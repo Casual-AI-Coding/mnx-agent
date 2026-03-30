@@ -2,15 +2,15 @@ import { Router } from 'express'
 
 const router = Router()
 
-router.get('/list', async (req, res) => {
+router.get('/list', async (_req, res) => {
   res.json({ message: 'Voice list endpoint - coming soon' })
 })
 
-router.post('/clone', async (req, res) => {
+router.post('/clone', async (_req, res) => {
   res.json({ message: 'Voice clone endpoint - coming soon' })
 })
 
-router.post('/design', async (req, res) => {
+router.post('/design', async (_req, res) => {
   res.json({ message: 'Voice design endpoint - coming soon' })
 })
 

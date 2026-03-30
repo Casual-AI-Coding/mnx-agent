@@ -16,10 +16,10 @@ import usageRouter from './routes/usage'
 config()
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 4511
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'http://localhost:4411',
   credentials: true,
 }))
 app.use(express.json({ limit: '50mb' }))
