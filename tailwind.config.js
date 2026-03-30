@@ -15,6 +15,9 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          400: "hsl(var(--primary-400))",
+          500: "hsl(var(--primary-500))",
+          600: "hsl(var(--primary-600))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -39,6 +42,17 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        dark: {
+          950: "hsl(var(--dark-950))",
+          900: "hsl(var(--dark-900))",
+          800: "hsl(var(--dark-800))",
+          700: "hsl(var(--dark-700))",
+          600: "hsl(var(--dark-600))",
+          500: "hsl(var(--dark-500))",
+          400: "hsl(var(--dark-400))",
+          300: "hsl(var(--dark-300))",
+          200: "hsl(var(--dark-200))",
         },
       },
       borderRadius: {

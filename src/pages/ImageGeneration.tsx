@@ -1,17 +1,21 @@
 import { useState, useRef } from 'react'
-import { Image as ImageIcon, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2 } from 'lucide-react'
+import { Image as ImageIcon, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import WarningBanner from '@/components/shared/WarningBanner'
+import { APIReference } from '@/components/shared/APIReference'
 import { generateImage } from '@/lib/api/image'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { useAppStore } from '@/stores/app'
 import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio } from '@/types'
 
 export default function ImageGeneration() {
+  const { apiKey } = useAppStore()
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<ImageModel>('image-01')
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
@@ -134,15 +138,19 @@ export default function ImageGeneration() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">图片生成</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-3xl font-bold text-white">图片生成</h1>
+          <p className="text-dark-400 text-sm mt-1">
             使用 AI 根据文本描述或参考图片生成高质量图片
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      {!apiKey && (
+        <WarningBanner message="请先在右上角配置 API Key，否则无法使用图片生成功能。" />
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -224,15 +232,15 @@ export default function ImageGeneration() {
             </Card>
           )}
 
-          {generatedImages.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  生成结果
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Grid3x3 className="w-5 h-5 text-green-400" />
+                生成结果
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {generatedImages.length > 0 ? (
                 <div className={`grid gap-4 ${generatedImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {generatedImages.map((url, index) => (
                     <div key={index} className="relative group">
@@ -256,9 +264,27 @@ export default function ImageGeneration() {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-dark-400">
+                  <ImageIcon className="w-12 h-12 mb-4 opacity-50" />
+                  <p>生成的图片将在此处显示</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <APIReference
+            endpoint="/v1/image_generation"
+            method="POST"
+            body={{
+              model,
+              prompt: prompt || '<YOUR_PROMPT>',
+              response_format: 'url',
+              n: numImages,
+              prompt_optimizer: false,
+              aspect_ratio: aspectRatio,
+            }}
+          />
         </div>
 
         <div className="space-y-4">

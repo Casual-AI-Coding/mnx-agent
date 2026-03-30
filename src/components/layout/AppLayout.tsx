@@ -1,17 +1,22 @@
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import HistoryPanel from './HistoryPanel'
 
 export default function AppLayout() {
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+
   return (
-    <div className="flex h-screen bg-background">
+    <div className="h-screen bg-background overflow-hidden">
+      <Header onHistoryClick={() => setIsHistoryOpen(true)} />
       <Sidebar />
-      <div className="flex flex-1 flex-col">
-        <Header />
-        <main className="flex-1 overflow-auto p-6">
+      <main className="ml-[260px] mt-[60px] min-h-[calc(100vh-60px)] bg-grid overflow-auto">
+        <div className="p-8">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
+      <HistoryPanel isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
     </div>
   )
 }

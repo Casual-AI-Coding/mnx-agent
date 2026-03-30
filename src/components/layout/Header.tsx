@@ -1,66 +1,195 @@
-import { Key, Globe } from 'lucide-react'
+import { Key, Globe, Languages, ChevronDown, X, History } from 'lucide-react'
 import { useState } from 'react'
 import { useAppStore } from '@/stores/app'
 
-export default function Header() {
+interface HeaderProps {
+  onHistoryClick?: () => void
+}
+
+export default function Header({ onHistoryClick }: HeaderProps) {
   const { apiKey, region, setApiKey, setRegion } = useAppStore()
   const [showKeyModal, setShowKeyModal] = useState(false)
+  const [showRegionDropdown, setShowRegionDropdown] = useState(false)
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">调试台</span>
+    <header className="fixed top-0 left-0 right-0 h-[60px] bg-dark-950/80 backdrop-blur-xl border-b border-dark-800/50 z-50">
+      <div className="h-full flex items-center justify-between px-6">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="shrink-0"
+            >
+              <defs>
+                <linearGradient id="minimaxGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="50%" stopColor="#a855f7" />
+                  <stop offset="100%" stopColor="#ec4899" />
+                </linearGradient>
+              </defs>
+              <circle cx="16" cy="16" r="14" stroke="url(#minimaxGradient)" strokeWidth="2" fill="none" />
+              <circle cx="16" cy="16" r="6" fill="url(#minimaxGradient)" />
+            </svg>
+            <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              MiniMax
+            </span>
+          </div>
+          <span className="text-sm text-gray-400 font-medium">Solutions</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowLanguageDropdown(!showLanguageDropdown)
+                setShowRegionDropdown(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+            >
+              <Languages className="w-4 h-4" />
+              <span>中文</span>
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {showLanguageDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
+                <button
+                  className="w-full px-3 py-2 text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                  onClick={() => setShowLanguageDropdown(false)}
+                >
+                  <span className="w-4 h-4 flex items-center justify-center">✓</span>
+                  中文
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                  onClick={() => setShowLanguageDropdown(false)}
+                >
+                  <span className="w-4 h-4 flex items-center justify-center"></span>
+                  English
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowRegionDropdown(!showRegionDropdown)
+                setShowLanguageDropdown(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+            >
+              <Globe className="w-4 h-4" />
+              <span>{region === 'cn' ? '国内' : '国际'}</span>
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {showRegionDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
+                <button
+                  className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                    region === 'cn' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                  onClick={() => {
+                    setRegion('cn')
+                    setShowRegionDropdown(false)
+                  }}
+                >
+                  {region === 'cn' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
+                  {region !== 'cn' && <span className="w-4 h-4"></span>}
+                  国内
+                </button>
+                <button
+                  className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                    region === 'intl' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                  onClick={() => {
+                    setRegion('intl')
+                    setShowRegionDropdown(false)
+                  }}
+                >
+                  {region === 'intl' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
+                  {region !== 'intl' && <span className="w-4 h-4"></span>}
+                  国际
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowKeyModal(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+          >
+            <Key className="w-4 h-4" />
+            <span>{apiKey ? 'API Key 已配置' : '配置 API Key'}</span>
+          </button>
+
+          {onHistoryClick && (
+            <button
+              onClick={onHistoryClick}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+            >
+              <History className="w-4 h-4" />
+              <span>历史</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Region Toggle */}
-        <button
-          onClick={() => setRegion(region === 'cn' ? 'intl' : 'cn')}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md border hover:bg-accent text-sm"
-        >
-          <Globe className="w-4 h-4" />
-          <span>{region === 'cn' ? '🇨🇳 国内' : '🌍 国际'}</span>
-        </button>
+      {(showLanguageDropdown || showRegionDropdown) && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setShowLanguageDropdown(false)
+            setShowRegionDropdown(false)
+          }}
+        />
+      )}
 
-        {/* API Key */}
-        <button
-          onClick={() => setShowKeyModal(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md border hover:bg-accent text-sm"
-        >
-          <Key className="w-4 h-4" />
-          <span>{apiKey ? 'API Key 已配置' : '配置 API Key'}</span>
-        </button>
-      </div>
-
-      {/* API Key Modal */}
       {showKeyModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 w-96 shadow-lg">
-            <h2 className="text-lg font-semibold mb-4">配置 API Key</h2>
-            <input
-              type="password"
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              placeholder="输入您的 MiniMax API Key"
-              className="w-full px-3 py-2 border rounded-md mb-4"
-            />
-            <div className="flex gap-2 justify-end">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
+          <div className="bg-gray-900/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-gray-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white">配置 API Key</h2>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="px-4 py-2 border rounded-md hover:bg-accent"
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
               >
-                取消
+                <X className="w-5 h-5 text-gray-400 hover:text-white" />
               </button>
-              <button
-                onClick={() => {
-                  setApiKey(tempKey)
-                  setShowKeyModal(false)
-                }}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-              >
-                保存
-              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">MiniMax API Key</label>
+                <input
+                  type="password"
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  placeholder="输入您的 MiniMax API Key"
+                  className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-4 py-2 text-sm text-gray-300 hover:text-white border border-gray-600 rounded-lg hover:bg-white/5 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    setApiKey(tempKey)
+                    setShowKeyModal(false)
+                  }}
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/25"
+                >
+                  保存
+                </button>
+              </div>
             </div>
           </div>
         </div>
