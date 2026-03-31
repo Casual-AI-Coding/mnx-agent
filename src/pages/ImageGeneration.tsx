@@ -8,13 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import WarningBanner from '@/components/shared/WarningBanner'
 import { APIReference } from '@/components/shared/APIReference'
-import { RetryableError } from '@/components/shared/RetryableError'
 import { generateImage } from '@/lib/api/image'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useAppStore } from '@/stores/app'
-import { useRetry } from '@/hooks/useRetry'
-import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio, type ImageGenerationResponse } from '@/types'
+import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio } from '@/types'
 
 export default function ImageGeneration() {
   const { apiKey } = useAppStore()
@@ -30,7 +28,6 @@ export default function ImageGeneration() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
-  const { execute, isRetrying, lastError, retryCount } = useRetry()
 
   const handleTemplateSelect = (templateId: string) => {
     const template = PROMPT_TEMPLATES.find(t => t.id === templateId)
@@ -69,19 +66,15 @@ export default function ImageGeneration() {
     setError(null)
     setGeneratedImages([])
 
-    const currentPrompt = prompt.trim()
-
-    const response = await execute(async () => {
-      return await generateImage({
+    try {
+      const response = await generateImage({
         model,
-        prompt: currentPrompt,
+        prompt: prompt.trim(),
         n: numImages as 1 | 2 | 3 | 4,
         aspect_ratio: aspectRatio,
         seed,
       })
-    }) as ImageGenerationResponse | null
 
-    if (response !== null) {
       const urls = response.data.map(d => d.url || '')
       setGeneratedImages(urls)
 
@@ -89,7 +82,7 @@ export default function ImageGeneration() {
       urls.forEach((url, index) => {
         addItem({
           type: 'image',
-          input: currentPrompt,
+          input: prompt.trim(),
           outputUrl: url,
           metadata: {
             model,
@@ -100,9 +93,11 @@ export default function ImageGeneration() {
           },
         })
       })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失败')
+    } finally {
+      setIsGenerating(false)
     }
-
-    setIsGenerating(false)
   }
 
   const handleDownload = async (url: string, index: number) => {
@@ -229,12 +224,12 @@ export default function ImageGeneration() {
             </CardContent>
           </Card>
 
-          {lastError && !isRetrying && (
-            <RetryableError
-              error={lastError}
-              onRetry={handleGenerate}
-              retryCount={retryCount}
-            />
+          {error && (
+            <Card className="border-destructive">
+              <CardContent className="p-4 text-destructive">
+                {error}
+              </CardContent>
+            </Card>
           )}
 
           <Card>

@@ -344,6 +344,14 @@ export function getMiniMaxClient(): MiniMaxClient {
   return clientInstance
 }
 
+export function createMiniMaxClientFromHeaders(apiKey: string, region?: string): MiniMaxClient {
+  if (!apiKey) {
+    throw new Error('API key is required')
+  }
+  const regionValue = (region === 'cn' ? 'domestic' : 'international') as Region
+  return new MiniMaxClient(apiKey, regionValue)
+}
+
 export function resetMiniMaxClient(): void {
   clientInstance = null
 }

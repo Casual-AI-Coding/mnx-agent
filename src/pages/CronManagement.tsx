@@ -991,7 +991,6 @@ export default function CronManagement() {
     { id: 'jobs', label: 'Jobs List', icon: ListTodo },
     { id: 'queue', label: 'Task Queue', icon: Activity },
     { id: 'logs', label: 'Execution Logs', icon: ScrollText },
-    { id: 'capacity', label: 'Capacity Monitor', icon: Gauge },
   ]
 
   return (
@@ -1037,9 +1036,6 @@ export default function CronManagement() {
             </TabsContent>
             <TabsContent value="logs" className="mt-6">
               <ExecutionLogsTab />
-            </TabsContent>
-            <TabsContent value="capacity" className="mt-6">
-              <CapacityMonitorTab />
             </TabsContent>
           </motion.div>
         </AnimatePresence>

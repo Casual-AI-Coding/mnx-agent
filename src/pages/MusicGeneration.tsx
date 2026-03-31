@@ -5,12 +5,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Switch } from '@/components/ui/Switch'
-import { RetryableError } from '@/components/shared/RetryableError'
 import { generateMusic } from '@/lib/api/music'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { useRetry } from '@/hooks/useRetry'
-import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationResponse } from '@/types'
+import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel } from '@/types'
 
 export default function MusicGeneration() {
   const [lyrics, setLyrics] = useState('')
@@ -23,7 +21,6 @@ export default function MusicGeneration() {
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
-  const { execute: executeWithRetry, retryCount, lastError, reset: resetRetry } = useRetry<MusicGenerationResponse>()
 
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
@@ -53,18 +50,15 @@ export default function MusicGeneration() {
     setIsGenerating(true)
     setError(null)
     setAudioUrl(null)
-    resetRetry()
 
-    const response = await executeWithRetry(() => generateMusic({
-      model,
-      lyrics: lyrics.trim(),
-      style_prompt: stylePrompt.trim() || undefined,
-      optimize_lyrics: optimizeLyrics,
-    }))
+    try {
+      const response = await generateMusic({
+        model,
+        lyrics: lyrics.trim(),
+        style_prompt: stylePrompt.trim() || undefined,
+        optimize_lyrics: optimizeLyrics,
+      })
 
-    setIsGenerating(false)
-
-    if (response) {
       const audioData = response.data.audio
       const byteArray = new Uint8Array(audioData.length / 2)
       for (let i = 0; i < audioData.length; i += 2) {
@@ -87,8 +81,10 @@ export default function MusicGeneration() {
           duration: response.data.duration,
         },
       })
-    } else if (lastError) {
-      setError(lastError.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失败')
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -260,12 +256,11 @@ export default function MusicGeneration() {
           </Card>
 
           {error && (
-            <RetryableError
-              error={error}
-              onRetry={handleGenerate}
-              retryCount={retryCount}
-              maxRetries={3}
-            />
+            <Card className="border-destructive">
+              <CardContent className="p-4 text-destructive">
+                {error}
+              </CardContent>
+            </Card>
           )}
 
           {audioUrl && (

@@ -84,9 +84,10 @@
     "fileManagement": "File Management",
     "imageGallery": "Image Gallery",
     "cronManagement": "Cron Tasks",
+    "capacityMonitor": "Capacity",
     "workflowBuilder": "Workflow Builder",
     "settings": "Settings",
-    "createdBy": "Created by MiniMax Agent"
+    "createdBy": "Created by oGsLP"
   },
   "dashboard": {
     "title": "MiniMax AI Tools",

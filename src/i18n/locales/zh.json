@@ -84,9 +84,10 @@
     "fileManagement": "文件管理",
     "imageGallery": "图片库",
     "cronManagement": "定时任务",
+    "capacityMonitor": "用量配额",
     "workflowBuilder": "工作流编排",
     "settings": "设置",
-    "createdBy": "Created by MiniMax Agent"
+    "createdBy": "Created by oGsLP"
   },
   "dashboard": {
     "title": "MiniMax AI 工具集",

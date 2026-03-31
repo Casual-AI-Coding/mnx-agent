@@ -7,12 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Slider } from '@/components/ui/Slider'
 import { Label } from '@/components/ui/Label'
 import { Badge } from '@/components/ui/Badge'
-import { RetryableError } from '@/components/shared/RetryableError'
 import { createSyncVoice } from '@/lib/api/voice'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { useRetry } from '@/hooks/useRetry'
-import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion, type T2ASyncResponse } from '@/types'
+import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
 
 const MAX_CHARS = 10000
 
@@ -30,7 +28,6 @@ export default function VoiceSync() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
-  const { execute: executeWithRetry, retryCount, lastError, reset: resetRetry } = useRetry<T2ASyncResponse>()
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
@@ -41,29 +38,26 @@ export default function VoiceSync() {
     setIsGenerating(true)
     setError(null)
     setAudioUrl(null)
-    resetRetry()
 
-    const response = await executeWithRetry(() => createSyncVoice({
-      model,
-      text: text.trim(),
-      voice_setting: {
-        voice_id: voiceId,
-        speed,
-        vol: volume,
-        pitch,
-        emotion,
-      },
-      audio_setting: {
-        sample_rate: 24000,
-        bitrate: 128000,
-        format: 'mp3',
-        channel: 1,
-      },
-    }))
+    try {
+      const response = await createSyncVoice({
+        model,
+        text: text.trim(),
+        voice_setting: {
+          voice_id: voiceId,
+          speed,
+          vol: volume,
+          pitch,
+          emotion,
+        },
+        audio_setting: {
+          sample_rate: 24000,
+          bitrate: 128000,
+          format: 'mp3',
+          channel: 1,
+        },
+      })
 
-    setIsGenerating(false)
-
-    if (response) {
       const hexData = response.data
       const byteArray = new Uint8Array(hexData.length / 2)
       for (let i = 0; i < hexData.length; i += 2) {
@@ -87,8 +81,10 @@ export default function VoiceSync() {
           pitch,
         },
       })
-    } else if (lastError) {
-      setError(lastError.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失败')
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -143,12 +139,11 @@ export default function VoiceSync() {
           </Card>
 
           {error && (
-            <RetryableError
-              error={error}
-              onRetry={handleGenerate}
-              retryCount={retryCount}
-              maxRetries={3}
-            />
+            <Card className="border-destructive">
+              <CardContent className="p-4 text-destructive">
+                {error}
+              </CardContent>
+            </Card>
           )}
 
           {audioUrl && (

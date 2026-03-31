@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CapacityRecord, ServiceType } from '../types/cron'
+import { useAppStore } from './app'
 
 interface CapacityState {
   records: CapacityRecord[]
@@ -11,9 +12,17 @@ interface CapacityState {
 }
 
 async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
+  const { apiKey, region } = useAppStore.getState()
+  
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  if (apiKey && apiKey.trim()) {
+    headers['X-API-Key'] = apiKey.trim()
+    headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
+  }
+  
   const response = await fetch('/api/cron/capacity', {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
   })
   
   if (!response.ok) {

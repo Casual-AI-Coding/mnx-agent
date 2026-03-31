@@ -10,6 +10,7 @@ import { TEXT_MODELS, SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 
 interface Message {
   id: string
@@ -223,7 +224,29 @@ export default function TextGeneration() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+      <div 
+        className="flex-1 overflow-y-auto space-y-4 pr-2 chat-scrollbar"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(139, 92, 246, 0.3) transparent',
+        }}
+      >
+        <style>{`
+          /* Custom scrollbar for chat messages - glassmorphic dark theme */
+          .chat-scrollbar::-webkit-scrollbar {
+            width: 6px;
+          }
+          .chat-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .chat-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.4), rgba(168, 85, 247, 0.3));
+            border-radius: 3px;
+          }
+          .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.6), rgba(168, 85, 247, 0.5));
+          }
+        `}</style>
         <AnimatePresence mode="popLayout">
           {messages.filter(m => m.role !== 'system').length === 0 && (
             <motion.div 
@@ -282,7 +305,14 @@ export default function TextGeneration() {
                       {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
                     </span>
                   </div>
-                  <div className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>
+                  {message.role === 'assistant' ? (
+                    <MarkdownRenderer 
+                      content={message.content} 
+                      className="text-[15px] leading-relaxed"
+                    />
+                  ) : (
+                    <div className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>
+                  )}
                   
                   {message.content && !message.error && (
                     <button

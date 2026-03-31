@@ -7,12 +7,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
-import { RetryableError } from '@/components/shared/RetryableError'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { useRetry } from '@/hooks/useRetry'
-import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion, type T2AAsyncStatusResponse, type T2AAsyncCreateResponse } from '@/types'
+import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion, type T2AAsyncStatusResponse } from '@/types'
 
 const MAX_CHARS = 50000
 
@@ -43,11 +41,9 @@ export default function VoiceAsync() {
   const [activeTab, setActiveTab] = useState('text')
   const [fileId, setFileId] = useState<string | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
-  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
-  const { execute: executeWithRetry, retryCount, lastError, reset: resetRetry } = useRetry<T2AAsyncCreateResponse>()
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
@@ -56,29 +52,26 @@ export default function VoiceAsync() {
     if (activeTab === 'text' && (!text.trim() || isOverLimit)) return
     if (activeTab === 'file' && !fileId) return
 
-    setError(null)
-    resetRetry()
+    try {
+      const response = await createAsyncVoice({
+        model,
+        text: activeTab === 'text' ? text.trim() : undefined,
+        file_id: activeTab === 'file' ? (fileId ?? undefined) : undefined,
+        voice_setting: {
+          voice_id: voiceId,
+          speed,
+          vol: volume,
+          pitch,
+          emotion,
+        },
+        audio_setting: {
+          sample_rate: 24000,
+          bitrate: 128000,
+          format: 'mp3',
+          channel: 1,
+        },
+      })
 
-    const response = await executeWithRetry(() => createAsyncVoice({
-      model,
-      text: activeTab === 'text' ? text.trim() : undefined,
-      file_id: activeTab === 'file' ? (fileId ?? undefined) : undefined,
-      voice_setting: {
-        voice_id: voiceId,
-        speed,
-        vol: volume,
-        pitch,
-        emotion,
-      },
-      audio_setting: {
-        sample_rate: 24000,
-        bitrate: 128000,
-        format: 'mp3',
-        channel: 1,
-      },
-    }))
-
-    if (response) {
       const newTask: Task = {
         id: response.trace_id,
         taskId: response.task_id,
@@ -94,8 +87,8 @@ export default function VoiceAsync() {
       }
 
       pollTaskStatus(newTask.taskId)
-    } else if (lastError) {
-      setError(lastError.message)
+    } catch (err) {
+      console.error('Failed to create task:', err)
     }
   }
 
@@ -386,15 +379,6 @@ export default function VoiceAsync() {
                 <Sparkles className="w-4 h-4 mr-2" />
                 创建任务
               </Button>
-
-              {error && (
-                <RetryableError
-                  error={error}
-                  onRetry={createTask}
-                  retryCount={retryCount}
-                  maxRetries={3}
-                />
-              )}
             </CardContent>
           </Card>
         </div>

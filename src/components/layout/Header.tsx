@@ -41,10 +41,9 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               <circle cx="16" cy="16" r="6" fill="url(#minimaxGradient)" />
             </svg>
             <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              MiniMax
+              Mnx-Agent 工作台
             </span>
           </div>
-          <span className="text-sm text-gray-400 font-medium">{t('header.solutions')}</span>
         </div>
 
         <div className="flex items-center gap-3">

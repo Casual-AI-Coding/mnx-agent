@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { DatabaseService, getDatabase } from '../database/service'
-import { getMiniMaxClient } from '../lib/minimax'
+import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { getNotificationService } from '../services/notification-service'
@@ -477,9 +477,16 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 // Capacity API
 // ============================================
 
-router.get('/capacity', asyncHandler(async (_req, res) => {
+router.get('/capacity', asyncHandler(async (req, res) => {
   try {
-    const client = getMiniMaxClient()
+    const apiKey = req.headers['x-api-key'] as string | undefined
+    const region = req.headers['x-region'] as string | undefined
+    
+    const hasValidApiKey = apiKey && apiKey.trim().length > 0
+    const client = hasValidApiKey 
+      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
+      : getMiniMaxClient()
+    
     const balance = await client.getBalance()
     const codingPlan = await client.getCodingPlanRemains()
     const records = db.getAllCapacityRecords()
@@ -496,9 +503,15 @@ router.get('/capacity', asyncHandler(async (_req, res) => {
   }
 }))
 
-router.post('/capacity/refresh', asyncHandler(async (_req, res) => {
+router.post('/capacity/refresh', asyncHandler(async (req, res) => {
   try {
-    const client = getMiniMaxClient()
+    const apiKey = req.headers['x-api-key'] as string | undefined
+    const region = req.headers['x-region'] as string | undefined
+    
+    const hasValidApiKey = apiKey && apiKey.trim().length > 0
+    const client = hasValidApiKey 
+      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
+      : getMiniMaxClient()
     const balance = await client.getBalance()
     const codingPlan = await client.getCodingPlanRemains()
     const now = new Date()

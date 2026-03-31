@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { getMiniMaxClient } from '../lib/minimax'
+import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
 import multer from 'multer'
 
@@ -10,9 +10,16 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 })
 
+function getClient(req: Request) {
+  const apiKey = req.headers['x-api-key'] as string | undefined
+  const region = req.headers['x-region'] as string | undefined
+  const hasValidApiKey = apiKey && apiKey.trim().length > 0
+  return hasValidApiKey ? createMiniMaxClientFromHeaders(apiKey!.trim(), region) : getMiniMaxClient()
+}
+
 router.get('/list', async (req: Request, res: Response) => {
   try {
-    const client = getMiniMaxClient()
+    const client = getClient(req)
     const { purpose } = req.query
     const result = await client.fileList(purpose as string)
     res.json({ success: true, data: result })
@@ -23,7 +30,7 @@ router.get('/list', async (req: Request, res: Response) => {
 
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
-    const client = getMiniMaxClient()
+    const client = getClient(req)
     
     if (!req.file) {
       res.status(400).json({ success: false, error: 'file is required' })
@@ -49,7 +56,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
 router.get('/retrieve', async (req: Request, res: Response) => {
   try {
-    const client = getMiniMaxClient()
+    const client = getClient(req)
     const { file_id } = req.query
 
     if (!file_id) {
@@ -66,7 +73,7 @@ router.get('/retrieve', async (req: Request, res: Response) => {
 
 router.post('/delete', async (req: Request, res: Response) => {
   try {
-    const client = getMiniMaxClient()
+    const client = getClient(req)
     const { file_id, purpose } = req.body
 
     if (!file_id || !purpose) {

@@ -1,6 +1,22 @@
 import { getBaseUrl, getHeaders, getApiMode } from './config'
 import type { ImageGenerationRequest, ImageGenerationResponse } from '@/types'
 
+interface MiniMaxImageResponse {
+  id?: string
+  data?: {
+    image_urls?: string[]
+  }
+  base_resp?: {
+    status_code: number
+    status_msg: string
+  }
+}
+
+interface ProxyImageResponse {
+  success: boolean
+  data: MiniMaxImageResponse
+}
+
 export async function generateImage(
   request: ImageGenerationRequest
 ): Promise<ImageGenerationResponse> {
@@ -17,7 +33,31 @@ export async function generateImage(
     throw new Error(error.base_resp?.status_msg || error.error || 'Failed to generate image')
   }
 
-  return response.json()
+  const result: MiniMaxImageResponse | ProxyImageResponse | ImageGenerationResponse = await response.json()
+  
+  // Proxy mode: backend wraps response as { success: true, data: MiniMaxResponse }
+  if (apiMode === 'proxy' && 'success' in result) {
+    const proxyResult = result as ProxyImageResponse
+    const minimaxData = proxyResult.data?.data
+    if (minimaxData && 'image_urls' in minimaxData) {
+      const urls = minimaxData.image_urls || []
+      return {
+        created: Date.now(),
+        data: urls.map(url => ({ url }))
+      }
+    }
+  }
+  
+  // Direct mode: MiniMax returns { data: { image_urls: [...] } }
+  if (!('success' in result) && result.data && 'image_urls' in result.data) {
+    const urls = result.data.image_urls || []
+    return {
+      created: Date.now(),
+      data: urls.map(url => ({ url }))
+    }
+  }
+  
+  return result as ImageGenerationResponse
 }
 
 export function generateImageCurl(request: ImageGenerationRequest): string {

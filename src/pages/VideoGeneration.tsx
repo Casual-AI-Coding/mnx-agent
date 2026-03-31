@@ -5,12 +5,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { RetryableError } from '@/components/shared/RetryableError'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { useRetry } from '@/hooks/useRetry'
-import { VIDEO_MODELS, type VideoModel, type VideoGenerationResponse } from '@/types'
+import { VIDEO_MODELS, type VideoModel } from '@/types'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -33,7 +31,6 @@ export default function VideoGeneration() {
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
-  const { execute, isRetrying, lastError, retryCount } = useRetry()
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -41,21 +38,17 @@ export default function VideoGeneration() {
     setIsGenerating(true)
     setError(null)
 
-    const currentPrompt = prompt.trim()
-
-    const response = await execute(async () => {
-      return await createVideo({
+    try {
+      const response = await createVideo({
         model,
-        prompt: currentPrompt,
+        prompt: prompt.trim(),
       })
-    }) as VideoGenerationResponse | null
 
-    if (response !== null) {
       const newTask: VideoTask = {
         id: response.task_id,
         taskId: response.task_id,
         status: 'pending',
-        prompt: currentPrompt,
+        prompt: prompt.trim(),
         createdAt: Date.now(),
       }
 
@@ -65,9 +58,11 @@ export default function VideoGeneration() {
       addUsage('videoRequests', 1)
 
       pollTaskStatus(newTask.taskId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '创建任务失败')
+    } finally {
+      setIsGenerating(false)
     }
-
-    setIsGenerating(false)
   }
 
   const pollTaskStatus = async (taskId: string) => {
@@ -205,12 +200,10 @@ export default function VideoGeneration() {
                 </Select>
               </div>
 
-              {lastError && !isRetrying && (
-                <RetryableError
-                  error={lastError}
-                  onRetry={handleGenerate}
-                  retryCount={retryCount}
-                />
+              {error && (
+                <div className="p-4 border border-destructive rounded-lg text-destructive">
+                  {error}
+                </div>
               )}
 
               <Button

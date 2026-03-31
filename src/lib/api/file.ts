@@ -20,10 +20,23 @@ interface FileUploadResponse {
   created_at: string
 }
 
-export async function listFiles(): Promise<FileListResponse> {
+export async function listFiles(purpose?: string): Promise<FileListResponse> {
   const apiMode = getApiMode()
-  const endpoint = apiMode === 'proxy' ? '/files/list' : '/v1/files'
-  const response = await fetch(`${getBaseUrl()}${endpoint}`, {
+  
+  let endpoint: string
+  let url: string
+  
+  if (apiMode === 'proxy') {
+    endpoint = '/files/list'
+    url = `${getBaseUrl()}${endpoint}`
+  } else {
+    endpoint = '/v1/files/list'
+    const params = new URLSearchParams()
+    if (purpose) params.append('purpose', purpose)
+    url = `${getBaseUrl()}${endpoint}${params.toString() ? '?' + params.toString() : ''}`
+  }
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: getHeaders(),
   })
@@ -33,7 +46,13 @@ export async function listFiles(): Promise<FileListResponse> {
     throw new Error(error.base_resp?.status_msg || error.error || 'Failed to list files')
   }
 
-  return response.json()
+  const result = await response.json()
+  
+  if (apiMode === 'proxy' && result.success && result.data) {
+    return result.data
+  }
+  
+  return result
 }
 
 export async function uploadFile(file: File): Promise<FileUploadResponse> {
@@ -44,7 +63,6 @@ export async function uploadFile(file: File): Promise<FileUploadResponse> {
   formData.append('file', file)
 
   const headers = getHeaders()
-  // Remove Content-Type for FormData - browser will set it automatically with boundary
   const headersRecord: Record<string, string> = {}
   for (const [key, value] of Object.entries(headers)) {
     if (key !== 'Content-Type') {
@@ -63,7 +81,13 @@ export async function uploadFile(file: File): Promise<FileUploadResponse> {
     throw new Error(error.base_resp?.status_msg || error.error || 'Failed to upload file')
   }
 
-  return response.json()
+  const result = await response.json()
+  
+  if (apiMode === 'proxy' && result.success && result.data) {
+    return result.data
+  }
+  
+  return result
 }
 
 export async function deleteFile(fileId: string): Promise<void> {

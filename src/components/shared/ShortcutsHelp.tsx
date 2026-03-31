@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { X, Keyboard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -39,60 +40,18 @@ const shortcutsData: ShortcutSection[] = [
   },
 ]
 
-export function ShortcutsHelp() {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const openHelp = useCallback(() => {
-    setIsOpen(true)
-  }, [])
-
-  const closeHelp = useCallback(() => {
-    setIsOpen(false)
-  }, [])
-
-  useHotkeys('ctrl+/, shift+/', openHelp, {
-    preventDefault: true,
-    enableOnFormTags: true,
-  })
-
-  useHotkeys('esc', closeHelp, {
-    enabled: isOpen,
-    preventDefault: true,
-  })
+function ShortcutsHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  useHotkeys('esc', onClose, { enabled: isOpen, preventDefault: true })
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      closeHelp()
+      onClose()
     }
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
+  if (!isOpen) return null
 
-  if (!isOpen) {
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={openHelp}
-        className="fixed bottom-4 right-4 gap-2 opacity-50 hover:opacity-100 transition-opacity"
-        title="快捷键帮助 (Ctrl+/)"
-      >
-        <Keyboard className="w-4 h-4" />
-        <span className="hidden sm:inline">快捷键</span>
-      </Button>
-    )
-  }
-
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
@@ -103,12 +62,7 @@ export function ShortcutsHelp() {
             <Keyboard className="w-5 h-5" />
             键盘快捷键
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={closeHelp}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
@@ -123,10 +77,7 @@ export function ShortcutsHelp() {
               </h3>
               <div className="space-y-2">
                 {section.shortcuts.map((shortcut) => (
-                  <div
-                    key={shortcut.key}
-                    className="flex items-center justify-between py-1"
-                  >
+                  <div key={shortcut.key} className="flex items-center justify-between py-1">
                     <span className="text-sm">{shortcut.description}</span>
                     <kbd className="bg-gray-700 dark:bg-gray-600 rounded px-2 py-1 text-xs font-mono text-white shrink-0 ml-4">
                       {shortcut.key}
@@ -143,8 +94,46 @@ export function ShortcutsHelp() {
           </p>
         </div>
       </Card>
-    </div>
+    </div>,
+    document.body
   )
+}
+
+export function ShortcutsHelpButton() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const openHelp = useCallback(() => setIsOpen(true), [])
+  const closeHelp = useCallback(() => setIsOpen(false), [])
+
+  useHotkeys('ctrl+/, shift+/', openHelp, { preventDefault: true, enableOnFormTags: true })
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  return (
+    <>
+      <button
+        onClick={openHelp}
+        className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+        title="快捷键帮助 (Ctrl+/)"
+      >
+        <Keyboard className="w-4 h-4" />
+      </button>
+      <ShortcutsHelpModal isOpen={isOpen} onClose={closeHelp} />
+    </>
+  )
+}
+
+export function ShortcutsHelp() {
+  return <ShortcutsHelpButton />
 }
 
 export default ShortcutsHelp

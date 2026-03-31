@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
-import { ShortcutsHelp } from '@/components/shared/ShortcutsHelp'
 import Dashboard from '@/pages/Dashboard'
 import TextGeneration from '@/pages/TextGeneration'
 import VoiceSync from '@/pages/VoiceSync'
@@ -19,6 +18,7 @@ import TokenMonitor from '@/pages/TokenMonitor'
 import Settings from '@/pages/Settings'
 import CronManagement from '@/pages/CronManagement'
 import WorkflowBuilder from '@/pages/WorkflowBuilder'
+import CapacityMonitor from '@/pages/CapacityMonitor'
 import { useAppStore } from '@/stores/app'
 import analytics from '@/lib/analytics'
 
@@ -115,6 +115,7 @@ function AppContent() {
         <Route path="token" element={<TokenMonitor />} />
         <Route path="settings" element={<Settings />} />
         <Route path="cron" element={<CronManagement />} />
+        <Route path="capacity" element={<CapacityMonitor />} />
         <Route path="workflow-builder" element={<WorkflowBuilder />} />
       </Route>
     </Routes>
@@ -128,7 +129,6 @@ function App() {
         fallback={<ErrorFallback className="min-h-screen" onRetry={() => window.location.reload()} />}
       >
         <Toaster position="bottom-right" theme="dark" richColors />
-        <ShortcutsHelp />
         <AppContent />
       </ErrorBoundary>
     </BrowserRouter>

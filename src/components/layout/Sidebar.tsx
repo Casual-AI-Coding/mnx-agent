@@ -15,8 +15,11 @@ import {
   ChevronRight,
   Clock,
   GitBranch,
+  Gauge,
+  Keyboard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
 
 export default function Sidebar() {
   const { t } = useTranslation()
@@ -36,6 +39,7 @@ export default function Sidebar() {
   const independentItems = [
     { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
     { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
+    { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
     { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
     { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
   ]
@@ -116,11 +120,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-dark-800/50 bg-dark-950/80 backdrop-blur-sm">
-        <div className="flex items-center gap-2 text-dark-400">
-          <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
-            <span className="text-white font-bold text-[10px]">M</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-dark-400">
+            <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
+              <span className="text-white font-bold text-[10px]">M</span>
+            </div>
+            <span className="text-xs">{t('sidebar.createdBy')}</span>
+            <ShortcutsHelpButton />
           </div>
-          <span className="text-xs">{t('sidebar.createdBy')}</span>
         </div>
       </div>
     </aside>
