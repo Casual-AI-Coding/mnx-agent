@@ -13,6 +13,7 @@ import VideoGeneration from '@/pages/VideoGeneration'
 import VideoAgent from '@/pages/VideoAgent'
 import VoiceManagement from '@/pages/VoiceManagement'
 import FileManagement from '@/pages/FileManagement'
+import MediaManagement from '@/pages/MediaManagement'
 import ImageGallery from '@/pages/ImageGallery'
 import TokenMonitor from '@/pages/TokenMonitor'
 import Settings from '@/pages/Settings'
@@ -111,6 +112,7 @@ function AppContent() {
         <Route path="video-agent" element={<VideoAgent />} />
         <Route path="voice-mgmt" element={<VoiceManagement />} />
         <Route path="files" element={<FileManagement />} />
+        <Route path="media" element={<MediaManagement />} />
         <Route path="gallery" element={<ImageGallery />} />
         <Route path="token" element={<TokenMonitor />} />
         <Route path="settings" element={<Settings />} />
