@@ -220,7 +220,7 @@ export interface CreateExecutionLogDetail {
   node_type?: string | null
   input_payload?: string | null
   output_result?: string | null
-  error_message?: string | null
+  error_message: string | null
   started_at?: string | null
   completed_at?: string | null
   duration_ms?: number | null
@@ -263,12 +263,12 @@ export interface CreateWebhookConfig {
 
 export interface CreateWebhookDelivery {
   webhook_id: string
-  execution_log_id?: string | null
+  execution_log_id: string | null
   event: string
   payload: string
-  response_status?: number | null
-  response_body?: string | null
-  error_message?: string | null
+  response_status: number | null
+  response_body: string | null
+  error_message: string | null
 }
 
 export interface CreateDeadLetterItem {
@@ -276,7 +276,7 @@ export interface CreateDeadLetterItem {
   job_id?: string | null
   task_type: string
   payload: string
-  error_message?: string | null
+  error_message: string | null
   retry_count?: number
 }
 
@@ -300,7 +300,7 @@ export interface UpdateCronJob {
 export interface UpdateTaskQueueItem {
   status?: TaskStatus
   retry_count?: number
-  error_message?: string | null
+  error_message: string | null
   result?: string | null
   started_at?: string | null
   completed_at?: string | null

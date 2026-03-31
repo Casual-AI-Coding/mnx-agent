@@ -4,6 +4,8 @@ import { DatabaseService, getDatabase } from '../database/service'
 import { getMiniMaxClient } from '../lib/minimax'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
+import { getNotificationService } from '../services/notification-service'
+import { CronExpressionParser } from 'cron-parser'
 import {
   createCronJobSchema,
   updateCronJobSchema,
@@ -51,10 +53,9 @@ router.get('/health', asyncHandler(async (_req, res) => {
     }))
 
     // Get task counts
-    const allTasks = db.getAllTasks()
-    const pendingCount = allTasks.filter(t => t.status === TaskStatus.PENDING).length
-    const runningCount = allTasks.filter(t => t.status === TaskStatus.RUNNING).length
-    const failedCount = allTasks.filter(t => t.status === TaskStatus.FAILED).length
+    const pendingCount = db.getPendingTaskCount()
+    const runningCount = db.getRunningTaskCount()
+    const failedCount = db.getFailedTaskCount()
 
     const health = {
       status: 'healthy',
@@ -65,13 +66,12 @@ router.get('/health', asyncHandler(async (_req, res) => {
         timezone: scheduler.getTimezone(),
       },
       database: {
-        connected: true,
+        connected: db.isConnected(),
       },
       queue: {
         pending: pendingCount,
         running: runningCount,
         failed: failedCount,
-        total: allTasks.length,
       },
     }
     res.json({ success: true, data: health })
@@ -94,13 +94,14 @@ router.get('/health', asyncHandler(async (_req, res) => {
 
 router.get('/jobs', asyncHandler(async (_req, res) => {
   const jobs: CronJob[] = db.getAllCronJobs()
-  const jobsWithStats = jobs.map((job: CronJob) => ({
+  const jobsWithTags = jobs.map((job: CronJob) => ({
     ...job,
+    tags: db.getJobTags(job.id),
     last_run: job.last_run_at,
     next_run: job.next_run_at,
     total_runs: job.total_runs,
   }))
-  res.json({ success: true, data: { jobs: jobsWithStats, total: jobs.length } })
+  res.json({ success: true, data: { jobs: jobsWithTags, total: jobs.length } })
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
@@ -117,8 +118,17 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
     cron_expression: jobData.cron_expression,
     is_active: jobData.is_active,
     workflow_json: jobData.workflow_json,
+    timeout_ms: jobData.timeout_ms,
   })
-  res.json({ success: true, data: job })
+  
+  // Add tags if provided
+  if (jobData.tags && Array.isArray(jobData.tags)) {
+    for (const tag of jobData.tags) {
+      db.addJobTag(job.id, tag)
+    }
+  }
+  
+  res.json({ success: true, data: { ...job, tags: jobData.tags || [] } })
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -127,7 +137,9 @@ router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(asyn
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  res.json({ success: true, data: job })
+  const tags = db.getJobTags(job.id)
+  const dependencies = db.getJobDependencies(job.id)
+  res.json({ success: true, data: { ...job, tags, dependencies } })
 }))
 
 router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
@@ -145,7 +157,21 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
     }
   }
   const job = db.updateCronJob(req.params.id, req.body)
-  res.json({ success: true, data: job })
+  
+  // Update tags if provided
+  if (req.body.tags && Array.isArray(req.body.tags)) {
+    // Remove existing tags
+    const existingTags = db.getJobTags(req.params.id)
+    for (const tag of existingTags) {
+      db.removeJobTag(req.params.id, tag)
+    }
+    // Add new tags
+    for (const tag of req.body.tags) {
+      db.addJobTag(req.params.id, tag)
+    }
+  }
+  
+  res.json({ success: true, data: { ...job, tags: req.body.tags || db.getJobTags(req.params.id) } })
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -187,6 +213,164 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
   }
   const updatedJob = db.toggleCronJobActive(req.params.id)
   res.json({ success: true, data: { job: updatedJob, scheduled: updatedJob?.is_active } })
+}))
+
+// ============================================
+// Job Cloning
+// ============================================
+router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
+  const job = db.getCronJobById(req.params.id)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  
+  const clonedJob = db.createCronJob({
+    name: `${job.name} (Copy)`,
+    description: job.description,
+    cron_expression: job.cron_expression,
+    is_active: false, // Clone as inactive
+    workflow_json: job.workflow_json,
+    timeout_ms: job.timeout_ms ?? undefined,
+  })
+  
+  // Clone tags
+  const tags = db.getJobTags(req.params.id)
+  for (const tag of tags) {
+    db.addJobTag(clonedJob.id, tag)
+  }
+  
+  res.json({ success: true, data: { ...clonedJob, tags } })
+}))
+
+// ============================================
+// Job Dry Run
+// ============================================
+router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
+  const job = db.getCronJobById(req.params.id)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  
+  // Validate workflow JSON
+  let validation = { valid: true, errors: [] as string[] }
+  try {
+    const workflow = JSON.parse(job.workflow_json)
+    if (!workflow.nodes || workflow.nodes.length === 0) {
+      validation.valid = false
+      validation.errors.push('Workflow has no nodes')
+    }
+  } catch {
+    validation.valid = false
+    validation.errors.push('Invalid workflow JSON')
+  }
+  
+  // Calculate next 5 execution times
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, {
+    executeTask: async () => ({ success: true, durationMs: 0 })
+  }, {
+    hasCapacity: async () => true,
+    decrementCapacity: async () => {}
+  }))
+  
+  const nextRuns: string[] = []
+  try {
+    const interval = CronExpressionParser.parse(job.cron_expression, { tz: scheduler.getTimezone() })
+    for (let i = 0; i < 5; i++) {
+      nextRuns.push(interval.next().toISOString())
+    }
+  } catch {
+    validation.valid = false
+    validation.errors.push('Invalid cron expression')
+  }
+  
+  // Get historical stats for estimated duration
+  const recentLogs = db.getAllExecutionLogs(job.id, 10)
+  const avgDuration = recentLogs.length > 0
+    ? recentLogs.reduce((sum, log) => sum + (log.duration_ms || 0), 0) / recentLogs.length
+    : null
+  
+  res.json({
+    success: true,
+    data: {
+      validation,
+      nextRuns,
+      estimatedDurationMs: avgDuration,
+      estimatedDurationFormatted: avgDuration ? formatDuration(avgDuration) : null,
+    },
+  })
+}))
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
+}
+
+// ============================================
+// Bulk Operations
+// ============================================
+router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
+  const { ids } = req.body
+  if (!Array.isArray(ids)) {
+    res.status(400).json({ success: false, error: 'ids must be an array' })
+    return
+  }
+  let updated = 0
+  for (const id of ids) {
+    const job = db.getCronJobById(id)
+    if (job && !job.is_active) {
+      db.toggleCronJobActive(id)
+      updated++
+    }
+  }
+  res.json({ success: true, data: { updated } })
+}))
+
+router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
+  const { ids } = req.body
+  if (!Array.isArray(ids)) {
+    res.status(400).json({ success: false, error: 'ids must be an array' })
+    return
+  }
+  let updated = 0
+  for (const id of ids) {
+    const job = db.getCronJobById(id)
+    if (job && job.is_active) {
+      db.toggleCronJobActive(id)
+      updated++
+    }
+  }
+  res.json({ success: true, data: { updated } })
+}))
+
+router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
+  const { ids } = req.body
+  if (!Array.isArray(ids)) {
+    res.status(400).json({ success: false, error: 'ids must be an array' })
+    return
+  }
+  let deleted = 0
+  for (const id of ids) {
+    if (db.deleteCronJob(id)) {
+      deleted++
+    }
+  }
+  res.json({ success: true, data: { deleted } })
+}))
+
+// ============================================
+// Tags API
+// ============================================
+router.get('/tags', asyncHandler(async (_req, res) => {
+  const tags = db.getAllTags()
+  res.json({ success: true, data: { tags, total: tags.length } })
+}))
+
+router.get('/jobs/by-tag/:tag', asyncHandler(async (req, res) => {
+  const jobs = db.getJobsByTag(req.params.tag)
+  res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
 // ============================================
@@ -337,6 +521,106 @@ router.post('/capacity/refresh', asyncHandler(async (_req, res) => {
     res.json({ success: true, data: { balance, records } })
   } catch (error) {
     res.status(503).json({ success: false, error: (error as Error).message })
+  }
+}))
+
+// ============================================
+// Dead Letter Queue API
+// ============================================
+router.get('/dead-letter', asyncHandler(async (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 100
+  const items = db.getDeadLetterQueue(limit)
+  res.json({ success: true, data: { items, total: items.length } })
+}))
+
+router.post('/dead-letter/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
+  const item = db.getDeadLetterItemById(req.params.id)
+  if (!item) {
+    res.status(404).json({ success: false, error: 'Item not found' })
+    return
+  }
+  
+  // Create a new task from the dead letter item
+  const task = db.createTask({
+    job_id: item.job_id,
+    task_type: item.task_type,
+    payload: item.payload,
+  })
+  
+  // Mark dead letter item as resolved
+  db.updateDeadLetterItem(item.id, {
+    resolved_at: new Date().toISOString(),
+    resolution: 'retried',
+  })
+  
+  res.json({ success: true, data: { task } })
+}))
+
+router.delete('/dead-letter/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
+  const item = db.getDeadLetterItemById(req.params.id)
+  if (!item) {
+    res.status(404).json({ success: false, error: 'Item not found' })
+    return
+  }
+  
+  db.updateDeadLetterItem(item.id, {
+    resolved_at: new Date().toISOString(),
+    resolution: 'discarded',
+  })
+  
+  res.json({ success: true, data: { deleted: true } })
+}))
+
+// ============================================
+// Webhooks API
+// ============================================
+router.get('/webhooks', asyncHandler(async (req, res) => {
+  const jobId = req.query.job_id as string | undefined
+  const configs = db.getWebhookConfigs(jobId)
+  res.json({ success: true, data: { webhooks: configs, total: configs.length } })
+}))
+
+router.post('/webhooks', asyncHandler(async (req, res) => {
+  const config = db.createWebhookConfig(req.body)
+  res.json({ success: true, data: config })
+}))
+
+router.get('/webhooks/:id', asyncHandler(async (req, res) => {
+  const config = db.getWebhookConfigById(req.params.id)
+  if (!config) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  res.json({ success: true, data: config })
+}))
+
+router.put('/webhooks/:id', asyncHandler(async (req, res) => {
+  const existing = db.getWebhookConfigById(req.params.id)
+  if (!existing) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  const config = db.updateWebhookConfig(req.params.id, req.body)
+  res.json({ success: true, data: config })
+}))
+
+router.delete('/webhooks/:id', asyncHandler(async (req, res) => {
+  const existing = db.getWebhookConfigById(req.params.id)
+  if (!existing) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  db.deleteWebhookConfig(req.params.id)
+  res.json({ success: true, data: { deleted: true } })
+}))
+
+router.post('/webhooks/:id/test', asyncHandler(async (req, res) => {
+  const notificationService = getNotificationService(db)
+  const result = await notificationService.testWebhook(req.params.id)
+  if (result.success) {
+    res.json({ success: true, data: { delivered: true } })
+  } else {
+    res.status(400).json({ success: false, error: result.error })
   }
 }))
 
