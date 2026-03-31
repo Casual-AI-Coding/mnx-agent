@@ -859,9 +859,22 @@ export class DatabaseService {
 }
 
 let dbInstance: DatabaseService | null = null
+const inMemoryInstances: Map<string, DatabaseService> = new Map()
 
 export function getDatabase(dbPath?: string): DatabaseService {
   if (dbPath) {
+    if (dbPath === ':memory:') {
+      if (inMemoryInstances.has(dbPath)) {
+        return inMemoryInstances.get(dbPath)!
+      }
+      const db = new DatabaseService(dbPath)
+      db.init()
+      inMemoryInstances.set(dbPath, db)
+      if (!dbInstance) {
+        dbInstance = db
+      }
+      return db
+    }
     const db = new DatabaseService(dbPath)
     db.init()
     return db
@@ -878,4 +891,6 @@ export function closeDatabase(): void {
     dbInstance.close()
     dbInstance = null
   }
+  inMemoryInstances.forEach(db => db.close())
+  inMemoryInstances.clear()
 }
