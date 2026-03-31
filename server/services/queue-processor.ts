@@ -1,7 +1,6 @@
 import type { DatabaseService } from '../database'
-import { TaskStatus, TaskQueueItem, TaskQueueRow } from '../database/types'
+import { TaskStatus, TaskQueueRow } from '../database/types'
 import type { TaskResult } from './workflow-engine'
-import { v4 as uuidv4 } from 'uuid'
 
 export type { DatabaseService }
 

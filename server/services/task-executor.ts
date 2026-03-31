@@ -1,6 +1,5 @@
 import type { DatabaseService } from '../database'
 import { MiniMaxClient } from '../lib/minimax'
-import { TaskQueueItem, TaskStatus, CapacityRecord, CreateCapacityRecord } from '../database/types'
 
 export type { DatabaseService }
 
@@ -130,37 +129,6 @@ export class TaskExecutor {
     }
 
     throw new Error(`${taskType} task ${taskId} timed out after ${POLLING_CONFIG.maxDurationMs / 1000}s`)
-  }
-
-  private async handleFailure(
-    task: TaskQueueItem,
-    startTime: number,
-    errorMessage: string
-  ): Promise<TaskResult> {
-    const durationMs = Date.now() - startTime
-
-    await this.db.updateTaskStatus(task.id, TaskStatus.FAILED, {
-      completed_at: new Date().toISOString(),
-      error_message: errorMessage,
-    })
-
-    console.error(`Task ${task.id} (${task.task_type}) failed: ${errorMessage}`)
-
-    return {
-      success: false,
-      error: errorMessage,
-      durationMs,
-    }
-  }
-
-  private extractErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message
-    }
-    if (typeof error === 'string') {
-      return error
-    }
-    return 'Unknown error occurred'
   }
 
   private delay(ms: number): Promise<void> {
