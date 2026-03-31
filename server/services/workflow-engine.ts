@@ -411,10 +411,10 @@ export class WorkflowEngine {
     const comparisonPatterns = [
       { pattern: /^(.+)==(.+)$/, evaluate: (a: string, b: string) => a.trim() === b.trim() },
       { pattern: /^(.+)!=(.+)$/, evaluate: (a: string, b: string) => a.trim() !== b.trim() },
-      { pattern: /^(.+)>(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) > parseFloat(b.trim()) },
-      { pattern: /^(.+)<(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) < parseFloat(b.trim()) },
       { pattern: /^(.+)>=(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) >= parseFloat(b.trim()) },
       { pattern: /^(.+)<=(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) <= parseFloat(b.trim()) },
+      { pattern: /^(.+)>(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) > parseFloat(b.trim()) },
+      { pattern: /^(.+)<(.+)$/, evaluate: (a: string, b: string) => parseFloat(a.trim()) < parseFloat(b.trim()) },
       { pattern: /^(.+)contains(.+)$/, evaluate: (a: string, b: string) => a.trim().includes(b.trim()) },
     ]
 
