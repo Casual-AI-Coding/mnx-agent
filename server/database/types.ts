@@ -35,8 +35,32 @@ export enum WebhookEvent {
 }
 
 // ============================================================================
+// Media Types
+// ============================================================================
+
+export type MediaType = 'audio' | 'image' | 'video' | 'music'
+export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation'
+
+// ============================================================================
 // Core Entities
 // ============================================================================
+
+export interface MediaRecord {
+  id: string
+  filename: string
+  original_name: string | null
+  filepath: string
+  type: MediaType
+  mime_type: string | null
+  size_bytes: number
+  source: MediaSource | null
+  task_id: string | null
+  metadata: string | null  // JSON string
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
 
 export interface CronJob {
   id: string
@@ -280,6 +304,18 @@ export interface CreateDeadLetterItem {
   retry_count?: number
 }
 
+export interface CreateMediaRecord {
+  filename: string
+  original_name?: string
+  filepath: string
+  type: MediaType
+  mime_type?: string
+  size_bytes: number
+  source?: MediaSource
+  task_id?: string
+  metadata?: Record<string, unknown>
+}
+
 // ============================================================================
 // Update DTOs (for partial updates)
 // ============================================================================
@@ -343,6 +379,12 @@ export interface UpdateWebhookConfig {
 export interface UpdateDeadLetterItem {
   resolved_at?: string
   resolution?: 'retried' | 'discarded' | 'manual'
+}
+
+export interface UpdateMediaRecord {
+  original_name?: string
+  metadata?: Record<string, unknown>
+  is_deleted?: boolean
 }
 
 // ============================================================================
@@ -497,6 +539,23 @@ export interface MigrationRow {
   id: number
   name: string
   executed_at: string
+}
+
+export interface MediaRecordRow {
+  id: string
+  filename: string
+  original_name: string | null
+  filepath: string
+  type: string
+  mime_type: string | null
+  size_bytes: number
+  source: string | null
+  task_id: string | null
+  metadata: string | null
+  is_deleted: number
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
 }
 
 // ============================================================================

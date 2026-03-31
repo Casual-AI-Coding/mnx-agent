@@ -171,4 +171,30 @@ CREATE TABLE IF NOT EXISTS _migrations (
   name TEXT NOT NULL UNIQUE,
   executed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ============================================
+-- Media Records
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS media_records (
+    id TEXT PRIMARY KEY,
+    filename TEXT NOT NULL,
+    original_name TEXT,
+    filepath TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('audio', 'image', 'video', 'music')),
+    mime_type TEXT,
+    size_bytes INTEGER NOT NULL,
+    source TEXT CHECK(source IN ('voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation')),
+    task_id TEXT,
+    metadata TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_records_type ON media_records(type);
+CREATE INDEX IF NOT EXISTS idx_media_records_source ON media_records(source);
+CREATE INDEX IF NOT EXISTS idx_media_records_created_at ON media_records(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_media_records_is_deleted ON media_records(is_deleted);
 `
