@@ -10,6 +10,7 @@ import {
 import { saveMediaFile, readMediaFile, deleteMediaFile } from '../lib/media-storage'
 import type { Request, Response } from 'express'
 import multer from 'multer'
+import axios from 'axios'
 
 const router = Router()
 
@@ -106,6 +107,37 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     filepath,
     type: type as any,
     mime_type: req.file.mimetype,
+    size_bytes,
+    source: source as any,
+  })
+
+  res.status(201).json({ success: true, data: record })
+}))
+
+router.post('/upload-from-url', asyncHandler(async (req, res) => {
+  const { url, filename, type, source } = req.body
+
+  if (!url || !type) {
+    res.status(400).json({ success: false, error: 'url and type are required' })
+    return
+  }
+
+  const response = await axios.get(url, { responseType: 'arraybuffer' })
+  const buffer = Buffer.from(response.data)
+  const finalFilename = filename || `image_${Date.now()}.png`
+
+  const { filepath, filename: savedFilename, size_bytes } = await saveMediaFile(
+    buffer,
+    finalFilename,
+    type as any
+  )
+
+  const record = getDatabase().createMediaRecord({
+    filename: savedFilename,
+    original_name: finalFilename,
+    filepath,
+    type: type as any,
+    mime_type: response.headers['content-type'],
     size_bytes,
     source: source as any,
   })
