@@ -138,20 +138,3 @@ export async function retrieveFile(fileId: string): Promise<FileItem> {
 
   return response.json()
 }
-
-export async function downloadFile(fileId: string): Promise<Blob> {
-  const apiMode = getApiMode()
-  const endpoint = apiMode === 'proxy' ? `/files/retrieve?file_id=${fileId}` : `/v1/files/${fileId}/content`
-  
-  const response = await fetch(`${getBaseUrl()}${endpoint}`, {
-    method: 'GET',
-    headers: getHeaders(),
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.base_resp?.status_msg || error.error || 'Failed to download file')
-  }
-
-  return response.blob()
-}

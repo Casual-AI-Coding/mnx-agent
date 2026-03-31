@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { FolderOpen, Upload, Trash2, Download, FileText, Image, Music, Video, File, RefreshCw, Search, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FolderOpen, Upload, Trash2, FileText, Image, Music, Video, File, RefreshCw, Search, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useAppStore } from '@/stores/app'
 import { usePagination } from '@/hooks/usePagination'
-import { listFiles, uploadFile, deleteFile, downloadFile } from '@/lib/api/file'
+import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
 
 interface FileItem {
   file_id: string
@@ -142,22 +142,6 @@ export default function FileManagement() {
     }
   }
 
-  const handleDownload = async (fileId: string, fileName: string) => {
-    if (!apiKey) return
-
-    try {
-      const blob = await downloadFile(fileId)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '下载失败')
-    }
-  }
-
   const filteredFiles = files.filter(file =>
     (file.file_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -287,13 +271,6 @@ export default function FileManagement() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDownload(file.file_id, file.file_name)}
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
