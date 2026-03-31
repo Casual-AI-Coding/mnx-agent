@@ -127,7 +127,7 @@ export default function ImageGeneration() {
       const response = await generateImage({
         model,
         prompt: prompt.trim(),
-        n: numImages as 1 | 2 | 3 | 4,
+        n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
         aspect_ratio: aspectRatio,
         seed,
       })
@@ -385,8 +385,8 @@ export default function ImageGeneration() {
                 {/* Number of Images */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{t('imageGeneration.count') || '生成数量'}</label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4].map(n => (
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
                       <button
                         key={n}
                         onClick={() => setNumImages(n)}

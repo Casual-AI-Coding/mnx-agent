@@ -6,7 +6,7 @@ export interface ImageGenerationRequest {
   model: ImageModel
   prompt: string
   response_format?: 'url' | 'b64_json'
-  n?: 1 | 2 | 3 | 4
+  n?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
   prompt_optimizer?: boolean
   aspect_ratio?: AspectRatio
   seed?: number
