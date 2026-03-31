@@ -20,7 +20,9 @@ export async function* streamChatCompletion(
   }
 
   const reader = response.body?.getReader()
-  if (!reader) throw new Error('No reader available')
+  if (!reader) {
+    throw new Error('Stream reader unavailable: response body is null (ERR_NO_READER)')
+  }
 
   const decoder = new TextDecoder()
   let buffer = ''
