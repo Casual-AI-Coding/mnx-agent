@@ -29,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
+import { createMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import {
@@ -97,6 +98,28 @@ const taskVariants = {
     x: 20,
     transition: { duration: 0.3 },
   },
+}
+
+const saveToMedia = async (
+  audioUrl: string,
+  filename: string,
+  source: MediaSource
+): Promise<void> => {
+  try {
+    const response = await fetch(audioUrl)
+    const blob = await response.blob()
+    
+    await createMedia({
+      filename,
+      filepath: `/tmp/${filename}`,
+      type: 'audio',
+      mime_type: blob.type || 'audio/mp3',
+      size_bytes: blob.size,
+      source,
+    })
+  } catch (error) {
+    console.error('Failed to save media:', error)
+  }
 }
 
 export default function VoiceAsync() {
@@ -232,6 +255,8 @@ export default function VoiceAsync() {
               audioLength: status.results.audio_length,
             },
           })
+          
+          saveToMedia(status.results.audio_url, `voice_async_${Date.now()}.wav`, 'voice_async')
         } else if (status.status === 'failed') {
           newTask.error = '生成失败'
         }

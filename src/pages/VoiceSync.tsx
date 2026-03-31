@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/Slider'
 import { Label } from '@/components/ui/Label'
 import { Badge } from '@/components/ui/Badge'
 import { createSyncVoice } from '@/lib/api/voice'
+import { createMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
@@ -45,6 +46,27 @@ const cardHoverVariants = {
       ease: [0.4, 0, 0.2, 1],
     },
   },
+}
+
+const saveToMedia = async (
+  blob: Blob,
+  filename: string,
+  source: MediaSource
+): Promise<void> => {
+  try {
+    await blob.arrayBuffer()
+    
+    await createMedia({
+      filename,
+      filepath: `/tmp/${filename}`,
+      type: 'audio',
+      mime_type: blob.type || 'audio/wav',
+      size_bytes: blob.size,
+      source,
+    })
+  } catch (error) {
+    console.error('Failed to save media:', error)
+  }
 }
 
 function VoiceWaveform({ isPlaying }: { isPlaying: boolean }) {
@@ -245,6 +267,8 @@ export default function VoiceSync() {
           pitch,
         },
       })
+      
+      saveToMedia(blob, `voice_sync_${Date.now()}.wav`, 'voice_sync')
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成失败')
     } finally {
