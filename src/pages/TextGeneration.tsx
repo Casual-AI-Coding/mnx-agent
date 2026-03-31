@@ -1,22 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, Trash2, Bot, User } from 'lucide-react'
+import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
-import { Card, CardContent } from '@/components/ui/Card'
 import { streamChatCompletion } from '@/lib/api/text'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { TEXT_MODELS, SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Message {
   id: string
   role: 'system' | 'user' | 'assistant'
   content: string
   timestamp: number
+  error?: boolean
 }
 
 export default function TextGeneration() {
@@ -27,6 +27,7 @@ export default function TextGeneration() {
   const [selectedModel, setSelectedModel] = useState<string>(TEXT_MODELS[0].id)
   const [selectedTemplate, setSelectedTemplate] = useState('general')
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { addItem } = useHistoryStore()
@@ -151,6 +152,12 @@ export default function TextGeneration() {
     }] : [])
   }
 
+  const copyToClipboard = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current
     if (textarea) {
@@ -164,149 +171,219 @@ export default function TextGeneration() {
   }, [input])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">{t('textGeneration.title')}</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+            {t('textGeneration.title')}
+          </h1>
+          <p className="text-zinc-500 text-sm mt-1">
             {t('textGeneration.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={clearChat}>
+        <div className="flex items-center gap-3">
+          <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
+            <SelectTrigger className="w-48 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:border-violet-500/50 transition-colors">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {TEXT_MODELS.map(model => (
+                <SelectItem key={model.id} value={model.id} className="text-zinc-300 focus:bg-zinc-800">
+                  <div className="flex flex-col">
+                    <span>{model.name}</span>
+                    <span className="text-xs text-zinc-500">{model.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <SelectTrigger className="w-36 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:border-violet-500/50 transition-colors">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {SYSTEM_PROMPT_TEMPLATES.map(template => (
+                <SelectItem key={template.id} value={template.id} className="text-zinc-300 focus:bg-zinc-800">
+                  {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={clearChat}
+            className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+          >
             <Trash2 className="w-4 h-4 mr-2" />
             {t('textGeneration.clearChat')}
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 pb-2 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{t('textGeneration.model')}:</span>
-          <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TEXT_MODELS.map(model => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-xs text-muted-foreground">{model.description}</span>
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+        <AnimatePresence mode="popLayout">
+          {messages.filter(m => m.role !== 'system').length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center h-full text-zinc-500"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
+                <Sparkles className="w-16 h-16 relative text-violet-400/50" />
+              </div>
+              <p className="mt-6 text-lg font-medium text-zinc-400">{t('textGeneration.startConversation')}</p>
+              <p className="text-sm text-zinc-600 mt-2">{t('textGeneration.pressEnterToSend')}</p>
+            </motion.div>
+          )}
+
+          {messages.filter(m => m.role !== 'system').map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`relative group max-w-[85%] ${
+                  message.role === 'user'
+                    ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white'
+                    : 'bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 text-zinc-100'
+                } rounded-2xl ${message.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'} shadow-lg`}
+              >
+                {message.role === 'user' && (
+                  <div className="absolute inset-0 bg-violet-500/30 blur-xl rounded-2xl -z-10" />
+                )}
+                
+                {message.role === 'assistant' && (
+                  <div className="absolute inset-0 bg-violet-500/5 blur-xl rounded-2xl -z-10" />
+                )}
+
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      message.role === 'user' 
+                        ? 'bg-white/20' 
+                        : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <User className="w-3.5 h-3.5" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                      )}
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      message.role === 'user' ? 'text-white/80' : 'text-zinc-400'
+                    }`}>
+                      {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
+                    </span>
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{t('textGeneration.role')}:</span>
-          <Select value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SYSTEM_PROMPT_TEMPLATES.map(template => (
-                <SelectItem key={template.id} value={template.id}>
-                  {template.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-        {messages.filter(m => m.role !== 'system').length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Bot className="w-12 h-12 mb-4 opacity-50" />
-            <p>{t('textGeneration.startConversation')}</p>
-            <p className="text-sm">{t('textGeneration.pressEnterToSend')}</p>
-          </div>
-        )}
-
-        {messages.filter(m => m.role !== 'system').map((message) => (
-          <Card
-            key={message.id}
-            className={`${
-              message.role === 'user'
-                ? 'ml-auto max-w-[80%] bg-primary text-primary-foreground'
-                : 'mr-auto max-w-[80%]'
-            }`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.role === 'user' ? 'bg-primary-foreground/20' : 'bg-muted'
-                }`}>
-                  {message.role === 'user' ? (
-                    <User className="w-4 h-4" />
-                  ) : (
-                    <Bot className="w-4 h-4" />
+                  <div className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>
+                  
+                  {message.content && !message.error && (
+                    <button
+                      onClick={() => copyToClipboard(message.content, message.id)}
+                      className={`absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                        message.role === 'user' 
+                          ? 'hover:bg-white/20 text-white/70 hover:text-white' 
+                          : 'hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {copiedId === message.id ? (
+                        <Check className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium mb-1">
-                    {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
-                  </div>
-                  <div className="whitespace-pre-wrap">{message.content}</div>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         {isLoading && (
-          <Card className="mr-auto max-w-[80%]">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-start"
+          >
+            <div className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl rounded-bl-md px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-zinc-500 text-sm">{t('textGeneration.thinking')}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </motion.div>
         )}
 
         {lastError && !isRetrying && (
-          <RetryableError
-            error={lastError}
-            onRetry={() => {
-              if (lastUserMessage) {
-                setInput(lastUserMessage)
-                handleSend()
-              }
-            }}
-            retryCount={retryCount}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center"
+          >
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+              <RetryableError
+                error={lastError}
+                onRetry={() => {
+                  if (lastUserMessage) {
+                    setInput(lastUserMessage)
+                    handleSend()
+                  }
+                }}
+                retryCount={retryCount}
+              />
+            </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border rounded-lg p-4 bg-card">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t('textGeneration.placeholder')}
-            className="min-h-[60px] resize-none"
-            disabled={isLoading}
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="shrink-0"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-          <span>{t('textGeneration.enterToSend')}</span>
-          <span>{messages.filter(m => m.role !== 'system').length} {t('textGeneration.messages')}</span>
+      <div className="mt-4 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 blur-2xl rounded-2xl" />
+        
+        <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-2">
+          <div className="flex gap-2">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={t('textGeneration.placeholder')}
+              className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-600 resize-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed min-h-[52px] max-h-[200px]"
+              disabled={isLoading}
+              rows={1}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                input.trim() && !isLoading
+                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
+                  : 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed'
+              }`}
+            >
+              {isLoading ? (
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-600">
+            <span>{t('textGeneration.enterToSend')}</span>
+            <span>{messages.filter(m => m.role !== 'system').length} {t('textGeneration.messages')}</span>
+          </div>
         </div>
       </div>
     </div>

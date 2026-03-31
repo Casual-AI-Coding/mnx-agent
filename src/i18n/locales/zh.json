@@ -135,12 +135,14 @@
     "pressEnterToSend": "输入消息，按 Enter 发送",
     "you": "你",
     "aiAssistant": "AI 助手",
+    "thinking": "思考中...",
     "errorRetry": "抱歉，发生错误，请重试。",
     "streamError": "流式响应失败",
     "enterToSend": "按 Enter 发送，Shift+Enter 换行",
     "ctrlEnterToSend": "Ctrl+Enter 发送",
     "ctrlShiftCToCopy": "Ctrl+Shift+C 复制最后回复",
-    "copiedLastReply": "已复制最后回复"
+    "copiedLastReply": "已复制最后回复",
+    "messages": "条消息"
   },
   "voiceSync": {
     "title": "同步语音生成",

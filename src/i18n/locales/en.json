@@ -135,12 +135,14 @@
     "pressEnterToSend": "Type a message and press Enter to send",
     "you": "You",
     "aiAssistant": "AI Assistant",
+    "thinking": "Thinking...",
     "errorRetry": "Sorry, an error occurred. Please try again.",
     "streamError": "Streaming Response Failed",
     "enterToSend": "Press Enter to send, Shift+Enter for new line",
     "ctrlEnterToSend": "Ctrl+Enter to send",
     "ctrlShiftCToCopy": "Ctrl+Shift+C to copy last reply",
-    "copiedLastReply": "Copied last reply"
+    "copiedLastReply": "Copied last reply",
+    "messages": "messages"
   },
   "voiceSync": {
     "title": "Voice Sync Generation",
