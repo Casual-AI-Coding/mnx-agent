@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image as ImageIcon, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight } from 'lucide-react'
+import { Image as ImageIcon, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -13,6 +13,8 @@ import { useUsageStore } from '@/stores/usage'
 import { useAppStore } from '@/stores/app'
 import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 // Animation variants
 const containerVariants = {
@@ -64,6 +66,8 @@ export default function ImageGeneration() {
   const [seed, setSeed] = useState<number | undefined>()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
@@ -148,7 +152,9 @@ export default function ImageGeneration() {
       })
 
       if (urls.length > 0) {
-        await saveImageToMedia(urls[0])
+        for (const url of urls) {
+          await saveImageToMedia(url)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成失败')
@@ -170,6 +176,11 @@ export default function ImageGeneration() {
     } catch {
       window.open(url, '_blank')
     }
+  }
+
+  const handleImagePreview = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
   }
 
   const getAspectRatioClass = () => {
@@ -535,7 +546,10 @@ export default function ImageGeneration() {
                           className="relative group"
                         >
                           <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300" />
-                          <div className="relative overflow-hidden rounded-xl border border-zinc-800/50 bg-zinc-950/50">
+                          <div
+                            className="relative overflow-hidden rounded-xl border border-zinc-800/50 bg-zinc-950/50 cursor-pointer"
+                            onClick={() => handleImagePreview(index)}
+                          >
                             <img
                               src={url}
                               alt={`Generated ${index + 1}`}
@@ -543,13 +557,22 @@ export default function ImageGeneration() {
                             />
                             {/* Hover Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
-                              <button
-                                onClick={() => handleDownload(url, index)}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors backdrop-blur-sm"
-                              >
-                                <Download className="w-4 h-4" />
-                                {t('imageGeneration.download') || '下载图片'}
-                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleImagePreview(index); }}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors backdrop-blur-sm"
+                                >
+                                  <ZoomIn className="w-4 h-4" />
+                                  预览
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDownload(url, index); }}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors backdrop-blur-sm"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  下载
+                                </button>
+                              </div>
                             </div>
                             {/* Image Number Badge */}
                             <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-zinc-950/80 backdrop-blur-sm text-xs font-medium text-zinc-400 border border-zinc-800/50">
@@ -610,6 +633,13 @@ export default function ImageGeneration() {
           }}
         />
       </motion.div>
+
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        index={lightboxIndex}
+        slides={generatedImages.map(url => ({ src: url }))}
+      />
     </motion.div>
   )
 }
