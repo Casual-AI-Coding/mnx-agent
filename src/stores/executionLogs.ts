@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ExecutionLog } from '../types/cron'
+import { getLogs, getLogById } from '@/lib/api/cron'
 
 interface ExecutionLogsState {
   logs: ExecutionLog[]
@@ -8,15 +9,6 @@ interface ExecutionLogsState {
   error: string | null
   fetchLogs: (jobId?: string, limit?: number) => Promise<void>
   fetchLogById: (id: string) => Promise<ExecutionLog | null>
-}
-
-const placeholderApi = {
-  fetchLogs: async (jobId?: string, limit?: number): Promise<ExecutionLog[]> => {
-    return []
-  },
-  fetchLogById: async (id: string): Promise<ExecutionLog | null> => {
-    return null
-  },
 }
 
 export const useExecutionLogsStore = create<ExecutionLogsState>()(
@@ -29,8 +21,12 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
       fetchLogs: async (jobId, limit = 50) => {
         set({ loading: true, error: null })
         try {
-          const logs = await placeholderApi.fetchLogs(jobId, limit)
-          set({ logs, loading: false })
+          const response = await getLogs({ jobId, limit })
+          if (response.success && response.data) {
+            set({ logs: response.data.logs, loading: false })
+          } else {
+            set({ error: response.error || 'Failed to fetch logs', loading: false })
+          }
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to fetch logs',
@@ -45,16 +41,17 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
 
         set({ loading: true, error: null })
         try {
-          const log = await placeholderApi.fetchLogById(id)
-          if (log) {
+          const response = await getLogById(id)
+          if (response.success && response.data) {
             set((state) => ({
-              logs: [log, ...state.logs.filter((l) => l.id !== id)],
+              logs: [response.data!, ...state.logs.filter((l) => l.id !== id)],
               loading: false,
             }))
+            return response.data
           } else {
-            set({ loading: false })
+            set({ error: response.error || 'Failed to fetch log', loading: false })
+            return null
           }
-          return log
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to fetch log',

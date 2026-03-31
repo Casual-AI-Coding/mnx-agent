@@ -98,7 +98,6 @@ export class QueueProcessor {
           if (!skipFailed && task.retry_count < task.max_retries) {
             // Apply exponential backoff before requeuing
             const delayMs = this.calculateRetryDelay(task.retry_count)
-            console.log(`[QueueProcessor] Task ${task.id} will retry in ${delayMs}ms (attempt ${task.retry_count + 1}/${task.max_retries})`)
             await this.sleep(delayMs)
             await this.requeueTask(task)
           } else if (task.retry_count >= task.max_retries) {
@@ -217,7 +216,6 @@ export class QueueProcessor {
         error,
         task.retry_count
       )
-      console.log(`[QueueProcessor] Task ${task.id} moved to dead letter queue`)
     } catch (dbError) {
       console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, dbError)
     }

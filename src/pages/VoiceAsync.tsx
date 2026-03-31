@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText,
@@ -16,6 +16,7 @@ import {
   Layers,
   Mic,
 } from 'lucide-react'
+import { RetryableError } from '@/components/shared/RetryableError'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import {
@@ -110,12 +111,24 @@ export default function VoiceAsync() {
   const [fileId, setFileId] = useState<string | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadRetryCount, setUploadRetryCount] = useState(0)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pollingIntervalsRef = useRef<NodeJS.Timeout[]>([])
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
+
+  // Cleanup polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      pollingIntervalsRef.current.forEach(clearInterval)
+      pollingIntervalsRef.current = []
+    }
+  }, [])
 
   const createTask = async () => {
     if (activeTab === 'text' && (!text.trim() || isOverLimit)) return
@@ -186,8 +199,10 @@ export default function VoiceAsync() {
       const complete = await poll()
       if (complete || attempts >= maxAttempts) {
         clearInterval(interval)
+        pollingIntervalsRef.current = pollingIntervalsRef.current.filter(id => id !== interval)
       }
     }, 3000)
+    pollingIntervalsRef.current.push(interval)
   }
 
   const updateTaskStatus = (taskId: string, status: T2AAsyncStatusResponse) => {
@@ -226,15 +241,9 @@ export default function VoiceAsync() {
     )
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
-      alert('仅支持 .txt 和 .zip 文件')
-      return
-    }
-
+  const uploadFile = async (file: File) => {
+    setUploadError(null)
+    
     const formData = new FormData()
     formData.append('file', file)
 
@@ -258,9 +267,24 @@ export default function VoiceAsync() {
 
       const data = await response.json()
       setFileId(data.file_id)
+      setPendingFile(null)
+      setUploadRetryCount(0)
     } catch (err) {
-      alert('文件上传失败')
+      setUploadError(err instanceof Error ? err.message : '文件上传失败')
+      setPendingFile(file)
     }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
+      alert('仅支持 .txt 和 .zip 文件')
+      return
+    }
+
+    await uploadFile(file)
   }
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -274,32 +298,20 @@ export default function VoiceAsync() {
       return
     }
 
-    const formData = new FormData()
-    formData.append('file', file)
+    await uploadFile(file)
+  }
 
-    try {
-      const { region } = await import('@/stores/app').then(m => m.useAppStore.getState())
-      const { API_HOSTS } = await import('@/types')
-      const baseUrl = API_HOSTS[region]
-      const { apiKey } = await import('@/stores/app').then(m => m.useAppStore.getState())
-
-      const response = await fetch(`${baseUrl}/v1/files`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('上传失败')
-      }
-
-      const data = await response.json()
-      setFileId(data.file_id)
-    } catch (err) {
-      alert('文件上传失败')
+  const handleRetryUpload = () => {
+    if (pendingFile) {
+      setUploadRetryCount(prev => prev + 1)
+      uploadFile(pendingFile)
     }
+  }
+
+  const clearUploadError = () => {
+    setUploadError(null)
+    setPendingFile(null)
+    setUploadRetryCount(0)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -549,6 +561,32 @@ export default function VoiceAsync() {
                           className="hidden"
                         />
                       </div>
+                      <AnimatePresence>
+                        {uploadError && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="relative overflow-hidden"
+                          >
+                            <RetryableError
+                              error={uploadError}
+                              onRetry={handleRetryUpload}
+                              retryCount={uploadRetryCount}
+                              maxRetries={3}
+                              className="border-rose-500/30 bg-rose-500/5"
+                            />
+                            <button
+                              onClick={clearUploadError}
+                              className="absolute top-2 right-2 p-1 text-rose-400/70 hover:text-rose-400 transition-colors"
+                              aria-label="Dismiss error"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       <AnimatePresence>
                         {fileId && (
                           <motion.div

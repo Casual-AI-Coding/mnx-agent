@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Video, Download, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Lightbulb, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -107,7 +107,8 @@ export default function VideoAgent() {
 
       addUsage('videoRequests', 1)
 
-      pollTaskStatus(newTask.taskId)
+      const intervalId = await pollTaskStatus(newTask.taskId)
+      activeIntervals.current.set(newTask.taskId, intervalId)
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建任务失败')
     } finally {
@@ -161,7 +162,22 @@ export default function VideoAgent() {
         clearInterval(interval)
       }
     }, 5000)
+
+    return interval
   }
+
+  // Store active intervals for cleanup on unmount
+  const activeIntervals = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
+
+  // Cleanup all intervals on unmount
+  useEffect(() => {
+    return () => {
+      activeIntervals.current.forEach((intervalId) => {
+        clearInterval(intervalId)
+      })
+      activeIntervals.current.clear()
+    }
+  }, [])
 
   const removeTask = (taskId: string) => {
     setTasks(prev => prev.filter(t => t.taskId !== taskId))

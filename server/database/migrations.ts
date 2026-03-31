@@ -30,9 +30,6 @@ CREATE INDEX IF NOT EXISTS idx_capacity_tracking_service_type ON capacity_tracki
     id: 3,
     name: 'migration_003_enhanced_cron_features',
     sql: `
--- Add timeout_ms column to cron_jobs if not exists
-ALTER TABLE cron_jobs ADD COLUMN timeout_ms INTEGER DEFAULT 300000;
-
 -- Create execution_log_details table
 CREATE TABLE IF NOT EXISTS execution_log_details (
   id TEXT PRIMARY KEY,

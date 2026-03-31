@@ -7,6 +7,7 @@ import type {
   UpdateTaskDTO,
   TaskQueueFilter,
 } from '../types/cron'
+import { getTasks, createTask, updateTask, deleteTask } from '@/lib/api/cron'
 
 interface TaskQueueState {
   tasks: TaskQueueItem[]
@@ -20,51 +21,36 @@ interface TaskQueueState {
   setFilter: (filter: TaskQueueFilter) => void
 }
 
-const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-const placeholderApi = {
+const realApi = {
   fetchTasks: async (filter?: TaskQueueFilter): Promise<TaskQueueItem[]> => {
-    return []
+    const response = await getTasks(filter)
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Failed to fetch tasks')
+    }
+    return response.data.tasks
   },
   createTask: async (task: CreateTaskDTO): Promise<TaskQueueItem> => {
-    return {
-      id: generateId(),
-      jobId: task.jobId,
-      taskType: task.taskType,
-      payload: task.payload,
-      priority: task.priority ?? 1,
-      status: 'pending' as TaskStatus,
-      retryCount: 0,
-      maxRetries: task.maxRetries ?? 3,
-      errorMessage: null,
-      result: null,
-      createdAt: new Date().toISOString(),
-      startedAt: null,
-      completedAt: null,
+    const response = await createTask(task)
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Failed to create task')
     }
+    return response.data
   },
   updateTask: async (
     id: string,
     updates: UpdateTaskDTO
   ): Promise<TaskQueueItem> => {
-    return {
-      id,
-      jobId: 'placeholder',
-      taskType: 'placeholder',
-      payload: {},
-      priority: 1,
-      status: updates.status ?? 'pending' as TaskStatus,
-      retryCount: updates.retryCount ?? 0,
-      maxRetries: 3,
-      errorMessage: updates.errorMessage ?? null,
-      result: updates.result ?? null,
-      createdAt: new Date().toISOString(),
-      startedAt: updates.startedAt ?? null,
-      completedAt: updates.completedAt ?? null,
+    const response = await updateTask(id, updates)
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Failed to update task')
     }
+    return response.data
   },
   deleteTask: async (id: string): Promise<void> => {
-    console.log(`Placeholder: Deleting task ${id}`)
+    const response = await deleteTask(id)
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to delete task')
+    }
   },
 }
 
@@ -79,7 +65,7 @@ export const useTaskQueueStore = create<TaskQueueState>()(
       fetchTasks: async (filter) => {
         set({ loading: true, error: null, filter: filter ?? {} })
         try {
-          const tasks = await placeholderApi.fetchTasks(filter)
+          const tasks = await realApi.fetchTasks(filter)
           set({ tasks, loading: false })
         } catch (err) {
           set({
@@ -92,7 +78,7 @@ export const useTaskQueueStore = create<TaskQueueState>()(
       createTask: async (taskData) => {
         set({ loading: true, error: null })
         try {
-          const newTask = await placeholderApi.createTask(taskData)
+          const newTask = await realApi.createTask(taskData)
           set((state) => ({
             tasks: [...state.tasks, newTask],
             loading: false,
@@ -110,7 +96,7 @@ export const useTaskQueueStore = create<TaskQueueState>()(
       updateTask: async (id, updates) => {
         set({ loading: true, error: null })
         try {
-          const updatedTask = await placeholderApi.updateTask(id, updates)
+          const updatedTask = await realApi.updateTask(id, updates)
           set((state) => ({
             tasks: state.tasks.map((task) =>
               task.id === id ? { ...task, ...updatedTask } : task
@@ -130,7 +116,7 @@ export const useTaskQueueStore = create<TaskQueueState>()(
       deleteTask: async (id) => {
         set({ loading: true, error: null })
         try {
-          await placeholderApi.deleteTask(id)
+          await realApi.deleteTask(id)
           set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== id),
             loading: false,

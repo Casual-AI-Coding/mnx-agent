@@ -58,9 +58,7 @@ app.use(errorHandler)
 // Initialize services with dependency injection
 try {
   const dbService = getDatabase()
-  console.log('📦 Database initialized')
   runMigrations(dbService.getDatabase())
-  console.log('📦 Database migrations applied')
 
   // Core services
   const minimaxClient = getMiniMaxClient()
@@ -78,13 +76,9 @@ try {
   const cronScheduler = new CronScheduler(dbService, workflowEngine)
 
   // Initialize scheduler (load jobs from DB and start cron tasks)
-  cronScheduler.init().then(() => {
-    console.log('⏰ Cron scheduler initialized')
-  }).catch((error) => {
+  cronScheduler.init().catch((error) => {
     console.warn('⚠️  Cron scheduler initialization failed:', (error as Error).message)
   })
-
-  console.log('🔧 All cron services wired up successfully')
 } catch (error) {
   console.warn('⚠️  Service initialization failed:', (error as Error).message)
 }
