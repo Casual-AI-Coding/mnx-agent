@@ -11,20 +11,35 @@ import type {
   ExecutionLog,
   CapacityRecord,
   WorkflowTemplate,
+  JobTag,
+  JobDependency,
+  WebhookConfig,
+  WebhookDelivery,
+  DeadLetterItem,
   CreateCronJob,
   CreateTaskQueueItem,
   CreateExecutionLog,
+  CreateWebhookConfig,
+  CreateWebhookDelivery,
+  CreateDeadLetterItem,
   UpdateCronJob,
   UpdateTaskQueueItem,
   UpdateExecutionLog,
   UpdateCapacityRecord,
   UpdateWorkflowTemplate,
+  UpdateWebhookConfig,
+  UpdateDeadLetterItem,
   RunStats,
   CronJobRow,
   TaskQueueRow,
   ExecutionLogRow,
   CapacityRecordRow,
   WorkflowTemplateRow,
+  JobTagRow,
+  JobDependencyRow,
+  WebhookConfigRow,
+  WebhookDeliveryRow,
+  DeadLetterItemRow,
 } from './types.js'
 
 function toISODate(): string {
@@ -32,7 +47,11 @@ function toISODate(): string {
 }
 
 function rowToCronJob(row: CronJobRow): CronJob {
-  return { ...row, is_active: row.is_active === 1 }
+  return { 
+    ...row, 
+    is_active: row.is_active === 1,
+    timeout_ms: row.timeout_ms ?? 300000,
+  }
 }
 
 function rowToTaskQueueItem(row: TaskQueueRow): TaskQueueItem {
@@ -49,6 +68,34 @@ function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
 
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
   return { ...row, is_template: row.is_template === 1 }
+}
+
+function rowToJobTag(row: JobTagRow): JobTag {
+  return row
+}
+
+function rowToJobDependency(row: JobDependencyRow): JobDependency {
+  return row
+}
+
+function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
+  return {
+    ...row,
+    events: JSON.parse(row.events) as import('./types.js').WebhookEvent[],
+    headers: row.headers ? JSON.parse(row.headers) : null,
+    is_active: row.is_active === 1,
+  }
+}
+
+function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
+  return row
+}
+
+function rowToDeadLetterItem(row: DeadLetterItemRow): DeadLetterItem {
+  return {
+    ...row,
+    resolution: row.resolution as 'retried' | 'discarded' | 'manual' | null,
+  }
 }
 
 export class DatabaseService {
@@ -74,6 +121,19 @@ export class DatabaseService {
     return this.db
   }
 
+  isConnected(): boolean {
+    try {
+      this.db.prepare('SELECT 1').get()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // ============================================
+  // Cron Jobs
+  // ============================================
+
   getAllCronJobs(): CronJob[] {
     const rows = this.db.prepare('SELECT * FROM cron_jobs ORDER BY created_at DESC').all() as CronJobRow[]
     return rows.map(rowToCronJob)
@@ -88,9 +148,9 @@ export class DatabaseService {
     const id = uuidv4()
     const now = toISODate()
     this.db.prepare(`
-      INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, job.name, job.description ?? null, job.cron_expression, job.is_active !== false ? 1 : 0, job.workflow_json, now, now)
+      INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_json, created_at, updated_at, timeout_ms)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, job.name, job.description ?? null, job.cron_expression, job.is_active !== false ? 1 : 0, job.workflow_json, now, now, job.timeout_ms ?? 300000)
     return this.getCronJobById(id)!
   }
 
@@ -110,6 +170,7 @@ export class DatabaseService {
     if (updates.next_run_at !== undefined) { fields.push('next_run_at = ?'); values.push(updates.next_run_at) }
     if (updates.total_runs !== undefined) { fields.push('total_runs = ?'); values.push(updates.total_runs) }
     if (updates.total_failures !== undefined) { fields.push('total_failures = ?'); values.push(updates.total_failures) }
+    if (updates.timeout_ms !== undefined) { fields.push('timeout_ms = ?'); values.push(updates.timeout_ms) }
 
     if (fields.length === 0) return existing
     fields.push('updated_at = ?')
@@ -150,6 +211,10 @@ export class DatabaseService {
     const rows = this.db.prepare('SELECT * FROM cron_jobs WHERE is_active = 1 ORDER BY created_at DESC').all() as CronJobRow[]
     return rows.map(rowToCronJob)
   }
+
+  // ============================================
+  // Task Queue
+  // ============================================
 
   getAllTasks(status?: TaskStatus): TaskQueueItem[] {
     const sql = status
@@ -211,6 +276,21 @@ export class DatabaseService {
     return rows.map(rowToTaskQueueItem)
   }
 
+  getPendingTaskCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM task_queue WHERE status = ?').get('pending') as { count: number }
+    return row?.count ?? 0
+  }
+
+  getRunningTaskCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM task_queue WHERE status = ?').get('running') as { count: number }
+    return row?.count ?? 0
+  }
+
+  getFailedTaskCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM task_queue WHERE status = ?').get('failed') as { count: number }
+    return row?.count ?? 0
+  }
+
   markTaskRunning(id: string): TaskQueueItem | null {
     this.db.prepare(`UPDATE task_queue SET status = ?, started_at = ? WHERE id = ?`).run('running', toISODate(), id)
     return this.getTaskById(id)
@@ -235,6 +315,10 @@ export class DatabaseService {
     const rows = this.db.prepare('SELECT * FROM task_queue WHERE job_id = ? ORDER BY created_at ASC').all(jobId) as TaskQueueRow[]
     return rows.map(rowToTaskQueueItem)
   }
+
+  // ============================================
+  // Execution Logs
+  // ============================================
 
   getAllExecutionLogs(jobId?: string, limit: number = 100): ExecutionLog[] {
     const sql = jobId
@@ -290,6 +374,10 @@ export class DatabaseService {
     return this.getAllExecutionLogs(undefined, limit)
   }
 
+  // ============================================
+  // Capacity Tracking
+  // ============================================
+
   getAllCapacityRecords(): CapacityRecord[] {
     const rows = this.db.prepare('SELECT * FROM capacity_tracking ORDER BY service_type').all() as CapacityRecordRow[]
     return rows.map(rowToCapacityRecord)
@@ -315,6 +403,270 @@ export class DatabaseService {
       .run(id, serviceType, data.remaining_quota, data.total_quota, data.reset_at ?? null, now)
     return this.getCapacityByService(serviceType)!
   }
+
+  // ============================================
+  // Workflow Templates
+  // ============================================
+
+  getAllWorkflowTemplates(): WorkflowTemplate[] {
+    const rows = this.db.prepare('SELECT * FROM workflow_templates ORDER BY created_at DESC').all() as WorkflowTemplateRow[]
+    return rows.map(rowToWorkflowTemplate)
+  }
+
+  getWorkflowTemplateById(id: string): WorkflowTemplate | null {
+    const row = this.db.prepare('SELECT * FROM workflow_templates WHERE id = ?').get(id) as WorkflowTemplateRow | undefined
+    return row ? rowToWorkflowTemplate(row) : null
+  }
+
+  createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_template?: boolean }): WorkflowTemplate {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare(`INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_template) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, template.is_template !== false ? 1 : 0)
+    return this.getWorkflowTemplateById(id)!
+  }
+
+  updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplate): WorkflowTemplate | null {
+    const existing = this.getWorkflowTemplateById(id)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | number | null)[] = []
+
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name) }
+    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description) }
+    if (updates.nodes_json !== undefined) { fields.push('nodes_json = ?'); values.push(updates.nodes_json) }
+    if (updates.edges_json !== undefined) { fields.push('edges_json = ?'); values.push(updates.edges_json) }
+    if (updates.is_template !== undefined) { fields.push('is_template = ?'); values.push(updates.is_template ? 1 : 0) }
+
+    if (fields.length === 0) return existing
+    values.push(id)
+    this.db.prepare(`UPDATE workflow_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+    return this.getWorkflowTemplateById(id)
+  }
+
+  deleteWorkflowTemplate(id: string): boolean {
+    return this.db.prepare('DELETE FROM workflow_templates WHERE id = ?').run(id).changes > 0
+  }
+
+  getMarkedWorkflowTemplates(): WorkflowTemplate[] {
+    const rows = this.db.prepare('SELECT * FROM workflow_templates WHERE is_template = 1 ORDER BY created_at DESC').all() as WorkflowTemplateRow[]
+    return rows.map(rowToWorkflowTemplate)
+  }
+
+  // ============================================
+  // Job Tags
+  // ============================================
+
+  getJobTags(jobId: string): string[] {
+    const rows = this.db.prepare('SELECT tag FROM job_tags WHERE job_id = ? ORDER BY tag').all(jobId) as { tag: string }[]
+    return rows.map(r => r.tag)
+  }
+
+  addJobTag(jobId: string, tag: string): JobTag {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare('INSERT INTO job_tags (id, job_id, tag, created_at) VALUES (?, ?, ?, ?)').run(id, jobId, tag, now)
+    return { id, job_id: jobId, tag, created_at: now }
+  }
+
+  removeJobTag(jobId: string, tag: string): boolean {
+    return this.db.prepare('DELETE FROM job_tags WHERE job_id = ? AND tag = ?').run(jobId, tag).changes > 0
+  }
+
+  getJobsByTag(tag: string): CronJob[] {
+    const rows = this.db.prepare(`
+      SELECT j.* FROM cron_jobs j
+      INNER JOIN job_tags t ON j.id = t.job_id
+      WHERE t.tag = ?
+      ORDER BY j.created_at DESC
+    `).all(tag) as CronJobRow[]
+    return rows.map(rowToCronJob)
+  }
+
+  getAllTags(): string[] {
+    const rows = this.db.prepare('SELECT DISTINCT tag FROM job_tags ORDER BY tag').all() as { tag: string }[]
+    return rows.map(r => r.tag)
+  }
+
+  // ============================================
+  // Job Dependencies
+  // ============================================
+
+  getJobDependencies(jobId: string): string[] {
+    const rows = this.db.prepare('SELECT depends_on_job_id FROM job_dependencies WHERE job_id = ?').all(jobId) as { depends_on_job_id: string }[]
+    return rows.map(r => r.depends_on_job_id)
+  }
+
+  getJobDependents(jobId: string): string[] {
+    const rows = this.db.prepare('SELECT job_id FROM job_dependencies WHERE depends_on_job_id = ?').all(jobId) as { job_id: string }[]
+    return rows.map(r => r.job_id)
+  }
+
+  addJobDependency(jobId: string, dependsOnJobId: string): JobDependency {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare('INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES (?, ?, ?, ?)').run(id, jobId, dependsOnJobId, now)
+    return { id, job_id: jobId, depends_on_job_id: dependsOnJobId, created_at: now }
+  }
+
+  removeJobDependency(jobId: string, dependsOnJobId: string): boolean {
+    return this.db.prepare('DELETE FROM job_dependencies WHERE job_id = ? AND depends_on_job_id = ?').run(jobId, dependsOnJobId).changes > 0
+  }
+
+  // ============================================
+  // Webhook Configs
+  // ============================================
+
+  getWebhookConfigs(jobId?: string): WebhookConfig[] {
+    const sql = jobId
+      ? 'SELECT * FROM webhook_configs WHERE job_id = ? AND is_active = 1'
+      : 'SELECT * FROM webhook_configs WHERE is_active = 1'
+    const rows = jobId 
+      ? this.db.prepare(sql).all(jobId) as WebhookConfigRow[]
+      : this.db.prepare(sql).all() as WebhookConfigRow[]
+    return rows.map(rowToWebhookConfig)
+  }
+
+  getWebhookConfigById(id: string): WebhookConfig | null {
+    const row = this.db.prepare('SELECT * FROM webhook_configs WHERE id = ?').get(id) as WebhookConfigRow | undefined
+    return row ? rowToWebhookConfig(row) : null
+  }
+
+  createWebhookConfig(config: CreateWebhookConfig): WebhookConfig {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare(`
+      INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      config.job_id ?? null,
+      config.name,
+      config.url,
+      JSON.stringify(config.events),
+      config.headers ? JSON.stringify(config.headers) : null,
+      config.secret ?? null,
+      config.is_active !== false ? 1 : 0,
+      now,
+      now
+    )
+    return this.getWebhookConfigById(id)!
+  }
+
+  updateWebhookConfig(id: string, updates: UpdateWebhookConfig): WebhookConfig | null {
+    const existing = this.getWebhookConfigById(id)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | number | null)[] = []
+
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name) }
+    if (updates.url !== undefined) { fields.push('url = ?'); values.push(updates.url) }
+    if (updates.events !== undefined) { fields.push('events = ?'); values.push(JSON.stringify(updates.events)) }
+    if (updates.headers !== undefined) { fields.push('headers = ?'); values.push(updates.headers ? JSON.stringify(updates.headers) : null) }
+    if (updates.secret !== undefined) { fields.push('secret = ?'); values.push(updates.secret) }
+    if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0) }
+
+    if (fields.length === 0) return existing
+    fields.push('updated_at = ?')
+    values.push(toISODate())
+    values.push(id)
+    this.db.prepare(`UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+    return this.getWebhookConfigById(id)
+  }
+
+  deleteWebhookConfig(id: string): boolean {
+    return this.db.prepare('DELETE FROM webhook_configs WHERE id = ?').run(id).changes > 0
+  }
+
+  // ============================================
+  // Webhook Deliveries
+  // ============================================
+
+  createWebhookDelivery(delivery: CreateWebhookDelivery): WebhookDelivery {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare(`
+      INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, delivered_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      delivery.webhook_id,
+      delivery.execution_log_id ?? null,
+      delivery.event,
+      delivery.payload,
+      delivery.response_status ?? null,
+      delivery.response_body ?? null,
+      delivery.error_message ?? null,
+      now
+    )
+    return { ...delivery, id, delivered_at: now }
+  }
+
+  getWebhookDeliveries(webhookId: string, limit: number = 100): WebhookDelivery[] {
+    const rows = this.db.prepare('SELECT * FROM webhook_deliveries WHERE webhook_id = ? ORDER BY delivered_at DESC LIMIT ?')
+      .all(webhookId, limit) as WebhookDeliveryRow[]
+    return rows.map(rowToWebhookDelivery)
+  }
+
+  // ============================================
+  // Dead Letter Queue
+  // ============================================
+
+  createDeadLetterItem(item: CreateDeadLetterItem): DeadLetterItem {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare(`
+      INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      item.original_task_id ?? null,
+      item.job_id ?? null,
+      item.task_type,
+      item.payload,
+      item.error_message ?? null,
+      now,
+      item.retry_count ?? 0
+    )
+    return this.getDeadLetterItemById(id)!
+  }
+
+  getDeadLetterItemById(id: string): DeadLetterItem | null {
+    const row = this.db.prepare('SELECT * FROM dead_letter_queue WHERE id = ?').get(id) as DeadLetterItemRow | undefined
+    return row ? rowToDeadLetterItem(row) : null
+  }
+
+  getDeadLetterQueue(limit: number = 100): DeadLetterItem[] {
+    const rows = this.db.prepare('SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT ?')
+      .all(limit) as DeadLetterItemRow[]
+    return rows.map(rowToDeadLetterItem)
+  }
+
+  updateDeadLetterItem(id: string, updates: UpdateDeadLetterItem): DeadLetterItem | null {
+    const existing = this.getDeadLetterItemById(id)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | null)[] = []
+
+    if (updates.resolved_at !== undefined) { fields.push('resolved_at = ?'); values.push(updates.resolved_at) }
+    if (updates.resolution !== undefined) { fields.push('resolution = ?'); values.push(updates.resolution) }
+
+    if (fields.length === 0) return existing
+    values.push(id)
+    this.db.prepare(`UPDATE dead_letter_queue SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+    return this.getDeadLetterItemById(id)
+  }
+
+  deleteDeadLetterItem(id: string): boolean {
+    return this.db.prepare('DELETE FROM dead_letter_queue WHERE id = ?').run(id).changes > 0
+  }
+
+  // ============================================
+  // Legacy compatibility methods
+  // ============================================
 
   updateTaskStatus(taskId: string, status: TaskStatus, updates?: { started_at?: string | null; completed_at?: string | null; error_message?: string | null; result?: string | null }): Promise<void> {
     const existing = this.getTaskById(taskId)
@@ -369,139 +721,6 @@ export class DatabaseService {
     const newRemaining = Math.max(0, existing.remaining_quota - amount)
     this.db.prepare(`UPDATE capacity_tracking SET remaining_quota = ?, last_checked_at = ? WHERE service_type = ?`).run(newRemaining, toISODate(), serviceType)
     return this.getCapacityByService(serviceType)
-  }
-
-  getAllWorkflowTemplates(): WorkflowTemplate[] {
-    const rows = this.db.prepare('SELECT * FROM workflow_templates ORDER BY created_at DESC').all() as WorkflowTemplateRow[]
-    return rows.map(rowToWorkflowTemplate)
-  }
-
-  getWorkflowTemplateById(id: string): WorkflowTemplate | null {
-    const row = this.db.prepare('SELECT * FROM workflow_templates WHERE id = ?').get(id) as WorkflowTemplateRow | undefined
-    return row ? rowToWorkflowTemplate(row) : null
-  }
-
-  createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_template?: boolean }): WorkflowTemplate {
-    const id = uuidv4()
-    const now = toISODate()
-    this.db.prepare(`INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_template) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, template.is_template !== false ? 1 : 0)
-    return this.getWorkflowTemplateById(id)!
-  }
-
-  updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplate): WorkflowTemplate | null {
-    const existing = this.getWorkflowTemplateById(id)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | null)[] = []
-
-    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name) }
-    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description) }
-    if (updates.nodes_json !== undefined) { fields.push('nodes_json = ?'); values.push(updates.nodes_json) }
-    if (updates.edges_json !== undefined) { fields.push('edges_json = ?'); values.push(updates.edges_json) }
-    if (updates.is_template !== undefined) { fields.push('is_template = ?'); values.push(updates.is_template ? 1 : 0) }
-
-    if (fields.length === 0) return existing
-    values.push(id)
-    this.db.prepare(`UPDATE workflow_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values)
-    return this.getWorkflowTemplateById(id)
-  }
-
-  deleteWorkflowTemplate(id: string): boolean {
-    return this.db.prepare('DELETE FROM workflow_templates WHERE id = ?').run(id).changes > 0
-  }
-
-  getMarkedWorkflowTemplates(): WorkflowTemplate[] {
-    const rows = this.db.prepare('SELECT * FROM workflow_templates WHERE is_template = 1 ORDER BY created_at DESC').all() as WorkflowTemplateRow[]
-    return rows.map(rowToWorkflowTemplate)
-  }
-
-  // ============================================
-  // Job Tags
-  // ============================================
-
-  getJobTags(jobId: string): string[] {
-    const rows = this.db.prepare('SELECT tag FROM job_tags WHERE job_id = ? ORDER BY created_at').all(jobId) as { tag: string }[]
-    return rows.map(r => r.tag)
-  }
-
-  addJobTag(jobId: string, tag: string): void {
-    const id = uuidv4()
-    this.db.prepare('INSERT OR IGNORE INTO job_tags (id, job_id, tag, created_at) VALUES (?, ?, ?, ?)')
-      .run(id, jobId, tag, toISODate())
-  }
-
-  removeJobTag(jobId: string, tag: string): boolean {
-    return this.db.prepare('DELETE FROM job_tags WHERE job_id = ? AND tag = ?').run(jobId, tag).changes > 0
-  }
-
-  getJobsByTag(tag: string): CronJob[] {
-    const rows = this.db.prepare(`
-      SELECT c.* FROM cron_jobs c
-      JOIN job_tags jt ON c.id = jt.job_id
-      WHERE jt.tag = ?
-      ORDER BY c.created_at DESC
-    `).all(tag) as CronJobRow[]
-    return rows.map(rowToCronJob)
-  }
-
-  // ============================================
-  // Job Dependencies
-  // ============================================
-
-  getJobDependencies(jobId: string): string[] {
-    const rows = this.db.prepare('SELECT depends_on_job_id FROM job_dependencies WHERE job_id = ?').all(jobId) as { depends_on_job_id: string }[]
-    return rows.map(r => r.depends_on_job_id)
-  }
-
-  addJobDependency(jobId: string, dependsOnJobId: string): void {
-    const id = uuidv4()
-    this.db.prepare('INSERT OR IGNORE INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES (?, ?, ?, ?)')
-      .run(id, jobId, dependsOnJobId, toISODate())
-  }
-
-  removeJobDependency(jobId: string, dependsOnJobId: string): boolean {
-    return this.db.prepare('DELETE FROM job_dependencies WHERE job_id = ? AND depends_on_job_id = ?').run(jobId, dependsOnJobId).changes > 0
-  }
-
-  // ============================================
-  // Dead Letter Queue
-  // ============================================
-
-  getDeadLetterQueue(limit: number = 100): { id: string; original_task_id: string | null; job_id: string | null; task_type: string; payload: string; error_message: string | null; failed_at: string; retry_count: number }[] {
-    return this.db.prepare('SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT ?').all(limit) as { id: string; original_task_id: string | null; job_id: string | null; task_type: string; payload: string; error_message: string | null; failed_at: string; retry_count: number }[]
-  }
-
-  addToDeadLetterQueue(data: { original_task_id?: string; job_id?: string; task_type: string; payload: string; error_message?: string }): string {
-    const id = uuidv4()
-    this.db.prepare(`INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`)
-      .run(id, data.original_task_id ?? null, data.job_id ?? null, data.task_type, data.payload, data.error_message ?? null, toISODate())
-    return id
-  }
-
-  resolveDeadLetterItem(id: string, resolution: 'retried' | 'discarded' | 'manual'): boolean {
-    return this.db.prepare('UPDATE dead_letter_queue SET resolved_at = ?, resolution = ? WHERE id = ?')
-      .run(toISODate(), resolution, id).changes > 0
-  }
-
-  // ============================================
-  // Pending Task Count
-  // ============================================
-
-  getPendingTaskCount(): number {
-    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'pending'").get() as { count: number }
-    return row.count
-  }
-
-  getRunningTaskCount(): number {
-    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'running'").get() as { count: number }
-    return row.count
-  }
-
-  getFailedTaskCount(): number {
-    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'failed'").get() as { count: number }
-    return row.count
   }
 }
 

@@ -18,6 +18,7 @@ export enum TriggerType {
   CRON = 'cron',
   MANUAL = 'manual',
   RETRY = 'retry',
+  WEBHOOK = 'webhook',
 }
 
 export enum ExecutionStatus {
@@ -25,6 +26,12 @@ export enum ExecutionStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   PARTIAL = 'partial',
+}
+
+export enum WebhookEvent {
+  ON_START = 'on_start',
+  ON_SUCCESS = 'on_success',
+  ON_FAILURE = 'on_failure',
 }
 
 // ============================================================================
@@ -44,6 +51,7 @@ export interface CronJob {
   next_run_at: string | null
   total_runs: number
   total_failures: number
+  timeout_ms: number | null
 }
 
 export interface TaskQueueItem {
@@ -77,6 +85,19 @@ export interface ExecutionLog {
   log_detail: string | null
 }
 
+export interface ExecutionLogDetail {
+  id: string
+  log_id: string
+  node_id: string | null
+  node_type: string | null
+  input_payload: string | null
+  output_result: string | null
+  error_message: string | null
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
+}
+
 export interface CapacityRecord {
   id: string
   service_type: string
@@ -97,6 +118,70 @@ export interface WorkflowTemplate {
 }
 
 // ============================================================================
+// Job Organization & Dependencies
+// ============================================================================
+
+export interface JobTag {
+  id: string
+  job_id: string
+  tag: string
+  created_at: string
+}
+
+export interface JobDependency {
+  id: string
+  job_id: string
+  depends_on_job_id: string
+  created_at: string
+}
+
+// ============================================================================
+// Webhooks & Notifications
+// ============================================================================
+
+export interface WebhookConfig {
+  id: string
+  job_id: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers: Record<string, string> | null
+  secret: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookDelivery {
+  id: string
+  webhook_id: string
+  execution_log_id: string | null
+  event: string
+  payload: string
+  response_status: number | null
+  response_body: string | null
+  error_message: string | null
+  delivered_at: string
+}
+
+// ============================================================================
+// Dead Letter Queue
+// ============================================================================
+
+export interface DeadLetterItem {
+  id: string
+  original_task_id: string | null
+  job_id: string | null
+  task_type: string
+  payload: string
+  error_message: string | null
+  failed_at: string
+  retry_count: number
+  resolved_at: string | null
+  resolution: 'retried' | 'discarded' | 'manual' | null
+}
+
+// ============================================================================
 // Create DTOs (for inserting new records)
 // ============================================================================
 
@@ -106,6 +191,7 @@ export interface CreateCronJob {
   cron_expression: string
   is_active?: boolean
   workflow_json: string
+  timeout_ms?: number
 }
 
 export interface CreateTaskQueueItem {
@@ -128,6 +214,18 @@ export interface CreateExecutionLog {
   log_detail?: string | null
 }
 
+export interface CreateExecutionLogDetail {
+  log_id: string
+  node_id?: string | null
+  node_type?: string | null
+  input_payload?: string | null
+  output_result?: string | null
+  error_message?: string | null
+  started_at?: string | null
+  completed_at?: string | null
+  duration_ms?: number | null
+}
+
 export interface CreateCapacityRecord {
   service_type: string
   remaining_quota: number
@@ -141,6 +239,45 @@ export interface CreateWorkflowTemplate {
   nodes_json: string
   edges_json: string
   is_template?: boolean
+}
+
+export interface CreateJobTag {
+  job_id: string
+  tag: string
+}
+
+export interface CreateJobDependency {
+  job_id: string
+  depends_on_job_id: string
+}
+
+export interface CreateWebhookConfig {
+  job_id?: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  is_active?: boolean
+}
+
+export interface CreateWebhookDelivery {
+  webhook_id: string
+  execution_log_id?: string | null
+  event: string
+  payload: string
+  response_status?: number | null
+  response_body?: string | null
+  error_message?: string | null
+}
+
+export interface CreateDeadLetterItem {
+  original_task_id?: string | null
+  job_id?: string | null
+  task_type: string
+  payload: string
+  error_message?: string | null
+  retry_count?: number
 }
 
 // ============================================================================
@@ -157,6 +294,7 @@ export interface UpdateCronJob {
   next_run_at?: string | null
   total_runs?: number
   total_failures?: number
+  timeout_ms?: number
 }
 
 export interface UpdateTaskQueueItem {
@@ -193,6 +331,20 @@ export interface UpdateWorkflowTemplate {
   is_template?: boolean
 }
 
+export interface UpdateWebhookConfig {
+  name?: string
+  url?: string
+  events?: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  is_active?: boolean
+}
+
+export interface UpdateDeadLetterItem {
+  resolved_at?: string
+  resolution?: 'retried' | 'discarded' | 'manual'
+}
+
 // ============================================================================
 // Run Statistics DTO
 // ============================================================================
@@ -223,6 +375,7 @@ export interface CronJobRow {
   next_run_at: string | null
   total_runs: number
   total_failures: number
+  timeout_ms: number | null
 }
 
 export interface TaskQueueRow {
@@ -256,6 +409,19 @@ export interface ExecutionLogRow {
   log_detail: string | null
 }
 
+export interface ExecutionLogDetailRow {
+  id: string
+  log_id: string
+  node_id: string | null
+  node_type: string | null
+  input_payload: string | null
+  output_result: string | null
+  error_message: string | null
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
+}
+
 export interface CapacityRecordRow {
   id: string
   service_type: string
@@ -275,8 +441,71 @@ export interface WorkflowTemplateRow {
   is_template: number
 }
 
+export interface JobTagRow {
+  id: string
+  job_id: string
+  tag: string
+  created_at: string
+}
+
+export interface JobDependencyRow {
+  id: string
+  job_id: string
+  depends_on_job_id: string
+  created_at: string
+}
+
+export interface WebhookConfigRow {
+  id: string
+  job_id: string | null
+  name: string
+  url: string
+  events: string
+  headers: string | null
+  secret: string | null
+  is_active: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookDeliveryRow {
+  id: string
+  webhook_id: string
+  execution_log_id: string | null
+  event: string
+  payload: string
+  response_status: number | null
+  response_body: string | null
+  error_message: string | null
+  delivered_at: string
+}
+
+export interface DeadLetterItemRow {
+  id: string
+  original_task_id: string | null
+  job_id: string | null
+  task_type: string
+  payload: string
+  error_message: string | null
+  failed_at: string
+  retry_count: number
+  resolved_at: string | null
+  resolution: string | null
+}
+
 export interface MigrationRow {
   id: number
   name: string
   executed_at: string
+}
+
+// ============================================================================
+// Utility Types
+// ============================================================================
+
+export type JobWithTags = CronJob & { tags: string[] }
+export type JobWithDependencies = CronJob & { 
+  tags: string[]
+  dependencies: string[] 
+  dependents: string[]
 }
