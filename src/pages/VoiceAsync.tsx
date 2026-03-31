@@ -29,7 +29,7 @@ import {
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
-import { createMedia, type MediaSource } from '@/lib/api/media'
+import { uploadMedia, uploadMediaFromUrl, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import {
@@ -108,15 +108,7 @@ const saveToMedia = async (
   try {
     const response = await fetch(audioUrl)
     const blob = await response.blob()
-    
-    await createMedia({
-      filename,
-      filepath: `/tmp/${filename}`,
-      type: 'audio',
-      mime_type: blob.type || 'audio/mp3',
-      size_bytes: blob.size,
-      source,
-    })
+    await uploadMedia(blob, filename, 'audio', source)
   } catch (error) {
     console.error('Failed to save media:', error)
   }

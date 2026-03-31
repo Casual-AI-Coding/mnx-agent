@@ -112,3 +112,35 @@ export function getMediaSourceLabel(source: MediaSource): string {
   }
   return labels[source]
 }
+
+export async function uploadMedia(
+  blob: Blob,
+  filename: string,
+  type: MediaType,
+  source?: MediaSource
+): Promise<{ success: boolean; data: MediaRecord }> {
+  const formData = new FormData()
+  formData.append('file', blob, filename)
+  formData.append('type', type)
+  if (source) {
+    formData.append('source', source)
+  }
+
+  const response = await client.post('/media/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data
+}
+
+export async function uploadMediaFromUrl(
+  url: string,
+  filename: string,
+  type: MediaType,
+  source?: MediaSource
+): Promise<{ success: boolean; data: MediaRecord }> {
+  const response = await fetch(url)
+  const blob = await response.blob()
+  return uploadMedia(blob, filename, type, source)
+}

@@ -7,9 +7,16 @@ import {
   createMediaRecordSchema,
   updateMediaRecordSchema,
 } from '../validation/media-schemas'
+import { saveMediaFile, readMediaFile, deleteMediaFile } from '../lib/media-storage'
 import type { Request, Response } from 'express'
+import multer from 'multer'
 
 const router = Router()
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+})
 
 function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response) => {
@@ -76,6 +83,47 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
     return
   }
   res.json({ success: true, data: { deleted: true } })
+}))
+
+router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ success: false, error: 'No file uploaded' })
+    return
+  }
+
+  const type = req.body.type as string
+  const source = req.body.source as string
+
+  const { filepath, filename, size_bytes } = await saveMediaFile(
+    req.file.buffer,
+    req.file.originalname,
+    type as any
+  )
+
+  const record = getDatabase().createMediaRecord({
+    filename,
+    original_name: req.file.originalname,
+    filepath,
+    type: type as any,
+    mime_type: req.file.mimetype,
+    size_bytes,
+    source: source as any,
+  })
+
+  res.status(201).json({ success: true, data: record })
+}))
+
+router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const record = getDatabase().getMediaRecordById(req.params.id)
+  if (!record || record.is_deleted) {
+    res.status(404).json({ success: false, error: 'Media not found' })
+    return
+  }
+
+  const buffer = await readMediaFile(record.filepath)
+  res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
+  res.setHeader('Content-Disposition', `attachment; filename="${record.original_name || record.filename}"`)
+  res.send(buffer)
 }))
 
 export default router

@@ -6,7 +6,7 @@ import { Slider } from '@/components/ui/Slider'
 import { Label } from '@/components/ui/Label'
 import { Badge } from '@/components/ui/Badge'
 import { createSyncVoice } from '@/lib/api/voice'
-import { createMedia, type MediaSource } from '@/lib/api/media'
+import { uploadMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
@@ -54,16 +54,7 @@ const saveToMedia = async (
   source: MediaSource
 ): Promise<void> => {
   try {
-    await blob.arrayBuffer()
-    
-    await createMedia({
-      filename,
-      filepath: `/tmp/${filename}`,
-      type: 'audio',
-      mime_type: blob.type || 'audio/wav',
-      size_bytes: blob.size,
-      source,
-    })
+    await uploadMedia(blob, filename, 'audio', source)
   } catch (error) {
     console.error('Failed to save media:', error)
   }

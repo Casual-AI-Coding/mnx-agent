@@ -6,7 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
-import { createMedia } from '@/lib/api/media'
+import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { VIDEO_MODELS, type VideoModel } from '@/types'
@@ -117,20 +117,12 @@ export default function VideoGeneration() {
 
   const saveVideoToMedia = async (videoUrl: string): Promise<void> => {
     try {
-      const response = await fetch(videoUrl)
-      const blob = await response.blob()
-
-      await createMedia({
-        filename: `video_${Date.now()}.mp4`,
-        filepath: videoUrl,
-        type: 'video',
-        mime_type: blob.type || 'video/mp4',
-        size_bytes: blob.size,
-        source: 'video_generation',
-        task_id: videoUrl,
-      })
-
-      console.log('Video saved to media')
+      await uploadMediaFromUrl(
+        videoUrl,
+        `video_${Date.now()}.mp4`,
+        'video',
+        'video_generation'
+      )
     } catch (error) {
       console.error('Failed to save video:', error)
     }

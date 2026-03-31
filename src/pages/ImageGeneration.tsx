@@ -7,7 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import WarningBanner from '@/components/shared/WarningBanner'
 import { APIReference } from '@/components/shared/APIReference'
 import { generateImage } from '@/lib/api/image'
-import { createMedia } from '@/lib/api/media'
+import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useAppStore } from '@/stores/app'
@@ -101,19 +101,12 @@ export default function ImageGeneration() {
 
   const saveImageToMedia = async (imageUrl: string): Promise<void> => {
     try {
-      const response = await fetch(imageUrl)
-      const blob = await response.blob()
-
-      await createMedia({
-        filename: `image_${Date.now()}.png`,
-        filepath: imageUrl,
-        type: 'image',
-        mime_type: blob.type || 'image/png',
-        size_bytes: blob.size,
-        source: 'image_generation',
-      })
-
-      console.log('Image saved to media')
+      await uploadMediaFromUrl(
+        imageUrl,
+        `image_${Date.now()}.png`,
+        'image',
+        'image_generation'
+      )
     } catch (error) {
       console.error('Failed to save image:', error)
     }
