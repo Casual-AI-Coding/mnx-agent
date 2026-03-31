@@ -23,6 +23,14 @@
 - **任务依赖** - 支持任务链式执行
 - **死信队列** - 存储和重试失败任务
 
+### 📁 媒体管理
+- **文件存储** - 自动保存生成的音频、图片、视频、音乐
+- **分类筛选** - 按类型、来源过滤
+- **缩略图预览** - 图片列表直接显示缩略图
+- **全屏预览** - Lightbox 图片查看
+- **批量下载** - 支持单个/批量下载
+- **文件管理** - 重命名、删除、搜索
+
 ### 🔔 通知系统
 - **WebSocket** - 实时推送任务状态更新
 - **Webhook** - 任务事件通知（on_start/on_success/on_failure）
@@ -99,6 +107,18 @@ npm run build
 ```
 
 ## API 端点
+
+### 媒体管理
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/media` | 获取媒体列表（分页、筛选） |
+| GET | `/media/:id` | 获取单个媒体 |
+| POST | `/media` | 创建媒体记录 |
+| POST | `/media/upload` | 上传文件 |
+| POST | `/media/upload-from-url` | 从 URL 上传 |
+| GET | `/media/:id/download` | 下载文件 |
+| PUT | `/media/:id` | 更新媒体信息 |
+| DELETE | `/media/:id` | 删除媒体（软删除） |
 
 ### Cron 任务管理
 | 方法 | 路径 | 描述 |
@@ -242,6 +262,7 @@ mnx-agent/
 | `dead_letter_queue` | 死信队列 |
 | `capacity_tracking` | API 容量追踪 |
 | `workflow_templates` | 工作流模板 |
+| `media_records` | 媒体文件记录 |
 
 ## 许可证
 
