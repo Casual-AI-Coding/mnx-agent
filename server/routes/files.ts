@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient } from '../lib/minimax'
+import { handleApiError } from '../middleware/errorHandler'
 import multer from 'multer'
 
 const router = Router()
@@ -16,9 +17,7 @@ router.get('/list', async (req: Request, res: Response) => {
     const result = await client.fileList(purpose as string)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -44,9 +43,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const result = await client.fileUpload(formData)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -63,9 +60,7 @@ router.get('/retrieve', async (req: Request, res: Response) => {
     const result = await client.fileRetrieve(Number(file_id))
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -82,9 +77,7 @@ router.post('/delete', async (req: Request, res: Response) => {
     const result = await client.fileDelete(Number(file_id), purpose)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 

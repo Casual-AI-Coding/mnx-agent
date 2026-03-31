@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient } from '../lib/minimax'
+import { handleApiError } from '../middleware/errorHandler'
 
 const router = Router()
 
@@ -34,9 +35,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     const result = await client.textToAudioSync(body)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -58,9 +57,7 @@ router.post('/async', async (req: Request, res: Response) => {
     const result = await client.textToAudioAsync(body)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -77,9 +74,7 @@ router.get('/async/:taskId', async (req: Request, res: Response) => {
     const result = await client.textToAudioAsyncStatus(taskId)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 

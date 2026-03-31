@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient } from '../lib/minimax'
+import { handleApiError } from '../middleware/errorHandler'
 
 const router = Router()
 
@@ -10,9 +11,7 @@ router.post('/list', async (req: Request, res: Response) => {
     const result = await client.voiceList(voice_type || 'all')
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -37,7 +36,14 @@ router.post('/clone', async (req: Request, res: Response) => {
       voice_id,
     }
 
-    if (clone_prompt) body.clone_prompt = typeof clone_prompt === 'string' ? JSON.parse(clone_prompt) : clone_prompt
+    if (clone_prompt) {
+      try {
+        body.clone_prompt = typeof clone_prompt === 'string' ? JSON.parse(clone_prompt) : clone_prompt
+      } catch {
+        res.status(400).json({ success: false, error: 'clone_prompt must be valid JSON string' })
+        return
+      }
+    }
     if (text) body.text = text
     if (model) body.model = model
     if (language_boost) body.language_boost = language_boost
@@ -45,9 +51,7 @@ router.post('/clone', async (req: Request, res: Response) => {
     const result = await client.voiceClone(body)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -67,9 +71,7 @@ router.post('/design', async (req: Request, res: Response) => {
     const result = await client.voiceDesign(body)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -86,9 +88,7 @@ router.post('/delete', async (req: Request, res: Response) => {
     const result = await client.voiceDelete(voice_id, voice_type)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 

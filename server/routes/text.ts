@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient } from '../lib/minimax'
+import { handleApiError } from '../middleware/errorHandler'
 
 const router = Router()
 
@@ -39,9 +40,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     const result = await client.chatCompletion(body)
     res.json({ success: true, data: result })
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
@@ -73,18 +72,12 @@ router.post('/chat/stream', async (req: Request, res: Response) => {
     const chunks = await client.chatCompletionStream(body)
 
     for (const chunk of chunks) {
-      if (chunk.isEnd) {
-        res.write(`data: ${chunk.data}\n\n`)
-      } else {
-        res.write(`data: ${chunk.data}\n\n`)
-      }
+      res.write(`data: ${chunk.data}\n\n`)
     }
 
     res.end()
   } catch (error) {
-    const err = error as Error & { code?: number }
-    const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-    res.status(statusCode).json({ success: false, error: err.message })
+    handleApiError(res, error)
   }
 })
 
