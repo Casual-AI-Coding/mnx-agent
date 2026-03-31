@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText,
@@ -111,11 +111,20 @@ export default function VoiceAsync() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pollingIntervalsRef = useRef<NodeJS.Timeout[]>([])
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
+
+  // Cleanup polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      pollingIntervalsRef.current.forEach(clearInterval)
+      pollingIntervalsRef.current = []
+    }
+  }, [])
 
   const createTask = async () => {
     if (activeTab === 'text' && (!text.trim() || isOverLimit)) return
@@ -186,8 +195,10 @@ export default function VoiceAsync() {
       const complete = await poll()
       if (complete || attempts >= maxAttempts) {
         clearInterval(interval)
+        pollingIntervalsRef.current = pollingIntervalsRef.current.filter(id => id !== interval)
       }
     }, 3000)
+    pollingIntervalsRef.current.push(interval)
   }
 
   const updateTaskStatus = (taskId: string, status: T2AAsyncStatusResponse) => {
