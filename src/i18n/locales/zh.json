@@ -82,6 +82,7 @@
     "dashboard": "仪表盘",
     "voiceManagement": "音色管理",
     "fileManagement": "文件管理",
+    "mediaManagement": "媒体管理",
     "imageGallery": "图片库",
     "cronManagement": "定时任务",
     "capacityMonitor": "用量配额",

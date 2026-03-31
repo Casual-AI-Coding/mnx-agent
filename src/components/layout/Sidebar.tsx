@@ -17,6 +17,7 @@ import {
   GitBranch,
   Gauge,
   Keyboard,
+  HardDrive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -39,6 +40,7 @@ export default function Sidebar() {
   const independentItems = [
     { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
     { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
+    { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
     { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
     { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
     { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },

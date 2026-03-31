@@ -82,6 +82,7 @@
     "dashboard": "Dashboard",
     "voiceManagement": "Voice Management",
     "fileManagement": "File Management",
+    "mediaManagement": "Media Management",
     "imageGallery": "Image Gallery",
     "cronManagement": "Cron Tasks",
     "capacityMonitor": "Capacity",
