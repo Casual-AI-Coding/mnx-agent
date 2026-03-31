@@ -160,15 +160,16 @@ export default function CapacityMonitor() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {modelRemains
             .sort((a, b) => {
-              const order = ['text', 'voice_sync', 'image', 'voice_async', 'music', 'video']
               const getPriority = (name: string) => {
                 const lower = name.toLowerCase()
-                if (lower.includes('text')) return 0
-                if (lower.includes('voice') && lower.includes('sync')) return 1
+                if (lower.includes('minimax')) return 0
+                if (lower.includes('speech')) return 1
                 if (lower.includes('image')) return 2
-                if (lower.includes('voice') && lower.includes('async')) return 3
-                if (lower.includes('music')) return 4
-                if (lower.includes('video')) return 5
+                if (lower.includes('voice') && lower.includes('sync')) return 3
+                if (lower.includes('voice') && lower.includes('async')) return 4
+                if (lower.includes('music')) return 5
+                if (lower.includes('video')) return 6
+                if (lower.includes('text')) return 0
                 return 99
               }
               return getPriority(a.model_name) - getPriority(b.model_name)
