@@ -40,6 +40,10 @@ import type {
   WebhookConfigRow,
   WebhookDeliveryRow,
   DeadLetterItemRow,
+  MediaRecord,
+  MediaRecordRow,
+  CreateMediaRecord,
+  UpdateMediaRecord,
 } from './types.js'
 
 function toISODate(): string {
@@ -95,6 +99,16 @@ function rowToDeadLetterItem(row: DeadLetterItemRow): DeadLetterItem {
   return {
     ...row,
     resolution: row.resolution as 'retried' | 'discarded' | 'manual' | null,
+  }
+}
+
+function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
+  return {
+    ...row,
+    type: row.type as MediaRecord['type'],
+    source: row.source as MediaRecord['source'],
+    is_deleted: row.is_deleted === 1,
+    metadata: row.metadata ? JSON.parse(row.metadata) : null,
   }
 }
 
@@ -722,11 +736,136 @@ export class DatabaseService {
     this.db.prepare(`UPDATE capacity_tracking SET remaining_quota = ?, last_checked_at = ? WHERE service_type = ?`).run(newRemaining, toISODate(), serviceType)
     return this.getCapacityByService(serviceType)
   }
+
+  // ============================================================================
+  // Media Records
+  // ============================================================================
+
+  getMediaRecords(options: {
+    type?: string
+    source?: string
+    limit: number
+    offset: number
+    includeDeleted?: boolean
+  }): { records: MediaRecord[]; total: number } {
+    const { type, source, limit, offset, includeDeleted = false } = options
+    
+    let whereClause = ''
+    const params: (string | number)[] = []
+    
+    if (!includeDeleted) {
+      whereClause = 'WHERE is_deleted = 0'
+    }
+    
+    if (type) {
+      whereClause += whereClause ? ' AND type = ?' : 'WHERE type = ?'
+      params.push(type)
+    }
+    
+    if (source) {
+      whereClause += whereClause ? ' AND source = ?' : 'WHERE source = ?'
+      params.push(source)
+    }
+    
+    const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM media_records ${whereClause}`)
+    const countResult = countStmt.get(...params) as { count: number }
+    const total = countResult.count
+    
+    const query = `SELECT * FROM media_records ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    const stmt = this.db.prepare(query)
+    const rows = stmt.all(...params, limit, offset) as MediaRecordRow[]
+    
+    return {
+      records: rows.map(rowToMediaRecord),
+      total,
+    }
+  }
+
+  getMediaRecordById(id: string): MediaRecord | null {
+    const stmt = this.db.prepare('SELECT * FROM media_records WHERE id = ?')
+    const row = stmt.get(id) as MediaRecordRow | undefined
+    if (!row) return null
+    return rowToMediaRecord(row)
+  }
+
+  createMediaRecord(data: CreateMediaRecord): MediaRecord {
+    const id = uuidv4()
+    const now = toISODate()
+    const metadata = data.metadata ? JSON.stringify(data.metadata) : null
+    
+    const stmt = this.db.prepare(`
+      INSERT INTO media_records (id, filename, original_name, filepath, type, mime_type, size_bytes, source, task_id, metadata, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    
+    stmt.run(
+      id,
+      data.filename,
+      data.original_name ?? null,
+      data.filepath,
+      data.type,
+      data.mime_type ?? null,
+      data.size_bytes,
+      data.source ?? null,
+      data.task_id ?? null,
+      metadata,
+      now,
+      now
+    )
+    
+    return this.getMediaRecordById(id)!
+  }
+
+  updateMediaRecord(id: string, data: UpdateMediaRecord): MediaRecord | null {
+    const existing = this.getMediaRecordById(id)
+    if (!existing) return null
+    
+    const now = toISODate()
+    const metadata = data.metadata !== undefined 
+      ? (data.metadata ? JSON.stringify(data.metadata) : null)
+      : existing.metadata
+    
+    const stmt = this.db.prepare(`
+      UPDATE media_records SET original_name = ?, metadata = ?, updated_at = ? WHERE id = ?
+    `)
+    
+    stmt.run(
+      data.original_name ?? existing.original_name,
+      metadata,
+      now,
+      id
+    )
+    
+    return this.getMediaRecordById(id)
+  }
+
+  softDeleteMediaRecord(id: string): boolean {
+    const existing = this.getMediaRecordById(id)
+    if (!existing) return false
+    
+    const now = toISODate()
+    const stmt = this.db.prepare(`
+      UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ?
+    `)
+    
+    stmt.run(now, now, id)
+    return true
+  }
+
+  hardDeleteMediaRecord(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM media_records WHERE id = ?').run(id)
+    return result.changes > 0
+  }
 }
 
 let dbInstance: DatabaseService | null = null
 
-export function getDatabase(): DatabaseService {
+export function getDatabase(dbPath?: string): DatabaseService {
+  if (dbPath) {
+    const db = new DatabaseService(dbPath)
+    db.init()
+    return db
+  }
   if (!dbInstance) {
     dbInstance = new DatabaseService()
     dbInstance.init()
