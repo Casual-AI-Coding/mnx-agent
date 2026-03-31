@@ -40,21 +40,15 @@ export class CronScheduler {
   }
 
   async init(): Promise<void> {
-    console.log('[CronScheduler] Initializing...')
-    
     const activeJobs = await this.db.getActiveCronJobs()
-    console.log(`[CronScheduler] Found ${activeJobs.length} active jobs`)
     
     for (const job of activeJobs) {
       try {
         this.scheduleJob(job)
-        console.log(`[CronScheduler] Scheduled job "${job.name}" (${job.id}) with expression: ${job.cron_expression}`)
       } catch (error) {
         console.error(`[CronScheduler] Failed to schedule job "${job.name}" (${job.id}):`, error)
       }
     }
-    
-    console.log('[CronScheduler] Initialization complete')
   }
 
   calculateNextRun(expression: string): Date | null {
@@ -95,7 +89,6 @@ export class CronScheduler {
     )
 
     this.jobs.set(job.id, task)
-    console.log(`[CronScheduler] Job "${job.name}" (${job.id}) scheduled successfully`)
   }
 
   private async acquireExecutionSlot(jobId: string): Promise<boolean> {
@@ -114,7 +107,6 @@ export class CronScheduler {
   private async executeJobTick(job: CronJob): Promise<void> {
     // Check for shutdown
     if (this.isShuttingDown) {
-      console.log(`[CronScheduler] Shutdown in progress, skipping job "${job.name}" (${job.id})`)
       return
     }
 
@@ -138,8 +130,6 @@ export class CronScheduler {
         tasks_succeeded: 0,
         tasks_failed: 0,
       })
-
-      console.log(`[CronScheduler] Executing job "${job.name}" (${job.id}) at ${startedAt}`)
 
       // Execute with timeout
       const result = await this.executeWithTimeout(
@@ -179,8 +169,6 @@ export class CronScheduler {
         total_runs: newTotalRuns,
         total_failures: newTotalFailures,
       })
-
-      console.log(`[CronScheduler] Job "${job.name}" (${job.id}) completed in ${durationMs}ms - success: ${result.success}`)
     } catch (error) {
       const endTime = Date.now()
       const durationMs = endTime - startTime
@@ -235,7 +223,6 @@ export class CronScheduler {
     try {
       task.stop()
       this.jobs.delete(jobId)
-      console.log(`[CronScheduler] Job ${jobId} unscheduled successfully`)
       return true
     } catch (error) {
       console.error(`[CronScheduler] Error unscheduling job ${jobId}:`, error)
@@ -254,7 +241,6 @@ export class CronScheduler {
     }
 
     if (!job.is_active) {
-      console.log(`[CronScheduler] Job ${jobId} is inactive, not scheduling`)
       return false
     }
 
@@ -276,23 +262,18 @@ export class CronScheduler {
   }
 
   stopAll(): void {
-    console.log(`[CronScheduler] Stopping all scheduled jobs (${this.jobs.size} jobs)`)
-    
     for (const [jobId, task] of Array.from(this.jobs.entries())) {
       try {
         task.stop()
-        console.log(`[CronScheduler] Stopped job ${jobId}`)
       } catch (error) {
         console.error(`[CronScheduler] Error stopping job ${jobId}:`, error)
       }
     }
     
     this.jobs.clear()
-    console.log('[CronScheduler] All jobs stopped')
   }
 
   async gracefulShutdown(timeoutMs: number = 30000): Promise<void> {
-    console.log('[CronScheduler] Starting graceful shutdown...')
     this.isShuttingDown = true
 
     const startTime = Date.now()
@@ -307,14 +288,12 @@ export class CronScheduler {
         break
       }
       
-      console.log(`[CronScheduler] Waiting for ${this.runningJobs.size} jobs to complete (${remaining}ms remaining)...`)
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
     // Force stop remaining jobs
     this.stopAll()
     this.isShuttingDown = false
-    console.log('[CronScheduler] Graceful shutdown complete')
   }
 
   getRunningJobs(): Set<string> {
