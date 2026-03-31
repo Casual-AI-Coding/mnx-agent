@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   MessageSquare,
   Mic,
@@ -12,27 +13,32 @@ import {
   FolderOpen,
   Terminal,
   ChevronRight,
+  Clock,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const debugItems = [
-  { path: '/text', label: '文本生成', icon: MessageSquare },
-  { path: '/voice', label: '同步语音', icon: Mic },
-  { path: '/voice-async', label: '异步语音', icon: MicOff },
-  { path: '/image', label: '图片生成', icon: Image },
-  { path: '/music', label: '音乐生成', icon: Music },
-  { path: '/video', label: '视频生成', icon: Video },
-  { path: '/video-agent', label: '视频Agent', icon: VideoIcon },
-]
-
-const independentItems = [
-  { path: '/voice-mgmt', label: '音色管理', icon: User },
-  { path: '/files', label: '文件管理', icon: FolderOpen },
-]
-
 export default function Sidebar() {
+  const { t } = useTranslation()
   const location = useLocation()
   const [isDebugExpanded, setIsDebugExpanded] = useState(true)
+
+  const debugItems = [
+    { path: '/text', label: t('sidebar.textGeneration'), icon: MessageSquare },
+    { path: '/voice', label: t('sidebar.voiceSync'), icon: Mic },
+    { path: '/voice-async', label: t('sidebar.voiceAsync'), icon: MicOff },
+    { path: '/image', label: t('sidebar.imageGeneration'), icon: Image },
+    { path: '/music', label: t('sidebar.musicGeneration'), icon: Music },
+    { path: '/video', label: t('sidebar.videoGeneration'), icon: Video },
+    { path: '/video-agent', label: t('sidebar.videoAgent'), icon: VideoIcon },
+  ]
+
+  const independentItems = [
+    { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
+    { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
+    { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
+    { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+  ]
 
   const isInDebugSection = debugItems.some((item) =>
     location.pathname.startsWith(item.path)
@@ -49,7 +55,7 @@ export default function Sidebar() {
             className="w-full flex items-center gap-3 px-3 py-2 text-dark-300 hover:text-white transition-colors"
           >
             <Terminal className="w-4 h-4" />
-            <span className="text-sm font-medium flex-1 text-left">调试台</span>
+            <span className="text-sm font-medium flex-1 text-left">{t('sidebar.debugConsole')}</span>
             <ChevronRight
               className={cn(
                 'w-4 h-4 transition-transform duration-200',
@@ -114,7 +120,7 @@ export default function Sidebar() {
           <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
             <span className="text-white font-bold text-[10px]">M</span>
           </div>
-          <span className="text-xs">Created by MiniMax Agent</span>
+          <span className="text-xs">{t('sidebar.createdBy')}</span>
         </div>
       </div>
     </aside>

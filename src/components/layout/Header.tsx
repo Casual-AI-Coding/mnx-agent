@@ -1,12 +1,15 @@
 import { Key, Globe, Languages, ChevronDown, X, History, Server, Cloud } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore, type ApiMode } from '@/stores/app'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher'
 
 interface HeaderProps {
   onHistoryClick?: () => void
 }
 
 export default function Header({ onHistoryClick }: HeaderProps) {
+  const { t } = useTranslation()
   const { apiKey, region, apiMode, setApiKey, setRegion, setApiMode } = useAppStore()
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
@@ -41,43 +44,11 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               MiniMax
             </span>
           </div>
-          <span className="text-sm text-gray-400 font-medium">Solutions</span>
+          <span className="text-sm text-gray-400 font-medium">{t('header.solutions')}</span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowLanguageDropdown(!showLanguageDropdown)
-                setShowRegionDropdown(false)
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
-            >
-              <Languages className="w-4 h-4" />
-              <span>中文</span>
-              <ChevronDown className="w-3 h-3 opacity-60" />
-            </button>
-            {showLanguageDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
-                <button
-                  className="w-full px-3 py-2 text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
-                  onClick={() => setShowLanguageDropdown(false)}
-                >
-                  <span className="w-4 h-4 flex items-center justify-center">✓</span>
-                  中文
-                </button>
-                <button
-                  className="w-full px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-2"
-                  onClick={() => setShowLanguageDropdown(false)}
-                >
-                  <span className="w-4 h-4 flex items-center justify-center"></span>
-                  English
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
+          <LanguageSwitcher />          <div className="relative">
             <button
               onClick={() => {
                 setShowRegionDropdown(!showRegionDropdown)
@@ -87,7 +58,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
             >
               <Globe className="w-4 h-4" />
-              <span>{region === 'cn' ? '国内' : '国际'}</span>
+              <span>{region === 'cn' ? t('header.regionCn') : t('header.regionIntl')}</span>
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
             {showRegionDropdown && (
@@ -103,7 +74,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 >
                   {region === 'cn' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
                   {region !== 'cn' && <span className="w-4 h-4"></span>}
-                  国内
+                  {t('header.regionCn')}
                 </button>
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
@@ -116,7 +87,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 >
                   {region === 'intl' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
                   {region !== 'intl' && <span className="w-4 h-4"></span>}
-                  国际
+                  {t('header.regionIntl')}
                 </button>
               </div>
             )}
@@ -132,7 +103,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
             >
               {apiMode === 'direct' ? <Cloud className="w-4 h-4" /> : <Server className="w-4 h-4" />}
-              <span>{apiMode === 'direct' ? '直连' : '代理'}</span>
+              <span>{apiMode === 'direct' ? t('header.modeDirect') : t('header.modeProxy')}</span>
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
             {showModeDropdown && (
@@ -149,7 +120,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                   {apiMode === 'direct' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
                   {apiMode !== 'direct' && <span className="w-4 h-4"></span>}
                   <Cloud className="w-3 h-3" />
-                  直连 API
+                  {t('header.directApi')}
                 </button>
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
@@ -163,7 +134,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                   {apiMode === 'proxy' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
                   {apiMode !== 'proxy' && <span className="w-4 h-4"></span>}
                   <Server className="w-3 h-3" />
-                  本地代理
+                  {t('header.localProxy')}
                 </button>
               </div>
             )}
@@ -174,7 +145,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
           >
             <Key className="w-4 h-4" />
-            <span>{apiKey ? 'API Key 已配置' : '配置 API Key'}</span>
+            <span>{apiKey ? t('header.configured') : t('header.configKey')}</span>
           </button>
 
           {onHistoryClick && (
@@ -183,7 +154,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
             >
               <History className="w-4 h-4" />
-              <span>历史</span>
+              <span>{t('common.history')}</span>
             </button>
           )}
         </div>
@@ -204,7 +175,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
           <div className="bg-gray-900/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-gray-700 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-white">配置 API Key</h2>
+              <h2 className="text-lg font-semibold text-white">{t('header.apiKeyTitle')}</h2>
               <button
                 onClick={() => setShowKeyModal(false)}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
@@ -214,12 +185,12 @@ export default function Header({ onHistoryClick }: HeaderProps) {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">MiniMax API Key</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('header.apiKeyLabel')}</label>
                 <input
                   type="password"
                   value={tempKey}
                   onChange={(e) => setTempKey(e.target.value)}
-                  placeholder="输入您的 MiniMax API Key"
+                  placeholder={t('header.apiKeyPlaceholder')}
                   className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
               </div>
@@ -228,7 +199,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                   onClick={() => setShowKeyModal(false)}
                   className="px-4 py-2 text-sm text-gray-300 hover:text-white border border-gray-600 rounded-lg hover:bg-white/5 transition-all"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -237,7 +208,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                   }}
                   className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/25"
                 >
-                  保存
+                  {t('common.save')}
                 </button>
               </div>
             </div>
