@@ -53,3 +53,11 @@ coverage/
 # OpenCode/Sisyphus
 .opencode/
 .sisyphus/
+
+# Database files
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
