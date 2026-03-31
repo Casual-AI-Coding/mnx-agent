@@ -198,10 +198,6 @@ function getDownloadUrl(id: string): string {
   return `/api/media/${id}/download`
 }
 
-function getPreviewUrl(filepath: string): string {
-  return `/api/media/file/${filepath}`
-}
-
 // ============================================================================
 // Components
 // ============================================================================
@@ -347,7 +343,7 @@ export default function MediaManagement() {
   // Handle preview (for images)
   const handlePreview = (record: MediaRecord) => {
     if (record.type === 'image') {
-      const url = getPreviewUrl(record.filepath)
+      const url = `/api/media/${record.id}/download`
       setLightboxSrc(url)
       setLightboxOpen(true)
     }
