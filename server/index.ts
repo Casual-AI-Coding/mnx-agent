@@ -14,6 +14,7 @@ import fileRouter from './routes/files'
 import usageRouter from './routes/usage'
 import capacityRouter from './routes/capacity'
 import cronRouter from './routes/cron'
+import mediaRouter from './routes/media'
 import { getDatabase, runMigrations } from './database'
 import { getMiniMaxClient } from './lib/minimax'
 import { TaskExecutor } from './services/task-executor'
@@ -52,6 +53,7 @@ app.use('/api/files', fileRouter)
 app.use('/api/usage', usageRouter)
 app.use('/api/capacity', capacityRouter)
 app.use('/api/cron', cronRouter)
+app.use('/api/media', mediaRouter)
 
 app.use(errorHandler)
 
