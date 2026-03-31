@@ -20,16 +20,24 @@ async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
     headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
   }
   
+  console.log('[CapacityAPI] Fetching capacity...')
+  
   const response = await fetch('/api/cron/capacity', {
     method: 'GET',
     headers,
   })
   
+  console.log('[CapacityAPI] Response status:', response.status)
+  
   if (!response.ok) {
-    throw new Error('Failed to fetch capacity')
+    const errorText = await response.text()
+    console.error('[CapacityAPI] Error response:', errorText)
+    throw new Error(`Failed to fetch capacity: ${response.status}`)
   }
   
   const data = await response.json()
+  console.log('[CapacityAPI] Response data:', data)
+  
   const records = data?.data?.records || []
   
   return records.map((r: Record<string, unknown>) => ({
@@ -59,6 +67,7 @@ export const useCapacityStore = create<CapacityState>()(
             lastRefresh: Date.now(),
           })
         } catch (err) {
+          console.error('[CapacityStore] fetchCapacity error:', err)
           set({ loading: false })
         }
       },

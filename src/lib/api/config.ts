@@ -22,18 +22,21 @@ export function getBaseUrl(): string {
  * In proxy mode: API key is handled by backend, headers are simpler
  */
 export function getHeaders(): HeadersInit {
-  const { apiKey, apiMode } = useAppStore.getState()
+  const { apiKey, apiMode, region } = useAppStore.getState()
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   }
   
   if (apiMode === 'direct') {
-    headers['Authorization'] = `Bearer ${apiKey}`
+    if (apiKey && apiKey.trim()) {
+      headers['Authorization'] = `Bearer ${apiKey.trim()}`
+    }
   } else {
-    // Proxy mode: backend adds Authorization from X-API-Key header
-    headers['X-API-Key'] = apiKey
-    headers['X-Region'] = useAppStore.getState().region
+    if (apiKey && apiKey.trim()) {
+      headers['X-API-Key'] = apiKey.trim()
+    }
+    headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
   }
   
   return headers
