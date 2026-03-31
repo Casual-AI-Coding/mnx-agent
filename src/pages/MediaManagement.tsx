@@ -259,6 +259,7 @@ export default function MediaManagement() {
     totalPages: 0,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
@@ -279,10 +280,11 @@ export default function MediaManagement() {
   }, [records, searchQuery])
 
   // Fetch media records
-  const fetchMedia = useCallback(async () => {
+  const fetchMedia = useCallback(async (isInitial = false) => {
     if (!apiKey) return
 
     setIsLoading(true)
+    if (isInitial) setIsInitialLoad(true)
     setError(null)
 
     try {
@@ -301,18 +303,27 @@ export default function MediaManagement() {
       setError(err instanceof Error ? err.message : '获取媒体列表失败')
     } finally {
       setIsLoading(false)
+      setIsInitialLoad(false)
     }
   }, [apiKey, activeTab, pagination.page, pagination.limit])
 
-  // Initial fetch and when dependencies change
   useEffect(() => {
-    fetchMedia()
-  }, [fetchMedia])
+    if (isInitialLoad) {
+      fetchMedia(true)
+    }
+  }, [fetchMedia, isInitialLoad])
 
-  // Reset to page 1 when tab changes
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, page: 1 }))
+    if (!isInitialLoad) {
+      setPagination((prev) => ({ ...prev, page: 1 }))
+    }
   }, [activeTab])
+
+  useEffect(() => {
+    if (!isInitialLoad) {
+      fetchMedia(false)
+    }
+  }, [activeTab, pagination.page])
 
   // Handle delete
   const handleDelete = async () => {
@@ -359,7 +370,7 @@ export default function MediaManagement() {
           <h1 className="text-2xl font-bold">媒体管理</h1>
           <p className="text-muted-foreground mt-1">管理生成的音频、图片、视频和音乐文件</p>
         </div>
-        <Button variant="outline" onClick={fetchMedia} disabled={isLoading}>
+        <Button variant="outline" onClick={() => fetchMedia(false)} disabled={isLoading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           刷新
         </Button>
@@ -415,7 +426,7 @@ export default function MediaManagement() {
           )}
 
           {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className={`border rounded-lg overflow-hidden transition-opacity duration-200 ${isLoading && !isInitialLoad ? 'opacity-50' : 'opacity-100'}`}>
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
@@ -428,7 +439,7 @@ export default function MediaManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {isLoading ? (
+                {isInitialLoad ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
