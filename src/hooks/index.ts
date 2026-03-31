@@ -1,2 +1,5 @@
 export { usePollTask } from './usePollTask'
 export { useLocalStorage } from './useLocalStorage'
+export { useMediaQuery } from './useMediaQuery'
+export { useMobile, useTablet, useDesktop } from './useMobile'
+export { useAnalytics, usePageView, usePerformanceTracker } from './useAnalytics'
