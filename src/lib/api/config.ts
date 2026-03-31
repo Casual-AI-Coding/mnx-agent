@@ -46,9 +46,10 @@ export function getApiModeLabel(mode: ApiMode): string {
   return mode === 'direct' ? '直连' : '代理'
 }
 
-/**
- * Get API mode description
- */
+export function getApiMode(): ApiMode {
+  return useAppStore.getState().apiMode
+}
+
 export function getApiModeDescription(mode: ApiMode): string {
   return mode === 'direct' 
     ? '直接调用 MiniMax API' 

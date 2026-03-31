@@ -45,6 +45,11 @@ export class CapacityChecker {
     return result
   }
 
+  async checkCodingPlanRemains(productId?: string): Promise<unknown> {
+    const rawResponse = await this.client.getCodingPlanRemains(productId)
+    return rawResponse
+  }
+
   parseBalanceResponse(raw: unknown): BalanceResult {
     const data = raw as {
       base_resp?: { status_code: number }

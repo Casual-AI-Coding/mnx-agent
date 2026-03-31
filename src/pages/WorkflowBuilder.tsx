@@ -1026,7 +1026,7 @@ function ConfigPanel({
 
 // Main Workflow Builder Component
 function WorkflowBuilderInner() {
-  const { setViewport } = useReactFlow()
+  const { setViewport, screenToFlowPosition } = useReactFlow()
   const store = useWorkflowStore()
 
   // Local React Flow state
@@ -1092,7 +1092,6 @@ function WorkflowBuilderInner() {
     const nodeType = event.dataTransfer.getData('application/reactflow')
     if (!nodeType) return
 
-    const { screenToFlowPosition } = useReactFlow()
     const position = screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,

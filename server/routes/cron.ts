@@ -481,10 +481,10 @@ router.get('/capacity', asyncHandler(async (_req, res) => {
   try {
     const client = getMiniMaxClient()
     const balance = await client.getBalance()
+    const codingPlan = await client.getCodingPlanRemains()
     const records = db.getAllCapacityRecords()
-    res.json({ success: true, data: { balance, records } })
+    res.json({ success: true, data: { balance, codingPlan, records } })
   } catch (error) {
-    // Return empty capacity data if API key not configured
     const records = db.getAllCapacityRecords()
     res.json({ 
       success: true, 
@@ -500,6 +500,7 @@ router.post('/capacity/refresh', asyncHandler(async (_req, res) => {
   try {
     const client = getMiniMaxClient()
     const balance = await client.getBalance()
+    const codingPlan = await client.getCodingPlanRemains()
     const now = new Date()
     const resetAt = new Date(now.getTime() + 60000).toISOString()
     const rateLimits: Record<string, { rpm: number }> = {
@@ -518,7 +519,7 @@ router.post('/capacity/refresh', asyncHandler(async (_req, res) => {
       })
     }
     const records = db.getAllCapacityRecords()
-    res.json({ success: true, data: { balance, records } })
+    res.json({ success: true, data: { balance, codingPlan, records } })
   } catch (error) {
     res.status(503).json({ success: false, error: (error as Error).message })
   }

@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useAppStore } from '@/stores/app'
-import { API_HOSTS } from '@/types'
 import { usePagination } from '@/hooks/usePagination'
+import { listFiles, uploadFile, deleteFile, downloadFile } from '@/lib/api/file'
 
 interface FileItem {
   file_id: string
@@ -85,7 +85,7 @@ export default function FileManagement() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [page, setPage] = useState(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { apiKey, region } = useAppStore()
+  const { apiKey } = useAppStore()
 
   const ITEMS_PER_PAGE = 20
 
@@ -96,18 +96,7 @@ export default function FileManagement() {
     setError(null)
 
     try {
-      const baseUrl = API_HOSTS[region]
-      const response = await fetch(`${baseUrl}/v1/files`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('获取文件列表失败')
-      }
-
-      const data = await response.json()
+      const data = await listFiles()
       setFiles(data.files || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取文件列表失败')
@@ -118,7 +107,7 @@ export default function FileManagement() {
 
   useEffect(() => {
     fetchFiles()
-  }, [apiKey, region])
+  }, [apiKey])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -128,23 +117,8 @@ export default function FileManagement() {
     setUploadProgress(0)
     setError(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
-      const baseUrl = API_HOSTS[region]
-      const response = await fetch(`${baseUrl}/v1/files`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('上传失败')
-      }
-
+      await uploadFile(file)
       await fetchFiles()
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败')
@@ -161,18 +135,7 @@ export default function FileManagement() {
     if (!apiKey) return
 
     try {
-      const baseUrl = API_HOSTS[region]
-      const response = await fetch(`${baseUrl}/v1/files/${fileId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('删除失败')
-      }
-
+      await deleteFile(fileId)
       setFiles(prev => prev.filter(f => f.file_id !== fileId))
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败')
@@ -183,18 +146,7 @@ export default function FileManagement() {
     if (!apiKey) return
 
     try {
-      const baseUrl = API_HOSTS[region]
-      const response = await fetch(`${baseUrl}/v1/files/${fileId}/content`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('下载失败')
-      }
-
-      const blob = await response.blob()
+      const blob = await downloadFile(fileId)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

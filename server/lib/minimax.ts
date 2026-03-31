@@ -277,6 +277,19 @@ export class MiniMaxClient {
       return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
+
+  async getCodingPlanRemains(productId: string = '1001'): Promise<unknown> {
+    try {
+      const response = await this.client.get('/v1/api/openplatform/coding_plan/remains', {
+        headers: {
+          'productId': productId,
+        },
+      })
+      return response.data
+    } catch (error) {
+      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
 }
 
 // Mock client that returns errors gracefully when API key is not configured
@@ -312,6 +325,7 @@ class MockMiniMaxClient extends MiniMaxClient {
   async voiceClone(): Promise<unknown> { return this.createErrorResponse('voiceClone') }
   async voiceDesign(): Promise<unknown> { return this.createErrorResponse('voiceDesign') }
   async getBalance(): Promise<unknown> { return this.createErrorResponse('getBalance') }
+  async getCodingPlanRemains(): Promise<unknown> { return this.createErrorResponse('getCodingPlanRemains') }
 }
 
 let clientInstance: MiniMaxClient | null = null

@@ -1,4 +1,4 @@
-import { getBaseUrl, getHeaders } from './config'
+import { getBaseUrl, getHeaders, getApiMode } from './config'
 import type {
   T2ASyncRequest,
   T2ASyncResponse,
@@ -10,7 +10,9 @@ import type {
 export async function createSyncVoice(
   request: T2ASyncRequest
 ): Promise<T2ASyncResponse> {
-  const response = await fetch(`${getBaseUrl()}/v1/t2a_v2`, {
+  const apiMode = getApiMode()
+  const endpoint = apiMode === 'proxy' ? '/voice/sync' : '/v1/t2a_v2'
+  const response = await fetch(`${getBaseUrl()}${endpoint}`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ ...request, output_format: 'hex' }),
@@ -18,7 +20,7 @@ export async function createSyncVoice(
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.base_resp?.status_msg || 'Failed to create voice')
+    throw new Error(error.base_resp?.status_msg || error.error || 'Failed to create voice')
   }
 
   return response.json()
@@ -27,7 +29,9 @@ export async function createSyncVoice(
 export async function createAsyncVoice(
   request: T2AAsyncRequest
 ): Promise<T2AAsyncCreateResponse> {
-  const response = await fetch(`${getBaseUrl()}/v1/t2a_async_v2`, {
+  const apiMode = getApiMode()
+  const endpoint = apiMode === 'proxy' ? '/voice/async' : '/v1/t2a_async_v2'
+  const response = await fetch(`${getBaseUrl()}${endpoint}`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(request),
@@ -35,7 +39,7 @@ export async function createAsyncVoice(
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.base_resp?.status_msg || 'Failed to create async voice task')
+    throw new Error(error.base_resp?.status_msg || error.error || 'Failed to create async voice task')
   }
 
   return response.json()
@@ -44,14 +48,16 @@ export async function createAsyncVoice(
 export async function getAsyncVoiceStatus(
   taskId: string
 ): Promise<T2AAsyncStatusResponse> {
-  const response = await fetch(`${getBaseUrl()}/v1/t2a_async_query?task_id=${taskId}`, {
+  const apiMode = getApiMode()
+  const endpoint = apiMode === 'proxy' ? `/voice/async/${taskId}` : `/v1/t2a_async_query?task_id=${taskId}`
+  const response = await fetch(`${getBaseUrl()}${endpoint}`, {
     method: 'GET',
     headers: getHeaders(),
   })
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.base_resp?.status_msg || 'Failed to query voice status')
+    throw new Error(error.base_resp?.status_msg || error.error || 'Failed to query voice status')
   }
 
   return response.json()

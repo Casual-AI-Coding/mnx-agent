@@ -10,59 +10,27 @@ interface CapacityState {
   refreshCapacity: () => Promise<void>
 }
 
-const placeholderApi = {
-  fetchCapacity: async (): Promise<CapacityRecord[]> => {
-    return [
-      {
-        id: 'text-capacity',
-        serviceType: 'text' as ServiceType,
-        remainingQuota: 100000,
-        totalQuota: 100000,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-      {
-        id: 'voice-sync-capacity',
-        serviceType: 'voice_sync' as ServiceType,
-        remainingQuota: 5000,
-        totalQuota: 5000,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-      {
-        id: 'voice-async-capacity',
-        serviceType: 'voice_async' as ServiceType,
-        remainingQuota: 1000,
-        totalQuota: 1000,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-      {
-        id: 'image-capacity',
-        serviceType: 'image' as ServiceType,
-        remainingQuota: 100,
-        totalQuota: 100,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-      {
-        id: 'music-capacity',
-        serviceType: 'music' as ServiceType,
-        remainingQuota: 50,
-        totalQuota: 50,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-      {
-        id: 'video-capacity',
-        serviceType: 'video' as ServiceType,
-        remainingQuota: 10,
-        totalQuota: 10,
-        resetAt: new Date(Date.now() + 86400000).toISOString(),
-        lastCheckedAt: new Date().toISOString(),
-      },
-    ]
-  },
+async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
+  const response = await fetch('/api/cron/capacity', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch capacity')
+  }
+  
+  const data = await response.json()
+  const records = data?.data?.records || []
+  
+  return records.map((r: Record<string, unknown>) => ({
+    id: String(r.id || ''),
+    serviceType: r.service_type as ServiceType,
+    remainingQuota: Number(r.remaining_quota) || 0,
+    totalQuota: Number(r.total_quota) || 0,
+    resetAt: r.reset_at as string | null,
+    lastCheckedAt: r.last_checked_at as string || new Date().toISOString(),
+  }))
 }
 
 export const useCapacityStore = create<CapacityState>()(
@@ -75,7 +43,7 @@ export const useCapacityStore = create<CapacityState>()(
       fetchCapacity: async () => {
         set({ loading: true })
         try {
-          const records = await placeholderApi.fetchCapacity()
+          const records = await fetchCapacityFromApi()
           set({
             records,
             loading: false,

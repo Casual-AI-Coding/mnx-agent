@@ -63,7 +63,7 @@ export interface TaskQueueItem {
   status: TaskStatus
   retry_count: number
   max_retries: number
-  error_message: string | null
+  error_message?: string | null
   result: string | null
   created_at: string
   started_at: string | null
@@ -92,7 +92,7 @@ export interface ExecutionLogDetail {
   node_type: string | null
   input_payload: string | null
   output_result: string | null
-  error_message: string | null
+  error_message?: string | null
   started_at: string | null
   completed_at: string | null
   duration_ms: number | null
@@ -160,7 +160,7 @@ export interface WebhookDelivery {
   payload: string
   response_status: number | null
   response_body: string | null
-  error_message: string | null
+  error_message?: string | null
   delivered_at: string
 }
 
@@ -174,7 +174,7 @@ export interface DeadLetterItem {
   job_id: string | null
   task_type: string
   payload: string
-  error_message: string | null
+  error_message?: string | null
   failed_at: string
   retry_count: number
   resolved_at: string | null
@@ -220,7 +220,7 @@ export interface CreateExecutionLogDetail {
   node_type?: string | null
   input_payload?: string | null
   output_result?: string | null
-  error_message: string | null
+  error_message?: string | null
   started_at?: string | null
   completed_at?: string | null
   duration_ms?: number | null
@@ -268,7 +268,7 @@ export interface CreateWebhookDelivery {
   payload: string
   response_status: number | null
   response_body: string | null
-  error_message: string | null
+  error_message?: string | null
 }
 
 export interface CreateDeadLetterItem {
@@ -276,7 +276,7 @@ export interface CreateDeadLetterItem {
   job_id?: string | null
   task_type: string
   payload: string
-  error_message: string | null
+  error_message?: string | null
   retry_count?: number
 }
 
@@ -300,7 +300,7 @@ export interface UpdateCronJob {
 export interface UpdateTaskQueueItem {
   status?: TaskStatus
   retry_count?: number
-  error_message: string | null
+  error_message?: string | null
   result?: string | null
   started_at?: string | null
   completed_at?: string | null
@@ -387,7 +387,7 @@ export interface TaskQueueRow {
   status: string
   retry_count: number
   max_retries: number
-  error_message: string | null
+  error_message?: string | null
   result: string | null
   created_at: string
   started_at: string | null
@@ -416,7 +416,7 @@ export interface ExecutionLogDetailRow {
   node_type: string | null
   input_payload: string | null
   output_result: string | null
-  error_message: string | null
+  error_message?: string | null
   started_at: string | null
   completed_at: string | null
   duration_ms: number | null
@@ -476,7 +476,7 @@ export interface WebhookDeliveryRow {
   payload: string
   response_status: number | null
   response_body: string | null
-  error_message: string | null
+  error_message?: string | null
   delivered_at: string
 }
 
@@ -486,7 +486,7 @@ export interface DeadLetterItemRow {
   job_id: string | null
   task_type: string
   payload: string
-  error_message: string | null
+  error_message?: string | null
   failed_at: string
   retry_count: number
   resolved_at: string | null
