@@ -133,7 +133,6 @@ export class NotificationService {
       new Date().toISOString()
     )
   }
-}
 
   async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
     const row = this.db.getDatabase()

@@ -278,7 +278,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   try {
     const interval = CronExpressionParser.parse(job.cron_expression, { tz: scheduler.getTimezone() })
     for (let i = 0; i < 5; i++) {
-      nextRuns.push(interval.next().toISOString())
+      nextRuns.push(interval.next().toDate().toISOString())
     }
   } catch {
     validation.valid = false
