@@ -158,80 +158,95 @@ export default function CapacityMonitor() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {modelRemains.map((model) => {
-            const used = model.current_interval_usage_count
-            const total = model.current_interval_total_count
-            const remaining = total - used
-            const percentage = total > 0 ? Math.round((used / total) * 100) : 0
-            const statusColor = percentage < 50 ? 'bg-green-500' : percentage < 80 ? 'bg-yellow-500' : 'bg-red-500'
+          {modelRemains
+            .sort((a, b) => {
+              const order = ['text', 'voice_sync', 'image', 'voice_async', 'music', 'video']
+              const getPriority = (name: string) => {
+                const lower = name.toLowerCase()
+                if (lower.includes('text')) return 0
+                if (lower.includes('voice') && lower.includes('sync')) return 1
+                if (lower.includes('image')) return 2
+                if (lower.includes('voice') && lower.includes('async')) return 3
+                if (lower.includes('music')) return 4
+                if (lower.includes('video')) return 5
+                return 99
+              }
+              return getPriority(a.model_name) - getPriority(b.model_name)
+            })
+            .map((model) => {
+              const total = model.current_interval_total_count
+              const usage = model.current_interval_usage_count
+              const remaining = total - usage
+              const percentage = total > 0 ? Math.round((usage / total) * 100) : 0
+              const statusColor = percentage < 50 ? 'bg-green-500' : percentage < 80 ? 'bg-yellow-500' : 'bg-red-500'
 
-            return (
-              <motion.div
-                key={model.model_name}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="h-full">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/10">
-                          <FileText className="w-5 h-5 text-purple-400" />
+              return (
+                <motion.div
+                  key={model.model_name}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Card className="h-full">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-purple-500/10">
+                            <FileText className="w-5 h-5 text-purple-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-white">
+                              {model.model_name}
+                            </h4>
+                            <p className="text-xs text-dark-500">{model.model_name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-white">
-                            {model.model_name}
-                          </h4>
-                          <p className="text-xs text-dark-500">{model.model_name}</p>
+                        <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
+                          {percentage}%
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-dark-400">Quota</span>
+                          <span className="text-white font-medium">
+                            {usage.toLocaleString()} / {total.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-dark-400">Used</span>
+                          <span className="text-green-400 font-medium">
+                            {usage.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-dark-400">Remaining</span>
+                          <span className="text-blue-400 font-medium">
+                            {remaining.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="pt-2">
+                          <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${percentage}%` }}
+                              transition={{ duration: 0.5, delay: 0.2 }}
+                              className={`h-full ${statusColor} transition-colors`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 text-xs text-dark-500">
+                          <span>Weekly: {model.current_weekly_usage_count.toLocaleString()}</span>
+                          <span>Reset: {formatDate(new Date(model.end_time).toISOString())}</span>
                         </div>
                       </div>
-                      <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
-                        {percentage}%
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-dark-400">Used</span>
-                        <span className="text-white font-medium">
-                          {used.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-dark-400">Remaining</span>
-                        <span className="text-white font-medium">
-                          {remaining.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-dark-400">Total Quota</span>
-                        <span className="text-white font-medium">
-                          {total.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="pt-2">
-                        <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percentage}%` }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className={`h-full ${statusColor} transition-colors`}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 text-xs text-dark-500">
-                        <span>Weekly used: {model.current_weekly_usage_count.toLocaleString()}</span>
-                        <span>Resets: {formatDate(new Date(model.end_time).toISOString())}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
         </div>
       )}
     </div>
