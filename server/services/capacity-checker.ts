@@ -1,6 +1,6 @@
 import { MiniMaxClient } from '../lib/minimax'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
-import { DatabaseService } from './task-executor'
+import type { DatabaseService } from '../database/service'
 
 export interface BalanceResult {
   totalBalance: number

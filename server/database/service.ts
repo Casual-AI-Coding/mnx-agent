@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { mkdirSync, existsSync } from 'fs'
 import { dirname } from 'path'
 import { runMigrations } from './migrations.js'
+import { TaskStatus, TriggerType, ExecutionStatus } from './types.js'
 import type {
   CronJob,
   TaskQueueItem,
@@ -24,9 +25,6 @@ import type {
   ExecutionLogRow,
   CapacityRecordRow,
   WorkflowTemplateRow,
-  TaskStatus,
-  TriggerType,
-  ExecutionStatus,
 } from './types.js'
 
 function toISODate(): string {
@@ -175,7 +173,7 @@ export class DatabaseService {
     const id = uuidv4()
     const now = toISODate()
     this.db.prepare(`INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? 'pending', task.max_retries ?? 3, now)
+      .run(id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? TaskStatus.PENDING, task.max_retries ?? 3, now)
     return this.getTaskById(id)!
   }
 
