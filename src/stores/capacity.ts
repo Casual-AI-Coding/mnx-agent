@@ -100,7 +100,6 @@ export const useCapacityStore = create<CapacityState>()(
           const minRefreshInterval = 60000
 
           if (now - lastRefresh < minRefreshInterval) {
-            console.log('[CapacityStore] Skipping refresh, too soon')
             return
           }
         }
