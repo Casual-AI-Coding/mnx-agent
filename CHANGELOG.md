@@ -2,10 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.0] - 2026-03-31
 
 ### Added
-- **Media Management System** - Complete media file management
+- **AI Capabilities**
+  - Text generation (sync/stream) with abab5.5-chat model
+  - Voice synthesis (sync/async) with speech-01 model
+  - Voice cloning and management
+  - Image generation with image-01 model (1-9 images at once)
+  - Music generation with music-2.5 model
+  - Video generation with video-01 model
+  - Video Agent with 6 templates
+
+- **Cron System**
+  - Standard cron expression scheduling
+  - Timezone support
+  - Job management (CRUD, toggle, run, clone)
+  - Task queue with FIFO/priority strategies
+  - Execution logs with details
+  - Webhook notifications with HMAC signing
+  - Dead letter queue for failed tasks
+
+- **Workflow Engine**
+  - DAG execution with topological sort
+  - Node types: action, condition, transform, loop, queue
+  - Template string resolution
+  - Retry logic with exponential backoff
+
+- **Media Management System**
   - Database schema for `media_records` table
   - Backend API routes for CRUD operations
   - File upload and download endpoints
@@ -14,7 +38,11 @@ All notable changes to this project will be documented in this file.
   - Lightbox preview for images
   - Integration with all generation pages (Voice, Image, Video, Music)
   - Backend proxy for image upload to bypass CORS
-  - Support for generating 1-9 images at once
+
+- **Monitoring**
+  - Capacity tracking for API quotas
+  - WebSocket real-time updates
+  - Health check endpoint
 
 ### Fixed
 - **Rate Limiting** - Skip rate limit for internal service routes (`/api/media`, `/api/files`, `/api/cron`)
@@ -37,40 +65,6 @@ All notable changes to this project will be documented in this file.
   - DatabaseService: 107 tests (CRUD operations)
   - Zustand stores: 78 tests
   - API modules: 102 tests
-
----
-
-## [1.0.0] - 2026-03-31
-
-### Added
-- **AI Capabilities**
-  - Text generation (sync/stream) with abab5.5-chat model
-  - Voice synthesis (sync/async) with speech-01 model
-  - Voice cloning and management
-  - Image generation with image-01 model
-  - Music generation with music-2.5 model
-  - Video generation with video-01 model
-  - Video Agent with 6 templates
-
-- **Cron System**
-  - Standard cron expression scheduling
-  - Timezone support
-  - Job management (CRUD, toggle, run, clone)
-  - Task queue with FIFO/priority strategies
-  - Execution logs with details
-  - Webhook notifications with HMAC signing
-  - Dead letter queue for failed tasks
-
-- **Workflow Engine**
-  - DAG execution with topological sort
-  - Node types: action, condition, transform, loop, queue
-  - Template string resolution
-  - Retry logic with exponential backoff
-
-- **Monitoring**
-  - Capacity tracking for API quotas
-  - WebSocket real-time updates
-  - Health check endpoint
 
 ### Technical
 - Express backend with TypeScript
