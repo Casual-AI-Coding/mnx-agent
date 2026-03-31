@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
     port: 4411,
     host: '0.0.0.0',
+    allowedHosts: ['mnx.ogslp.top', 'localhost', '.ogslp.top'],
     proxy: {
       '/api': {
         target: 'http://localhost:4511',
