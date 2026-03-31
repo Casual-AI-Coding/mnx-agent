@@ -24,6 +24,18 @@ const POLLING_CONFIG = {
   intervalMs: 10 * 1000,
 }
 
+const DEFAULT_TIMEOUT = 5 * 60 * 1000
+const ASYNC_TIMEOUT = 10 * 60 * 1000
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, taskType: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${taskType} task timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+    ),
+  ])
+}
+
 export class TaskExecutor {
   private client: MiniMaxClient
   private db: DatabaseService
@@ -47,21 +59,31 @@ export class TaskExecutor {
       }
 
       let result: unknown
+      const isAsyncTask = taskType === 'voice_async' || taskType === 'video'
+      const timeout = isAsyncTask ? ASYNC_TIMEOUT : DEFAULT_TIMEOUT
 
       if (taskType === 'voice_async') {
-        result = await this.executeWithPolling(
-          () => this.client.textToAudioAsync(payload),
-          (taskId: string) => this.client.textToAudioAsyncStatus(taskId),
-          'voice_async'
+        result = await withTimeout(
+          this.executeWithPolling(
+            () => this.client.textToAudioAsync(payload),
+            (taskId: string) => this.client.textToAudioAsyncStatus(taskId),
+            'voice_async'
+          ),
+          timeout,
+          taskType
         )
       } else if (taskType === 'video') {
-        result = await this.executeWithPolling(
-          () => this.client.videoGeneration(payload),
-          (taskId: string) => this.client.videoGenerationStatus(taskId),
-          'video'
+        result = await withTimeout(
+          this.executeWithPolling(
+            () => this.client.videoGeneration(payload),
+            (taskId: string) => this.client.videoGenerationStatus(taskId),
+            'video'
+          ),
+          timeout,
+          taskType
         )
       } else {
-        result = await this.executeDirect(methodName, payload)
+        result = await withTimeout(this.executeDirect(methodName, payload), timeout, taskType)
       }
 
       const durationMs = Date.now() - startTime

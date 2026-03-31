@@ -1,4 +1,5 @@
 import cron, { ScheduledTask } from 'node-cron'
+import { CronExpressionParser } from 'cron-parser'
 import type { DatabaseService } from '../database'
 import { WorkflowResult } from './workflow-engine'
 import { 
@@ -16,6 +17,8 @@ export interface WorkflowEngine {
 
 export interface CronSchedulerOptions {
   timezone?: string
+  maxConcurrent?: number
+  defaultTimeoutMs?: number
 }
 
 export class CronScheduler {
@@ -23,11 +26,17 @@ export class CronScheduler {
   private db: DatabaseService
   private workflowEngine: WorkflowEngine
   private timezone: string
+  private maxConcurrent: number
+  private defaultTimeoutMs: number
+  private runningJobs: Set<string> = new Set()
+  private isShuttingDown: boolean = false
 
   constructor(db: DatabaseService, workflowEngine: WorkflowEngine, options?: CronSchedulerOptions) {
     this.db = db
     this.workflowEngine = workflowEngine
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
+    this.maxConcurrent = options?.maxConcurrent ?? 5
+    this.defaultTimeoutMs = options?.defaultTimeoutMs ?? 5 * 60 * 1000 // 5 minutes default
   }
 
   async init(): Promise<void> {
@@ -48,6 +57,15 @@ export class CronScheduler {
     console.log('[CronScheduler] Initialization complete')
   }
 
+  calculateNextRun(expression: string): Date | null {
+    try {
+      const interval = CronExpressionParser.parse(expression, { tz: this.timezone })
+      return interval.next().toDate()
+    } catch {
+      return null
+    }
+  }
+
   scheduleJob(job: CronJob): void {
     if (!cron.validate(job.cron_expression)) {
       throw new Error(`Invalid cron expression for job ${job.id}: ${job.cron_expression}`)
@@ -57,10 +75,21 @@ export class CronScheduler {
       this.unscheduleJob(job.id)
     }
 
+    // Calculate and save next_run_at
+    const nextRun = this.calculateNextRun(job.cron_expression)
+    if (nextRun) {
+      this.db.updateCronJob(job.id, { next_run_at: nextRun.toISOString() })
+    }
+
     const task = cron.schedule(
       job.cron_expression,
       async () => {
         await this.executeJobTick(job)
+        // Update next_run_at after execution
+        const nextRunAfter = this.calculateNextRun(job.cron_expression)
+        if (nextRunAfter) {
+          this.db.updateCronJob(job.id, { next_run_at: nextRunAfter.toISOString() })
+        }
       },
       { timezone: this.timezone }
     )
@@ -69,23 +98,54 @@ export class CronScheduler {
     console.log(`[CronScheduler] Job "${job.name}" (${job.id}) scheduled successfully`)
   }
 
+  private async acquireExecutionSlot(jobId: string): Promise<boolean> {
+    if (this.runningJobs.size >= this.maxConcurrent) {
+      console.warn(`[CronScheduler] Max concurrent jobs (${this.maxConcurrent}) reached, skipping job ${jobId}`)
+      return false
+    }
+    this.runningJobs.add(jobId)
+    return true
+  }
+
+  private releaseExecutionSlot(jobId: string): void {
+    this.runningJobs.delete(jobId)
+  }
+
   private async executeJobTick(job: CronJob): Promise<void> {
+    // Check for shutdown
+    if (this.isShuttingDown) {
+      console.log(`[CronScheduler] Shutdown in progress, skipping job "${job.name}" (${job.id})`)
+      return
+    }
+
+    // Check concurrent execution limit
+    if (!(await this.acquireExecutionSlot(job.id))) {
+      console.warn(`[CronScheduler] Job "${job.name}" (${job.id}) skipped due to concurrency limit`)
+      return
+    }
+
     const startTime = Date.now()
     const startedAt = new Date().toISOString()
     
-    const log = await this.db.createExecutionLog({
-      job_id: job.id,
-      trigger_type: TriggerType.CRON,
-      status: ExecutionStatus.RUNNING,
-      tasks_executed: 0,
-      tasks_succeeded: 0,
-      tasks_failed: 0,
-    })
-
-    console.log(`[CronScheduler] Executing job "${job.name}" (${job.id}) at ${startedAt}`)
-
+    let log: { id: string } | null = null
+    
     try {
-      const result = await this.workflowEngine.executeWorkflow(job.workflow_json)
+      log = await this.db.createExecutionLog({
+        job_id: job.id,
+        trigger_type: TriggerType.CRON,
+        status: ExecutionStatus.RUNNING,
+        tasks_executed: 0,
+        tasks_succeeded: 0,
+        tasks_failed: 0,
+      })
+
+      console.log(`[CronScheduler] Executing job "${job.name}" (${job.id}) at ${startedAt}`)
+
+      // Execute with timeout
+      const result = await this.executeWithTimeout(
+        () => this.workflowEngine.executeWorkflow(job.workflow_json),
+        this.defaultTimeoutMs
+      )
       
       const endTime = Date.now()
       const durationMs = endTime - startTime
@@ -99,15 +159,17 @@ export class CronScheduler {
         else tasksFailed++
       }
       
-      await this.db.updateExecutionLog(log.id, {
-        status: result.success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
-        completed_at: completedAt,
-        duration_ms: durationMs,
-        tasks_executed: tasksExecuted,
-        tasks_succeeded: tasksSucceeded,
-        tasks_failed: tasksFailed,
-        error_summary: result.error ?? null,
-      })
+      if (log) {
+        await this.db.updateExecutionLog(log.id, {
+          status: result.success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
+          completed_at: completedAt,
+          duration_ms: durationMs,
+          tasks_executed: tasksExecuted,
+          tasks_succeeded: tasksSucceeded,
+          tasks_failed: tasksFailed,
+          error_summary: result.error ?? null,
+        })
+      }
 
       const newTotalRuns = job.total_runs + 1
       const newTotalFailures = result.success ? job.total_failures : job.total_failures + 1
@@ -128,12 +190,14 @@ export class CronScheduler {
       console.error(`[CronScheduler] Job "${job.name}" (${job.id}) failed with error:`, errorMessage)
 
       try {
-        await this.db.updateExecutionLog(log.id, {
-          status: ExecutionStatus.FAILED,
-          completed_at: completedAt,
-          duration_ms: durationMs,
-          error_summary: errorMessage,
-        })
+        if (log) {
+          await this.db.updateExecutionLog(log.id, {
+            status: ExecutionStatus.FAILED,
+            completed_at: completedAt,
+            duration_ms: durationMs,
+            error_summary: errorMessage,
+          })
+        }
 
         await this.db.updateCronJob(job.id, {
           last_run_at: completedAt,
@@ -143,7 +207,21 @@ export class CronScheduler {
       } catch (dbError) {
         console.error(`[CronScheduler] Failed to update database after job failure:`, dbError)
       }
+    } finally {
+      this.releaseExecutionSlot(job.id)
     }
+  }
+
+  private async executeWithTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number
+  ): Promise<T> {
+    return Promise.race([
+      fn(),
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Execution timed out after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ])
   }
 
   unscheduleJob(jobId: string): boolean {
@@ -211,6 +289,40 @@ export class CronScheduler {
     
     this.jobs.clear()
     console.log('[CronScheduler] All jobs stopped')
+  }
+
+  async gracefulShutdown(timeoutMs: number = 30000): Promise<void> {
+    console.log('[CronScheduler] Starting graceful shutdown...')
+    this.isShuttingDown = true
+
+    const startTime = Date.now()
+    
+    // Wait for running jobs to complete
+    while (this.runningJobs.size > 0) {
+      const elapsed = Date.now() - startTime
+      const remaining = timeoutMs - elapsed
+      
+      if (remaining <= 0) {
+        console.warn(`[CronScheduler] Graceful shutdown timed out with ${this.runningJobs.size} jobs still running`)
+        break
+      }
+      
+      console.log(`[CronScheduler] Waiting for ${this.runningJobs.size} jobs to complete (${remaining}ms remaining)...`)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+
+    // Force stop remaining jobs
+    this.stopAll()
+    this.isShuttingDown = false
+    console.log('[CronScheduler] Graceful shutdown complete')
+  }
+
+  getRunningJobs(): Set<string> {
+    return this.runningJobs
+  }
+
+  getRunningJobCount(): number {
+    return this.runningJobs.size
   }
 
   getJobCount(): number {

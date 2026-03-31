@@ -31,6 +31,7 @@ export class QueueProcessor {
   private db: DatabaseService
   private taskExecutor: TaskExecutor
   private capacityChecker: CapacityChecker
+  private readonly maxRetryDelayMs = 5 * 60 * 1000 // 5 minutes max delay
 
   constructor(
     db: DatabaseService,
@@ -40,6 +41,17 @@ export class QueueProcessor {
     this.db = db
     this.taskExecutor = taskExecutor
     this.capacityChecker = capacityChecker
+  }
+
+  private calculateRetryDelay(retryCount: number): number {
+    // Exponential backoff with jitter: 1s, 2s, 4s, 8s, 16s... capped at 5 minutes
+    const baseDelay = 1000 * Math.pow(2, retryCount)
+    const jitter = Math.random() * 1000 // Add up to 1s of random jitter
+    return Math.min(baseDelay + jitter, this.maxRetryDelayMs)
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   async processQueue(jobId: string, options?: QueueOptions): Promise<QueueResult> {
@@ -84,7 +96,14 @@ export class QueueProcessor {
           stats.tasksFailed++
           
           if (!skipFailed && task.retry_count < task.max_retries) {
+            // Apply exponential backoff before requeuing
+            const delayMs = this.calculateRetryDelay(task.retry_count)
+            console.log(`[QueueProcessor] Task ${task.id} will retry in ${delayMs}ms (attempt ${task.retry_count + 1}/${task.max_retries})`)
+            await this.sleep(delayMs)
             await this.requeueTask(task)
+          } else if (task.retry_count >= task.max_retries) {
+            // Move to dead letter queue
+            await this.moveToDeadLetterQueue(task, taskResult.error || 'Max retries exceeded')
           }
         }
       }
@@ -183,6 +202,27 @@ export class QueueProcessor {
     })
   }
 
+  private async moveToDeadLetterQueue(task: TaskQueueRow, error: string): Promise<void> {
+    try {
+      // Insert into dead letter queue
+      this.db.getDatabase().prepare(`
+        INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+      `).run(
+        crypto.randomUUID(),
+        task.id,
+        task.job_id,
+        task.task_type,
+        task.payload,
+        error,
+        task.retry_count
+      )
+      console.log(`[QueueProcessor] Task ${task.id} moved to dead letter queue`)
+    } catch (dbError) {
+      console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, dbError)
+    }
+  }
+
   async getQueueStats(jobId: string): Promise<{
     pending: number
     running: number
@@ -259,7 +299,11 @@ export class QueueProcessor {
         stats.tasksFailed++
         
         if (!skipFailed && task.retry_count < task.max_retries) {
+          const delayMs = this.calculateRetryDelay(task.retry_count)
+          await this.sleep(delayMs)
           await this.requeueTask(task)
+        } else if (task.retry_count >= task.max_retries) {
+          await this.moveToDeadLetterQueue(task, taskResult.error || 'Max retries exceeded')
         }
       }
     }
@@ -271,4 +315,12 @@ export class QueueProcessor {
       tasksFailed: stats.tasksFailed,
     }
   }
+}
+
+export function createQueueProcessor(
+  db: DatabaseService,
+  taskExecutor: TaskExecutor,
+  capacityChecker: CapacityChecker
+): QueueProcessor {
+  return new QueueProcessor(db, taskExecutor, capacityChecker)
 }
