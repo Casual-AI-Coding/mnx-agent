@@ -41,7 +41,7 @@ async function fetchCapacityFromApi(): Promise<{ records: CapacityRecord[]; codi
     }
   }
   
-  const response = await fetch('/api/cron/capacity', {
+  const response = await fetch('/api/capacity', {
     method: 'GET',
     headers,
   })

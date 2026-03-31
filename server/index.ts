@@ -12,6 +12,7 @@ import videoAgentRouter from './routes/videoAgent'
 import voiceMgmtRouter from './routes/voiceMgmt'
 import fileRouter from './routes/files'
 import usageRouter from './routes/usage'
+import capacityRouter from './routes/capacity'
 import cronRouter from './routes/cron'
 import { getDatabase, runMigrations } from './database'
 import { getMiniMaxClient } from './lib/minimax'
@@ -49,6 +50,7 @@ app.use('/api/video-agent', videoAgentRouter)
 app.use('/api/voice-mgmt', voiceMgmtRouter)
 app.use('/api/files', fileRouter)
 app.use('/api/usage', usageRouter)
+app.use('/api/capacity', capacityRouter)
 app.use('/api/cron', cronRouter)
 
 app.use(errorHandler)

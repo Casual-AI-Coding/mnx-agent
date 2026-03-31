@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { DatabaseService, getDatabase } from '../database/service'
-import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { getNotificationService } from '../services/notification-service'
@@ -471,70 +470,6 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
     }))
   }
   res.json({ success: true, data: { log, tasks } })
-}))
-
-// ============================================
-// Capacity API
-// ============================================
-
-router.get('/capacity', asyncHandler(async (req, res) => {
-  try {
-    const apiKey = req.headers['x-api-key'] as string | undefined
-    const region = req.headers['x-region'] as string | undefined
-    
-    const hasValidApiKey = apiKey && apiKey.trim().length > 0
-    const client = hasValidApiKey 
-      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
-      : getMiniMaxClient()
-    
-    const codingPlan = await client.getCodingPlanRemains()
-    const records = db.getAllCapacityRecords()
-    res.json({ success: true, data: { codingPlan, records } })
-  } catch (error) {
-    const records = db.getAllCapacityRecords()
-    res.json({ 
-      success: true, 
-      data: { 
-        codingPlan: { error: (error as Error).message }, 
-        records 
-      } 
-    })
-  }
-}))
-
-router.post('/capacity/refresh', asyncHandler(async (req, res) => {
-  try {
-    const apiKey = req.headers['x-api-key'] as string | undefined
-    const region = req.headers['x-region'] as string | undefined
-    
-    const hasValidApiKey = apiKey && apiKey.trim().length > 0
-    const client = hasValidApiKey 
-      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
-      : getMiniMaxClient()
-    const balance = await client.getBalance()
-    const codingPlan = await client.getCodingPlanRemains()
-    const now = new Date()
-    const resetAt = new Date(now.getTime() + 60000).toISOString()
-    const rateLimits: Record<string, { rpm: number }> = {
-      text: { rpm: 500 },
-      voice_sync: { rpm: 60 },
-      voice_async: { rpm: 60 },
-      image: { rpm: 10 },
-      music: { rpm: 10 },
-      video: { rpm: 5 },
-    }
-    for (const [serviceType, config] of Object.entries(rateLimits)) {
-      db.upsertCapacityRecord(serviceType, {
-        remaining_quota: config.rpm,
-        total_quota: config.rpm,
-        reset_at: resetAt,
-      })
-    }
-    const records = db.getAllCapacityRecords()
-    res.json({ success: true, data: { balance, codingPlan, records } })
-  } catch (error) {
-    res.status(503).json({ success: false, error: (error as Error).message })
-  }
 }))
 
 // ============================================

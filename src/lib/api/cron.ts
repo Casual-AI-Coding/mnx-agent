@@ -240,28 +240,6 @@ export async function getLogById(id: string): Promise<ApiResponse<ExecutionLog>>
 }
 
 // ============================================
-// Capacity API - Fixed endpoints
-// ============================================
-
-export async function getCapacity(): Promise<ApiResponse<{ balance: unknown; records: CapacityRecord[] }>> {
-  try {
-    const response = await cronClient.get('/cron/capacity')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return handleApiError(error, 'getCapacity')
-  }
-}
-
-export async function refreshCapacity(): Promise<ApiResponse<{ balance: unknown; records: CapacityRecord[] }>> {
-  try {
-    const response = await cronClient.post('/cron/capacity/refresh')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return handleApiError(error, 'refreshCapacity')
-  }
-}
-
-// ============================================
 // Workflow API - Fixed endpoints
 // ============================================
 
