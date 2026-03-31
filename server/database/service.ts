@@ -416,6 +416,93 @@ export class DatabaseService {
     const rows = this.db.prepare('SELECT * FROM workflow_templates WHERE is_template = 1 ORDER BY created_at DESC').all() as WorkflowTemplateRow[]
     return rows.map(rowToWorkflowTemplate)
   }
+
+  // ============================================
+  // Job Tags
+  // ============================================
+
+  getJobTags(jobId: string): string[] {
+    const rows = this.db.prepare('SELECT tag FROM job_tags WHERE job_id = ? ORDER BY created_at').all(jobId) as { tag: string }[]
+    return rows.map(r => r.tag)
+  }
+
+  addJobTag(jobId: string, tag: string): void {
+    const id = uuidv4()
+    this.db.prepare('INSERT OR IGNORE INTO job_tags (id, job_id, tag, created_at) VALUES (?, ?, ?, ?)')
+      .run(id, jobId, tag, toISODate())
+  }
+
+  removeJobTag(jobId: string, tag: string): boolean {
+    return this.db.prepare('DELETE FROM job_tags WHERE job_id = ? AND tag = ?').run(jobId, tag).changes > 0
+  }
+
+  getJobsByTag(tag: string): CronJob[] {
+    const rows = this.db.prepare(`
+      SELECT c.* FROM cron_jobs c
+      JOIN job_tags jt ON c.id = jt.job_id
+      WHERE jt.tag = ?
+      ORDER BY c.created_at DESC
+    `).all(tag) as CronJobRow[]
+    return rows.map(rowToCronJob)
+  }
+
+  // ============================================
+  // Job Dependencies
+  // ============================================
+
+  getJobDependencies(jobId: string): string[] {
+    const rows = this.db.prepare('SELECT depends_on_job_id FROM job_dependencies WHERE job_id = ?').all(jobId) as { depends_on_job_id: string }[]
+    return rows.map(r => r.depends_on_job_id)
+  }
+
+  addJobDependency(jobId: string, dependsOnJobId: string): void {
+    const id = uuidv4()
+    this.db.prepare('INSERT OR IGNORE INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES (?, ?, ?, ?)')
+      .run(id, jobId, dependsOnJobId, toISODate())
+  }
+
+  removeJobDependency(jobId: string, dependsOnJobId: string): boolean {
+    return this.db.prepare('DELETE FROM job_dependencies WHERE job_id = ? AND depends_on_job_id = ?').run(jobId, dependsOnJobId).changes > 0
+  }
+
+  // ============================================
+  // Dead Letter Queue
+  // ============================================
+
+  getDeadLetterQueue(limit: number = 100): { id: string; original_task_id: string | null; job_id: string | null; task_type: string; payload: string; error_message: string | null; failed_at: string; retry_count: number }[] {
+    return this.db.prepare('SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT ?').all(limit) as { id: string; original_task_id: string | null; job_id: string | null; task_type: string; payload: string; error_message: string | null; failed_at: string; retry_count: number }[]
+  }
+
+  addToDeadLetterQueue(data: { original_task_id?: string; job_id?: string; task_type: string; payload: string; error_message?: string }): string {
+    const id = uuidv4()
+    this.db.prepare(`INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`)
+      .run(id, data.original_task_id ?? null, data.job_id ?? null, data.task_type, data.payload, data.error_message ?? null, toISODate())
+    return id
+  }
+
+  resolveDeadLetterItem(id: string, resolution: 'retried' | 'discarded' | 'manual'): boolean {
+    return this.db.prepare('UPDATE dead_letter_queue SET resolved_at = ?, resolution = ? WHERE id = ?')
+      .run(toISODate(), resolution, id).changes > 0
+  }
+
+  // ============================================
+  // Pending Task Count
+  // ============================================
+
+  getPendingTaskCount(): number {
+    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'pending'").get() as { count: number }
+    return row.count
+  }
+
+  getRunningTaskCount(): number {
+    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'running'").get() as { count: number }
+    return row.count
+  }
+
+  getFailedTaskCount(): number {
+    const row = this.db.prepare("SELECT COUNT(*) as count FROM task_queue WHERE status = 'failed'").get() as { count: number }
+    return row.count
+  }
 }
 
 let dbInstance: DatabaseService | null = null

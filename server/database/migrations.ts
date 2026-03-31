@@ -26,6 +26,92 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_started_at ON execution_logs(start
 CREATE INDEX IF NOT EXISTS idx_capacity_tracking_service_type ON capacity_tracking(service_type);
 `,
   },
+  {
+    id: 3,
+    name: 'migration_003_enhanced_cron_features',
+    sql: `
+-- Add timeout_ms column to cron_jobs if not exists
+ALTER TABLE cron_jobs ADD COLUMN timeout_ms INTEGER DEFAULT 300000;
+
+-- Create execution_log_details table
+CREATE TABLE IF NOT EXISTS execution_log_details (
+  id TEXT PRIMARY KEY,
+  log_id TEXT NOT NULL REFERENCES execution_logs(id) ON DELETE CASCADE,
+  node_id TEXT,
+  node_type TEXT,
+  input_payload TEXT,
+  output_result TEXT,
+  error_message TEXT,
+  started_at TEXT,
+  completed_at TEXT,
+  duration_ms INTEGER
+);
+
+-- Create job_tags table
+CREATE TABLE IF NOT EXISTS job_tags (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  tag TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(job_id, tag)
+);
+
+-- Create job_dependencies table
+CREATE TABLE IF NOT EXISTS job_dependencies (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  depends_on_job_id TEXT NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(job_id, depends_on_job_id)
+);
+
+-- Create webhook_configs table
+CREATE TABLE IF NOT EXISTS webhook_configs (
+  id TEXT PRIMARY KEY,
+  job_id TEXT REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  events TEXT NOT NULL,
+  headers TEXT,
+  secret TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Create webhook_deliveries table
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id TEXT PRIMARY KEY,
+  webhook_id TEXT NOT NULL REFERENCES webhook_configs(id) ON DELETE CASCADE,
+  execution_log_id TEXT REFERENCES execution_logs(id) ON DELETE SET NULL,
+  event TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  response_status INTEGER,
+  response_body TEXT,
+  error_message TEXT,
+  delivered_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Create dead_letter_queue table
+CREATE TABLE IF NOT EXISTS dead_letter_queue (
+  id TEXT PRIMARY KEY,
+  original_task_id TEXT,
+  job_id TEXT REFERENCES cron_jobs(id) ON DELETE SET NULL,
+  task_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  error_message TEXT,
+  failed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  retry_count INTEGER DEFAULT 0,
+  resolved_at TEXT,
+  resolution TEXT
+);
+
+-- Create additional indexes
+CREATE INDEX IF NOT EXISTS idx_job_tags_tag ON job_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_job_dependencies_job_id ON job_dependencies(job_id);
+CREATE INDEX IF NOT EXISTS idx_dead_letter_failed_at ON dead_letter_queue(failed_at DESC);
+`,
+  },
 ]
 
 function getExecutedMigrations(db: DatabaseType): Set<string> {
