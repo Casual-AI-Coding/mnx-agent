@@ -48,11 +48,28 @@ export async function listFiles(purpose?: string): Promise<FileListResponse> {
 
   const result = await response.json()
   
+  let rawFiles: Record<string, unknown>[] = []
+  
   if (apiMode === 'proxy' && result.success && result.data) {
-    return result.data
+    rawFiles = result.data.files || result.data || []
+  } else {
+    rawFiles = result.files || []
   }
   
-  return result
+  // Transform MiniMax response format to our format
+  const files: FileItem[] = rawFiles.map((f) => ({
+    file_id: String(f.file_id || ''),
+    file_name: String(f.filename || f.file_name || ''),
+    file_size: Number(f.bytes || f.file_size || 0),
+    created_at: f.created_at 
+      ? (typeof f.created_at === 'number' 
+          ? new Date((f.created_at as number) * 1000).toISOString()
+          : String(f.created_at))
+      : new Date().toISOString(),
+    purpose: String(f.purpose || ''),
+  }))
+  
+  return { files, total: files.length }
 }
 
 export async function uploadFile(file: File): Promise<FileUploadResponse> {

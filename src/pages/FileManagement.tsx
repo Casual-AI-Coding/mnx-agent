@@ -159,7 +159,7 @@ export default function FileManagement() {
   }
 
   const filteredFiles = files.filter(file =>
-    file.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (file.file_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const { paginatedItems: pageFiles, totalPages, hasNextPage, hasPrevPage } = usePagination(filteredFiles, {
