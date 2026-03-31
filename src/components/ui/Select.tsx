@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
+import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 
 // Select Context
 interface SelectContextValue {
@@ -52,6 +53,27 @@ export interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButto
 
 export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, children, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="SelectTrigger 错误"
+            message="SelectTrigger 必须在 Select 组件内使用"
+            className="min-h-[36px]"
+          />
+        }
+      >
+        <SelectTriggerInner ref={ref} className={className} {...props}>
+          {children}
+        </SelectTriggerInner>
+      </ErrorBoundary>
+    )
+  }
+)
+SelectTrigger.displayName = 'SelectTrigger'
+
+const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
+  ({ className, children, ...props }, ref) => {
     const { open, setOpen } = useSelectContext()
     
     return (
@@ -93,6 +115,25 @@ export interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> 
 
 export const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps>(
   ({ className, placeholder, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="SelectValue 错误"
+            message="SelectValue 必须在 Select 组件内使用"
+            className="min-h-[24px]"
+          />
+        }
+      >
+        <SelectValueInner ref={ref} className={className} placeholder={placeholder} {...props} />
+      </ErrorBoundary>
+    )
+  }
+)
+SelectValue.displayName = 'SelectValue'
+
+const SelectValueInner = React.forwardRef<HTMLSpanElement, SelectValueProps>(
+  ({ className, placeholder, ...props }, ref) => {
     const { value } = useSelectContext()
     
     return (
@@ -112,6 +153,27 @@ SelectValue.displayName = 'SelectValue'
 export interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="SelectContent 错误"
+            message="SelectContent 必须在 Select 组件内使用"
+            className="min-h-[36px]"
+          />
+        }
+      >
+        <SelectContentInner ref={ref} className={className} {...props}>
+          {children}
+        </SelectContentInner>
+      </ErrorBoundary>
+    )
+  }
+)
+SelectContent.displayName = 'SelectContent'
+
+const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, ...props }, ref) => {
     const { open } = useSelectContext()
     
@@ -139,6 +201,27 @@ export interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
+  ({ className, value, children, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="SelectItem 错误"
+            message="SelectItem 必须在 Select 组件内使用"
+            className="min-h-[36px]"
+          />
+        }
+      >
+        <SelectItemInner ref={ref} className={className} value={value} {...props}>
+          {children}
+        </SelectItemInner>
+      </ErrorBoundary>
+    )
+  }
+)
+SelectItem.displayName = 'SelectItem'
+
+const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ className, value, children, ...props }, ref) => {
     const { value: selectedValue, onValueChange } = useSelectContext()
     const isSelected = selectedValue === value

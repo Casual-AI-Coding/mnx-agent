@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 
 const tabsListVariants = cva(
   'inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground'
@@ -94,6 +95,27 @@ export interface TabsTriggerProps
 
 const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
   ({ className, value, children, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="TabsTrigger 错误"
+            message="TabsTrigger 必须在 Tabs 组件内使用"
+            className="min-h-[40px]"
+          />
+        }
+      >
+        <TabsTriggerInner ref={ref} className={className} value={value} {...props}>
+          {children}
+        </TabsTriggerInner>
+      </ErrorBoundary>
+    )
+  }
+)
+TabsTrigger.displayName = 'TabsTrigger'
+
+const TabsTriggerInner = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
+  ({ className, value, children, ...props }, ref) => {
     const { value: selectedValue, onValueChange } = useTabs()
     const isSelected = selectedValue === value
 
@@ -122,6 +144,27 @@ export interface TabsContentProps
 }
 
 const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
+  ({ className, value, children, ...props }, ref) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback
+            title="TabsContent 错误"
+            message="TabsContent 必须在 Tabs 组件内使用"
+            className="min-h-[40px]"
+          />
+        }
+      >
+        <TabsContentInner ref={ref} className={className} value={value} {...props}>
+          {children}
+        </TabsContentInner>
+      </ErrorBoundary>
+    )
+  }
+)
+TabsContent.displayName = 'TabsContent'
+
+const TabsContentInner = React.forwardRef<HTMLDivElement, TabsContentProps>(
   ({ className, value, children, ...props }, ref) => {
     const { value: selectedValue } = useTabs()
     const isSelected = selectedValue === value
