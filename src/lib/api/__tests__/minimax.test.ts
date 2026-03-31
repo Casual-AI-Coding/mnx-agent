@@ -157,7 +157,7 @@ describe('Text API Module', () => {
           model: 'abab6.5s-chat',
           messages: [{ role: 'user', content: 'Hi' }],
         })) {}
-      }).rejects.toThrow('No reader available')
+      }).rejects.toThrow('ERR_NO_READER')
     })
 
     it('should skip empty lines and non-data lines', async () => {
