@@ -12,6 +12,14 @@ import videoAgentRouter from './routes/videoAgent'
 import voiceMgmtRouter from './routes/voiceMgmt'
 import fileRouter from './routes/files'
 import usageRouter from './routes/usage'
+import cronRouter from './routes/cron'
+import { getDatabase, runMigrations } from './database'
+import { getMiniMaxClient } from './lib/minimax'
+import { TaskExecutor } from './services/task-executor'
+import { CapacityChecker } from './services/capacity-checker'
+import { QueueProcessor } from './services/queue-processor'
+import { WorkflowEngine } from './services/workflow-engine'
+import { CronScheduler } from './services/cron-scheduler'
 
 config()
 
@@ -35,8 +43,43 @@ app.use('/api/video-agent', videoAgentRouter)
 app.use('/api/voice-mgmt', voiceMgmtRouter)
 app.use('/api/files', fileRouter)
 app.use('/api/usage', usageRouter)
+app.use('/api/cron', cronRouter)
 
 app.use(errorHandler)
+
+// Initialize services with dependency injection
+try {
+  const dbService = getDatabase()
+  console.log('📦 Database initialized')
+  runMigrations(dbService.getDatabase())
+  console.log('📦 Database migrations applied')
+
+  // Core services
+  const minimaxClient = getMiniMaxClient()
+  const taskExecutor = new TaskExecutor(minimaxClient, dbService)
+  const capacityChecker = new CapacityChecker(minimaxClient, dbService)
+
+  // Queue processor (capacity-aware execution)
+  const queueProcessor = new QueueProcessor(dbService, taskExecutor, capacityChecker)
+
+  // Workflow engine
+  const workflowEngine = new WorkflowEngine(dbService, taskExecutor, capacityChecker)
+  workflowEngine.setQueueProcessor(queueProcessor)
+
+  // Cron scheduler (depends on workflow engine)
+  const cronScheduler = new CronScheduler(dbService, workflowEngine)
+
+  // Initialize scheduler (load jobs from DB and start cron tasks)
+  cronScheduler.init().then(() => {
+    console.log('⏰ Cron scheduler initialized')
+  }).catch((error) => {
+    console.warn('⚠️  Cron scheduler initialization failed:', (error as Error).message)
+  })
+
+  console.log('🔧 All cron services wired up successfully')
+} catch (error) {
+  console.warn('⚠️  Service initialization failed:', (error as Error).message)
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 MiniMax Proxy Server running on http://localhost:${PORT}`)
