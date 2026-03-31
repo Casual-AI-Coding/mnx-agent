@@ -64,7 +64,7 @@ const serviceLabels: Record<ServiceType, string> = {
 }
 
 export default function CapacityMonitor() {
-  const { records, loading, fetchCapacity, refreshCapacity, lastRefresh } = useCapacityStore()
+  const { records, codingPlan, loading, fetchCapacity, refreshCapacity, lastRefresh } = useCapacityStore()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -84,16 +84,8 @@ export default function CapacityMonitor() {
     }
   }
 
-  const getUsagePercentage = (remaining: number, total: number): number => {
-    if (total === 0) return 0
-    return Math.round(((total - remaining) / total) * 100)
-  }
-
-  const getStatusColor = (percentage: number): string => {
-    if (percentage < 50) return 'bg-green-500'
-    if (percentage < 80) return 'bg-yellow-500'
-    return 'bg-red-500'
-  }
+  const modelRemains = codingPlan?.model_remains || []
+  const hasError = codingPlan && 'error' in codingPlan
 
   return (
     <div className="space-y-6">
@@ -101,7 +93,7 @@ export default function CapacityMonitor() {
         <div>
           <h1 className="text-3xl font-bold text-white">Capacity Monitor</h1>
           <p className="text-dark-400 mt-2">
-            Real-time MiniMax API capacity and quota monitoring
+            MiniMax Coding Plan usage and quota monitoring
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -131,14 +123,26 @@ export default function CapacityMonitor() {
         </Card>
       )}
 
-      {loading && records.length === 0 ? (
+      {hasError && (
+        <Card className="border-yellow-500/50 bg-yellow-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-500" />
+            <div>
+              <p className="font-medium text-yellow-500">API Warning</p>
+              <p className="text-sm text-yellow-500/80">{(codingPlan as { error: string }).error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading && modelRemains.length === 0 ? (
         <Card className="border-dashed border-dark-700">
           <CardContent className="py-16 text-center">
             <RefreshCw className="w-12 h-12 mx-auto mb-4 text-dark-600 animate-spin" />
             <h3 className="text-lg font-medium text-dark-300 mb-2">Loading Capacity Data...</h3>
           </CardContent>
         </Card>
-      ) : records.length === 0 ? (
+      ) : modelRemains.length === 0 && !hasError ? (
         <Card className="border-dashed border-dark-700">
           <CardContent className="py-16 text-center">
             <Gauge className="w-12 h-12 mx-auto mb-4 text-dark-600" />
@@ -154,13 +158,16 @@ export default function CapacityMonitor() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {records.map((record) => {
-            const percentage = getUsagePercentage(record.remainingQuota, record.totalQuota)
-            const statusColor = getStatusColor(percentage)
+          {modelRemains.map((model) => {
+            const used = model.current_interval_usage_count
+            const total = model.current_interval_total_count
+            const remaining = total - used
+            const percentage = total > 0 ? Math.round((used / total) * 100) : 0
+            const statusColor = percentage < 50 ? 'bg-green-500' : percentage < 80 ? 'bg-yellow-500' : 'bg-red-500'
 
             return (
               <motion.div
-                key={record.id}
+                key={model.model_name}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
@@ -169,12 +176,14 @@ export default function CapacityMonitor() {
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <ServiceIcon type={record.serviceType} />
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <FileText className="w-5 h-5 text-purple-400" />
+                        </div>
                         <div>
                           <h4 className="font-semibold text-white">
-                            {serviceLabels[record.serviceType]}
+                            {model.model_name}
                           </h4>
-                          <p className="text-xs text-dark-500">{record.serviceType}</p>
+                          <p className="text-xs text-dark-500">{model.model_name}</p>
                         </div>
                       </div>
                       <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
@@ -184,15 +193,21 @@ export default function CapacityMonitor() {
 
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
+                        <span className="text-dark-400">Used</span>
+                        <span className="text-white font-medium">
+                          {used.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
                         <span className="text-dark-400">Remaining</span>
                         <span className="text-white font-medium">
-                          {record.remainingQuota.toLocaleString()}
+                          {remaining.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-dark-400">Total Quota</span>
                         <span className="text-white font-medium">
-                          {record.totalQuota.toLocaleString()}
+                          {total.toLocaleString()}
                         </span>
                       </div>
 
@@ -208,8 +223,8 @@ export default function CapacityMonitor() {
                       </div>
 
                       <div className="flex items-center justify-between pt-2 text-xs text-dark-500">
-                        <span>Used: {(record.totalQuota - record.remainingQuota).toLocaleString()}</span>
-                        <span>Resets: {formatDate(record.resetAt)}</span>
+                        <span>Weekly used: {model.current_weekly_usage_count.toLocaleString()}</span>
+                        <span>Resets: {formatDate(new Date(model.end_time).toISOString())}</span>
                       </div>
                     </div>
                   </CardContent>

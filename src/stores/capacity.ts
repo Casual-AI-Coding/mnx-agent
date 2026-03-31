@@ -3,23 +3,33 @@ import { persist } from 'zustand/middleware'
 import type { CapacityRecord, ServiceType } from '../types/cron'
 import { useAppStore } from './app'
 
+interface MiniMaxModelRemain {
+  model_name: string
+  current_interval_total_count: number
+  current_interval_usage_count: number
+  start_time: number
+  end_time: number
+  remains_time: number
+  current_weekly_total_count: number
+  current_weekly_usage_count: number
+}
+
+interface CodingPlanResponse {
+  model_remains: MiniMaxModelRemain[]
+  base_resp: { status_code: number; status_msg: string }
+}
+
 interface CapacityState {
   records: CapacityRecord[]
+  codingPlan: CodingPlanResponse | null
   loading: boolean
   lastRefresh: number
   fetchCapacity: () => Promise<void>
   refreshCapacity: (force?: boolean) => Promise<void>
 }
 
-async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
+async function fetchCapacityFromApi(): Promise<{ records: CapacityRecord[]; codingPlan: CodingPlanResponse | null }> {
   const { apiKey, region } = useAppStore.getState()
-  
-  console.log('[CapacityAPI] State:', { 
-    hasApiKey: !!apiKey, 
-    apiKeyLength: apiKey?.length,
-    apiKeyChars: apiKey?.split('').map(c => c.charCodeAt(0)),
-    region 
-  })
   
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
   
@@ -28,43 +38,33 @@ async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
     if (/^[\x00-\x7F]*$/.test(cleanKey)) {
       headers['X-API-Key'] = cleanKey
       headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
-    } else {
-      console.warn('[CapacityAPI] API key contains non-ASCII characters, skipping header')
     }
   }
   
-  console.log('[CapacityAPI] Fetching capacity...')
+  const response = await fetch('/api/cron/capacity', {
+    method: 'GET',
+    headers,
+  })
   
-  try {
-    const response = await fetch('/api/cron/capacity', {
-      method: 'GET',
-      headers,
-    })
-    
-    console.log('[CapacityAPI] Response status:', response.status)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[CapacityAPI] Error response:', errorText)
-      throw new Error(`Failed to fetch capacity: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    console.log('[CapacityAPI] Response data:', data)
-    
-    const records = data?.data?.records || []
-    
-    return records.map((r: Record<string, unknown>) => ({
+  if (!response.ok) {
+    throw new Error(`Failed to fetch capacity: ${response.status}`)
+  }
+  
+  const data = await response.json()
+  
+  const codingPlan = data?.data?.codingPlan as CodingPlanResponse | null
+  const records = data?.data?.records || []
+  
+  return {
+    records: records.map((r: Record<string, unknown>) => ({
       id: String(r.id || ''),
       serviceType: r.service_type as ServiceType,
       remainingQuota: Number(r.remaining_quota) || 0,
       totalQuota: Number(r.total_quota) || 0,
       resetAt: r.reset_at as string | null,
       lastCheckedAt: r.last_checked_at as string || new Date().toISOString(),
-    }))
-  } catch (err) {
-    console.error('[CapacityAPI] Fetch error:', err)
-    throw err
+    })),
+    codingPlan,
   }
 }
 
@@ -72,15 +72,17 @@ export const useCapacityStore = create<CapacityState>()(
   persist(
     (set, get) => ({
       records: [],
+      codingPlan: null,
       loading: false,
       lastRefresh: 0,
 
       fetchCapacity: async () => {
         set({ loading: true })
         try {
-          const records = await fetchCapacityFromApi()
+          const { records, codingPlan } = await fetchCapacityFromApi()
           set({
             records,
+            codingPlan,
             loading: false,
             lastRefresh: Date.now(),
           })

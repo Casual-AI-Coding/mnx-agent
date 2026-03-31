@@ -487,16 +487,15 @@ router.get('/capacity', asyncHandler(async (req, res) => {
       ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
       : getMiniMaxClient()
     
-    const balance = await client.getBalance()
     const codingPlan = await client.getCodingPlanRemains()
     const records = db.getAllCapacityRecords()
-    res.json({ success: true, data: { balance, codingPlan, records } })
+    res.json({ success: true, data: { codingPlan, records } })
   } catch (error) {
     const records = db.getAllCapacityRecords()
     res.json({ 
       success: true, 
       data: { 
-        balance: { error: 'API key not configured', message: (error as Error).message }, 
+        codingPlan: { error: (error as Error).message }, 
         records 
       } 
     })
