@@ -135,6 +135,41 @@ export class NotificationService {
   }
 }
 
+  async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
+    const row = this.db.getDatabase()
+      .prepare('SELECT * FROM webhook_configs WHERE id = ? AND is_active = 1')
+      .get(webhookId) as { id: string; url: string; headers: string | null; secret: string | null } | undefined
+    
+    if (!row) {
+      return { success: false, error: 'Webhook not found or inactive' }
+    }
+
+    const config = {
+      id: row.id,
+      url: row.url,
+      headers: row.headers ? JSON.parse(row.headers) : {},
+      secret: row.secret
+    }
+
+    const testPayload: WebhookPayload = {
+      event: 'test',
+      timestamp: new Date().toISOString(),
+      job_id: null,
+      data: { message: 'This is a test webhook delivery' }
+    }
+
+    try {
+      await this.sendWebhook(config, testPayload)
+      return { success: true }
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+}
+
 let notificationInstance: NotificationService | null = null
 
 export function getNotificationService(db: DatabaseService, options?: { timeout?: number }): NotificationService {
@@ -147,57 +182,3 @@ export function getNotificationService(db: DatabaseService, options?: { timeout?
 export function resetNotificationService(): void {
   notificationInstance = null
 }
-  async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
-    const config = this.db.getWebhookConfigById(webhookId)
-    if (!config) {
-      return { success: false, error: 'Webhook not found' }
-    }
-
-    const testPayload: WebhookPayload = {
-      event: WebhookEvent.ON_SUCCESS,
-      timestamp: new Date().toISOString(),
-      execution_id: 'test-' + Date.now(),
-      job_id: config.job_id,
-      status: 'completed',
-      duration_ms: 1234,
-      error_summary: null,
-      tasks_executed: 1,
-      tasks_succeeded: 1,
-      tasks_failed: 0,
-    }
-
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'MiniMax-Cron-Scheduler/1.0',
-        'X-Webhook-Event': 'test',
-        'X-Webhook-Id': config.id,
-        ...(config.headers || {}),
-      }
-
-      if (config.secret) {
-        const signature = this.generateSignature(JSON.stringify(testPayload), config.secret)
-        headers['X-Webhook-Signature'] = signature
-      }
-
-      const response = await fetch(config.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(testPayload),
-      })
-
-      if (response.ok) {
-        return { success: true }
-      } else {
-        return { 
-          success: false, 
-          error: `Webhook returned ${response.status}: ${await response.text()}` 
-        }
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }
-  }
