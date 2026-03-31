@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
+import { createMedia } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { VIDEO_MODELS, type VideoModel } from '@/types'
@@ -96,6 +97,8 @@ export default function VideoGeneration() {
                 duration: status.results.duration,
               },
             })
+
+            saveVideoToMedia(status.results.video_url)
           } else if (status.status === 'failed') {
             updatedTask.error = status.error || '生成失败'
           }
@@ -110,6 +113,27 @@ export default function VideoGeneration() {
         clearInterval(interval)
       }
     }, 5000)
+  }
+
+  const saveVideoToMedia = async (videoUrl: string): Promise<void> => {
+    try {
+      const response = await fetch(videoUrl)
+      const blob = await response.blob()
+
+      await createMedia({
+        filename: `video_${Date.now()}.mp4`,
+        filepath: videoUrl,
+        type: 'video',
+        mime_type: blob.type || 'video/mp4',
+        size_bytes: blob.size,
+        source: 'video_generation',
+        task_id: videoUrl,
+      })
+
+      console.log('Video saved to media')
+    } catch (error) {
+      console.error('Failed to save video:', error)
+    }
   }
 
   const removeTask = (taskId: string) => {
