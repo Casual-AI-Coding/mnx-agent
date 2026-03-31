@@ -8,7 +8,7 @@ interface CapacityState {
   loading: boolean
   lastRefresh: number
   fetchCapacity: () => Promise<void>
-  refreshCapacity: () => Promise<void>
+  refreshCapacity: (force?: boolean) => Promise<void>
 }
 
 async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
@@ -69,16 +69,20 @@ export const useCapacityStore = create<CapacityState>()(
         } catch (err) {
           console.error('[CapacityStore] fetchCapacity error:', err)
           set({ loading: false })
+          throw err
         }
       },
 
-      refreshCapacity: async () => {
-        const now = Date.now()
-        const lastRefresh = get().lastRefresh
-        const minRefreshInterval = 60000
+      refreshCapacity: async (force = false) => {
+        if (!force) {
+          const now = Date.now()
+          const lastRefresh = get().lastRefresh
+          const minRefreshInterval = 60000
 
-        if (now - lastRefresh < minRefreshInterval) {
-          return
+          if (now - lastRefresh < minRefreshInterval) {
+            console.log('[CapacityStore] Skipping refresh, too soon')
+            return
+          }
         }
 
         await get().fetchCapacity()
@@ -86,6 +90,7 @@ export const useCapacityStore = create<CapacityState>()(
     }),
     {
       name: 'minimax-capacity',
+      partialize: (state) => ({ records: state.records }),
     }
   )
 )

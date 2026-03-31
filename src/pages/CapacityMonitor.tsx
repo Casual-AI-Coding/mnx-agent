@@ -68,21 +68,18 @@ export default function CapacityMonitor() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadCapacity = async () => {
-      try {
-        await fetchCapacity()
-      } catch (err) {
-        setError((err as Error).message)
-      }
-    }
-    loadCapacity()
+    fetchCapacity().catch((err) => {
+      console.error('[CapacityMonitor] Initial load error:', err)
+      setError((err as Error).message)
+    })
   }, [fetchCapacity])
 
   const handleRefresh = async () => {
     setError(null)
     try {
-      await refreshCapacity()
+      await refreshCapacity(true)
     } catch (err) {
+      console.error('[CapacityMonitor] Refresh error:', err)
       setError((err as Error).message)
     }
   }
