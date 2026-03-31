@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { DatabaseService, getDatabase } from '../database/service'
 import { getMiniMaxClient } from '../lib/minimax'
+import { getCronScheduler } from '../services/cron-scheduler'
+import { WorkflowEngine } from '../services/workflow-engine'
 import {
   createCronJobSchema,
   updateCronJobSchema,
@@ -21,7 +23,6 @@ import { TaskStatus, TriggerType, ExecutionStatus, CronJob, TaskQueueItem, Execu
 
 const router = Router()
 const db: DatabaseService = getDatabase()
-const client = getMiniMaxClient()
 
 function parsePayload(payload: string | Record<string, unknown>): string {
   if (typeof payload === 'string') return payload
@@ -36,6 +37,60 @@ function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
     })
   }
 }
+
+// ============================================
+// Health Check Endpoint
+// ============================================
+router.get('/health', asyncHandler(async (_req, res) => {
+  try {
+    const scheduler = getCronScheduler(db, new WorkflowEngine(db, {
+      executeTask: async () => ({ success: true, durationMs: 0 })
+    }, {
+      hasCapacity: async () => true,
+      decrementCapacity: async () => {}
+    }))
+
+    // Get task counts
+    const allTasks = db.getAllTasks()
+    const pendingCount = allTasks.filter(t => t.status === TaskStatus.PENDING).length
+    const runningCount = allTasks.filter(t => t.status === TaskStatus.RUNNING).length
+    const failedCount = allTasks.filter(t => t.status === TaskStatus.FAILED).length
+
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      scheduler: {
+        jobsScheduled: scheduler.getJobCount(),
+        jobsRunning: scheduler.getRunningJobCount(),
+        timezone: scheduler.getTimezone(),
+      },
+      database: {
+        connected: true,
+      },
+      queue: {
+        pending: pendingCount,
+        running: runningCount,
+        failed: failedCount,
+        total: allTasks.length,
+      },
+    }
+    res.json({ success: true, data: health })
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Health check failed',
+      data: {
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: (error as Error).message,
+      }
+    })
+  }
+}))
+
+// ============================================
+// Cron Jobs API
+// ============================================
 
 router.get('/jobs', asyncHandler(async (_req, res) => {
   const jobs: CronJob[] = db.getAllCronJobs()
@@ -134,6 +189,10 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
   res.json({ success: true, data: { job: updatedJob, scheduled: updatedJob?.is_active } })
 }))
 
+// ============================================
+// Task Queue API
+// ============================================
+
 router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (req, res) => {
   const query = req.query as unknown as { status?: TaskStatus; job_id?: string; page: number; limit: number }
   const { status, job_id, page, limit } = query
@@ -201,6 +260,10 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
   res.json({ success: true, data: updatedTask })
 }))
 
+// ============================================
+// Execution Logs API
+// ============================================
+
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
   const query = req.query as unknown as { job_id?: string; status?: string; limit: number }
   const { job_id, status, limit } = query
@@ -226,34 +289,60 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
   res.json({ success: true, data: { log, tasks } })
 }))
 
+// ============================================
+// Capacity API
+// ============================================
+
 router.get('/capacity', asyncHandler(async (_req, res) => {
-  const balance = await client.getBalance()
-  const records = db.getAllCapacityRecords()
-  res.json({ success: true, data: { balance, records } })
+  try {
+    const client = getMiniMaxClient()
+    const balance = await client.getBalance()
+    const records = db.getAllCapacityRecords()
+    res.json({ success: true, data: { balance, records } })
+  } catch (error) {
+    // Return empty capacity data if API key not configured
+    const records = db.getAllCapacityRecords()
+    res.json({ 
+      success: true, 
+      data: { 
+        balance: { error: 'API key not configured', message: (error as Error).message }, 
+        records 
+      } 
+    })
+  }
 }))
 
 router.post('/capacity/refresh', asyncHandler(async (_req, res) => {
-  const balance = await client.getBalance()
-  const now = new Date()
-  const resetAt = new Date(now.getTime() + 60000).toISOString()
-  const rateLimits: Record<string, { rpm: number }> = {
-    text: { rpm: 500 },
-    voice_sync: { rpm: 60 },
-    voice_async: { rpm: 60 },
-    image: { rpm: 10 },
-    music: { rpm: 10 },
-    video: { rpm: 5 },
+  try {
+    const client = getMiniMaxClient()
+    const balance = await client.getBalance()
+    const now = new Date()
+    const resetAt = new Date(now.getTime() + 60000).toISOString()
+    const rateLimits: Record<string, { rpm: number }> = {
+      text: { rpm: 500 },
+      voice_sync: { rpm: 60 },
+      voice_async: { rpm: 60 },
+      image: { rpm: 10 },
+      music: { rpm: 10 },
+      video: { rpm: 5 },
+    }
+    for (const [serviceType, config] of Object.entries(rateLimits)) {
+      db.upsertCapacityRecord(serviceType, {
+        remaining_quota: config.rpm,
+        total_quota: config.rpm,
+        reset_at: resetAt,
+      })
+    }
+    const records = db.getAllCapacityRecords()
+    res.json({ success: true, data: { balance, records } })
+  } catch (error) {
+    res.status(503).json({ success: false, error: (error as Error).message })
   }
-  for (const [serviceType, config] of Object.entries(rateLimits)) {
-    db.upsertCapacityRecord(serviceType, {
-      remaining_quota: config.rpm,
-      total_quota: config.rpm,
-      reset_at: resetAt,
-    })
-  }
-  const records = db.getAllCapacityRecords()
-  res.json({ success: true, data: { balance, records } })
 }))
+
+// ============================================
+// Workflow API
+// ============================================
 
 router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler(async (req, res) => {
   const { workflow_json, nodes, edges } = req.body
