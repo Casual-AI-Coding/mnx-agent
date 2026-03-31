@@ -1,16 +1,17 @@
-import { Key, Globe, Languages, ChevronDown, X, History } from 'lucide-react'
+import { Key, Globe, Languages, ChevronDown, X, History, Server, Cloud } from 'lucide-react'
 import { useState } from 'react'
-import { useAppStore } from '@/stores/app'
+import { useAppStore, type ApiMode } from '@/stores/app'
 
 interface HeaderProps {
   onHistoryClick?: () => void
 }
 
 export default function Header({ onHistoryClick }: HeaderProps) {
-  const { apiKey, region, setApiKey, setRegion } = useAppStore()
+  const { apiKey, region, apiMode, setApiKey, setRegion, setApiMode } = useAppStore()
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
+  const [showModeDropdown, setShowModeDropdown] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
 
   return (
@@ -81,6 +82,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               onClick={() => {
                 setShowRegionDropdown(!showRegionDropdown)
                 setShowLanguageDropdown(false)
+                setShowModeDropdown(false)
               }}
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
             >
@@ -120,6 +122,53 @@ export default function Header({ onHistoryClick }: HeaderProps) {
             )}
           </div>
 
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowModeDropdown(!showModeDropdown)
+                setShowRegionDropdown(false)
+                setShowLanguageDropdown(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+            >
+              {apiMode === 'direct' ? <Cloud className="w-4 h-4" /> : <Server className="w-4 h-4" />}
+              <span>{apiMode === 'direct' ? '直连' : '代理'}</span>
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {showModeDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-40 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
+                <button
+                  className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                    apiMode === 'direct' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                  onClick={() => {
+                    setApiMode('direct')
+                    setShowModeDropdown(false)
+                  }}
+                >
+                  {apiMode === 'direct' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
+                  {apiMode !== 'direct' && <span className="w-4 h-4"></span>}
+                  <Cloud className="w-3 h-3" />
+                  直连 API
+                </button>
+                <button
+                  className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                    apiMode === 'proxy' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                  onClick={() => {
+                    setApiMode('proxy')
+                    setShowModeDropdown(false)
+                  }}
+                >
+                  {apiMode === 'proxy' && <span className="w-4 h-4 flex items-center justify-center">✓</span>}
+                  {apiMode !== 'proxy' && <span className="w-4 h-4"></span>}
+                  <Server className="w-3 h-3" />
+                  本地代理
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowKeyModal(true)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
@@ -140,12 +189,13 @@ export default function Header({ onHistoryClick }: HeaderProps) {
         </div>
       </div>
 
-      {(showLanguageDropdown || showRegionDropdown) && (
+      {(showLanguageDropdown || showRegionDropdown || showModeDropdown) && (
         <div
           className="fixed inset-0 z-40"
           onClick={() => {
             setShowLanguageDropdown(false)
             setShowRegionDropdown(false)
+            setShowModeDropdown(false)
           }}
         />
       )}

@@ -146,6 +146,137 @@ export class MiniMaxClient {
       this.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
+
+  async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/music_generation', body)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async videoGeneration(body: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/video_generation', body)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async videoGenerationStatus(taskId: string): Promise<unknown> {
+    try {
+      const response = await this.client.get(`/v1/query/video_generation?task_id=${taskId}`)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async videoAgentGenerate(body: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/video_template_generation', body)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async videoAgentStatus(taskId: string): Promise<unknown> {
+    try {
+      const response = await this.client.get(`/v1/query/video_template_generation?task_id=${taskId}`)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async fileList(purpose?: string): Promise<unknown> {
+    try {
+      const url = purpose ? `/v1/files/list?purpose=${purpose}` : '/v1/files/list'
+      const response = await this.client.get(url)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async fileUpload(formData: FormData): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async fileRetrieve(fileId: number): Promise<unknown> {
+    try {
+      const response = await this.client.get(`/v1/files/retrieve?file_id=${fileId}`)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async fileDelete(fileId: number, purpose: string): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/files/delete', { file_id: fileId, purpose })
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async voiceList(voiceType: string = 'all'): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/get_voice', { voice_type: voiceType })
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async voiceDelete(voiceId: string, voiceType: string): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/delete_voice', { voice_id: voiceId, voice_type: voiceType })
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async voiceClone(body: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/voice_clone', body)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async voiceDesign(body: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/voice_design', body)
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
+  async getBalance(): Promise<unknown> {
+    try {
+      const response = await this.client.get('/v1/user/balance')
+      return response.data
+    } catch (error) {
+      this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
 }
 
 let clientInstance: MiniMaxClient | null = null

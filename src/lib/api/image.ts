@@ -1,19 +1,5 @@
-import { useAppStore } from '@/stores/app'
-import { API_HOSTS } from '@/types'
+import { getBaseUrl, getHeaders } from './config'
 import type { ImageGenerationRequest, ImageGenerationResponse } from '@/types'
-
-function getBaseUrl(): string {
-  const { region } = useAppStore.getState()
-  return API_HOSTS[region]
-}
-
-function getHeaders(): HeadersInit {
-  const { apiKey } = useAppStore.getState()
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`,
-  }
-}
 
 export async function generateImage(
   request: ImageGenerationRequest
@@ -33,10 +19,9 @@ export async function generateImage(
 }
 
 export function generateImageCurl(request: ImageGenerationRequest): string {
-  const { region } = useAppStore.getState()
-  const host = API_HOSTS[region]
+  const baseUrl = getBaseUrl()
   return `curl --request POST \\
-  --url '${host}/v1/image_generation' \\
+  --url '${baseUrl}/v1/image_generation' \\
   --header 'Authorization: Bearer YOUR_API_KEY' \\
   --header 'Content-Type: application/json' \\
   --data '${JSON.stringify(request, null, 2)}'`

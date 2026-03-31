@@ -1,5 +1,4 @@
-import { useAppStore } from '@/stores/app'
-import { API_HOSTS } from '@/types'
+import { getBaseUrl, getHeaders } from './config'
 import type {
   T2ASyncRequest,
   T2ASyncResponse,
@@ -7,19 +6,6 @@ import type {
   T2AAsyncCreateResponse,
   T2AAsyncStatusResponse,
 } from '@/types'
-
-function getBaseUrl(): string {
-  const { region } = useAppStore.getState()
-  return API_HOSTS[region]
-}
-
-function getHeaders(): HeadersInit {
-  const { apiKey } = useAppStore.getState()
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`,
-  }
-}
 
 export async function createSyncVoice(
   request: T2ASyncRequest
