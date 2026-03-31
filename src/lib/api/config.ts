@@ -1,11 +1,6 @@
 import { useAppStore, type ApiMode, PROXY_BASE_URL } from '@/stores/app'
 import { API_HOSTS } from '@/types'
 
-/**
- * Get the base URL based on API mode:
- * - 'direct': Returns MiniMax API host directly
- * - 'proxy': Returns local backend proxy URL ('/api')
- */
 export function getBaseUrl(): string {
   const { region, apiMode } = useAppStore.getState()
   
@@ -16,11 +11,6 @@ export function getBaseUrl(): string {
   return API_HOSTS[region]
 }
 
-/**
- * Get headers for API requests
- * In direct mode: includes Authorization with API key
- * In proxy mode: API key is handled by backend, headers are simpler
- */
 export function getHeaders(): HeadersInit {
   const { apiKey, apiMode, region } = useAppStore.getState()
   
@@ -28,13 +18,16 @@ export function getHeaders(): HeadersInit {
     'Content-Type': 'application/json',
   }
   
+  const cleanKey = apiKey?.trim() || ''
+  const isAscii = /^[\x00-\x7F]*$/.test(cleanKey)
+  
   if (apiMode === 'direct') {
-    if (apiKey && apiKey.trim()) {
-      headers['Authorization'] = `Bearer ${apiKey.trim()}`
+    if (cleanKey && isAscii) {
+      headers['Authorization'] = `Bearer ${cleanKey}`
     }
   } else {
-    if (apiKey && apiKey.trim()) {
-      headers['X-API-Key'] = apiKey.trim()
+    if (cleanKey && isAscii) {
+      headers['X-API-Key'] = cleanKey
     }
     headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
   }
@@ -42,9 +35,6 @@ export function getHeaders(): HeadersInit {
   return headers
 }
 
-/**
- * Get API mode description for UI display
- */
 export function getApiModeLabel(mode: ApiMode): string {
   return mode === 'direct' ? '直连' : '代理'
 }

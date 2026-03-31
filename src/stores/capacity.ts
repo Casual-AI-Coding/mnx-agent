@@ -14,40 +14,58 @@ interface CapacityState {
 async function fetchCapacityFromApi(): Promise<CapacityRecord[]> {
   const { apiKey, region } = useAppStore.getState()
   
+  console.log('[CapacityAPI] State:', { 
+    hasApiKey: !!apiKey, 
+    apiKeyLength: apiKey?.length,
+    apiKeyChars: apiKey?.split('').map(c => c.charCodeAt(0)),
+    region 
+  })
+  
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  
   if (apiKey && apiKey.trim()) {
-    headers['X-API-Key'] = apiKey.trim()
-    headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
+    const cleanKey = apiKey.trim()
+    if (/^[\x00-\x7F]*$/.test(cleanKey)) {
+      headers['X-API-Key'] = cleanKey
+      headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
+    } else {
+      console.warn('[CapacityAPI] API key contains non-ASCII characters, skipping header')
+    }
   }
   
   console.log('[CapacityAPI] Fetching capacity...')
   
-  const response = await fetch('/api/cron/capacity', {
-    method: 'GET',
-    headers,
-  })
-  
-  console.log('[CapacityAPI] Response status:', response.status)
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[CapacityAPI] Error response:', errorText)
-    throw new Error(`Failed to fetch capacity: ${response.status}`)
+  try {
+    const response = await fetch('/api/cron/capacity', {
+      method: 'GET',
+      headers,
+    })
+    
+    console.log('[CapacityAPI] Response status:', response.status)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[CapacityAPI] Error response:', errorText)
+      throw new Error(`Failed to fetch capacity: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    console.log('[CapacityAPI] Response data:', data)
+    
+    const records = data?.data?.records || []
+    
+    return records.map((r: Record<string, unknown>) => ({
+      id: String(r.id || ''),
+      serviceType: r.service_type as ServiceType,
+      remainingQuota: Number(r.remaining_quota) || 0,
+      totalQuota: Number(r.total_quota) || 0,
+      resetAt: r.reset_at as string | null,
+      lastCheckedAt: r.last_checked_at as string || new Date().toISOString(),
+    }))
+  } catch (err) {
+    console.error('[CapacityAPI] Fetch error:', err)
+    throw err
   }
-  
-  const data = await response.json()
-  console.log('[CapacityAPI] Response data:', data)
-  
-  const records = data?.data?.records || []
-  
-  return records.map((r: Record<string, unknown>) => ({
-    id: String(r.id || ''),
-    serviceType: r.service_type as ServiceType,
-    remainingQuota: Number(r.remaining_quota) || 0,
-    totalQuota: Number(r.total_quota) || 0,
-    resetAt: r.reset_at as string | null,
-    lastCheckedAt: r.last_checked_at as string || new Date().toISOString(),
-  }))
 }
 
 export const useCapacityStore = create<CapacityState>()(
