@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Switch } from '@/components/ui/Switch'
 import { generateMusic } from '@/lib/api/music'
+import { createMedia } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel } from '@/types'
@@ -44,6 +45,26 @@ export default function MusicGeneration() {
     }
   }
 
+  const saveMusicToMedia = async (audioUrl: string): Promise<void> => {
+    try {
+      const response = await fetch(audioUrl)
+      const blob = await response.blob()
+
+      await createMedia({
+        filename: `music_${Date.now()}.mp3`,
+        filepath: `/media/music_${Date.now()}.mp3`,
+        type: 'music',
+        mime_type: blob.type || 'audio/mpeg',
+        size_bytes: blob.size,
+        source: 'music_generation',
+      })
+
+      console.log('Music saved to media')
+    } catch (error) {
+      console.error('Failed to save music:', error)
+    }
+  }
+
   const handleGenerate = async () => {
     if (!lyrics.trim()) return
 
@@ -68,6 +89,7 @@ export default function MusicGeneration() {
       const url = URL.createObjectURL(blob)
       setAudioUrl(url)
       setAudioDuration(response.data.duration)
+      saveMusicToMedia(url)
 
       addUsage('musicRequests', 1)
       addItem({
