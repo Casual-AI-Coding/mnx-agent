@@ -456,8 +456,18 @@ export default function MediaManagement() {
                   filteredRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-muted/50">
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(record.type)}
+                        <div className="flex items-center gap-3">
+                          {record.type === 'image' ? (
+                            <img
+                              src={`/api/media/${record.id}/download`}
+                              alt={record.original_name || record.filename}
+                              className="w-10 h-10 object-cover rounded border border-zinc-800"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 flex items-center justify-center rounded border border-zinc-800 bg-zinc-900">
+                              {getTypeIcon(record.type)}
+                            </div>
+                          )}
                           <span className="font-medium truncate max-w-[200px]" title={record.original_name || record.filename}>
                             {record.original_name || record.filename}
                           </span>
