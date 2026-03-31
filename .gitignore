@@ -53,6 +53,7 @@ coverage/
 # OpenCode/Sisyphus
 .opencode/
 .sisyphus/
+.worktrees/
 
 # Database files
 data/
