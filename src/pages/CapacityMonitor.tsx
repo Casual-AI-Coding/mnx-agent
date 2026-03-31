@@ -175,9 +175,9 @@ export default function CapacityMonitor() {
             })
             .map((model) => {
               const total = model.current_interval_total_count
-              const usage = model.current_interval_usage_count
-              const remaining = total - usage
-              const percentage = total > 0 ? Math.round((usage / total) * 100) : 0
+              const remaining = model.current_interval_usage_count
+              const used = total - remaining
+              const percentage = total > 0 ? Math.round((used / total) * 100) : 0
               const statusColor = percentage < 50 ? 'bg-green-500' : percentage < 80 ? 'bg-yellow-500' : 'bg-red-500'
 
               return (
@@ -210,13 +210,13 @@ export default function CapacityMonitor() {
                         <div className="flex justify-between text-sm">
                           <span className="text-dark-400">Quota</span>
                           <span className="text-white font-medium">
-                            {usage.toLocaleString()} / {total.toLocaleString()}
+                            {used.toLocaleString()} / {total.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-dark-400">Used</span>
                           <span className="text-green-400 font-medium">
-                            {usage.toLocaleString()}
+                            {used.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
