@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Send, Trash2, Bot, User } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -8,6 +9,8 @@ import { streamChatCompletion } from '@/lib/api/text'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { TEXT_MODELS, SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
+import { RetryableError } from '@/components/shared/RetryableError'
+import { useRetry } from '@/hooks/useRetry'
 
 interface Message {
   id: string
@@ -17,15 +20,18 @@ interface Message {
 }
 
 export default function TextGeneration() {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState<string>(TEXT_MODELS[0].id)
   const [selectedTemplate, setSelectedTemplate] = useState('general')
+  const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
+  const { execute, isRetrying, lastError, retryCount } = useRetry()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -50,10 +56,13 @@ export default function TextGeneration() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
+    const userMessageContent = input.trim()
+    setLastUserMessage(userMessageContent)
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input.trim(),
+      content: userMessageContent,
       timestamp: Date.now(),
     }
 
@@ -70,7 +79,7 @@ export default function TextGeneration() {
       chatMessages.unshift({ role: 'system', content: systemPrompt })
     }
 
-    chatMessages.push({ role: 'user', content: userMessage.content })
+    chatMessages.push({ role: 'user', content: userMessageContent })
 
     const assistantMessageId = `assistant-${Date.now()}`
     setMessages(prev => [...prev, {
@@ -80,8 +89,10 @@ export default function TextGeneration() {
       timestamp: Date.now(),
     }])
 
-    try {
-      let fullContent = ''
+    let fullContent = ''
+
+    const success = await execute(async () => {
+      fullContent = ''
 
       for await (const chunk of streamChatCompletion({
         model: selectedModel,
@@ -99,24 +110,28 @@ export default function TextGeneration() {
         }
       }
 
-      const usageEstimate = Math.ceil(userMessage.content.length / 4) + Math.ceil(fullContent.length / 4)
+      return fullContent
+    })
+
+    if (success !== null) {
+      const usageEstimate = Math.ceil(userMessageContent.length / 4) + Math.ceil(fullContent.length / 4)
       addUsage('textTokens', usageEstimate)
 
       addItem({
         type: 'text',
-        input: userMessage.content,
+        input: userMessageContent,
         output: fullContent,
         metadata: { model: selectedModel },
       })
-    } catch (error) {
+    } else {
       setMessages(prev => prev.map(m =>
         m.id === assistantMessageId
-          ? { ...m, content: '抱歉，发生错误，请重试。', error: true }
+          ? { ...m, content: '', error: true }
           : m
       ))
-    } finally {
-      setIsLoading(false)
     }
+
+    setIsLoading(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -152,22 +167,22 @@ export default function TextGeneration() {
     <div className="flex flex-col h-[calc(100vh-8rem)] space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">文本生成</h1>
+          <h1 className="text-2xl font-semibold">{t('textGeneration.title')}</h1>
           <p className="text-muted-foreground text-sm">
-            使用 MiniMax 文本模型进行对话，支持多轮对话
+            {t('textGeneration.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={clearChat}>
             <Trash2 className="w-4 h-4 mr-2" />
-            清空对话
+            {t('textGeneration.clearChat')}
           </Button>
         </div>
       </div>
 
       <div className="flex items-center gap-4 pb-2 border-b">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">模型:</span>
+          <span className="text-sm text-muted-foreground">{t('textGeneration.model')}:</span>
           <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
             <SelectTrigger className="w-56">
               <SelectValue />
@@ -186,7 +201,7 @@ export default function TextGeneration() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">角色:</span>
+          <span className="text-sm text-muted-foreground">{t('textGeneration.role')}:</span>
           <Select value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v)}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -206,8 +221,8 @@ export default function TextGeneration() {
         {messages.filter(m => m.role !== 'system').length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Bot className="w-12 h-12 mb-4 opacity-50" />
-            <p>开始与 AI 助手对话</p>
-            <p className="text-sm">输入消息，按 Enter 发送</p>
+            <p>{t('textGeneration.startConversation')}</p>
+            <p className="text-sm">{t('textGeneration.pressEnterToSend')}</p>
           </div>
         )}
 
@@ -233,7 +248,7 @@ export default function TextGeneration() {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium mb-1">
-                    {message.role === 'user' ? '你' : 'AI 助手'}
+                    {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
                   </div>
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
@@ -254,6 +269,19 @@ export default function TextGeneration() {
           </Card>
         )}
 
+        {lastError && !isRetrying && (
+          <RetryableError
+            error={lastError}
+            onRetry={() => {
+              if (lastUserMessage) {
+                setInput(lastUserMessage)
+                handleSend()
+              }
+            }}
+            retryCount={retryCount}
+          />
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -264,7 +292,7 @@ export default function TextGeneration() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="输入消息..."
+            placeholder={t('textGeneration.placeholder')}
             className="min-h-[60px] resize-none"
             disabled={isLoading}
           />
@@ -277,8 +305,8 @@ export default function TextGeneration() {
           </Button>
         </div>
         <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-          <span>按 Enter 发送，Shift + Enter 换行</span>
-          <span>{messages.filter(m => m.role !== 'system').length} 条消息</span>
+          <span>{t('textGeneration.enterToSend')}</span>
+          <span>{messages.filter(m => m.role !== 'system').length} {t('textGeneration.messages')}</span>
         </div>
       </div>
     </div>

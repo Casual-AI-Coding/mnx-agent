@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { FolderOpen, Upload, Trash2, Download, FileText, Image, Music, Video, File, RefreshCw, Search, X, AlertCircle } from 'lucide-react'
+import { FolderOpen, Upload, Trash2, Download, FileText, Image, Music, Video, File, RefreshCw, Search, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useAppStore } from '@/stores/app'
 import { API_HOSTS } from '@/types'
+import { usePagination } from '@/hooks/usePagination'
 
 interface FileItem {
   file_id: string
@@ -40,6 +41,41 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+function getPageNumbers(currentPage: number, totalPages: number): (number | string)[] {
+  const pages: (number | string)[] = []
+  const maxVisible = 5
+
+  if (totalPages <= maxVisible) {
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i)
+    }
+  } else {
+    if (currentPage <= 3) {
+      for (let i = 1; i <= 4; i++) {
+        pages.push(i)
+      }
+      pages.push('...')
+      pages.push(totalPages)
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1)
+      pages.push('...')
+      for (let i = totalPages - 3; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      pages.push(1)
+      pages.push('...')
+      for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+        pages.push(i)
+      }
+      pages.push('...')
+      pages.push(totalPages)
+    }
+  }
+
+  return pages
+}
+
 export default function FileManagement() {
   const [files, setFiles] = useState<FileItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -47,8 +83,11 @@ export default function FileManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [page, setPage] = useState(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { apiKey, region } = useAppStore()
+
+  const ITEMS_PER_PAGE = 20
 
   const fetchFiles = async () => {
     if (!apiKey) return
@@ -171,6 +210,15 @@ export default function FileManagement() {
     file.file_name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const { paginatedItems: pageFiles, totalPages, hasNextPage, hasPrevPage } = usePagination(filteredFiles, {
+    totalItems: filteredFiles.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+    currentPage: page,
+    onPageChange: setPage,
+  })
+
+  const pageNumbers = getPageNumbers(page, totalPages)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -262,7 +310,7 @@ export default function FileManagement() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredFiles.map((file) => (
+              {pageFiles.map((file) => (
                 <div
                   key={file.file_id}
                   className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -309,6 +357,44 @@ export default function FileManagement() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>没有找到匹配的文件</p>
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p - 1)}
+                    disabled={!hasPrevPage}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+
+                  {pageNumbers.map((pageNum, idx) => (
+                    pageNum === '...' ? (
+                      <span key={idx} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        key={idx}
+                        variant={page === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPage(pageNum as number)}
+                        className={page === pageNum ? 'bg-primary text-white' : ''}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={!hasNextPage}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
               )}
             </div>
