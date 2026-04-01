@@ -20,6 +20,8 @@ import {
   FileText,
   BarChart3,
   Shield,
+  Users,
+  Key,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -60,6 +62,8 @@ export default function Sidebar() {
     { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield, minRole: 'pro' as UserRole },
     { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock, minRole: 'pro' as UserRole },
     { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch, minRole: 'pro' as UserRole },
+    { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users, minRole: 'super' as UserRole },
+    { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key, minRole: 'super' as UserRole },
   ]
 
   const visibleIndependentItems = independentItems.filter(
