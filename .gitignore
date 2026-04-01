@@ -33,6 +33,7 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
+nohup.out
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
