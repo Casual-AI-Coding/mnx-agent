@@ -1,30 +1,27 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { getDatabase, closeDatabase } from '../../database/service'
-import workflowsRouter from '../workflows'
-import path from 'path'
-import fs from 'fs'
+import { createConnection, closeConnection, getConnection } from '../../database/connection.js'
+import workflowsRouter from '../workflows.js'
 
 describe('Workflows API Routes', () => {
   let app: express.Application
-  let tempDbPath: string
 
-  beforeEach(() => {
-    tempDbPath = path.join('/tmp', `test-workflow-${Date.now()}.db`)
-    process.env.DB_TYPE = 'sqlite'
-    process.env.DATABASE_PATH = tempDbPath
-    getDatabase(tempDbPath)
+  beforeAll(async () => {
+    await createConnection({
+      pgHost: process.env.DB_HOST || 'localhost',
+      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
+      pgUser: process.env.DB_USER || 'postgres',
+      pgPassword: process.env.DB_PASSWORD || '',
+      pgDatabase: process.env.DB_NAME || 'minimax_test',
+    })
     app = express()
     app.use(express.json())
     app.use('/api/workflows', workflowsRouter)
   })
 
-  afterEach(() => {
-    closeDatabase()
-    if (tempDbPath && fs.existsSync(tempDbPath)) {
-      fs.unlinkSync(tempDbPath)
-    }
+  afterAll(async () => {
+    await closeConnection()
   })
 
   describe('GET /api/workflows', () => {

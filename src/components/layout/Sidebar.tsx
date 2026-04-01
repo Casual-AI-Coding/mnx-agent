@@ -16,7 +16,6 @@ import {
   Clock,
   GitBranch,
   Gauge,
-  Keyboard,
   HardDrive,
   FileText,
   BarChart3,
@@ -24,11 +23,22 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
+import { useAuthStore, type UserRole } from '@/stores/auth'
+
+const roleHierarchy: Record<UserRole, number> = {
+  user: 0,
+  pro: 1,
+  admin: 2,
+  super: 3,
+}
 
 export default function Sidebar() {
   const { t } = useTranslation()
   const location = useLocation()
   const [isDebugExpanded, setIsDebugExpanded] = useState(true)
+  const { user } = useAuthStore()
+
+  const userRoleLevel = user ? roleHierarchy[user.role] : 0
 
   const debugItems = [
     { path: '/text', label: t('sidebar.textGeneration'), icon: MessageSquare },
@@ -41,16 +51,20 @@ export default function Sidebar() {
   ]
 
   const independentItems = [
-    { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
-    { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
-    { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
-    { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
-    { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
-    { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
-    { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield },
-    { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
-    { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+    { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User, minRole: 'pro' as UserRole },
+    { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen, minRole: 'pro' as UserRole },
+    { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive, minRole: 'pro' as UserRole },
+    { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText, minRole: 'pro' as UserRole },
+    { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge, minRole: 'pro' as UserRole },
+    { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3, minRole: 'pro' as UserRole },
+    { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield, minRole: 'pro' as UserRole },
+    { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock, minRole: 'pro' as UserRole },
+    { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch, minRole: 'pro' as UserRole },
   ]
+
+  const visibleIndependentItems = independentItems.filter(
+    item => userRoleLevel >= roleHierarchy[item.minRole]
+  )
 
   const isInDebugSection = debugItems.some((item) =>
     location.pathname.startsWith(item.path)
@@ -106,7 +120,7 @@ export default function Sidebar() {
         </div>
 
         <div className="px-2 py-2 border-t border-dark-800/30">
-          {independentItems.map((item) => {
+          {visibleIndependentItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
               <NavLink

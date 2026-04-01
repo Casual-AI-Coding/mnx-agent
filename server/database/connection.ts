@@ -1,16 +1,9 @@
 import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg'
-import Database from 'better-sqlite3'
-import { existsSync, mkdirSync } from 'fs'
-import { dirname } from 'path'
 import { getLogger } from '../lib/logger.js'
 
 const logger = getLogger()
 
-export type DatabaseType = 'postgres' | 'sqlite'
-
 export interface DatabaseConfig {
-  type: DatabaseType
-  sqlitePath?: string
   pgHost?: string
   pgPort?: number
   pgUser?: string
@@ -26,27 +19,15 @@ export interface QueryResultRow {
 }
 
 export interface DatabaseConnection {
-  type: DatabaseType
   query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]>
   execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }>
   transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T>
   close(): Promise<void>
   isPostgres(): boolean
-  isSqlite(): boolean
 }
 
 function getConfigFromEnv(): DatabaseConfig {
-  const type = (process.env.DB_TYPE || 'postgres') as DatabaseType
-  
-  if (type === 'sqlite') {
-    return {
-      type: 'sqlite',
-      sqlitePath: process.env.DATABASE_PATH || './data/minimax.db',
-    }
-  }
-  
   return {
-    type: 'postgres',
     pgHost: process.env.DB_HOST || 'localhost',
     pgPort: parseInt(process.env.DB_PORT || '5432', 10),
     pgUser: process.env.DB_USER || 'postgres',
@@ -59,7 +40,6 @@ function getConfigFromEnv(): DatabaseConfig {
 }
 
 class PostgresConnection implements DatabaseConnection {
-  readonly type: DatabaseType = 'postgres'
   private pool: Pool
   private consecutiveErrors: number = 0
   private readonly maxConsecutiveErrors: number = 5
@@ -160,7 +140,6 @@ class PostgresConnection implements DatabaseConnection {
   }
   
   isPostgres(): boolean { return true }
-  isSqlite(): boolean { return false }
   
   getPool(): Pool {
     return this.pool
@@ -176,7 +155,6 @@ class PostgresConnection implements DatabaseConnection {
 }
 
 class PostgresTransactionConnection implements DatabaseConnection {
-  readonly type: DatabaseType = 'postgres'
   private client: PoolClient
   
   constructor(client: PoolClient) {
@@ -203,83 +181,6 @@ class PostgresTransactionConnection implements DatabaseConnection {
   async close(): Promise<void> {}
   
   isPostgres(): boolean { return true }
-  isSqlite(): boolean { return false }
-}
-
-class SQLiteConnection implements DatabaseConnection {
-  readonly type: DatabaseType = 'sqlite'
-  private db: Database.Database
-  
-  constructor(config: DatabaseConfig) {
-    const path = config.sqlitePath || './data/minimax.db'
-    const dbDir = dirname(path)
-    if (!existsSync(dbDir)) {
-      mkdirSync(dbDir, { recursive: true })
-    }
-    try {
-      this.db = new Database(path)
-      this.db.pragma('journal_mode = WAL')
-    } catch (error) {
-      logger.error({ msg: 'Failed to open SQLite database', path, error: (error as Error).message })
-      throw error
-    }
-  }
-  
-  async query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]> {
-    try {
-      const stmt = this.db.prepare(sql)
-      if (params) {
-        return stmt.all(...params) as T[]
-      }
-      return stmt.all() as T[]
-    } catch (error) {
-      logger.error({ msg: 'SQLite query error', sql: sql.substring(0, 100), error: (error as Error).message })
-      throw error
-    }
-  }
-  
-  async execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
-    try {
-      const stmt = this.db.prepare(sql)
-      if (params) {
-        const result = stmt.run(...params)
-        return { changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) }
-      }
-      const result = stmt.run()
-      return { changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) }
-    } catch (error) {
-      logger.error({ msg: 'SQLite execute error', sql: sql.substring(0, 100), error: (error as Error).message })
-      throw error
-    }
-  }
-  
-  async transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.db.transaction(() => {
-          fn(this).then(resolve).catch(reject)
-        })()
-      } catch (error) {
-        logger.error({ msg: 'SQLite transaction error', error: (error as Error).message })
-        reject(error)
-      }
-    })
-  }
-  
-  async close(): Promise<void> {
-    try {
-      this.db.close()
-    } catch (error) {
-      logger.error({ msg: 'Failed to close SQLite database', error: (error as Error).message })
-    }
-  }
-  
-  isPostgres(): boolean { return false }
-  isSqlite(): boolean { return true }
-  
-  getDatabase(): Database.Database {
-    return this.db
-  }
 }
 
 let connectionInstance: DatabaseConnection | null = null
@@ -287,13 +188,9 @@ let connectionInstance: DatabaseConnection | null = null
 export async function createConnection(config?: DatabaseConfig): Promise<DatabaseConnection> {
   const finalConfig = config || getConfigFromEnv()
   
-  logger.info({ msg: 'Creating database connection', type: finalConfig.type })
+  logger.info({ msg: 'Creating PostgreSQL connection', host: finalConfig.pgHost, database: finalConfig.pgDatabase })
   
-  if (finalConfig.type === 'postgres') {
-    connectionInstance = new PostgresConnection(finalConfig)
-  } else {
-    connectionInstance = new SQLiteConnection(finalConfig)
-  }
+  connectionInstance = new PostgresConnection(finalConfig)
   
   return connectionInstance
 }
@@ -312,4 +209,4 @@ export async function closeConnection(): Promise<void> {
   }
 }
 
-export { PostgresConnection, SQLiteConnection }
+export { PostgresConnection }

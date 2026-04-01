@@ -227,6 +227,29 @@ VALUES (
 ) ON CONFLICT (code) DO NOTHING;
     `,
   },
+  {
+    id: 9,
+    name: 'migration_009_add_owner_id',
+    sql: `
+ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE media_records ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE execution_logs ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE task_queue ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE workflow_templates ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE prompt_templates ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE webhook_configs ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+ALTER TABLE dead_letter_queue ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_owner ON cron_jobs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_media_records_owner ON media_records(owner_id);
+CREATE INDEX IF NOT EXISTS idx_execution_logs_owner ON execution_logs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_task_queue_owner ON task_queue(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_owner ON workflow_templates(owner_id);
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_owner ON prompt_templates(owner_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_configs_owner ON webhook_configs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_dead_letter_queue_owner ON dead_letter_queue(owner_id);
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

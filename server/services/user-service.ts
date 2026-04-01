@@ -163,6 +163,41 @@ export class UserService {
     return { success: true }
   }
 
+  async updateUser(userId: string, updates: { minimax_api_key?: string | null; minimax_region?: string }): Promise<Omit<User, 'password_hash'> | null> {
+    const setClauses: string[] = []
+    const values: (string | null)[] = []
+    let paramIndex = 1
+
+    if (updates.minimax_api_key !== undefined) {
+      setClauses.push(`minimax_api_key = $${paramIndex}`)
+      values.push(updates.minimax_api_key)
+      paramIndex++
+    }
+
+    if (updates.minimax_region !== undefined) {
+      setClauses.push(`minimax_region = $${paramIndex}`)
+      values.push(updates.minimax_region)
+      paramIndex++
+    }
+
+    if (setClauses.length === 0) {
+      return this.getUserById(userId)
+    }
+
+    setClauses.push(`updated_at = $${paramIndex}`)
+    values.push(new Date().toISOString())
+    paramIndex++
+
+    values.push(userId)
+
+    await this.conn.execute(
+      `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
+
+    return this.getUserById(userId)
+  }
+
   private async validateInvitationCode(code: string): Promise<{ valid: boolean; codeId?: string; error?: string }> {
     const rows = await this.conn.query<{ id: string; max_uses: number; used_count: number; expires_at: string | null; is_active: boolean }>(
       'SELECT id, max_uses, used_count, expires_at, is_active FROM invitation_codes WHERE code = $1',
