@@ -23,6 +23,8 @@ import workflowsRouter from './routes/workflows'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
+import authRouter from './routes/auth.js'
+import { authenticateJWT } from './middleware/auth-middleware.js'
 import { getDatabase, closeDatabase } from './database/service-async.js'
 import { getMiniMaxClient } from './lib/minimax'
 import { TaskExecutor } from './services/task-executor'
@@ -72,6 +74,14 @@ app.use('/api/workflows', workflowsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
+app.use('/api/auth', authRouter)
+
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    return next()
+  }
+  authenticateJWT(req, res, next)
+})
 
 app.use(errorHandler)
 
