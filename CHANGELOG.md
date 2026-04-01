@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-04-01
+
+### Added
+- **RBAC Data Isolation** - Role-based access control with owner_id (#2)
+  - Migration 009: Add `owner_id` columns to all data tables with indexes
+  - Data isolation middleware: `buildOwnerFilter()`, `getOwnerIdForInsert()`
+  - Admin/super roles see ALL data; user/pro roles see ONLY their own data
+  - RoleGuard component for conditional UI rendering
+  - Sidebar filtering by role (management pages require pro+)
+  - Per-user API key in Settings page
+
+- **Signed Media URLs** - Secure media downloads without JWT (#3)
+  - `media-token.ts` for generating/verifying signed tokens (1 hour expiry)
+  - `GET /api/media/:id/token` endpoint to generate signed URLs
+  - Download endpoint accepts `?token=xxx` query parameter
+
+### Fixed
+- **Capacity Monitor 401** - Add JWT Authorization header to capacity API request (#4)
+- **SelectItem Hook Violation** - Move `useId()` from `useEffect` to component top level (#5)
+- **Select Dropdown Reflow** - Use `createPortal` for floating dropdown, prevent layout shift
+
+### Changed
+- **Remove SQLite Support** - Migrate to PostgreSQL only
+  - Delete deprecated `schema.ts`, `migrations.ts`, `service.ts`
+  - Remove `better-sqlite3` and `@types/better-sqlite3` dependencies
+  - Update connection.ts to PostgreSQL-only
+
+### Dependencies
+- **Removed** - better-sqlite3, @types/better-sqlite3
+
+### Database
+- `migration_009` - Add `owner_id` columns: cron_jobs, media_records, execution_logs, task_queue, workflow_templates, prompt_templates, webhook_configs, dead_letter_queue
+
 ## [1.1.1] - 2026-04-01
 
 ### Added
