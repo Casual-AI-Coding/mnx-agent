@@ -1351,12 +1351,15 @@ export class DatabaseService {
     return result.changes > 0
   }
 
-  async getExecutionStatsOverview(): Promise<{
+  async getExecutionStatsOverview(ownerId?: string): Promise<{
     totalExecutions: number
     successRate: number
     avgDuration: number
     errorCount: number
   }> {
+    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
+    const params = ownerId ? [ownerId] : []
+
     const rows = await this.conn.query<{
       totalexecutions: string
       successcount: string
@@ -1369,7 +1372,8 @@ export class DatabaseService {
         COALESCE(AVG(duration_ms), 0) as avgDuration,
         COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as errorCount
       FROM execution_logs
-    `)
+      ${ownerFilter}
+    `, params)
 
     const stats = rows[0]
     const totalExecutions = parseInt(stats?.totalexecutions ?? '0', 10)
@@ -1385,7 +1389,7 @@ export class DatabaseService {
     }
   }
 
-  async getExecutionStatsTrend(period: 'day' | 'week' | 'month'): Promise<{ date: string; total: number; success: number; failed: number }[]> {
+  async getExecutionStatsTrend(period: 'day' | 'week' | 'month', ownerId?: string): Promise<{ date: string; total: number; success: number; failed: number }[]> {
     let dateFormat: string
     if (this.conn.isPostgres()) {
       switch (period) {
@@ -1413,6 +1417,9 @@ export class DatabaseService {
       }
     }
 
+    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
+    const params = ownerId ? [ownerId] : []
+
     if (this.conn.isPostgres()) {
       const rows = await this.conn.query<{ date: string; total: string; success: string; failed: string }>(`
         SELECT 
@@ -1421,10 +1428,11 @@ export class DatabaseService {
           COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as success,
           COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed
         FROM execution_logs
+        ${ownerFilter}
         GROUP BY TO_CHAR(started_at, '${dateFormat}')
         ORDER BY date DESC
         LIMIT 90
-      `)
+      `, params)
       return rows.map(r => ({
         date: r.date,
         total: parseInt(r.total, 10),
@@ -1439,10 +1447,11 @@ export class DatabaseService {
           COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as success,
           COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed
         FROM execution_logs
+        ${ownerFilter}
         GROUP BY strftime('${dateFormat}', started_at)
         ORDER BY date DESC
         LIMIT 90
-      `)
+      `, params)
       return rows.map(r => ({
         date: r.date,
         total: parseInt(r.total, 10),
@@ -1452,32 +1461,40 @@ export class DatabaseService {
     }
   }
 
-  async getExecutionStatsDistribution(): Promise<{ type: string; count: number }[]> {
+  async getExecutionStatsDistribution(ownerId?: string): Promise<{ type: string; count: number }[]> {
+    const ownerFilter = ownerId ? 'WHERE el.owner_id = $1' : ''
+    const params = ownerId ? [ownerId] : []
+
     const rows = await this.conn.query<{ type: string; count: string }>(`
       SELECT 
         COALESCE(eld.node_type, 'unknown') as type,
         COUNT(DISTINCT el.id) as count
       FROM execution_logs el
       LEFT JOIN execution_log_details eld ON el.id = eld.log_id
+      ${ownerFilter}
       GROUP BY COALESCE(eld.node_type, 'unknown')
       ORDER BY count DESC
-    `)
+    `, params)
 
     const result = rows.map(r => ({ type: r.type, count: parseInt(r.count, 10) }))
     return result.length > 0 ? result.filter(r => r.type !== 'unknown') : []
   }
 
-  async getExecutionStatsErrors(limit: number = 10): Promise<{ errorSummary: string; count: number }[]> {
+  async getExecutionStatsErrors(limit: number = 10, ownerId?: string): Promise<{ errorSummary: string; count: number }[]> {
+    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
+    const params = ownerId ? [ownerId, limit] : [limit]
+
     const rows = await this.conn.query<{ errorsummary: string; count: string }>(`
       SELECT 
         COALESCE(NULLIF(TRIM(error_summary), ''), 'Unknown error') as errorSummary,
         COUNT(*) as count
       FROM execution_logs
-      WHERE error_summary IS NOT NULL AND error_summary != ''
+      ${ownerFilter}
+        ${ownerId ? 'AND' : 'WHERE'} error_summary IS NOT NULL AND error_summary != ''
       GROUP BY error_summary
       ORDER BY count DESC
-      LIMIT $1
-    `, [limit])
+      LIMIT $${ownerId ? 2 : 1}
+    `, params)
 
     return rows.map(r => ({ errorSummary: r.errorsummary, count: parseInt(r.count, 10) }))
   }
@@ -1723,30 +1740,37 @@ export class DatabaseService {
     }
   }
 
-  async getAuditStats(): Promise<AuditStats> {
-    const totalRows = await this.conn.query<{ count: string }>('SELECT COUNT(*) as count FROM audit_logs')
+  async getAuditStats(userId?: string): Promise<AuditStats> {
+    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
+    const params = userId ? [userId] : []
+
+    const totalRows = await this.conn.query<{ count: string }>(`SELECT COUNT(*) as count FROM audit_logs ${ownerFilter}`, params)
     const total_logs = parseInt(totalRows[0]?.count ?? '0', 10)
 
     const actionRows = await this.conn.query<{ action: string; count: string }>(
-      'SELECT action, COUNT(*) as count FROM audit_logs GROUP BY action'
+      `SELECT action, COUNT(*) as count FROM audit_logs ${ownerFilter} GROUP BY action`,
+      params
     )
     const by_action: Record<string, number> = { create: 0, update: 0, delete: 0, execute: 0 }
     actionRows.forEach(row => { by_action[row.action] = parseInt(row.count, 10) })
 
     const resourceRows = await this.conn.query<{ resource_type: string; count: string }>(
-      'SELECT resource_type, COUNT(*) as count FROM audit_logs GROUP BY resource_type'
+      `SELECT resource_type, COUNT(*) as count FROM audit_logs ${ownerFilter} GROUP BY resource_type`,
+      params
     )
     const by_resource_type: Record<string, number> = {}
     resourceRows.forEach(row => { by_resource_type[row.resource_type] = parseInt(row.count, 10) })
 
     const statusRows = await this.conn.query<{ response_status: string; count: string }>(
-      'SELECT response_status, COUNT(*) as count FROM audit_logs WHERE response_status IS NOT NULL GROUP BY response_status'
+      `SELECT response_status, COUNT(*) as count FROM audit_logs WHERE response_status IS NOT NULL ${userId ? 'AND user_id = $1' : ''} GROUP BY response_status`,
+      params
     )
     const by_response_status: Record<string, number> = {}
     statusRows.forEach(row => { by_response_status[row.response_status] = parseInt(row.count, 10) })
 
     const avgDurationRows = await this.conn.query<{ avg_duration: string }>(
-      "SELECT COALESCE(AVG(duration_ms), 0) as avg_duration FROM audit_logs WHERE duration_ms IS NOT NULL"
+      `SELECT COALESCE(AVG(duration_ms), 0) as avg_duration FROM audit_logs WHERE duration_ms IS NOT NULL ${userId ? 'AND user_id = $1' : ''}`,
+      params
     )
     const avg_duration = parseFloat(avgDurationRows[0]?.avg_duration ?? '0')
 

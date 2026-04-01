@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getExportService } from '../services/export-service'
+import { buildOwnerFilter } from '../middleware/data-isolation.js'
 import {
   executionLogsExportQuerySchema,
   mediaRecordsExportQuerySchema,
@@ -18,6 +19,8 @@ router.get('/execution-logs', validateQuery(executionLogsExportQuerySchema), asy
     limit?: number
   }
 
+  const ownerId = buildOwnerFilter(req).params[0]
+
   const exportService = await getExportService()
   const result = await exportService.exportExecutionLogs({
     format,
@@ -25,6 +28,7 @@ router.get('/execution-logs', validateQuery(executionLogsExportQuerySchema), asy
     endDate,
     page,
     limit,
+    ownerId,
   })
 
   res.setHeader('Content-Type', result.contentType)
@@ -40,12 +44,15 @@ router.get('/media-records', validateQuery(mediaRecordsExportQuerySchema), async
     limit?: number
   }
 
+  const ownerId = buildOwnerFilter(req).params[0]
+
   const exportService = await getExportService()
   const result = await exportService.exportMediaRecords({
     format,
     type,
     page,
     limit,
+    ownerId,
   })
 
   res.setHeader('Content-Type', result.contentType)

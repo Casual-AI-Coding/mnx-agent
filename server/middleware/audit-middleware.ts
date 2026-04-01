@@ -93,7 +93,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
           action: methodToAction(req.method),
           resource_type: resourceType,
           resource_id: resourceId,
-          user_id: null,
+          user_id: req.user?.userId ?? null,
           ip_address: req.ip || null,
           user_agent: req.get('user-agent') || null,
           request_method: req.method,

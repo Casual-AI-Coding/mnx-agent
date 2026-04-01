@@ -20,12 +20,17 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     limit,
   } = req.query
 
+  // Non-admin users can only see their own audit logs
+  const effectiveUserId = req.user?.role === 'admin' || req.user?.role === 'super'
+    ? (user_id as string | undefined)
+    : req.user?.userId
+
   const db = await getDatabase()
   const result = await db.getAuditLogs({
     action: action as AuditAction | undefined,
     resource_type: resource_type as string | undefined,
     resource_id: resource_id as string | undefined,
-    user_id: user_id as string | undefined,
+    user_id: effectiveUserId,
     response_status: response_status ? Number(response_status) : undefined,
     start_date: start_date as string | undefined,
     end_date: end_date as string | undefined,
@@ -48,9 +53,15 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
   })
 }))
 
-router.get('/stats', asyncHandler(async (_req, res) => {
+router.get('/stats', asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const stats = await db.getAuditStats()
+  
+  // Non-admin users can only see stats for their own audit logs
+  const userId = req.user?.role === 'admin' || req.user?.role === 'super'
+    ? undefined
+    : req.user?.userId
+
+  const stats = await db.getAuditStats(userId)
   res.json({
     success: true,
     data: stats,
