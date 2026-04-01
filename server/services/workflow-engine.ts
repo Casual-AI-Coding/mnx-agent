@@ -17,7 +17,7 @@ export interface WorkflowResult {
 
 export interface WorkflowNode {
   id: string
-  type: 'action' | 'condition' | 'queue' | 'loop' | 'transform'
+  type: 'action' | 'condition' | 'queue' | 'loop' | 'transform' | 'text-generation' | 'voice-sync' | 'voice-async' | 'image-generation' | 'music-generation' | 'video-generation'
   subtype?: string
   config: Record<string, unknown>
   position?: { x: number; y: number }
@@ -316,6 +316,24 @@ export class WorkflowEngine {
         switch (node.type) {
           case 'action':
             result = await this.executeActionNode(node, config)
+            break
+          case 'text-generation':
+            result = await this.executeActionNode({ ...node, subtype: 'text' }, config)
+            break
+          case 'voice-sync':
+            result = await this.executeActionNode({ ...node, subtype: 'voice-sync' }, config)
+            break
+          case 'voice-async':
+            result = await this.executeActionNode({ ...node, subtype: 'voice-async' }, config)
+            break
+          case 'image-generation':
+            result = await this.executeActionNode({ ...node, subtype: 'image' }, config)
+            break
+          case 'music-generation':
+            result = await this.executeActionNode({ ...node, subtype: 'music' }, config)
+            break
+          case 'video-generation':
+            result = await this.executeActionNode({ ...node, subtype: 'video' }, config)
             break
           case 'condition':
             result = await this.executeConditionNode(node, config, nodeOutputs)

@@ -1,18 +1,10 @@
 import { Router, Request, Response } from 'express'
+import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 
 const router = Router()
 const db = getDatabase()
-
-function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
-  return (req: Request, res: Response) => {
-    fn(req, res).catch((error: Error & { code?: number }) => {
-      const statusCode = error.code && error.code >= 100 && error.code < 600 ? error.code : 500
-      res.status(statusCode).json({ success: false, error: error.message })
-    })
-  }
-}
 
 router.get('/', asyncHandler(async (req, res) => {
   try {

@@ -809,6 +809,143 @@ describe('WorkflowEngine', () => {
   })
 
   // ============================================
+  // Composite Node Type Execution Tests
+  // ============================================
+  describe('Composite Node Type Execution', () => {
+    it('should execute text-generation node as action with text subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'text-generation', config: { messages: [{ role: 'user', content: 'hello' }] } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('text', expect.anything())
+    })
+
+    it('should execute voice-sync node as action with voice-sync subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'voice-sync', config: { text: 'hello voice' } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('voice-sync', expect.anything())
+    })
+
+    it('should execute voice-async node as action with voice-async subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'voice-async', config: { text: 'hello voice async' } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('voice-async', expect.anything())
+    })
+
+    it('should execute image-generation node as action with image subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'image-generation', config: { prompt: 'a beautiful sunset' } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('image', expect.anything())
+    })
+
+    it('should execute music-generation node as action with music subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'music-generation', config: { prompt: 'upbeat jazz' } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('music', expect.anything())
+    })
+
+    it('should execute video-generation node as action with video subtype', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'video-generation', config: { prompt: 'a flying bird' } },
+        ],
+        edges: [],
+      })
+      
+      await engine.executeWorkflow(workflowJson)
+      
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('video', expect.anything())
+    })
+
+    it('should pass config correctly to composite node types', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'text-generation', config: { 
+            model: 'abab5.5-chat',
+            messages: [{ role: 'user', content: 'test' }]
+          }},
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('text', expect.objectContaining({
+        model: 'abab5.5-chat',
+        messages: [{ role: 'user', content: 'test' }]
+      }))
+    })
+
+    it('should handle workflow with multiple composite node types', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'text1', type: 'text-generation', config: { messages: [] } },
+          { id: 'image1', type: 'image-generation', config: { prompt: 'test' } },
+        ],
+        edges: [
+          { id: 'e1', source: 'text1', target: 'image1' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledTimes(2)
+    })
+
+    it('should still execute action+subtype nodes correctly alongside composite types', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'action1', type: 'action', subtype: 'text', config: { messages: [] } },
+          { id: 'textgen1', type: 'text-generation', config: { messages: [] } },
+        ],
+        edges: [
+          { id: 'e1', source: 'action1', target: 'textgen1' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockTaskExecutor.executeTask).toHaveBeenCalledWith('text', expect.anything())
+    })
+  })
+
+  // ============================================
   // Node Type Execution Tests
   // ============================================
   describe('Node Type Execution', () => {

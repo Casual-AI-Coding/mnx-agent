@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
@@ -77,7 +77,7 @@ import type {
 // Helper Components
 // ============================================
 
-function StatusBadge({ status }: { status: TaskStatus | string }) {
+const StatusBadge = memo(function StatusBadge({ status }: { status: TaskStatus | string }) {
   const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
     active: { variant: 'default', icon: <CheckCircle2 className="w-3 h-3" /> },
     inactive: { variant: 'secondary', icon: <Pause className="w-3 h-3" /> },
@@ -99,9 +99,9 @@ function StatusBadge({ status }: { status: TaskStatus | string }) {
       <span className="capitalize">{status}</span>
     </Badge>
   )
-}
+})
 
-function ServiceIcon({ type }: { type: ServiceType }) {
+const ServiceIcon = memo(function ServiceIcon({ type }: { type: ServiceType }) {
   const icons: Record<ServiceType, React.ReactNode> = {
     text: <FileText className="w-5 h-5" />,
     voice_sync: <Mic className="w-5 h-5" />,
@@ -125,7 +125,7 @@ function ServiceIcon({ type }: { type: ServiceType }) {
       {icons[type]}
     </div>
   )
-}
+})
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-'
@@ -320,7 +320,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
 // Jobs List Tab
 // ============================================
 
-function JobsListTab() {
+const JobsListTab = memo(function JobsListTab() {
   const { jobs, loading, fetchJobs, createJob, deleteJob, toggleJob, runJobManually } =
     useCronJobsStore()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -467,13 +467,13 @@ function JobsListTab() {
       />
     </div>
   )
-}
+})
 
 // ============================================
 // Task Queue Tab
 // ============================================
 
-function TaskQueueTab() {
+const TaskQueueTab = memo(function TaskQueueTab() {
   const { tasks, loading, filter, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
 
@@ -665,13 +665,13 @@ function TaskQueueTab() {
       )}
     </div>
   )
-}
+})
 
 // ============================================
 // Execution Logs Tab
 // ============================================
 
-function ExecutionLogsTab() {
+const ExecutionLogsTab = memo(function ExecutionLogsTab() {
   const { logs, loading, fetchLogs } = useExecutionLogsStore()
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
@@ -838,13 +838,13 @@ function ExecutionLogsTab() {
       )}
     </div>
   )
-}
+})
 
 // ============================================
 // Capacity Monitor Tab
 // ============================================
 
-function CapacityMonitorTab() {
+const CapacityMonitorTab = memo(function CapacityMonitorTab() {
   const { records, loading, fetchCapacity, refreshCapacity, lastRefresh } = useCapacityStore()
 
   useEffect(() => {
@@ -978,7 +978,7 @@ function CapacityMonitorTab() {
       )}
     </div>
   )
-}
+})
 
 // ============================================
 // Main Cron Management Page

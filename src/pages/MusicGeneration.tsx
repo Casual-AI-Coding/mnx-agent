@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -12,6 +13,7 @@ import { useUsageStore } from '@/stores/usage'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel } from '@/types'
 
 export default function MusicGeneration() {
+  const { t } = useTranslation()
   const [lyrics, setLyrics] = useState('')
   const [stylePrompt, setStylePrompt] = useState('')
   const [model, setModel] = useState<MusicModel>('music-2.5')
@@ -97,7 +99,7 @@ export default function MusicGeneration() {
         },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败')
+      setError(err instanceof Error ? err.message : t('musicGeneration.musicGenFailed'))
     } finally {
       setIsGenerating(false)
     }
@@ -129,14 +131,14 @@ export default function MusicGeneration() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">音乐生成</h1>
+          <h1 className="text-2xl font-semibold">{t('musicGeneration.title')}</h1>
           <p className="text-muted-foreground text-sm">
-            输入歌词和风格描述，AI 为你创作专属音乐
+            {t('musicGeneration.subtitle')}
           </p>
         </div>
         <Button variant="outline" onClick={clearAll}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          清空
+          {t('musicGeneration.clearBtn')}
         </Button>
       </div>
 
@@ -146,7 +148,7 @@ export default function MusicGeneration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Music2 className="w-5 h-5" />
-                歌词编辑器
+                {t('musicGeneration.lyricsEditorTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -166,12 +168,12 @@ export default function MusicGeneration() {
                 id="lyrics-editor"
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
-                placeholder={`[Verse]\n输入歌词内容...\n\n[Chorus]\n副歌部分...`}
+                placeholder={t('musicGeneration.lyricsPlaceholder')}
                 className="min-h-[300px] resize-none font-mono text-sm"
               />
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{lyrics.length} 字符</span>
-                <span>使用上方标签组织歌曲结构</span>
+                <span>{t('musicGeneration.charCount', { count: lyrics.length })}</span>
+                <span>{t('musicGeneration.useTags')}</span>
               </div>
             </CardContent>
           </Card>
@@ -180,7 +182,7 @@ export default function MusicGeneration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lightbulb className="w-5 h-5" />
-                音乐模板
+                {t('musicGeneration.musicTemplatesTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -204,11 +206,11 @@ export default function MusicGeneration() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>参数设置</CardTitle>
+              <CardTitle>{t('musicGeneration.paramsTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">模型</label>
+                <label className="text-sm font-medium">{t('musicGeneration.modelLabel')}</label>
                 <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -227,11 +229,11 @@ export default function MusicGeneration() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">风格描述</label>
+                <label className="text-sm font-medium">{t('musicGeneration.styleDescription')}</label>
                 <Textarea
                   value={stylePrompt}
                   onChange={(e) => setStylePrompt(e.target.value)}
-                  placeholder="描述你想要的音乐风格，如：流行音乐, 励志, 青春..."
+                  placeholder={t('musicGeneration.stylePlaceholder')}
                   className="min-h-[80px] resize-none"
                 />
               </div>
@@ -239,8 +241,8 @@ export default function MusicGeneration() {
               {model === 'music-2.5+' && (
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label className="text-sm font-medium">AI 歌词优化</label>
-                    <p className="text-xs text-muted-foreground">自动优化歌词以匹配音乐风格</p>
+                    <label className="text-sm font-medium">{t('musicGeneration.aiOptimizeLabel')}</label>
+                    <p className="text-xs text-muted-foreground">{t('musicGeneration.autoOptimizeLyrics')}</p>
                   </div>
                   <Switch
                     checked={optimizeLyrics}
@@ -258,12 +260,12 @@ export default function MusicGeneration() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    创作中...
+                    {t('musicGeneration.composing')}
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-4 h-4 mr-2" />
-                    生成音乐
+                    {t('musicGeneration.generateMusic')}
                   </>
                 )}
               </Button>
@@ -283,7 +285,7 @@ export default function MusicGeneration() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mic2 className="w-5 h-5" />
-                  生成结果
+                  {t('musicGeneration.resultTitle')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -295,12 +297,12 @@ export default function MusicGeneration() {
                 {audioDuration && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4" />
-                    时长: {formatDuration(audioDuration)}
+                    {t('musicGeneration.duration', { duration: formatDuration(audioDuration) })}
                   </div>
                 )}
                 <Button onClick={handleDownload} variant="outline" className="w-full">
                   <Download className="w-4 h-4 mr-2" />
-                  下载音乐
+                  {t('musicGeneration.downloadMusic')}
                 </Button>
               </CardContent>
             </Card>
@@ -308,15 +310,15 @@ export default function MusicGeneration() {
 
           <Card>
             <CardHeader>
-              <CardTitle>创作提示</CardTitle>
+              <CardTitle>{t('musicGeneration.creationTipsTitle')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• 使用结构标签组织歌曲段落</li>
-                <li>• [Verse] 主歌，[Chorus] 副歌</li>
-                <li>• [Intro]/[Outro] 用于开头结尾</li>
-                <li>• 风格描述帮助 AI 理解音乐氛围</li>
-                <li>• music-2.5+ 支持歌词优化功能</li>
+                <li>• {t('musicGeneration.tip1')}</li>
+                <li>• {t('musicGeneration.tip2')}</li>
+                <li>• {t('musicGeneration.tip3')}</li>
+                <li>• {t('musicGeneration.tip4')}</li>
+                <li>• {t('musicGeneration.tip5')}</li>
               </ul>
             </CardContent>
           </Card>

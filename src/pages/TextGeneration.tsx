@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw } from 'lucide-react'
+import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw, Zap, ZapOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
+import { Switch } from '@/components/ui/Switch'
+import { Label } from '@/components/ui/Label'
 import { streamChatCompletion } from '@/lib/api/text'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
@@ -27,6 +29,7 @@ export default function TextGeneration() {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState<string>(TEXT_MODELS[0].id)
   const [selectedTemplate, setSelectedTemplate] = useState('general')
+  const [promptCaching, setPromptCaching] = useState(false)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -100,6 +103,7 @@ export default function TextGeneration() {
         model: selectedModel,
         messages: chatMessages,
         stream: true,
+        ...(promptCaching && { caching: { mode: 'speed' } }),
       })) {
         const content = chunk.choices[0]?.delta?.content || ''
         if (content) {
@@ -211,6 +215,22 @@ export default function TextGeneration() {
               ))}
             </SelectContent>
           </Select>
+
+          <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+            {promptCaching ? (
+              <Zap className="w-4 h-4 text-amber-400" />
+            ) : (
+              <ZapOff className="w-4 h-4 text-zinc-500" />
+            )}
+            <Switch
+              checked={promptCaching}
+              onCheckedChange={setPromptCaching}
+              className="data-[state=checked]:bg-amber-500"
+            />
+            <Label className="text-sm text-zinc-400 cursor-pointer" onClick={() => setPromptCaching(!promptCaching)}>
+              {t('textGeneration.promptCaching') || '缓存'}
+            </Label>
+          </div>
 
           <Button 
             variant="ghost" 

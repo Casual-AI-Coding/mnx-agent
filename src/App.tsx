@@ -1,27 +1,58 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { Toaster } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
-import Dashboard from '@/pages/Dashboard'
-import TextGeneration from '@/pages/TextGeneration'
-import VoiceSync from '@/pages/VoiceSync'
-import VoiceAsync from '@/pages/VoiceAsync'
-import ImageGeneration from '@/pages/ImageGeneration'
-import MusicGeneration from '@/pages/MusicGeneration'
-import VideoGeneration from '@/pages/VideoGeneration'
-import VideoAgent from '@/pages/VideoAgent'
-import VoiceManagement from '@/pages/VoiceManagement'
-import FileManagement from '@/pages/FileManagement'
-import MediaManagement from '@/pages/MediaManagement'
-import ImageGallery from '@/pages/ImageGallery'
-import TokenMonitor from '@/pages/TokenMonitor'
-import Settings from '@/pages/Settings'
-import CronManagement from '@/pages/CronManagement'
-import WorkflowBuilder from '@/pages/WorkflowBuilder'
-import CapacityMonitor from '@/pages/CapacityMonitor'
 import { useAppStore } from '@/stores/app'
 import analytics from '@/lib/analytics'
+
+// Lazy load page components for code splitting
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const TextGeneration = lazy(() => import('@/pages/TextGeneration'))
+const VoiceSync = lazy(() => import('@/pages/VoiceSync'))
+const VoiceAsync = lazy(() => import('@/pages/VoiceAsync'))
+const ImageGeneration = lazy(() => import('@/pages/ImageGeneration'))
+const MusicGeneration = lazy(() => import('@/pages/MusicGeneration'))
+const VideoGeneration = lazy(() => import('@/pages/VideoGeneration'))
+const VideoAgent = lazy(() => import('@/pages/VideoAgent'))
+const VoiceManagement = lazy(() => import('@/pages/VoiceManagement'))
+const FileManagement = lazy(() => import('@/pages/FileManagement'))
+const MediaManagement = lazy(() => import('@/pages/MediaManagement'))
+const ImageGallery = lazy(() => import('@/pages/ImageGallery'))
+const TokenMonitor = lazy(() => import('@/pages/TokenMonitor'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const CronManagement = lazy(() => import('@/pages/CronManagement'))
+const WorkflowBuilder = lazy(() => import('@/pages/WorkflowBuilder'))
+const CapacityMonitor = lazy(() => import('@/pages/CapacityMonitor'))
+
+// Route wrapper with ErrorBoundary for each page
+function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
+  return (
+    <ErrorBoundary
+      fallback={
+        <ErrorFallback
+          title={`${pageName} 加载失败`}
+          message="页面渲染时遇到错误，请尝试刷新或返回上一页。"
+          onRetry={() => window.location.reload()}
+          className="min-h-[50vh]"
+        />
+      }
+    >
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span>加载中...</span>
+            </div>
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  )
+}
 
 function AppContent() {
   const location = useLocation()
@@ -103,22 +134,134 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<AppLayout />}>
         <Route index element={<Navigate to="/text" replace />} />
-        <Route path="text" element={<TextGeneration />} />
-        <Route path="voice" element={<VoiceSync />} />
-        <Route path="voice-async" element={<VoiceAsync />} />
-        <Route path="image" element={<ImageGeneration />} />
-        <Route path="music" element={<MusicGeneration />} />
-        <Route path="video" element={<VideoGeneration />} />
-        <Route path="video-agent" element={<VideoAgent />} />
-        <Route path="voice-mgmt" element={<VoiceManagement />} />
-        <Route path="files" element={<FileManagement />} />
-        <Route path="media" element={<MediaManagement />} />
-        <Route path="gallery" element={<ImageGallery />} />
-        <Route path="token" element={<TokenMonitor />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="cron" element={<CronManagement />} />
-        <Route path="capacity" element={<CapacityMonitor />} />
-        <Route path="workflow-builder" element={<WorkflowBuilder />} />
+        <Route
+          path="text"
+          element={
+            <RouteWithErrorBoundary pageName="文本生成">
+              <TextGeneration />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="voice"
+          element={
+            <RouteWithErrorBoundary pageName="语音同步">
+              <VoiceSync />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="voice-async"
+          element={
+            <RouteWithErrorBoundary pageName="语音异步">
+              <VoiceAsync />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="image"
+          element={
+            <RouteWithErrorBoundary pageName="图像生成">
+              <ImageGeneration />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="music"
+          element={
+            <RouteWithErrorBoundary pageName="音乐生成">
+              <MusicGeneration />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="video"
+          element={
+            <RouteWithErrorBoundary pageName="视频生成">
+              <VideoGeneration />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="video-agent"
+          element={
+            <RouteWithErrorBoundary pageName="视频智能体">
+              <VideoAgent />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="voice-mgmt"
+          element={
+            <RouteWithErrorBoundary pageName="音色管理">
+              <VoiceManagement />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="files"
+          element={
+            <RouteWithErrorBoundary pageName="文件管理">
+              <FileManagement />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="media"
+          element={
+            <RouteWithErrorBoundary pageName="媒体管理">
+              <MediaManagement />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="gallery"
+          element={
+            <RouteWithErrorBoundary pageName="图库">
+              <ImageGallery />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="token"
+          element={
+            <RouteWithErrorBoundary pageName="Token监控">
+              <TokenMonitor />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <RouteWithErrorBoundary pageName="设置">
+              <Settings />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="cron"
+          element={
+            <RouteWithErrorBoundary pageName="定时任务">
+              <CronManagement />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="capacity"
+          element={
+            <RouteWithErrorBoundary pageName="容量监控">
+              <CapacityMonitor />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="workflow-builder"
+          element={
+            <RouteWithErrorBoundary pageName="工作流构建器">
+              <WorkflowBuilder />
+            </RouteWithErrorBoundary>
+          }
+        />
       </Route>
     </Routes>
   )

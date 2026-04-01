@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { ConnectionStatus } from '@/lib/websocket-client'
 
 export type ApiMode = 'direct' | 'proxy'
 export const PROXY_BASE_URL = '/api'
@@ -9,10 +10,12 @@ interface AppState {
   region: 'cn' | 'intl'
   theme: 'light' | 'dark' | 'system'
   apiMode: ApiMode
+  wsStatus: ConnectionStatus
   setApiKey: (key: string) => void
   setRegion: (region: 'cn' | 'intl') => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
   setApiMode: (mode: ApiMode) => void
+  setWsStatus: (status: ConnectionStatus) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -22,10 +25,12 @@ export const useAppStore = create<AppState>()(
       region: 'cn',
       theme: 'system',
       apiMode: 'direct',
+      wsStatus: 'disconnected',
       setApiKey: (key) => set({ apiKey: key }),
       setRegion: (region) => set({ region: region }),
       setTheme: (theme) => set({ theme: theme }),
       setApiMode: (mode) => set({ apiMode: mode }),
+      setWsStatus: (status) => set({ wsStatus: status }),
     }),
     {
       name: 'minimax-app-storage',

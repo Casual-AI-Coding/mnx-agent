@@ -30,6 +30,9 @@ export interface ChatCompletionRequest {
   max_completion_tokens?: number
   tools?: Tool[]
   tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } }
+  caching?: {
+    mode: 'speed' | 'quality'
+  }
 }
 
 export interface Tool {

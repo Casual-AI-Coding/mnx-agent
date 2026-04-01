@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-04-01
+
+### Fixed
+- **WebSocket Infrastructure** - `initCronWebSocket()` now called in server startup, events properly emitted
+- **Workflow Node Types** - Composite types (text-generation, voice-sync, etc.) now correctly handled in DAG execution
+- **Error Handling** - Centralized `asyncHandler` middleware, axios interceptor preserves MiniMax error codes
+
+### Performance
+- **Database** - Migration 4 adds 5 indexes, 12 N+1 queries fixed with SQLite RETURNING clause
+- **React** - Dashboard memoization (useMemo/useCallback), React.memo on CronManagement children
+- **Build** - Code splitting with 45 chunks (vendor 346KB, flow 183KB, animation 129KB, ui 54KB)
+
+### Added
+- **WebSocket Client** - Frontend `ReconnectingWebSocket` with auto-reconnect, heartbeat, typed message handlers
+- **Unit Tests** - 74 new tests for TaskExecutor (94%), CapacityChecker (98%), WebSocketService
+- **i18n** - 3 pages fixed (VoiceSync, MusicGeneration, VideoGeneration) with proper translation keys
+- **MiniMax API Features** - Prompt caching toggle for text generation, 15 camera commands for video generation
+
+### Changed
+- **Routes** - All use centralized `asyncHandler` from `server/middleware/asyncHandler.ts`
+- **Frontend Architecture** - All 17 routes use React.lazy() for code splitting with ErrorBoundary
+
 ## [1.0.0] - 2026-03-31
 
 ### Added

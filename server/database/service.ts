@@ -190,8 +190,9 @@ export class DatabaseService {
     fields.push('updated_at = ?')
     values.push(toISODate())
     values.push(id)
-    this.db.prepare(`UPDATE cron_jobs SET ${fields.join(', ')} WHERE id = ?`).run(...values)
-    return this.getCronJobById(id)
+    const returningFields = ['id', 'name', 'description', 'cron_expression', 'is_active', 'workflow_json', 'created_at', 'updated_at', 'last_run_at', 'next_run_at', 'total_runs', 'total_failures', 'timeout_ms']
+    const row = this.db.prepare(`UPDATE cron_jobs SET ${fields.join(', ')} WHERE id = ? RETURNING ${returningFields.join(', ')}`).get(...values) as CronJobRow | undefined
+    return row ? rowToCronJob(row) : null
   }
 
   deleteCronJob(id: string): boolean {
@@ -201,8 +202,9 @@ export class DatabaseService {
   toggleCronJobActive(id: string): CronJob | null {
     const existing = this.getCronJobById(id)
     if (!existing) return null
-    this.db.prepare('UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ?').run(existing.is_active ? 0 : 1, toISODate(), id)
-    return this.getCronJobById(id)
+    const newIsActive = existing.is_active ? 0 : 1
+    const row = this.db.prepare('UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ? RETURNING *').get(newIsActive, toISODate(), id) as CronJobRow | undefined
+    return row ? rowToCronJob(row) : null
   }
 
   updateCronJobRunStats(id: string, stats: RunStats): CronJob | null {
@@ -210,15 +212,15 @@ export class DatabaseService {
     if (!existing) return null
     const newTotalRuns = existing.total_runs + 1
     const newTotalFailures = stats.success ? existing.total_failures : existing.total_failures + 1
-    this.db.prepare(`UPDATE cron_jobs SET total_runs = ?, total_failures = ?, last_run_at = ?, updated_at = ? WHERE id = ?`)
-      .run(newTotalRuns, newTotalFailures, toISODate(), toISODate(), id)
-    return this.getCronJobById(id)
+    const row = this.db.prepare(`UPDATE cron_jobs SET total_runs = ?, total_failures = ?, last_run_at = ?, updated_at = ? WHERE id = ? RETURNING *`)
+      .get(newTotalRuns, newTotalFailures, toISODate(), toISODate(), id) as CronJobRow | undefined
+    return row ? rowToCronJob(row) : null
   }
 
   updateCronJobLastRun(id: string, nextRun: string): CronJob | null {
     const now = toISODate()
-    this.db.prepare(`UPDATE cron_jobs SET last_run_at = ?, next_run_at = ?, updated_at = ? WHERE id = ?`).run(now, nextRun, now, id)
-    return this.getCronJobById(id)
+    const row = this.db.prepare(`UPDATE cron_jobs SET last_run_at = ?, next_run_at = ?, updated_at = ? WHERE id = ? RETURNING *`).get(now, nextRun, now, id) as CronJobRow | undefined
+    return row ? rowToCronJob(row) : null
   }
 
   getActiveCronJobs(): CronJob[] {
@@ -251,9 +253,12 @@ export class DatabaseService {
   createTask(task: CreateTaskQueueItem): TaskQueueItem {
     const id = uuidv4()
     const now = toISODate()
-    this.db.prepare(`INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? TaskStatus.PENDING, task.max_retries ?? 3, now)
-    return this.getTaskById(id)!
+    const row = this.db.prepare(`
+      INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+      RETURNING *
+    `).get(id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? TaskStatus.PENDING, task.max_retries ?? 3, now) as TaskQueueRow
+    return rowToTaskQueueItem(row)
   }
 
   updateTask(id: string, updates: UpdateTaskQueueItem): TaskQueueItem | null {
@@ -272,8 +277,9 @@ export class DatabaseService {
 
     if (fields.length === 0) return existing
     values.push(id)
-    this.db.prepare(`UPDATE task_queue SET ${fields.join(', ')} WHERE id = ?`).run(...values)
-    return this.getTaskById(id)
+    const returningFields = ['id', 'job_id', 'task_type', 'payload', 'priority', 'status', 'retry_count', 'max_retries', 'error_message', 'result', 'created_at', 'started_at', 'completed_at']
+    const row = this.db.prepare(`UPDATE task_queue SET ${fields.join(', ')} WHERE id = ? RETURNING ${returningFields.join(', ')}`).get(...values) as TaskQueueRow | undefined
+    return row ? rowToTaskQueueItem(row) : null
   }
 
   deleteTask(id: string): boolean {
@@ -306,13 +312,13 @@ export class DatabaseService {
   }
 
   markTaskRunning(id: string): TaskQueueItem | null {
-    this.db.prepare(`UPDATE task_queue SET status = ?, started_at = ? WHERE id = ?`).run('running', toISODate(), id)
-    return this.getTaskById(id)
+    const row = this.db.prepare(`UPDATE task_queue SET status = 'running', started_at = ? WHERE id = ? RETURNING *`).get(toISODate(), id) as TaskQueueRow | undefined
+    return row ? rowToTaskQueueItem(row) : null
   }
 
   markTaskCompleted(id: string, result?: string): TaskQueueItem | null {
-    this.db.prepare(`UPDATE task_queue SET status = ?, completed_at = ?, result = ? WHERE id = ?`).run('completed', toISODate(), result ?? null, id)
-    return this.getTaskById(id)
+    const row = this.db.prepare(`UPDATE task_queue SET status = 'completed', completed_at = ?, result = ? WHERE id = ? RETURNING *`).get(toISODate(), result ?? null, id) as TaskQueueRow | undefined
+    return row ? rowToTaskQueueItem(row) : null
   }
 
   markTaskFailed(id: string, error: string): TaskQueueItem | null {
@@ -320,9 +326,9 @@ export class DatabaseService {
     if (!existing) return null
     const newRetryCount = existing.retry_count + 1
     const newStatus = newRetryCount >= existing.max_retries ? 'failed' : 'pending'
-    this.db.prepare(`UPDATE task_queue SET status = ?, retry_count = ?, error_message = ?, completed_at = ? WHERE id = ?`)
-      .run(newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id)
-    return this.getTaskById(id)
+    const row = this.db.prepare(`UPDATE task_queue SET status = ?, retry_count = ?, error_message = ?, completed_at = ? WHERE id = ? RETURNING *`)
+      .get(newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id) as TaskQueueRow | undefined
+    return row ? rowToTaskQueueItem(row) : null
   }
 
   getTasksByJobId(jobId: string): TaskQueueItem[] {
@@ -350,9 +356,12 @@ export class DatabaseService {
   createExecutionLog(log: CreateExecutionLog): ExecutionLog {
     const id = uuidv4()
     const now = toISODate()
-    this.db.prepare(`INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, log_detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, log.job_id ?? null, log.trigger_type, log.status, now, log.tasks_executed ?? 0, log.tasks_succeeded ?? 0, log.tasks_failed ?? 0, log.error_summary ?? null, log.log_detail ?? null)
-    return this.getExecutionLogById(id)!
+    const row = this.db.prepare(`
+      INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, log_detail) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+      RETURNING *
+    `).get(id, log.job_id ?? null, log.trigger_type, log.status, now, log.tasks_executed ?? 0, log.tasks_succeeded ?? 0, log.tasks_failed ?? 0, log.error_summary ?? null, log.log_detail ?? null) as ExecutionLogRow
+    return rowToExecutionLog(row)
   }
 
   updateExecutionLog(id: string, updates: UpdateExecutionLog): ExecutionLog | null {
@@ -373,15 +382,15 @@ export class DatabaseService {
 
     if (fields.length === 0) return existing
     values.push(id)
-    this.db.prepare(`UPDATE execution_logs SET ${fields.join(', ')} WHERE id = ?`).run(...values)
-    return this.getExecutionLogById(id)
+    const row = this.db.prepare(`UPDATE execution_logs SET ${fields.join(', ')} WHERE id = ? RETURNING *`).get(...values) as ExecutionLogRow | undefined
+    return row ? rowToExecutionLog(row) : null
   }
 
   completeExecutionLog(id: string, stats: RunStats): ExecutionLog | null {
     const status = stats.success ? 'completed' : 'failed'
-    this.db.prepare(`UPDATE execution_logs SET status = ?, completed_at = ?, duration_ms = ?, tasks_executed = ?, tasks_succeeded = ?, tasks_failed = ?, error_summary = ? WHERE id = ?`)
-      .run(status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id)
-    return this.getExecutionLogById(id)
+    const row = this.db.prepare(`UPDATE execution_logs SET status = ?, completed_at = ?, duration_ms = ?, tasks_executed = ?, tasks_succeeded = ?, tasks_failed = ?, error_summary = ? WHERE id = ? RETURNING *`)
+      .get(status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id) as ExecutionLogRow | undefined
+    return row ? rowToExecutionLog(row) : null
   }
 
   getRecentExecutionLogs(limit: number = 20): ExecutionLog[] {
@@ -550,10 +559,11 @@ export class DatabaseService {
   createWebhookConfig(config: CreateWebhookConfig): WebhookConfig {
     const id = uuidv4()
     const now = toISODate()
-    this.db.prepare(`
+    const row = this.db.prepare(`
       INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      RETURNING *
+    `).get(
       id,
       config.job_id ?? null,
       config.name,
@@ -564,8 +574,8 @@ export class DatabaseService {
       config.is_active !== false ? 1 : 0,
       now,
       now
-    )
-    return this.getWebhookConfigById(id)!
+    ) as WebhookConfigRow
+    return rowToWebhookConfig(row)
   }
 
   updateWebhookConfig(id: string, updates: UpdateWebhookConfig): WebhookConfig | null {
@@ -586,8 +596,8 @@ export class DatabaseService {
     fields.push('updated_at = ?')
     values.push(toISODate())
     values.push(id)
-    this.db.prepare(`UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = ?`).run(...values)
-    return this.getWebhookConfigById(id)
+    const row = this.db.prepare(`UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = ? RETURNING *`).get(...values) as WebhookConfigRow | undefined
+    return row ? rowToWebhookConfig(row) : null
   }
 
   deleteWebhookConfig(id: string): boolean {

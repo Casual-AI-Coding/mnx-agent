@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
+import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service'
 import {
   listMediaQuerySchema,
@@ -18,15 +19,6 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
 })
-
-function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
-  return (req: Request, res: Response) => {
-    fn(req, res).catch((error: Error & { code?: number }) => {
-      const statusCode = error.code && error.code >= 100 && error.code < 600 ? error.code : 500
-      res.status(statusCode).json({ success: false, error: error.message })
-    })
-  }
-}
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
   const { type, source, page, limit, includeDeleted } = req.query

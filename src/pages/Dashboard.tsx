@@ -1,22 +1,70 @@
+import { useEffect, useMemo, useCallback, memo } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   MessageSquare, Mic, MicOff, Image, Music, Video, VideoIcon,
-  User, FolderOpen, BarChart3, TrendingUp, Zap, Clock
+  User, FolderOpen, BarChart3, TrendingUp, Zap, Clock,
+  Wifi, WifiOff, Loader2
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
+import { useAppStore } from '@/stores/app'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import type { ConnectionStatus } from '@/lib/websocket-client'
+
+const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
+  const statusConfig: Record<ConnectionStatus, { icon: typeof Wifi; color: string; text: string }> = {
+    connected: { icon: Wifi, color: 'text-green-400', text: '已连接' },
+    connecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '连接中...' },
+    reconnecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '重连中...' },
+    disconnected: { icon: WifiOff, color: 'text-red-400', text: '未连接' },
+  }
+
+  const config = statusConfig[status]
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <config.icon className={`w-4 h-4 ${config.color}`} />
+      <span className="text-dark-400">{config.text}</span>
+    </div>
+  )
+})
 
 export default function Dashboard() {
   const { t } = useTranslation()
   const { usage } = useUsageStore()
-  const { items } = useHistoryStore()
-  const recentItems = items.slice(-5).reverse()
+  const { items, addItem } = useHistoryStore()
+  const { setWsStatus } = useAppStore()
+  const { status, events } = useWebSocket({
+    channels: ['jobs', 'tasks'],
+    showToasts: true,
+  })
 
-  const quickActions = [
+  // Memoized: only recalculates when items change
+  const recentItems = useMemo(() => items.slice(-5).reverse(), [items])
+
+  // Memoized: type labels and colors - stable references
+  const typeLabels = useMemo(() => ({
+    text: t('dashboard.text'),
+    image: t('dashboard.image'),
+    voice: t('dashboard.voice'),
+    music: t('dashboard.music'),
+    video: t('dashboard.video'),
+  }), [t])
+
+  const typeColors = useMemo(() => ({
+    text: 'bg-blue-500/20 text-blue-400',
+    image: 'bg-purple-500/20 text-purple-400',
+    voice: 'bg-green-500/20 text-green-400',
+    music: 'bg-pink-500/20 text-pink-400',
+    video: 'bg-orange-500/20 text-orange-400',
+  }), [])
+
+  // Memoized: stable array reference
+  const quickActions = useMemo(() => [
     { title: t('dashboard.aiChatAndWriting'), desc: t('dashboard.aiChatAndWriting'), icon: MessageSquare, path: '/text', color: 'hover:border-blue-500' },
     { title: t('dashboard.realtimeVoiceSynthesis'), desc: t('dashboard.realtimeVoiceSynthesis'), icon: Mic, path: '/voice', color: 'hover:border-green-500' },
     { title: t('dashboard.batchVoiceSynthesis'), desc: t('dashboard.batchVoiceSynthesis'), icon: MicOff, path: '/voice-async', color: 'hover:border-teal-500' },
@@ -27,9 +75,10 @@ export default function Dashboard() {
     { title: t('dashboard.customVoiceManagement'), desc: t('dashboard.customVoiceManagement'), icon: User, path: '/voice-mgmt', color: 'hover:border-indigo-500' },
     { title: t('dashboard.uploadedFileManagement'), desc: t('dashboard.uploadedFileManagement'), icon: FolderOpen, path: '/files', color: 'hover:border-cyan-500' },
     { title: t('dashboard.apiUsageStatistics'), desc: t('dashboard.apiUsageStatistics'), icon: BarChart3, path: '/token', color: 'hover:border-yellow-500' },
-  ]
+  ], [t])
 
-  function timeAgo(date: Date): string {
+  // Memoized: stable function reference
+  const timeAgo = useCallback((date: Date): string => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
     if (seconds < 60) return t('dashboard.justNow')
     const minutes = Math.floor(seconds / 60)
@@ -38,36 +87,46 @@ export default function Dashboard() {
     if (hours < 24) return `${hours}${t('dashboard.hoursAgo')}`
     const days = Math.floor(hours / 24)
     return `${days}${t('dashboard.daysAgo')}`
-  }
+  }, [t])
 
-  const typeLabels: Record<string, string> = {
-    text: t('dashboard.text'),
-    image: t('dashboard.image'),
-    voice: t('dashboard.voice'),
-    music: t('dashboard.music'),
-    video: t('dashboard.video'),
-  }
-
-  const typeColors: Record<string, string> = {
-    text: 'bg-blue-500/20 text-blue-400',
-    image: 'bg-purple-500/20 text-purple-400',
-    voice: 'bg-green-500/20 text-green-400',
-    music: 'bg-pink-500/20 text-pink-400',
-    video: 'bg-orange-500/20 text-orange-400',
-  }
-
-  const stats = [
+  // Memoized: only recalculates when usage or t changes
+  const stats = useMemo(() => [
     { label: t('dashboard.totalGenerations'), value: usage.textTokens + usage.imageRequests + usage.musicRequests + usage.videoRequests, icon: Zap, color: 'text-yellow-400' },
     { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: 'text-blue-400' },
     { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: 'text-purple-400' },
     { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: 'text-orange-400' },
-  ]
+  ], [usage, t])
+
+  useEffect(() => {
+    setWsStatus(status)
+  }, [status, setWsStatus])
+
+  useEffect(() => {
+    if (events.length === 0) return
+
+    const latestEvent = events[0]
+
+    if (latestEvent.type === 'task_completed' || latestEvent.type === 'job_executed') {
+      const payload = latestEvent.payload as { output?: string; result?: { output?: string } }
+      const output = payload?.output || payload?.result?.output
+
+      if (output) {
+        addItem({
+          type: 'text',
+          input: output.slice(0, 100),
+        })
+      }
+    }
+  }, [events, addItem])
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">{t('dashboard.title')}</h1>
-        <p className="text-dark-400 mt-2">{t('dashboard.subtitle')}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">{t('dashboard.title')}</h1>
+          <p className="text-dark-400 mt-2">{t('dashboard.subtitle')}</p>
+        </div>
+        <ConnectionIndicator status={status} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -22,6 +22,7 @@ import { CapacityChecker } from './services/capacity-checker'
 import { QueueProcessor } from './services/queue-processor'
 import { WorkflowEngine } from './services/workflow-engine'
 import { CronScheduler } from './services/cron-scheduler'
+import { initCronWebSocket } from './services/websocket-service'
 
 config()
 
@@ -85,6 +86,9 @@ try {
   console.warn('⚠️  Service initialization failed:', (error as Error).message)
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 MiniMax Proxy Server running on http://localhost:${PORT}`)
 })
+
+initCronWebSocket(server)
+console.log('📡 WebSocket server initialized on /ws/cron')

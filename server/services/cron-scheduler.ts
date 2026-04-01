@@ -8,6 +8,7 @@ import {
   ExecutionStatus,
   TriggerType 
 } from '../database/types'
+import { cronEvents } from './websocket-service'
 
 export type { DatabaseService }
 
@@ -120,6 +121,8 @@ export class CronScheduler {
     const startedAt = new Date().toISOString()
     
     let log: { id: string } | null = null
+    let executionSuccess = false
+    let durationMs = 0
     
     try {
       log = await this.db.createExecutionLog({
@@ -138,7 +141,8 @@ export class CronScheduler {
       )
       
       const endTime = Date.now()
-      const durationMs = endTime - startTime
+      durationMs = endTime - startTime
+      executionSuccess = result.success
       const completedAt = new Date().toISOString()
       
       const tasksExecuted = result.nodeResults.size
@@ -171,7 +175,8 @@ export class CronScheduler {
       })
     } catch (error) {
       const endTime = Date.now()
-      const durationMs = endTime - startTime
+      durationMs = endTime - startTime
+      executionSuccess = false
       const completedAt = new Date().toISOString()
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
@@ -197,6 +202,7 @@ export class CronScheduler {
       }
     } finally {
       this.releaseExecutionSlot(job.id)
+      cronEvents.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
     }
   }
 

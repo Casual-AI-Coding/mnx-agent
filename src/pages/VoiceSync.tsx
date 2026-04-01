@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Volume2, Play, Download, Loader2, Sparkles, Wand2, Mic2, Music2, Gauge, SlidersHorizontal, Check } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -192,6 +193,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
 }
 
 export default function VoiceSync() {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [model, setModel] = useState<SpeechModel>('speech-2.6-hd')
   const [voiceId, setVoiceId] = useState(VOICE_OPTIONS[0].id)
@@ -260,8 +262,8 @@ export default function VoiceSync() {
       })
       
       saveToMedia(blob, `voice_sync_${Date.now()}.wav`, 'voice_sync')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('voiceSync.voiceGenerationFailed'))
     } finally {
       setIsGenerating(false)
     }
@@ -290,10 +292,10 @@ export default function VoiceSync() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
-            同步语音生成
+            {t('voiceSync.title')}
           </h1>
           <p className="text-zinc-500 text-sm mt-1">
-            实时生成高品质语音，最大支持 {MAX_CHARS.toLocaleString()} 字符
+            {t('voiceSync.subtitleWithLimit', { count: MAX_CHARS.toLocaleString() })}
           </p>
         </div>
         <div className="relative">
@@ -324,8 +326,8 @@ export default function VoiceSync() {
                     <Sparkles className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-zinc-100">文本输入</h2>
-                    <p className="text-xs text-zinc-500">输入要转换为语音的文本内容</p>
+                    <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.textInputTitle')}</h2>
+                    <p className="text-xs text-zinc-500">{t('voiceSync.textInputDesc')}</p>
                   </div>
                 </div>
 
@@ -334,7 +336,7 @@ export default function VoiceSync() {
                   <Textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="输入要转换为语音的文本..."
+                    placeholder={t('voiceSync.placeholder')}
                     className="min-h-[200px] resize-none bg-zinc-950/50 border-zinc-800/60 text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl"
                   />
 
@@ -369,7 +371,7 @@ export default function VoiceSync() {
                           variant="destructive"
                           className="bg-red-500/20 text-red-400 border-red-500/30"
                         >
-                          超出限制
+                          {t('voiceSync.overLimit')}
                         </Badge>
                       )}
                     </div>
@@ -424,8 +426,8 @@ export default function VoiceSync() {
                         <Music2 className="w-5 h-5 text-emerald-400" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-zinc-100">生成结果</h2>
-                        <p className="text-xs text-zinc-500">语音已成功生成</p>
+                        <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.resultTitle')}</h2>
+                        <p className="text-xs text-zinc-500">{t('voiceSync.resultDesc')}</p>
                       </div>
                     </div>
 
@@ -451,8 +453,8 @@ export default function VoiceSync() {
                   <SlidersHorizontal className="w-5 h-5 text-zinc-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-100">参数设置</h2>
-                  <p className="text-xs text-zinc-500">自定义语音生成选项</p>
+                  <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.paramsTitle')}</h2>
+                  <p className="text-xs text-zinc-500">{t('voiceSync.paramsDesc')}</p>
                 </div>
               </div>
 
@@ -460,7 +462,7 @@ export default function VoiceSync() {
               <div className="relative p-6 space-y-6">
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">模型</Label>
+                  <Label className="text-zinc-400 text-sm">{t('voiceSync.modelLabel')}</Label>
                   <Select value={model} onValueChange={(v) => setModel(v as SpeechModel)}>
                     <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
@@ -486,12 +488,12 @@ export default function VoiceSync() {
                                 }`}
                               >
                                 {m.tier === 'latest'
-                                  ? '最新'
+                                  ? t('voiceSync.latest')
                                   : m.tier === 'recommended'
-                                    ? '推荐'
+                                    ? t('voiceSync.recommended')
                                     : m.tier === 'fast'
-                                      ? '快速'
-                                      : '稳定'}
+                                      ? t('voiceSync.fast')
+                                      : t('voiceSync.stable')}
                               </Badge>
                             </div>
                             <span className="text-xs text-zinc-500 mt-0.5">
@@ -506,7 +508,7 @@ export default function VoiceSync() {
 
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">音色</Label>
+                  <Label className="text-zinc-400 text-sm">{t('voiceSync.voiceLabel')}</Label>
                   <Select value={voiceId} onValueChange={setVoiceId}>
                     <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
@@ -538,7 +540,7 @@ export default function VoiceSync() {
 
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">情绪</Label>
+                  <Label className="text-zinc-400 text-sm">{t('voiceSync.emotionLabel')}</Label>
                   <Select value={emotion} onValueChange={(v) => setEmotion(v as Emotion)}>
                     <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
@@ -565,7 +567,7 @@ export default function VoiceSync() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Gauge className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">语速</Label>
+                        <Label className="text-zinc-400 text-sm">{t('voiceSync.speedLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {speed.toFixed(1)}x
@@ -586,7 +588,7 @@ export default function VoiceSync() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Volume2 className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">音量</Label>
+                        <Label className="text-zinc-400 text-sm">{t('voiceSync.volumeLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {Math.round(volume * 100)}%
@@ -607,7 +609,7 @@ export default function VoiceSync() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Music2 className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">音调</Label>
+                        <Label className="text-zinc-400 text-sm">{t('voiceSync.pitchLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {pitch > 0 ? `+${pitch}` : pitch}
@@ -639,12 +641,12 @@ export default function VoiceSync() {
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>生成中...</span>
+                      <span>{t('voiceSync.generating')}</span>
                     </>
                   ) : (
                     <>
                       <Wand2 className="w-5 h-5" />
-                      <span>生成语音</span>
+                      <span>{t('voiceSync.generateVoice')}</span>
                     </>
                   )}
                 </motion.button>
@@ -657,15 +659,15 @@ export default function VoiceSync() {
             <div className="bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/40 rounded-xl p-5">
               <h3 className="text-sm font-medium text-zinc-400 mb-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                当前配置
+                {t('voiceSync.currentConfig')}
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">模型</span>
+                  <span className="text-zinc-500">{t('voiceSync.modelLabel')}</span>
                   <span className="text-zinc-300 font-medium">{selectedModel?.name}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">音色</span>
+                  <span className="text-zinc-500">{t('voiceSync.voiceLabel')}</span>
                   <div className="flex items-center gap-2">
                     <span
                       className={`w-2 h-2 rounded-full ${
@@ -676,26 +678,26 @@ export default function VoiceSync() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">情绪</span>
+                  <span className="text-zinc-500">{t('voiceSync.emotionLabel')}</span>
                   <span className="text-zinc-300">
                     {selectedEmotion?.emoji} {selectedEmotion?.label}
                   </span>
                 </div>
                 <div className="h-px bg-zinc-800/60 my-3" />
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">语速</span>
+                  <span className="text-zinc-500">{t('voiceSync.speedLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">
                     {speed.toFixed(1)}x
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">音量</span>
+                  <span className="text-zinc-500">{t('voiceSync.volumeLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">
                     {Math.round(volume * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">音调</span>
+                  <span className="text-zinc-500">{t('voiceSync.pitchLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">{pitch}</span>
                 </div>
               </div>

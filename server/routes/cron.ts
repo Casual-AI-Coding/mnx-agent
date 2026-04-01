@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
+import { asyncHandler } from '../middleware/asyncHandler'
 import { DatabaseService, getDatabase } from '../database/service'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
@@ -28,15 +29,6 @@ const db: DatabaseService = getDatabase()
 function parsePayload(payload: string | Record<string, unknown>): string {
   if (typeof payload === 'string') return payload
   return JSON.stringify(payload)
-}
-
-function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
-  return (req: Request, res: Response) => {
-    fn(req, res).catch((error: Error & { code?: number }) => {
-      const statusCode = error.code && error.code >= 100 && error.code < 600 ? error.code : 500
-      res.status(statusCode).json({ success: false, error: error.message })
-    })
-  }
 }
 
 // ============================================

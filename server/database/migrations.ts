@@ -110,6 +110,22 @@ CREATE INDEX IF NOT EXISTS idx_dead_letter_failed_at ON dead_letter_queue(failed
 `,
   },
   {
+    id: 4,
+    name: 'migration_004_add_missing_indexes',
+    sql: `
+-- Add missing indexes for webhook tables
+CREATE INDEX IF NOT EXISTS idx_webhook_configs_job_id ON webhook_configs(job_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_execution_log_id ON webhook_deliveries(execution_log_id);
+
+-- Add missing indexes for cron_jobs
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_next_run ON cron_jobs(next_run_at);
+
+-- Add missing index for media_records
+CREATE INDEX IF NOT EXISTS idx_media_records_task_id ON media_records(task_id);
+`,
+  },
+  {
     id: 5,
     name: 'migration_005_media_records',
     sql: `

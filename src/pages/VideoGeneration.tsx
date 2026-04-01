@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -9,7 +10,7 @@ import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { VIDEO_MODELS, type VideoModel } from '@/types'
+import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } from '@/types'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -25,8 +26,10 @@ interface VideoTask {
 }
 
 export default function VideoGeneration() {
+  const { t } = useTranslation()
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<VideoModel>('video-01')
+  const [cameraCommand, setCameraCommand] = useState<CameraCommand>('static')
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<VideoTask[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +46,7 @@ export default function VideoGeneration() {
       const response = await createVideo({
         model,
         prompt: prompt.trim(),
+        ...(cameraCommand !== 'static' && { camera_control: { type: cameraCommand } }),
       })
 
       const newTask: VideoTask = {
@@ -60,7 +64,7 @@ export default function VideoGeneration() {
 
       pollTaskStatus(newTask.taskId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建任务失败')
+      setError(err instanceof Error ? err.message : t('videoGeneration.videoGenFailed'))
     } finally {
       setIsGenerating(false)
     }
@@ -100,7 +104,7 @@ export default function VideoGeneration() {
 
             saveVideoToMedia(status.results.video_url)
           } else if (status.status === 'failed') {
-            updatedTask.error = status.error || '生成失败'
+            updatedTask.error = status.error || t('videoGeneration.failed')
           }
 
           return updatedTask
@@ -150,15 +154,15 @@ export default function VideoGeneration() {
   const getStatusBadge = (status: TaskStatus) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">等待中</Badge>
+        return <Badge variant="secondary">{t('videoGeneration.waiting')}</Badge>
       case 'processing':
-        return <Badge variant="default">处理中</Badge>
+        return <Badge variant="default">{t('videoGeneration.processing')}</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">已完成</Badge>
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">{t('videoGeneration.completed')}</Badge>
       case 'failed':
-        return <Badge variant="destructive">失败</Badge>
+        return <Badge variant="destructive">{t('videoGeneration.failed')}</Badge>
       default:
-        return <Badge variant="outline">未知</Badge>
+        return <Badge variant="outline">{t('videoGeneration.unknown')}</Badge>
     }
   }
 
@@ -173,9 +177,9 @@ export default function VideoGeneration() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">视频生成</h1>
+          <h1 className="text-2xl font-semibold">{t('videoGeneration.title')}</h1>
           <p className="text-muted-foreground text-sm">
-            根据文本描述生成视频内容，支持异步任务处理
+            {t('videoGeneration.subtitle')}
           </p>
         </div>
       </div>
@@ -186,19 +190,19 @@ export default function VideoGeneration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                提示词
+                {t('videoGeneration.promptTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="描述你想要生成的视频场景...\n例如：一只可爱的猫咪在草地上玩耍，阳光明媚，微风轻拂"
+                placeholder={t('videoGeneration.placeholder')}
                 className="min-h-[200px] resize-none"
               />
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">模型</label>
+                <label className="text-sm font-medium">{t('videoGeneration.modelLabel')}</label>
                 <Select value={model} onValueChange={(v) => setModel(v as VideoModel)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -209,6 +213,28 @@ export default function VideoGeneration() {
                         <div className="flex flex-col">
                           <span>{m.name}</span>
                           <span className="text-xs text-muted-foreground">{m.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  镜头控制
+                </label>
+                <Select value={cameraCommand} onValueChange={(v) => setCameraCommand(v as CameraCommand)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CAMERA_COMMANDS.map(cmd => (
+                      <SelectItem key={cmd.id} value={cmd.id}>
+                        <div className="flex flex-col">
+                          <span>{cmd.name}</span>
+                          <span className="text-xs text-muted-foreground">{cmd.description}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -231,12 +257,12 @@ export default function VideoGeneration() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    创建任务...
+                    {t('videoGeneration.createTask')}
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-4 h-4 mr-2" />
-                    生成视频
+                    {t('videoGeneration.generateVideo')}
                   </>
                 )}
               </Button>
@@ -245,14 +271,14 @@ export default function VideoGeneration() {
 
           <Card>
             <CardHeader>
-              <CardTitle>使用提示</CardTitle>
+              <CardTitle>{t('videoGeneration.usageTipsTitle')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• 详细描述场景、动作、光线等</li>
-                <li>• 视频生成需要较长时间，请耐心等待</li>
-                <li>• 任务状态会自动更新</li>
-                <li>• 完成后可在任务列表中预览和下载</li>
+                <li>• {t('videoGeneration.tip1')}</li>
+                <li>• {t('videoGeneration.tip2')}</li>
+                <li>• {t('videoGeneration.tip3')}</li>
+                <li>• {t('videoGeneration.tip4')}</li>
               </ul>
             </CardContent>
           </Card>
@@ -263,15 +289,15 @@ export default function VideoGeneration() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Film className="w-5 h-5" />
-                任务列表
+                {t('videoGeneration.taskListTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {tasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>暂无任务</p>
-                  <p className="text-sm">创建任务后将显示在这里</p>
+                  <p>{t('videoGeneration.noTasksTitle')}</p>
+                  <p className="text-sm">{t('videoGeneration.tasksAppearHere')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -308,7 +334,7 @@ export default function VideoGeneration() {
                           />
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">
-                              时长: {formatDuration(task.duration)}
+                              {t('videoGeneration.duration', { duration: formatDuration(task.duration) })}
                             </span>
                             <Button
                               variant="outline"
@@ -321,7 +347,7 @@ export default function VideoGeneration() {
                               }}
                             >
                               <Download className="w-4 h-4 mr-2" />
-                              下载
+                              {t('videoGeneration.download')}
                             </Button>
                           </div>
                         </div>
@@ -332,7 +358,7 @@ export default function VideoGeneration() {
                       )}
 
                       <div className="text-xs text-muted-foreground">
-                        创建时间: {new Date(task.createdAt).toLocaleString()}
+                        {t('videoGeneration.createdAt', { time: new Date(task.createdAt).toLocaleString() })}
                       </div>
                     </div>
                   ))}

@@ -1,6 +1,7 @@
 import type { DatabaseService } from '../database'
 import { TaskStatus, TaskQueueRow } from '../database/types'
 import type { TaskResult } from './workflow-engine'
+import { cronEvents } from './websocket-service'
 
 export type { DatabaseService }
 
@@ -174,6 +175,8 @@ export class QueueProcessor {
         result: JSON.stringify(result.data),
       })
 
+      cronEvents.emitTaskCompleted(task)
+
       return result
 
     } catch (error) {
@@ -184,6 +187,8 @@ export class QueueProcessor {
         completed_at: new Date().toISOString(),
         error_message: errorMessage,
       })
+
+      cronEvents.emitTaskFailed(task)
 
       return {
         success: false,
