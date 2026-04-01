@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import { internalAxios } from './client'
 
 interface ApiResponse<T> {
   success: boolean
@@ -24,6 +24,14 @@ export interface AuditLog {
   created_at: string
 }
 
+interface BackendAuditStats {
+  total_logs: number
+  by_action: Record<string, number>
+  by_resource_type: Record<string, number>
+  by_response_status: Record<string, number>
+  avg_duration: number
+}
+
 export interface AuditStats {
   total: number
   byAction: { action: string; count: number }[]
@@ -41,40 +49,42 @@ export interface AuditLogQuery {
   limit?: number
 }
 
-const client: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4511',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+function transformAuditStats(backend: BackendAuditStats): AuditStats {
+  return {
+    total: backend.total_logs,
+    byAction: Object.entries(backend.by_action).map(([action, count]) => ({ action, count })),
+    byResourceType: Object.entries(backend.by_resource_type).map(([resource_type, count]) => ({ resource_type, count })),
+    byResponseStatus: Object.entries(backend.by_response_status).map(([status, count]) => ({ response_status: parseInt(status), count })),
+    avgDuration: backend.avg_duration,
+  }
+}
 
 export async function getAuditLogs(params: AuditLogQuery): Promise<ApiResponse<{ logs: AuditLog[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>> {
   try {
-    const response = await client.get('/audit', { params })
+    const response = await internalAxios.get('/audit', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function getAuditLog(id: string): Promise<ApiResponse<AuditLog>> {
   try {
-    const response = await client.get(`/audit/${id}`)
+    const response = await internalAxios.get(`/audit/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function getAuditStats(): Promise<ApiResponse<AuditStats>> {
   try {
-    const response = await client.get('/audit/stats')
-    return { success: true, data: response.data.data }
+    const response = await internalAxios.get<{ data: BackendAuditStats }>('/audit/stats')
+    return { success: true, data: transformAuditStats(response.data.data) }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }

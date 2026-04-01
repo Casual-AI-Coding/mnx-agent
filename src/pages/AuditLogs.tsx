@@ -12,14 +12,21 @@ import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type Audi
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
-const ACTION_COLORS: Record<AuditAction, string> = {
-  create: 'bg-green-500/20 text-green-400',
-  update: 'bg-blue-500/20 text-blue-400',
-  delete: 'bg-red-500/20 text-red-400',
-  execute: 'bg-purple-500/20 text-purple-400',
+const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
+  create: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: '创建' },
+  update: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', label: '更新' },
+  delete: { color: 'bg-red-500/20 text-red-400 border-red-500/30', label: '删除' },
+  execute: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: '执行' },
+}
+
+const DEFAULT_ACTION_CONFIG = { color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', label: '未知' }
+
+function getActionConfig(action: string) {
+  return (ACTION_CONFIG as Record<string, { color: string; label: string }>)[action] || DEFAULT_ACTION_CONFIG
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  '0': 'text-dark-400',
   '2': 'text-green-400',
   '3': 'text-yellow-400',
   '4': 'text-orange-400',
@@ -124,19 +131,40 @@ export default function AuditLogs() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{t('audit.logList', '日志列表')}</CardTitle>
-            <div className="flex gap-2">
-              <select
-                className="bg-dark-900 border border-dark-700 rounded-md px-3 py-1.5 text-sm text-dark-200"
-                value={filters.action || ''}
-                onChange={(e) => setFilters(f => ({ ...f, action: e.target.value as AuditAction || undefined }))}
-              >
-                <option value="">{t('audit.allActions', '所有操作')}</option>
-                <option value="create">{t('audit.create', '创建')}</option>
-                <option value="update">{t('audit.update', '更新')}</option>
-                <option value="delete">{t('audit.delete', '删除')}</option>
-                <option value="execute">{t('audit.execute', '执行')}</option>
-              </select>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 p-1 bg-dark-900 rounded-lg">
+                <button
+                  onClick={() => setFilters(f => ({ ...f, action: undefined }))}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    !filters.action
+                      ? 'bg-primary text-white'
+                      : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+                  )}
+                >
+                  全部
+                </button>
+                {(Object.keys(ACTION_CONFIG) as AuditAction[]).map((action) => (
+                  <button
+                    key={action}
+                    onClick={() => setFilters(f => ({ ...f, action }))}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-sm font-medium transition-all border',
+                      filters.action === action
+                        ? cn(ACTION_CONFIG[action].color, 'border-current')
+                        : 'text-dark-400 hover:text-dark-200 border-dark-700'
+                    )}
+                  >
+                    {ACTION_CONFIG[action].label}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
+          <div className="flex items-center gap-8 pt-3 text-xs text-dark-500 border-t border-dark-800 mt-3">
+            <span className="w-16">耗时</span>
+            <span className="w-20">时间</span>
+            <span className="w-8">状态</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -160,26 +188,25 @@ export default function AuditLogs() {
                   className="flex items-center justify-between py-3 hover:bg-dark-800/50 px-2 -mx-2 rounded cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
-                  <div className="flex items-center gap-4">
-                    <Badge className={cn('capitalize', ACTION_COLORS[log.action])}>
-                      {log.action}
-                    </Badge>
-                    <div>
-                      <p className="text-dark-200 text-sm font-medium">{log.request_path}</p>
-                      <p className="text-dark-500 text-xs">{log.resource_type} {log.resource_id && `• ${log.resource_id.slice(0, 8)}`}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className={cn(
-                      STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()]
-                    )}>
-                      {log.response_status || '-'}
-                    </span>
-                    <span className="text-dark-500">{formatTime(log.created_at)}</span>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
+<div className="flex items-center gap-4">
+              <Badge className={cn('capitalize', getActionConfig(log.action).color)}>
+                {getActionConfig(log.action).label}
+              </Badge>
+              <div className="flex-1 min-w-0">
+                <p className="text-dark-200 text-sm font-medium truncate">{log.request_path || '-'}</p>
+                <p className="text-dark-500 text-xs">{log.resource_type || '-'} {log.resource_id && `• ${log.resource_id.slice(0, 8)}`}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6 text-sm">
+              <span className="text-dark-400 w-16">{formatDuration(log.duration_ms)}</span>
+              <span className="text-dark-500 w-20">{formatTime(log.created_at)}</span>
+              <span className={cn('w-8', STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-dark-400')}>
+                {log.response_status || '-'}
+              </span>
+              <Button variant="ghost" size="icon" className="shrink-0">
+                <Eye className="w-4 h-4" />
+              </Button>
+            </div>
                 </motion.div>
               ))}
             </div>
@@ -208,25 +235,25 @@ export default function AuditLogs() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-dark-500">{t('audit.action', '操作')}</label>
-                <Badge className={cn('ml-2 capitalize', ACTION_COLORS[selectedLog.action])}>
-                  {selectedLog.action}
+                <Badge className={cn('ml-2', getActionConfig(selectedLog.action).color)}>
+                  {getActionConfig(selectedLog.action).label}
                 </Badge>
               </div>
               <div>
                 <label className="text-dark-500">{t('audit.status', '状态')}</label>
-                <span className={cn('ml-2', STATUS_COLORS[Math.floor((selectedLog.response_status || 0) / 100).toString()])}>
+                <span className={cn('ml-2', STATUS_COLORS[Math.floor((selectedLog.response_status || 0) / 100).toString()] || 'text-dark-400')}>
                   {selectedLog.response_status || '-'}
                 </span>
               </div>
             </div>
             <div>
               <label className="text-dark-500">{t('audit.path', '路径')}</label>
-              <p className="text-dark-200">{selectedLog.request_method} {selectedLog.request_path}</p>
+              <p className="text-dark-200">{selectedLog.request_method || '-'} {selectedLog.request_path || '-'}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-dark-500">{t('audit.resourceType', '资源类型')}</label>
-                <p className="text-dark-200">{selectedLog.resource_type}</p>
+                <p className="text-dark-200">{selectedLog.resource_type || '-'}</p>
               </div>
               <div>
                 <label className="text-dark-500">{t('audit.resourceId', '资源ID')}</label>
@@ -251,7 +278,13 @@ export default function AuditLogs() {
               <div>
                 <label className="text-dark-500">{t('audit.requestBody', '请求体')}</label>
                 <pre className="text-dark-300 bg-dark-800 p-2 rounded mt-1 overflow-x-auto text-xs">
-                  {JSON.stringify(JSON.parse(selectedLog.request_body), null, 2)}
+                  {(() => {
+                    try {
+                      return JSON.stringify(JSON.parse(selectedLog.request_body), null, 2)
+                    } catch {
+                      return selectedLog.request_body
+                    }
+                  })()}
                 </pre>
               </div>
             )}

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import { internalAxios } from './client'
 
 interface ApiResponse<T> {
   success: boolean
@@ -47,60 +47,52 @@ export interface ListTemplatesParams {
   category?: TemplateCategory
 }
 
-const client: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4511',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
 export async function listTemplates(params?: ListTemplatesParams): Promise<ApiResponse<{ templates: PromptTemplate[] }>> {
   try {
-    const response = await client.get('/templates', { params })
+    const response = await internalAxios.get('/templates', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function getTemplate(id: string): Promise<ApiResponse<PromptTemplate>> {
   try {
-    const response = await client.get(`/templates/${id}`)
+    const response = await internalAxios.get(`/templates/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function createTemplate(data: CreateTemplateData): Promise<ApiResponse<PromptTemplate>> {
   try {
-    const response = await client.post('/templates', data)
+    const response = await internalAxios.post('/templates', data)
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function updateTemplate(id: string, data: UpdateTemplateData): Promise<ApiResponse<PromptTemplate>> {
   try {
-    const response = await client.put(`/templates/${id}`, data)
+    const response = await internalAxios.put(`/templates/${id}`, data)
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }
 
 export async function deleteTemplate(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
   try {
-    const response = await client.delete(`/templates/${id}`)
+    const response = await internalAxios.delete(`/templates/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    const message = axios.isAxiosError(error) ? error.response?.data?.error || error.message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }
   }
 }

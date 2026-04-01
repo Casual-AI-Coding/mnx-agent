@@ -19,6 +19,7 @@ import capacityRouter from './routes/capacity'
 import cronRouter from './routes/cron'
 import mediaRouter from './routes/media'
 import templatesRouter from './routes/templates'
+import workflowsRouter from './routes/workflows'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
@@ -67,6 +68,7 @@ app.use('/api/capacity', capacityRouter)
 app.use('/api/cron', cronRouter)
 app.use('/api/media', mediaRouter)
 app.use('/api/templates', templatesRouter)
+app.use('/api/workflows', workflowsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)

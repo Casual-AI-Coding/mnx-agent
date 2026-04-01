@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, memo } from 'react'
+import { useEffect, useMemo, useCallback, memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal'
 import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
 import { useAppStore } from '@/stores/app'
@@ -37,11 +38,30 @@ export default function Dashboard() {
   const { t } = useTranslation()
   const { usage } = useUsageStore()
   const { items, addItem } = useHistoryStore()
-  const { setWsStatus } = useAppStore()
+  const { setWsStatus, hasCompletedOnboarding, setHasCompletedOnboarding } = useAppStore()
   const { status, events } = useWebSocket({
     channels: ['jobs', 'tasks'],
     showToasts: true,
   })
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      setShowWelcomeModal(true)
+    }
+  }, [hasCompletedOnboarding])
+
+  const handleCloseWelcomeModal = () => {
+    setShowWelcomeModal(false)
+    if (dontShowAgain) {
+      setHasCompletedOnboarding(true)
+    }
+  }
+
+  const handleDontShowAgain = (checked: boolean) => {
+    setDontShowAgain(checked)
+  }
 
   // Memoized: only recalculates when items change
   const recentItems = useMemo(() => items.slice(-5).reverse(), [items])
@@ -121,6 +141,13 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <WelcomeModal
+        open={showWelcomeModal}
+        onClose={handleCloseWelcomeModal}
+        onDontShowAgain={handleDontShowAgain}
+        dontShowAgain={dontShowAgain}
+      />
+
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">{t('dashboard.title')}</h1>
@@ -214,6 +241,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
     </div>
   )
 }

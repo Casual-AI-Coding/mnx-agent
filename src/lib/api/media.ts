@@ -84,6 +84,18 @@ export function getMediaDownloadUrl(id: string): string {
   return `/api/media/${id}/download`
 }
 
+export async function batchDeleteMedia(ids: string[]): Promise<{ success: boolean; data: { deletedCount: number } }> {
+  const response = await client.post('/media/batch/delete', { ids })
+  return response.data
+}
+
+export async function batchDownloadMedia(ids: string[]): Promise<Blob> {
+  const response = await client.post('/media/batch/download', { ids }, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024

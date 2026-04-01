@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CreateTemplateModal } from '@/components/templates/CreateTemplateModal'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search, FileText, Image, Music, Video, FolderOpen, Edit3, Trash2, Copy } from 'lucide-react'
@@ -34,6 +35,7 @@ export default function TemplateLibrary() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all')
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   useEffect(() => {
     fetchTemplates(selectedCategory === 'all' ? undefined : selectedCategory)
@@ -74,7 +76,7 @@ export default function TemplateLibrary() {
           <h1 className="text-2xl font-bold text-white">{t('templates.title', '模板库')}</h1>
           <p className="text-dark-400 mt-1">{t('templates.subtitle', '管理和使用提示词模板')}</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="w-4 h-4" />
           {t('templates.create', '创建模板')}
         </Button>
@@ -146,6 +148,11 @@ export default function TemplateLibrary() {
           </Button>
         </div>
       </Dialog>
+
+      <CreateTemplateModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   )
 }

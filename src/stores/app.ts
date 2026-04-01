@@ -11,11 +11,13 @@ interface AppState {
   theme: 'light' | 'dark' | 'system'
   apiMode: ApiMode
   wsStatus: ConnectionStatus
+  hasCompletedOnboarding: boolean
   setApiKey: (key: string) => void
   setRegion: (region: 'cn' | 'intl') => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
   setApiMode: (mode: ApiMode) => void
   setWsStatus: (status: ConnectionStatus) => void
+  setHasCompletedOnboarding: (value: boolean) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -26,11 +28,13 @@ export const useAppStore = create<AppState>()(
       theme: 'system',
       apiMode: 'direct',
       wsStatus: 'disconnected',
+      hasCompletedOnboarding: false,
       setApiKey: (key) => set({ apiKey: key }),
       setRegion: (region) => set({ region: region }),
       setTheme: (theme) => set({ theme: theme }),
       setApiMode: (mode) => set({ apiMode: mode }),
       setWsStatus: (status) => set({ wsStatus: status }),
+      setHasCompletedOnboarding: (value) => set({ hasCompletedOnboarding: value }),
     }),
     {
       name: 'minimax-app-storage',

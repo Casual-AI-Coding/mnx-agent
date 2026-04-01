@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   CronJob,
+  BackendJob,
   CreateCronJobDTO,
   UpdateCronJobDTO,
 } from '../types/cron'
@@ -12,21 +13,6 @@ import {
   toggleCronJob as apiToggleCronJob,
   runCronJob as apiRunCronJob,
 } from '../lib/api/cron'
-
-interface BackendJob {
-  id: string
-  name: string
-  description: string | null
-  cron_expression: string
-  is_active: number | boolean
-  workflow_json: string
-  created_at: string
-  updated_at: string
-  last_run_at: string | null
-  next_run_at: string | null
-  total_runs: number
-  total_failures: number
-}
 
 function transformJobResponse(job: BackendJob): CronJob {
   return {
@@ -42,16 +28,6 @@ function transformJobResponse(job: BackendJob): CronJob {
     nextRunAt: job.next_run_at,
     totalRuns: job.total_runs ?? 0,
     totalFailures: job.total_failures ?? 0,
-  }
-}
-
-function transformJobRequest(job: CreateCronJobDTO) {
-  return {
-    name: job.name,
-    description: job.description,
-    cron_expression: job.cronExpression,
-    is_active: job.isActive ?? true,
-    workflow_json: job.workflowJson,
   }
 }
 
@@ -79,7 +55,7 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch jobs')
       }
-      const jobs = response.data.jobs.map((j) => transformJobResponse(j as unknown as BackendJob))
+      const jobs = response.data.jobs.map((j) => transformJobResponse(j))
       set({ jobs, loading: false })
     } catch (err) {
       set({
@@ -92,11 +68,11 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
   createJob: async (jobData: CreateCronJobDTO) => {
     set({ loading: true, error: null })
     try {
-      const response = await apiCreateCronJob(transformJobRequest(jobData) as unknown as CreateCronJobDTO)
+      const response = await apiCreateCronJob(jobData)
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to create job')
       }
-      const newJob = transformJobResponse(response.data as unknown as BackendJob)
+      const newJob = transformJobResponse(response.data)
       set((state) => ({
         jobs: [...state.jobs, newJob],
         loading: false,
@@ -118,7 +94,7 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to update job')
       }
-      const updatedJob = transformJobResponse(response.data as unknown as BackendJob)
+      const updatedJob = transformJobResponse(response.data)
       set((state) => ({
         jobs: state.jobs.map((job) =>
           job.id === id ? { ...job, ...updatedJob, updatedAt: new Date().toISOString() } : job
@@ -165,7 +141,7 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to toggle job')
       }
-      const jobData = response.data.job as unknown as BackendJob
+      const jobData = response.data.job
       const newIsActive = jobData.is_active !== undefined 
         ? Boolean(jobData.is_active) 
         : !job.isActive

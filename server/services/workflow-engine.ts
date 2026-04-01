@@ -68,6 +68,7 @@ export class WorkflowEngine {
   private taskExecutor: TaskExecutor
   private capacityChecker: CapacityChecker
   private queueProcessor: QueueProcessor | null = null
+  private workflowNodes: WorkflowNode[] = []
 
   constructor(
     db: DatabaseService,
@@ -91,6 +92,7 @@ export class WorkflowEngine {
     try {
       const workflow = this.parseWorkflowJson(workflowJson)
       this.validateWorkflow(workflow)
+      this.workflowNodes = workflow.nodes
       const executionOrder = this.buildExecutionOrder(workflow)
       const nodeOutputs = new Map<string, unknown>()
 
@@ -499,6 +501,7 @@ export class WorkflowEngine {
     const maxIterations = (config.maxIterations as number) || 10
     const loopCondition = config.condition as string | undefined
     const bodyNodeId = config.bodyNode as string | undefined
+    const outputVariable = config.outputVariable as string | undefined
 
     if (!bodyNodeId) {
       return {
@@ -508,7 +511,10 @@ export class WorkflowEngine {
       }
     }
 
-    const iterations: unknown[] = []
+    const bodyNode = this.workflowNodes.find(n => n.id === bodyNodeId)
+    const shouldExecuteBody = bodyNode && outputVariable
+
+    const results: unknown[] = []
     let iterationCount = 0
 
     while (iterationCount < maxIterations) {
@@ -518,17 +524,36 @@ export class WorkflowEngine {
         if (!shouldContinue) break
       }
 
-      iterations.push({ iteration: iterationCount })
+      if (shouldExecuteBody && bodyNode) {
+        const bodyNodeConfig = this.resolveNodeConfig(bodyNode.config, nodeOutputs)
+        const iterationResult = await this.executeNode(bodyNode, bodyNodeConfig, nodeOutputs)
+        
+        if (!iterationResult.success) {
+          return {
+            success: false,
+            error: `Loop iteration ${iterationCount} failed: ${iterationResult.error}`,
+            durationMs: Date.now() - startTime,
+          }
+        }
+        
+        results.push(iterationResult)
+        nodeOutputs.set(`${node.id}.iteration.${iterationCount}`, iterationResult)
+      } else {
+        results.push({ iteration: iterationCount })
+        nodeOutputs.set(`${node.id}.iteration.${iterationCount}`, { iteration: iterationCount })
+      }
       iterationCount++
-      
-      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    if (outputVariable) {
+      nodeOutputs.set(outputVariable, results)
     }
 
     return {
       success: true,
       data: {
-        iterations: iterations.length,
-        results: iterations,
+        iterations: results.length,
+        results: results,
       },
       durationMs: Date.now() - startTime,
     }

@@ -13,13 +13,14 @@ export class ApiError extends Error {
   }
 }
 
-class APIClient {
+// Internal API client - for backend routes (uses Vite proxy)
+class InternalAPIClient {
   private client: AxiosInstance
 
   constructor() {
     this.client = axios.create({
       baseURL: '/api',
-      timeout: 120000,
+      timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -51,6 +52,34 @@ class APIClient {
   get client_() {
     return this.client
   }
+
+  async get<T>(url: string, params?: Record<string, unknown>) {
+    const response = await this.client.get<T>(url, { params })
+    return response.data
+  }
+
+  async post<T>(url: string, data?: unknown) {
+    const response = await this.client.post<T>(url, data)
+    return response.data
+  }
+
+  async put<T>(url: string, data?: unknown) {
+    const response = await this.client.put<T>(url, data)
+    return response.data
+  }
+
+  async patch<T>(url: string, data?: unknown) {
+    const response = await this.client.patch<T>(url, data)
+    return response.data
+  }
+
+  async delete<T>(url: string) {
+    const response = await this.client.delete<T>(url)
+    return response.data
+  }
 }
 
-export const apiClient = new APIClient()
+export const apiClient = new InternalAPIClient()
+
+// Export the axios instance for direct use if needed
+export const internalAxios = apiClient.client_

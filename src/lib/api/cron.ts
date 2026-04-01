@@ -1,6 +1,8 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import { internalAxios } from './client'
+import { AxiosError, isAxiosError } from 'axios'
 import type {
   CronJob,
+  BackendJob,
   TaskQueueItem,
   ExecutionLog,
   CapacityRecord,
@@ -13,10 +15,6 @@ import type {
   UpdateWorkflowTemplateDTO,
   TaskQueueFilter,
 } from '@/types/cron'
-
-// ============================================
-// Types
-// ============================================
 
 interface ApiResponse<T> {
   success: boolean
@@ -34,24 +32,10 @@ interface WorkflowValidationResponse {
   errors?: string[]
 }
 
-// ============================================
-// Axios Instance
-// ============================================
-
-const cronClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4511',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// ============================================
-// Error Handler
-// ============================================
+const cronClient = internalAxios
 
 function handleApiError(error: unknown, context: string): ApiResponse<never> {
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
     const axiosError = error as AxiosError<{ error?: string; message?: string; data?: { error?: string } }>
     const message = axiosError.response?.data?.error 
       || axiosError.response?.data?.data?.error
@@ -71,7 +55,7 @@ function handleApiError(error: unknown, context: string): ApiResponse<never> {
 // Cron Jobs API - Fixed endpoints to match backend
 // ============================================
 
-export async function getCronJobs(): Promise<ApiResponse<{ jobs: CronJob[]; total: number }>> {
+export async function getCronJobs(): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
   try {
     const response = await cronClient.get('/cron/jobs')
     return { success: true, data: response.data.data }
@@ -80,7 +64,7 @@ export async function getCronJobs(): Promise<ApiResponse<{ jobs: CronJob[]; tota
   }
 }
 
-export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<CronJob>> {
+export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<BackendJob>> {
   try {
     // Transform frontend DTO to backend format
     const backendJob = {
@@ -97,7 +81,7 @@ export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<
   }
 }
 
-export async function getCronJob(id: string): Promise<ApiResponse<CronJob>> {
+export async function getCronJob(id: string): Promise<ApiResponse<BackendJob>> {
   try {
     const response = await cronClient.get(`/cron/jobs/${id}`)
     return { success: true, data: response.data.data }
@@ -106,7 +90,7 @@ export async function getCronJob(id: string): Promise<ApiResponse<CronJob>> {
   }
 }
 
-export async function updateCronJob(id: string, updates: UpdateCronJobDTO): Promise<ApiResponse<CronJob>> {
+export async function updateCronJob(id: string, updates: UpdateCronJobDTO): Promise<ApiResponse<BackendJob>> {
   try {
     // Transform frontend DTO to backend format
     const backendUpdates: Record<string, unknown> = {}
@@ -141,7 +125,7 @@ export async function runCronJob(id: string): Promise<ApiResponse<{ message: str
   }
 }
 
-export async function toggleCronJob(id: string): Promise<ApiResponse<{ job: CronJob; scheduled: boolean }>> {
+export async function toggleCronJob(id: string): Promise<ApiResponse<{ job: BackendJob; scheduled: boolean }>> {
   try {
     const response = await cronClient.post(`/cron/jobs/${id}/toggle`)
     return { success: true, data: response.data.data }

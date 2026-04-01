@@ -77,10 +77,33 @@ export interface VideoAgentTemplate {
   name: string
   description: string
   thumbnail: string
+  icon: 'Waves' | 'Cpu' | 'Shield'
+  gradient: string
 }
 
 export const VIDEO_AGENT_TEMPLATES: VideoAgentTemplate[] = [
-  { id: 'diving', name: '潜水', description: '水下世界探索', thumbnail: '' },
-  { id: 'transformers', name: '变形金刚', description: '机器人变形', thumbnail: '' },
-  { id: 'superhero', name: '超级英雄', description: '英雄登场', thumbnail: '' },
+  {
+    id: 'diving',
+    name: '潜水',
+    description: '水下世界探索',
+    thumbnail: '',
+    icon: 'Waves',
+    gradient: 'from-cyan-500 to-blue-600',
+  },
+  {
+    id: 'transformers',
+    name: '变形金刚',
+    description: '机器人变形',
+    thumbnail: '',
+    icon: 'Cpu',
+    gradient: 'from-orange-500 to-red-600',
+  },
+  {
+    id: 'superhero',
+    name: '超级英雄',
+    description: '英雄登场',
+    thumbnail: '',
+    icon: 'Shield',
+    gradient: 'from-purple-500 to-pink-600',
+  },
 ]

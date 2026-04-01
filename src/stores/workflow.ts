@@ -1,12 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { WorkflowNode, WorkflowEdge, WorkflowState } from '../types/cron'
+import { useWorkflowTemplatesStore } from './workflowTemplates'
+import type { WorkflowTemplate } from '@/lib/api/workflows'
 
 interface WorkflowEditorState {
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   selectedNodeId: string | null
   isDirty: boolean
+  currentWorkflowId: string | null
+  isLoading: boolean
   addNode: (node: WorkflowNode) => void
   updateNode: (id: string, updates: Partial<WorkflowNode>) => void
   deleteNode: (id: string) => void
@@ -16,6 +20,9 @@ interface WorkflowEditorState {
   reset: () => void
   loadFromJson: (json: string) => void
   exportToJson: () => string
+  loadFromServer: (id: string) => Promise<boolean>
+  saveToServer: (name: string, description?: string, isTemplate?: boolean) => Promise<boolean>
+  loadFromTemplate: (template: WorkflowTemplate) => void
 }
 
 const generateId = () => `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -30,6 +37,8 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
       edges: initialEdges,
       selectedNodeId: null,
       isDirty: false,
+      currentWorkflowId: null,
+      isLoading: false,
 
       addNode: (node) => {
         set((state) => ({
@@ -103,6 +112,82 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
       exportToJson: () => {
         const { nodes, edges } = get()
         return JSON.stringify({ nodes, edges }, null, 2)
+      },
+
+      loadFromServer: async (id: string) => {
+        set({ isLoading: true })
+        const store = useWorkflowTemplatesStore.getState()
+        await store.fetchTemplate(id)
+        const template = store.currentTemplate
+        if (template) {
+          const state: WorkflowState = {
+            nodes: JSON.parse(template.nodes_json),
+            edges: JSON.parse(template.edges_json),
+          }
+          set({
+            nodes: state.nodes ?? [],
+            edges: state.edges ?? [],
+            selectedNodeId: null,
+            isDirty: false,
+            currentWorkflowId: template.id,
+            isLoading: false,
+          })
+          return true
+        }
+        set({ isLoading: false })
+        return false
+      },
+
+      saveToServer: async (name, description, isTemplate = false) => {
+        set({ isLoading: true })
+        const { nodes, edges, currentWorkflowId } = get()
+        const nodesJson = JSON.stringify(nodes)
+        const edgesJson = JSON.stringify(edges)
+
+        const store = useWorkflowTemplatesStore.getState()
+        let success = false
+
+        if (currentWorkflowId) {
+          success = await store.editTemplate(currentWorkflowId, {
+            name,
+            description,
+            nodes_json: nodesJson,
+            edges_json: edgesJson,
+            is_template: isTemplate,
+          })
+        } else {
+          success = await store.addTemplate({
+            name,
+            description,
+            nodes_json: nodesJson,
+            edges_json: edgesJson,
+            is_template: isTemplate,
+          })
+          if (success && store.currentTemplate) {
+            set({ currentWorkflowId: store.currentTemplate.id })
+          }
+        }
+
+        if (success) {
+          set({ isDirty: false, isLoading: false })
+        } else {
+          set({ isLoading: false })
+        }
+        return success
+      },
+
+      loadFromTemplate: (template: WorkflowTemplate) => {
+        const state: WorkflowState = {
+          nodes: JSON.parse(template.nodes_json),
+          edges: JSON.parse(template.edges_json),
+        }
+        set({
+          nodes: state.nodes ?? [],
+          edges: state.edges ?? [],
+          selectedNodeId: null,
+          isDirty: false,
+          currentWorkflowId: template.id,
+        })
       },
     }),
     {

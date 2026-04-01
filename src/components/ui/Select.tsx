@@ -1,6 +1,24 @@
 import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
+
+// Select variants using CVA
+const selectTriggerVariants = cva(
+  'flex items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+  {
+    variants: {
+      size: {
+        default: 'h-9 px-3 py-2',
+        sm: 'h-8 px-3 py-2 text-xs',
+        lg: 'h-10 px-4 py-2',
+      },
+    },
+    defaultVariants: {
+      size: 'default',
+    },
+  }
+)
 
 // Select Context
 interface SelectContextValue {
@@ -8,6 +26,14 @@ interface SelectContextValue {
   onValueChange: (value: string) => void
   open: boolean
   setOpen: (open: boolean) => void
+  highlightedIndex: number
+  setHighlightedIndex: (index: number) => void
+  selectId: string
+  itemIds: string[]
+  registerItem: (id: string) => number
+  unregisterItem: (id: string) => void
+  triggerRef: React.RefObject<HTMLButtonElement | null>
+  listboxRef: React.RefObject<HTMLDivElement | null>
 }
 
 const SelectContext = React.createContext<SelectContextValue | undefined>(undefined)
@@ -31,6 +57,11 @@ export interface SelectProps {
 export function Select({ value, defaultValue, onValueChange, children }: SelectProps) {
   const [internalValue, setInternalValue] = React.useState(defaultValue || '')
   const [open, setOpen] = React.useState(false)
+  const [highlightedIndex, setHighlightedIndex] = React.useState(-1)
+  const [itemIds, setItemIds] = React.useState<string[]>([])
+  const selectId = React.useId()
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const listboxRef = React.useRef<HTMLDivElement>(null)
   
   const currentValue = value ?? internalValue
   const handleValueChange = React.useCallback((newValue: string) => {
@@ -39,20 +70,120 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
     }
     onValueChange?.(newValue)
     setOpen(false)
+    setHighlightedIndex(-1)
+    // Return focus to trigger after selection
+    triggerRef.current?.focus()
   }, [value, onValueChange])
 
+  const registerItem = React.useCallback((id: string) => {
+    setItemIds(prev => {
+      if (prev.includes(id)) return prev
+      return [...prev, id]
+    })
+    return itemIds.length
+  }, [itemIds.length])
+
+  const unregisterItem = React.useCallback((id: string) => {
+    setItemIds(prev => prev.filter(itemId => itemId !== id))
+  }, [])
+
+  // Reset highlighted index when dropdown closes
+  React.useEffect(() => {
+    if (!open) {
+      setHighlightedIndex(-1)
+    }
+  }, [open])
+
+  // Handle keyboard navigation
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setHighlightedIndex(prev => {
+          const nextIndex = prev === -1 ? 0 : Math.min(prev + 1, itemIds.length - 1)
+          return nextIndex
+        })
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setHighlightedIndex(prev => {
+          const nextIndex = prev === -1 ? itemIds.length - 1 : Math.max(prev - 1, 0)
+          return nextIndex
+        })
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (highlightedIndex >= 0 && highlightedIndex < itemIds.length) {
+          const item = document.getElementById(itemIds[highlightedIndex])
+          if (item) {
+            const value = item.getAttribute('data-value')
+            if (value) {
+              handleValueChange(value)
+            }
+          }
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setOpen(false)
+        triggerRef.current?.focus()
+        break
+      case 'Tab':
+        setOpen(false)
+        break
+      case 'Home':
+        e.preventDefault()
+        setHighlightedIndex(0)
+        break
+      case 'End':
+        e.preventDefault()
+        setHighlightedIndex(itemIds.length - 1)
+        break
+    }
+  }, [open, itemIds.length, highlightedIndex, handleValueChange])
+
   return (
-    <SelectContext.Provider value={{ value: currentValue, onValueChange: handleValueChange, open, setOpen }}>
-      <div className="relative inline-block">{children}</div>
+    <SelectContext.Provider 
+      value={{ 
+        value: currentValue, 
+        onValueChange: handleValueChange, 
+        open, 
+        setOpen,
+        highlightedIndex,
+        setHighlightedIndex,
+        selectId,
+        itemIds,
+        registerItem,
+        unregisterItem,
+        triggerRef,
+        listboxRef
+      }}
+    >
+      <div 
+        className="relative inline-block"
+        onKeyDown={handleKeyDown}
+      >
+        {children}
+      </div>
     </SelectContext.Provider>
   )
 }
 
 // Select Trigger
-export interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+export interface SelectTriggerProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof selectTriggerVariants> {}
 
 export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, size, children, ...props }, ref) => {
     return (
       <ErrorBoundary
         fallback={
@@ -63,7 +194,7 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
           />
         }
       >
-        <SelectTriggerInner ref={ref} className={className} {...props}>
+        <SelectTriggerInner ref={ref} className={className} size={size} {...props}>
           {children}
         </SelectTriggerInner>
       </ErrorBoundary>
@@ -73,16 +204,37 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
 SelectTrigger.displayName = 'SelectTrigger'
 
 const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => {
-    const { open, setOpen } = useSelectContext()
+  ({ className, size, children, ...props }, forwardedRef) => {
+    const { open, setOpen, selectId, triggerRef, itemIds, highlightedIndex } = useSelectContext()
+    const innerRef = React.useRef<HTMLButtonElement | null>(null)
+    
+    const listboxId = `${selectId}-listbox`
+    const activeDescendantId = highlightedIndex >= 0 ? itemIds[highlightedIndex] : undefined
+    
+    React.useImperativeHandle(
+      triggerRef,
+      () => innerRef.current as HTMLButtonElement,
+      []
+    )
     
     return (
       <button
-        ref={ref}
+        ref={(node) => {
+          innerRef.current = node
+          if (typeof forwardedRef === 'function') {
+            forwardedRef(node)
+          } else if (forwardedRef) {
+            forwardedRef.current = node
+          }
+        }}
         type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={activeDescendantId}
         className={cn(
-          'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-          className
+          selectTriggerVariants({ size, className }),
+          'w-full [&>span]:line-clamp-1'
         )}
         onClick={() => setOpen(!open)}
         {...props}
@@ -106,7 +258,7 @@ const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProp
     )
   }
 )
-SelectTrigger.displayName = 'SelectTrigger'
+SelectTriggerInner.displayName = 'SelectTriggerInner'
 
 // Select Value
 export interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -147,13 +299,29 @@ const SelectValueInner = React.forwardRef<HTMLSpanElement, SelectValueProps>(
     )
   }
 )
-SelectValue.displayName = 'SelectValue'
+SelectValueInner.displayName = 'SelectValueInner'
 
 // Select Content
-export interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+const selectContentVariants = cva(
+  'relative z-50 max-h-60 min-w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md',
+  {
+    variants: {
+      variant: {
+        default: '',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+)
+
+export interface SelectContentProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof selectContentVariants> {}
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, variant, children, ...props }, ref) => {
     return (
       <ErrorBoundary
         fallback={
@@ -164,7 +332,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
           />
         }
       >
-        <SelectContentInner ref={ref} className={className} {...props}>
+        <SelectContentInner ref={ref} className={className} variant={variant} {...props}>
           {children}
         </SelectContentInner>
       </ErrorBoundary>
@@ -174,17 +342,37 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
 SelectContent.displayName = 'SelectContent'
 
 const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, children, ...props }, ref) => {
-    const { open } = useSelectContext()
+  ({ className, variant, children, ...props }, forwardedRef) => {
+    const { open, selectId, listboxRef, highlightedIndex, itemIds } = useSelectContext()
+    const innerRef = React.useRef<HTMLDivElement | null>(null)
+    const listboxId = `${selectId}-listbox`
+    const activeDescendantId = highlightedIndex >= 0 ? itemIds[highlightedIndex] : undefined
+    
+    React.useImperativeHandle(
+      listboxRef,
+      () => innerRef.current as HTMLDivElement,
+      []
+    )
     
     if (!open) return null
     
     return (
       <div
-        ref={ref}
+        ref={(node) => {
+          innerRef.current = node
+          if (typeof forwardedRef === 'function') {
+            forwardedRef(node)
+          } else if (forwardedRef) {
+            forwardedRef.current = node
+          }
+        }}
+        id={listboxId}
+        role="listbox"
+        aria-activedescendant={activeDescendantId}
+        tabIndex={0}
         className={cn(
-          'absolute top-full left-0 z-50 mt-1 max-h-60 min-w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md',
-          className
+          'absolute top-full left-0 mt-1',
+          selectContentVariants({ variant, className })
         )}
         {...props}
       >
@@ -193,15 +381,32 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
     )
   }
 )
-SelectContent.displayName = 'SelectContent'
+SelectContentInner.displayName = 'SelectContentInner'
 
 // Select Item
-export interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
+const selectItemVariants = cva(
+  'relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+  {
+    variants: {
+      variant: {
+        default: '',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+)
+
+export interface SelectItemProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof selectItemVariants> {
   value: string
+  disabled?: boolean
 }
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, value, children, ...props }, ref) => {
+  ({ className, variant, value, disabled, children, ...props }, ref) => {
     return (
       <ErrorBoundary
         fallback={
@@ -212,7 +417,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
           />
         }
       >
-        <SelectItemInner ref={ref} className={className} value={value} {...props}>
+        <SelectItemInner ref={ref} className={className} variant={variant} value={value} disabled={disabled} {...props}>
           {children}
         </SelectItemInner>
       </ErrorBoundary>
@@ -222,19 +427,40 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
 SelectItem.displayName = 'SelectItem'
 
 const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, value, children, ...props }, ref) => {
-    const { value: selectedValue, onValueChange } = useSelectContext()
+  ({ className, variant, value, disabled, children, ...props }, ref) => {
+    const { value: selectedValue, onValueChange, highlightedIndex, itemIds, registerItem } = useSelectContext()
     const isSelected = selectedValue === value
+    const [itemId, setItemId] = React.useState<string>('')
+    const [itemIndex, setItemIndex] = React.useState<number>(-1)
+    
+    React.useEffect(() => {
+      const id = `select-item-${React.useId()}`
+      setItemId(id)
+      const index = registerItem(id)
+      setItemIndex(index)
+    }, [registerItem])
+    
+    const isHighlighted = itemIds[highlightedIndex] === itemId
     
     return (
       <div
         ref={ref}
+        id={itemId}
+        role="option"
+        aria-selected={isHighlighted}
+        data-value={value}
+        data-disabled={disabled}
         className={cn(
-          'relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+          selectItemVariants({ variant }),
           isSelected && 'bg-accent',
+          isHighlighted && 'bg-accent',
           className
         )}
-        onClick={() => onValueChange(value)}
+        onClick={() => {
+          if (!disabled) {
+            onValueChange(value)
+          }
+        }}
         {...props}
       >
         {isSelected && (
@@ -260,7 +486,7 @@ const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
     )
   }
 )
-SelectItem.displayName = 'SelectItem'
+SelectItemInner.displayName = 'SelectItemInner'
 
 // Select Group
 export interface SelectGroupProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -309,3 +535,5 @@ export const SelectSeparator = React.forwardRef<HTMLDivElement, SelectSeparatorP
   }
 )
 SelectSeparator.displayName = 'SelectSeparator'
+
+export { selectTriggerVariants }

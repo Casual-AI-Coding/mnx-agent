@@ -1,4 +1,23 @@
 // ============================================
+// Backend Types (snake_case - matches database API responses)
+// ============================================
+
+export interface BackendJob {
+  id: string
+  name: string
+  description: string | null
+  cron_expression: string
+  is_active: number | boolean
+  workflow_json: string
+  created_at: string
+  updated_at: string
+  last_run_at: string | null
+  next_run_at: string | null
+  total_runs: number
+  total_failures: number
+}
+
+// ============================================
 // Enums
 // ============================================
 

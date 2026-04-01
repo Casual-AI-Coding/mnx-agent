@@ -26,6 +26,11 @@ function redactSensitiveData(obj: unknown): unknown {
   return redacted
 }
 
+function shouldAudit(method: string): boolean {
+  const auditableMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
+  return auditableMethods.includes(method.toUpperCase())
+}
+
 function methodToAction(method: string): AuditAction {
   switch (method.toUpperCase()) {
     case 'POST':
@@ -35,7 +40,6 @@ function methodToAction(method: string): AuditAction {
       return 'update'
     case 'DELETE':
       return 'delete'
-    case 'GET':
     default:
       return 'execute'
   }
@@ -64,7 +68,7 @@ const SKIP_PATHS = [
 ]
 
 export function auditMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const shouldSkip = SKIP_PATHS.some(path => req.path.startsWith(path))
+  const shouldSkip = SKIP_PATHS.some(path => req.path.startsWith(path)) || !shouldAudit(req.method)
   if (shouldSkip) {
     return next()
   }

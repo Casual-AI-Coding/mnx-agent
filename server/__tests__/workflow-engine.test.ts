@@ -1073,6 +1073,8 @@ describe('WorkflowEngine', () => {
         
         expect(result.success).toBe(true)
         expect((result.nodeResults.get('loop')?.data as Record<string, unknown>)?.iterations).toBe(3)
+        expect((result.nodeResults.get('loop')?.data as Record<string, unknown>)?.results).toBeDefined()
+        expect(Array.isArray((result.nodeResults.get('loop')?.data as Record<string, unknown>)?.results)).toBe(true)
       })
 
       it('should fail loop node without bodyNode config', async () => {
@@ -1087,6 +1089,59 @@ describe('WorkflowEngine', () => {
         
         expect(result.success).toBe(false)
         expect(result.error).toContain('bodyNode')
+      })
+
+      it('should accumulate iteration results in outputVariable', async () => {
+        const workflowJson = JSON.stringify({
+          nodes: [
+            { id: 'loop', type: 'loop', config: { 
+              maxIterations: 3, 
+              bodyNode: 'body',
+              outputVariable: 'loopResults'
+            } },
+            { id: 'body', type: 'action', subtype: 'text', config: {} },
+          ],
+          edges: [],
+        })
+        
+        const result = await engine.executeWorkflow(workflowJson)
+        
+        expect(result.success).toBe(true)
+        
+        const loopData = result.nodeResults.get('loop')?.data as Record<string, unknown>
+        expect(loopData).toBeDefined()
+        expect(loopData?.iterations).toBe(3)
+        expect(loopData?.results).toBeDefined()
+        expect(Array.isArray(loopData?.results)).toBe(true)
+        expect((loopData?.results as unknown[]).length).toBe(3)
+      })
+
+      it('should make loop results accessible to subsequent nodes via template', async () => {
+        const workflowJson = JSON.stringify({
+          nodes: [
+            { id: 'loop', type: 'loop', config: { 
+              maxIterations: 2, 
+              bodyNode: 'body',
+              outputVariable: 'allResults'
+            } },
+            { id: 'consumer', type: 'action', subtype: 'text', config: { 
+              input: '{{loop.output.results}}'
+            } },
+          ],
+          edges: [
+            { id: 'e1', source: 'loop', target: 'consumer' },
+          ],
+        })
+        
+        const result = await engine.executeWorkflow(workflowJson)
+        
+        expect(result.success).toBe(true)
+        
+        const loopData = result.nodeResults.get('loop')?.data as Record<string, unknown>
+        expect(loopData).toBeDefined()
+        expect(loopData?.iterations).toBe(2)
+        expect(loopData?.results).toBeDefined()
+        expect((loopData?.results as unknown[]).length).toBe(2)
       })
     })
 

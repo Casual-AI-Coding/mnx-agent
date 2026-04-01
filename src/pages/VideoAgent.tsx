@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Video, Download, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Lightbulb, ChevronRight } from 'lucide-react'
+import { Video, Download, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Lightbulb, ChevronRight, Waves, Cpu, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -21,6 +21,12 @@ interface AgentTask {
   videoUrl?: string
   duration?: number
   error?: string
+}
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Waves,
+  Cpu,
+  Shield,
 }
 
 const TEMPLATE_FORMS: Record<string, { label: string; placeholder: string }[]> = {
@@ -252,23 +258,30 @@ export default function VideoAgent() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {VIDEO_AGENT_TEMPLATES.map((template) => (
-                    <div
-                      key={template.id}
-                      className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-accent/50 transition-all group"
-                      onClick={() => handleTemplateSelect(template)}
-                    >
-                      <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center group-hover:bg-muted/80">
-                        <Film className="w-12 h-12 text-muted-foreground" />
+                  {VIDEO_AGENT_TEMPLATES.map((template) => {
+                    const IconComponent = ICON_MAP[template.icon]
+                    return (
+                      <div
+                        key={template.id}
+                        className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-accent/50 transition-all group"
+                        onClick={() => handleTemplateSelect(template)}
+                      >
+                        <div className={`aspect-video bg-gradient-to-br ${template.gradient} rounded-lg mb-3 flex items-center justify-center group-hover:opacity-90 transition-opacity`}>
+                          {IconComponent ? (
+                            <IconComponent className="w-16 h-16 text-white drop-shadow-lg" />
+                          ) : (
+                            <Film className="w-12 h-12 text-white/80" />
+                          )}
+                        </div>
+                        <h3 className="font-medium mb-1">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground">{template.description}</p>
+                        <div className="flex items-center gap-1 mt-2 text-primary text-sm">
+                          <span>开始使用</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <h3 className="font-medium mb-1">{template.name}</h3>
-                      <p className="text-sm text-muted-foreground">{template.description}</p>
-                      <div className="flex items-center gap-1 mt-2 text-primary text-sm">
-                        <span>开始使用</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

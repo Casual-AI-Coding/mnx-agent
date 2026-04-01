@@ -14,6 +14,8 @@ import {
   Eye,
   RefreshCw,
   Loader2,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -24,6 +26,15 @@ import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { apiClient } from '@/lib/api/client'
 import { useAppStore } from '@/stores/app'
+import { 
+  BatchOperationsToolbar, 
+  BatchDeleteDialog,
+} from '@/components/media/BatchOperationsToolbar'
+import { 
+  batchDeleteMedia, 
+  batchDownloadMedia,
+  deleteMedia,
+} from '@/lib/api/media'
 
 // ============================================================================
 // Types
@@ -190,7 +201,7 @@ async function listMedia(params: {
   return response.data
 }
 
-async function deleteMedia(id: string): Promise<void> {
+async function deleteMediaRecord(id: string): Promise<void> {
   await apiClient.client_.delete(`/media/${id}`)
 }
 
@@ -267,6 +278,70 @@ export default function MediaManagement() {
   const [lightboxSrc, setLightboxSrc] = useState('')
   const { apiKey } = useAppStore()
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false)
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false)
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredRecords.length && filteredRecords.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredRecords.map(m => m.id)))
+    }
+  }
+
+  const handleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [activeTab, pagination.page])
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setIsBatchDeleting(true)
+    try {
+      await batchDeleteMedia(Array.from(selectedIds))
+      setRecords((prev) => prev.filter((r) => !selectedIds.has(r.id)))
+      setSelectedIds(new Set())
+      setBatchDeleteDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '批量删除失败')
+    } finally {
+      setIsBatchDeleting(false)
+    }
+  }
+
+  const handleBatchDownload = async () => {
+    if (selectedIds.size === 0) return
+
+    setIsBatchDownloading(true)
+    try {
+      const blob = await batchDownloadMedia(Array.from(selectedIds))
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `media_batch_${Date.now()}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '批量下载失败')
+    } finally {
+      setIsBatchDownloading(false)
+    }
+  }
+
   // Filter records by search query (client-side filtering)
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) return records
@@ -321,12 +396,12 @@ export default function MediaManagement() {
     }
   }, [activeTab, pagination.page])
 
-  // Handle delete
+  // Handle single delete
   const handleDelete = async () => {
     if (!deleteDialog.record) return
 
     try {
-      await deleteMedia(deleteDialog.record.id)
+      await deleteMediaRecord(deleteDialog.record.id)
       setRecords((prev) => prev.filter((r) => r.id !== deleteDialog.record!.id))
       setDeleteDialog({ isOpen: false, record: null })
     } catch (err) {
@@ -426,6 +501,22 @@ export default function MediaManagement() {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
+                  <th className="px-4 py-3 text-left">
+                    <button
+                      onClick={handleSelectAll}
+                      className="flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 hover:border-primary/50 transition-colors"
+                      disabled={filteredRecords.length === 0}
+                      aria-label={selectedIds.size === filteredRecords.length && filteredRecords.length > 0 ? '取消全选' : '全选'}
+                    >
+                      {selectedIds.size === filteredRecords.length && filteredRecords.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : selectedIds.size > 0 ? (
+                        <div className="w-3 h-3 bg-primary rounded-sm" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">文件名</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">类型</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">来源</th>
@@ -437,20 +528,36 @@ export default function MediaManagement() {
               <tbody className="divide-y">
                 {isInitialLoad ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center">
+                    <td colSpan={7} className="px-4 py-8 text-center">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                       <p className="text-muted-foreground mt-2">加载中...</p>
                     </td>
                   </tr>
                 ) : filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       {searchQuery ? '没有找到匹配的文件' : '暂无媒体文件'}
                     </td>
                   </tr>
                 ) : (
                   filteredRecords.map((record) => (
-                    <tr key={record.id} className="hover:bg-muted/50">
+                    <tr 
+                      key={record.id} 
+                      className={`hover:bg-muted/50 ${selectedIds.has(record.id) ? 'bg-primary/5' : ''}`}
+                    >
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleSelect(record.id)}
+                          className="flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 hover:border-primary/50 transition-colors"
+                          aria-label={selectedIds.has(record.id) ? '取消选择' : '选择'}
+                        >
+                          {selectedIds.has(record.id) ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Square className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {record.type === 'image' ? (
@@ -562,7 +669,6 @@ export default function MediaManagement() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, record: null })}
@@ -570,7 +676,23 @@ export default function MediaManagement() {
         filename={deleteDialog.record?.original_name || deleteDialog.record?.filename || ''}
       />
 
-      {/* Lightbox for Image Preview */}
+      <BatchDeleteDialog
+        isOpen={batchDeleteDialogOpen}
+        onClose={() => setBatchDeleteDialogOpen(false)}
+        onConfirm={handleBatchDelete}
+        selectedCount={selectedIds.size}
+        isDeleting={isBatchDeleting}
+      />
+
+      <BatchOperationsToolbar
+        selectedCount={selectedIds.size}
+        onDelete={() => setBatchDeleteDialogOpen(true)}
+        onDownload={handleBatchDownload}
+        onClearSelection={() => setSelectedIds(new Set())}
+        isDeleting={isBatchDeleting}
+        isDownloading={isBatchDownloading}
+      />
+
       <Lightbox
         open={lightboxOpen}
         close={() => setLightboxOpen(false)}

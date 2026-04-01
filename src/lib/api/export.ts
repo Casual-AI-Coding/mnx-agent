@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import { internalAxios } from './client'
 
 interface ApiResponse<T> {
   success: boolean
@@ -19,16 +19,8 @@ export interface ExportMediaRecordsParams {
   type?: 'audio' | 'image' | 'video' | 'music'
 }
 
-const client: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4511',
-  timeout: 60000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
 export async function exportExecutionLogs(params: ExportExecutionLogsParams): Promise<void> {
-  const response = await client.get('/export/execution-logs', {
+  const response = await internalAxios.get('/export/execution-logs', {
     params,
     responseType: params.format === 'csv' ? 'text' : 'json'
   })
@@ -48,7 +40,7 @@ export async function exportExecutionLogs(params: ExportExecutionLogsParams): Pr
 }
 
 export async function exportMediaRecords(params: ExportMediaRecordsParams): Promise<void> {
-  const response = await client.get('/export/media-records', {
+  const response = await internalAxios.get('/export/media-records', {
     params,
     responseType: params.format === 'csv' ? 'text' : 'json'
   })
@@ -62,7 +54,7 @@ export async function exportMediaRecords(params: ExportMediaRecordsParams): Prom
   link.href = url
   link.download = `media-records-${new Date().toISOString().split('T')[0]}.${params.format}`
   document.body.appendChild(link)
-  link.click
+  link.click()
   document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
 }
