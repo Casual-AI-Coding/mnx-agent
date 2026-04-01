@@ -1,6 +1,7 @@
-export { DatabaseService, getDatabase, closeDatabase } from './service.js'
+export { DatabaseService, getDatabase, closeDatabase } from './service-async.js'
 export { SCHEMA_SQL } from './schema.js'
-export { runMigrations, MIGRATIONS } from './migrations.js'
+export { PG_SCHEMA_SQL, PG_MIGRATIONS } from './schema-pg.js'
+export { runMigrations, MIGRATIONS } from './migrations-async.js'
 export {
   TaskStatus,
   TriggerType,

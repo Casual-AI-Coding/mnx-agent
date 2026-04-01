@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express'
+import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { DatabaseService, getDatabase } from '../database/service'
+import { getDatabase } from '../database/service-async.js'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { getNotificationService } from '../services/notification-service'
@@ -24,7 +24,6 @@ import {
 import { TaskStatus, TriggerType, ExecutionStatus, CronJob, TaskQueueItem, ExecutionLog, WorkflowTemplate } from '../database/types'
 
 const router = Router()
-const db: DatabaseService = getDatabase()
 
 function parsePayload(payload: string | Record<string, unknown>): string {
   if (typeof payload === 'string') return payload
@@ -36,6 +35,7 @@ function parsePayload(payload: string | Record<string, unknown>): string {
 // ============================================
 router.get('/health', asyncHandler(async (_req, res) => {
   try {
+    const db = await getDatabase()
     const scheduler = getCronScheduler(db, new WorkflowEngine(db, {
       executeTask: async () => ({ success: true, durationMs: 0 })
     }, {
@@ -44,9 +44,9 @@ router.get('/health', asyncHandler(async (_req, res) => {
     }))
 
     // Get task counts
-    const pendingCount = db.getPendingTaskCount()
-    const runningCount = db.getRunningTaskCount()
-    const failedCount = db.getFailedTaskCount()
+    const pendingCount = await db.getPendingTaskCount()
+    const runningCount = await db.getRunningTaskCount()
+    const failedCount = await db.getFailedTaskCount()
 
     const health = {
       status: 'healthy',
@@ -57,7 +57,7 @@ router.get('/health', asyncHandler(async (_req, res) => {
         timezone: scheduler.getTimezone(),
       },
       database: {
-        connected: db.isConnected(),
+        connected: await db.isConnected(),
       },
       queue: {
         pending: pendingCount,
@@ -84,18 +84,20 @@ router.get('/health', asyncHandler(async (_req, res) => {
 // ============================================
 
 router.get('/jobs', asyncHandler(async (_req, res) => {
-  const jobs: CronJob[] = db.getAllCronJobs()
-  const jobsWithTags = jobs.map((job: CronJob) => ({
+  const db = await getDatabase()
+  const jobs: CronJob[] = await db.getAllCronJobs()
+  const jobsWithTags = await Promise.all(jobs.map(async (job: CronJob) => ({
     ...job,
-    tags: db.getJobTags(job.id),
+    tags: await db.getJobTags(job.id),
     last_run: job.last_run_at,
     next_run: job.next_run_at,
     total_runs: job.total_runs,
-  }))
+  })))
   res.json({ success: true, data: { jobs: jobsWithTags, total: jobs.length } })
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const jobData = req.body
   try {
     JSON.parse(jobData.workflow_json)
@@ -103,7 +105,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
     res.status(400).json({ success: false, error: 'workflow_json must be valid JSON' })
     return
   }
-  const job = db.createCronJob({
+  const job = await db.createCronJob({
     name: jobData.name,
     description: jobData.description,
     cron_expression: jobData.cron_expression,
@@ -115,7 +117,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
   // Add tags if provided
   if (jobData.tags && Array.isArray(jobData.tags)) {
     for (const tag of jobData.tags) {
-      db.addJobTag(job.id, tag)
+      await db.addJobTag(job.id, tag)
     }
   }
   
@@ -123,18 +125,20 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const tags = db.getJobTags(job.id)
-  const dependencies = db.getJobDependencies(job.id)
+  const tags = await db.getJobTags(job.id)
+  const dependencies = await db.getJobDependencies(job.id)
   res.json({ success: true, data: { ...job, tags, dependencies } })
 }))
 
 router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
-  const existingJob = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const existingJob = await db.getCronJobById(req.params.id)
   if (!existingJob) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
@@ -147,45 +151,47 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
       return
     }
   }
-  const job = db.updateCronJob(req.params.id, req.body)
+  const job = await db.updateCronJob(req.params.id, req.body)
   
   // Update tags if provided
   if (req.body.tags && Array.isArray(req.body.tags)) {
     // Remove existing tags
-    const existingTags = db.getJobTags(req.params.id)
+    const existingTags = await db.getJobTags(req.params.id)
     for (const tag of existingTags) {
-      db.removeJobTag(req.params.id, tag)
+      await db.removeJobTag(req.params.id, tag)
     }
     // Add new tags
     for (const tag of req.body.tags) {
-      db.addJobTag(req.params.id, tag)
+      await db.addJobTag(req.params.id, tag)
     }
   }
   
-  res.json({ success: true, data: { ...job, tags: req.body.tags || db.getJobTags(req.params.id) } })
+  res.json({ success: true, data: { ...job, tags: req.body.tags || await db.getJobTags(req.params.id) } })
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const tasks: TaskQueueItem[] = db.getTasksByJobId(req.params.id)
+  const tasks: TaskQueueItem[] = await db.getTasksByJobId(req.params.id)
   for (const task of tasks) {
-    db.deleteTask(task.id)
+    await db.deleteTask(task.id)
   }
-  db.deleteCronJob(req.params.id)
+  await db.deleteCronJob(req.params.id)
   res.json({ success: true, data: { deleted: true, tasksDeleted: tasks.length } })
 }))
 
 router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const log = db.createExecutionLog({
+  const log = await db.createExecutionLog({
     job_id: job.id,
     trigger_type: TriggerType.MANUAL,
     status: ExecutionStatus.RUNNING,
@@ -197,12 +203,13 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
 }))
 
 router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const updatedJob = db.toggleCronJobActive(req.params.id)
+  const updatedJob = await db.toggleCronJobActive(req.params.id)
   res.json({ success: true, data: { job: updatedJob, scheduled: updatedJob?.is_active } })
 }))
 
@@ -210,13 +217,14 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
 // Job Cloning
 // ============================================
 router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
   
-  const clonedJob = db.createCronJob({
+  const clonedJob = await db.createCronJob({
     name: `${job.name} (Copy)`,
     description: job.description,
     cron_expression: job.cron_expression,
@@ -226,9 +234,9 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
   })
   
   // Clone tags
-  const tags = db.getJobTags(req.params.id)
+  const tags = await db.getJobTags(req.params.id)
   for (const tag of tags) {
-    db.addJobTag(clonedJob.id, tag)
+    await db.addJobTag(clonedJob.id, tag)
   }
   
   res.json({ success: true, data: { ...clonedJob, tags } })
@@ -238,7 +246,8 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
 // Job Dry Run
 // ============================================
 router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const job = db.getCronJobById(req.params.id)
+  const db = await getDatabase()
+  const job = await db.getCronJobById(req.params.id)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
@@ -277,9 +286,9 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   }
   
   // Get historical stats for estimated duration
-  const recentLogs = db.getAllExecutionLogs(job.id, 10)
+  const recentLogs = await db.getAllExecutionLogs(job.id, 10)
   const avgDuration = recentLogs.length > 0
-    ? recentLogs.reduce((sum, log) => sum + (log.duration_ms || 0), 0) / recentLogs.length
+    ? recentLogs.reduce((sum: number, log) => sum + (log.duration_ms || 0), 0) / recentLogs.length
     : null
   
   res.json({
@@ -303,6 +312,7 @@ function formatDuration(ms: number): string {
 // Bulk Operations
 // ============================================
 router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const { ids } = req.body
   if (!Array.isArray(ids)) {
     res.status(400).json({ success: false, error: 'ids must be an array' })
@@ -310,9 +320,9 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
   }
   let updated = 0
   for (const id of ids) {
-    const job = db.getCronJobById(id)
+    const job = await db.getCronJobById(id)
     if (job && !job.is_active) {
-      db.toggleCronJobActive(id)
+      await db.toggleCronJobActive(id)
       updated++
     }
   }
@@ -320,6 +330,7 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const { ids } = req.body
   if (!Array.isArray(ids)) {
     res.status(400).json({ success: false, error: 'ids must be an array' })
@@ -327,9 +338,9 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
   }
   let updated = 0
   for (const id of ids) {
-    const job = db.getCronJobById(id)
+    const job = await db.getCronJobById(id)
     if (job && job.is_active) {
-      db.toggleCronJobActive(id)
+      await db.toggleCronJobActive(id)
       updated++
     }
   }
@@ -337,6 +348,7 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const { ids } = req.body
   if (!Array.isArray(ids)) {
     res.status(400).json({ success: false, error: 'ids must be an array' })
@@ -344,7 +356,7 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
   }
   let deleted = 0
   for (const id of ids) {
-    if (db.deleteCronJob(id)) {
+    if (await db.deleteCronJob(id)) {
       deleted++
     }
   }
@@ -355,12 +367,14 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
 // Tags API
 // ============================================
 router.get('/tags', asyncHandler(async (_req, res) => {
-  const tags = db.getAllTags()
+  const db = await getDatabase()
+  const tags = await db.getAllTags()
   res.json({ success: true, data: { tags, total: tags.length } })
 }))
 
 router.get('/jobs/by-tag/:tag', asyncHandler(async (req, res) => {
-  const jobs = db.getJobsByTag(req.params.tag)
+  const db = await getDatabase()
+  const jobs = await db.getJobsByTag(req.params.tag)
   res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
@@ -369,9 +383,10 @@ router.get('/jobs/by-tag/:tag', asyncHandler(async (req, res) => {
 // ============================================
 
 router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const query = req.query as unknown as { status?: TaskStatus; job_id?: string; page: number; limit: number }
   const { status, job_id, page, limit } = query
-  let tasks: TaskQueueItem[] = db.getAllTasks(status)
+  let tasks: TaskQueueItem[] = await db.getAllTasks(status)
   if (job_id) {
     tasks = tasks.filter((t: TaskQueueItem) => t.job_id === job_id)
   }
@@ -381,8 +396,9 @@ router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (re
 }))
 
 router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const taskData = req.body
-  const task = db.createTask({
+  const task = await db.createTask({
     job_id: taskData.job_id,
     task_type: taskData.task_type,
     payload: parsePayload(taskData.payload),
@@ -394,7 +410,8 @@ router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) 
 }))
 
 router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTaskSchema), asyncHandler(async (req, res) => {
-  const task = db.getTaskById(req.params.id)
+  const db = await getDatabase()
+  const task = await db.getTaskById(req.params.id)
   if (!task) {
     res.status(404).json({ success: false, error: 'Task not found' })
     return
@@ -403,22 +420,24 @@ router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTask
   if (req.body.status) updates.status = req.body.status as TaskStatus
   if (req.body.error_message) updates.error_message = req.body.error_message
   if (req.body.result) updates.result = req.body.result
-  const updatedTask = db.updateTask(req.params.id, updates)
+  const updatedTask = await db.updateTask(req.params.id, updates)
   res.json({ success: true, data: updatedTask })
 }))
 
 router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const task = db.getTaskById(req.params.id)
+  const db = await getDatabase()
+  const task = await db.getTaskById(req.params.id)
   if (!task) {
     res.status(404).json({ success: false, error: 'Task not found' })
     return
   }
-  db.deleteTask(req.params.id)
+  await db.deleteTask(req.params.id)
   res.json({ success: true, data: { deleted: true } })
 }))
 
 router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const task = db.getTaskById(req.params.id)
+  const db = await getDatabase()
+  const task = await db.getTaskById(req.params.id)
   if (!task) {
     res.status(404).json({ success: false, error: 'Task not found' })
     return
@@ -427,7 +446,7 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
     res.status(400).json({ success: false, error: 'Only failed tasks can be retried' })
     return
   }
-  const updatedTask = db.updateTask(req.params.id, {
+  const updatedTask = await db.updateTask(req.params.id, {
     status: TaskStatus.PENDING,
     retry_count: 0,
     error_message: null,
@@ -440,22 +459,24 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
 // ============================================
 
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const query = req.query as unknown as { job_id?: string; status?: string; limit: number }
   const { job_id, status, limit } = query
-  let logs: ExecutionLog[] = db.getAllExecutionLogs(job_id, limit)
+  let logs: ExecutionLog[] = await db.getAllExecutionLogs(job_id, limit)
   if (status) logs = logs.filter((l: ExecutionLog) => l.status === status)
   res.json({ success: true, data: { logs, total: logs.length } })
 }))
 
 router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
-  const log = db.getExecutionLogById(req.params.id)
+  const db = await getDatabase()
+  const log = await db.getExecutionLogById(req.params.id)
   if (!log) {
     res.status(404).json({ success: false, error: 'Log not found' })
     return
   }
   let tasks: { id: string; status: string; created_at: string }[] = []
   if (log.job_id) {
-    tasks = db.getTasksByJobId(log.job_id).map((t: TaskQueueItem) => ({
+    tasks = (await db.getTasksByJobId(log.job_id)).map((t: TaskQueueItem) => ({
       id: t.id,
       status: t.status,
       created_at: t.created_at,
@@ -468,27 +489,29 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 // Dead Letter Queue API
 // ============================================
 router.get('/dead-letter', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const limit = parseInt(req.query.limit as string) || 100
-  const items = db.getDeadLetterQueue(limit)
+  const items = await db.getDeadLetterQueue(limit)
   res.json({ success: true, data: { items, total: items.length } })
 }))
 
 router.post('/dead-letter/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const item = db.getDeadLetterItemById(req.params.id)
+  const db = await getDatabase()
+  const item = await db.getDeadLetterItemById(req.params.id)
   if (!item) {
     res.status(404).json({ success: false, error: 'Item not found' })
     return
   }
   
   // Create a new task from the dead letter item
-  const task = db.createTask({
+  const task = await db.createTask({
     job_id: item.job_id,
     task_type: item.task_type,
     payload: item.payload,
   })
   
   // Mark dead letter item as resolved
-  db.updateDeadLetterItem(item.id, {
+  await db.updateDeadLetterItem(item.id, {
     resolved_at: new Date().toISOString(),
     resolution: 'retried',
   })
@@ -497,13 +520,14 @@ router.post('/dead-letter/:id/retry', validateParams(taskIdParamsSchema), asyncH
 }))
 
 router.delete('/dead-letter/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const item = db.getDeadLetterItemById(req.params.id)
+  const db = await getDatabase()
+  const item = await db.getDeadLetterItemById(req.params.id)
   if (!item) {
     res.status(404).json({ success: false, error: 'Item not found' })
     return
   }
   
-  db.updateDeadLetterItem(item.id, {
+  await db.updateDeadLetterItem(item.id, {
     resolved_at: new Date().toISOString(),
     resolution: 'discarded',
   })
@@ -515,18 +539,21 @@ router.delete('/dead-letter/:id', validateParams(taskIdParamsSchema), asyncHandl
 // Webhooks API
 // ============================================
 router.get('/webhooks', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const jobId = req.query.job_id as string | undefined
-  const configs = db.getWebhookConfigs(jobId)
+  const configs = await db.getWebhookConfigs(jobId)
   res.json({ success: true, data: { webhooks: configs, total: configs.length } })
 }))
 
 router.post('/webhooks', asyncHandler(async (req, res) => {
-  const config = db.createWebhookConfig(req.body)
+  const db = await getDatabase()
+  const config = await db.createWebhookConfig(req.body)
   res.json({ success: true, data: config })
 }))
 
 router.get('/webhooks/:id', asyncHandler(async (req, res) => {
-  const config = db.getWebhookConfigById(req.params.id)
+  const db = await getDatabase()
+  const config = await db.getWebhookConfigById(req.params.id)
   if (!config) {
     res.status(404).json({ success: false, error: 'Webhook not found' })
     return
@@ -535,26 +562,29 @@ router.get('/webhooks/:id', asyncHandler(async (req, res) => {
 }))
 
 router.put('/webhooks/:id', asyncHandler(async (req, res) => {
-  const existing = db.getWebhookConfigById(req.params.id)
+  const db = await getDatabase()
+  const existing = await db.getWebhookConfigById(req.params.id)
   if (!existing) {
     res.status(404).json({ success: false, error: 'Webhook not found' })
     return
   }
-  const config = db.updateWebhookConfig(req.params.id, req.body)
+  const config = await db.updateWebhookConfig(req.params.id, req.body)
   res.json({ success: true, data: config })
 }))
 
 router.delete('/webhooks/:id', asyncHandler(async (req, res) => {
-  const existing = db.getWebhookConfigById(req.params.id)
+  const db = await getDatabase()
+  const existing = await db.getWebhookConfigById(req.params.id)
   if (!existing) {
     res.status(404).json({ success: false, error: 'Webhook not found' })
     return
   }
-  db.deleteWebhookConfig(req.params.id)
+  await db.deleteWebhookConfig(req.params.id)
   res.json({ success: true, data: { deleted: true } })
 }))
 
 router.post('/webhooks/:id/test', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   const notificationService = getNotificationService(db)
   const result = await notificationService.testWebhook(req.params.id)
   if (result.success) {
@@ -603,11 +633,13 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
 }))
 
 router.get('/workflow/templates', asyncHandler(async (_req, res) => {
-  const templates: WorkflowTemplate[] = db.getMarkedWorkflowTemplates()
+  const db = await getDatabase()
+  const templates: WorkflowTemplate[] = await db.getMarkedWorkflowTemplates()
   res.json({ success: true, data: { templates, total: templates.length } })
 }))
 
 router.post('/workflow/templates', validate(createWorkflowTemplateSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
   try {
     JSON.parse(req.body.nodes_json)
     JSON.parse(req.body.edges_json)
@@ -615,7 +647,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
     res.status(400).json({ success: false, error: 'nodes_json and edges_json must be valid JSON' })
     return
   }
-  const template = db.createWorkflowTemplate({
+  const template = await db.createWorkflowTemplate({
     name: req.body.name,
     description: req.body.description,
     nodes_json: req.body.nodes_json,
@@ -626,7 +658,8 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
 }))
 
 router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), validate(updateWorkflowTemplateSchema), asyncHandler(async (req, res) => {
-  const template = db.getWorkflowTemplateById(req.params.id)
+  const db = await getDatabase()
+  const template = await db.getWorkflowTemplateById(req.params.id)
   if (!template) {
     res.status(404).json({ success: false, error: 'Template not found' })
     return
@@ -643,17 +676,18 @@ router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSch
       return
     }
   }
-  const updatedTemplate = db.updateWorkflowTemplate(req.params.id, req.body)
+  const updatedTemplate = await db.updateWorkflowTemplate(req.params.id, req.body)
   res.json({ success: true, data: updatedTemplate })
 }))
 
 router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), asyncHandler(async (req, res) => {
-  const template = db.getWorkflowTemplateById(req.params.id)
+  const db = await getDatabase()
+  const template = await db.getWorkflowTemplateById(req.params.id)
   if (!template) {
     res.status(404).json({ success: false, error: 'Template not found' })
     return
   }
-  db.deleteWorkflowTemplate(req.params.id)
+  await db.deleteWorkflowTemplate(req.params.id)
   res.json({ success: true, data: { deleted: true } })
 }))
 

@@ -1,4 +1,4 @@
-import type { DatabaseService } from '../database'
+import type { DatabaseService } from '../database/service-async.js'
 import type { TaskStatus } from '../database/types'
 
 export interface TaskResult {

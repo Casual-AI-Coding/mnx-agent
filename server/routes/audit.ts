@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getDatabase } from '../database/service'
+import { getDatabase } from '../database/service-async.js'
 import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
 import type { AuditAction } from '../database/types'
 
@@ -20,7 +20,8 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     limit,
   } = req.query
 
-  const result = getDatabase().getAuditLogs({
+  const db = await getDatabase()
+  const result = await db.getAuditLogs({
     action: action as AuditAction | undefined,
     resource_type: resource_type as string | undefined,
     resource_id: resource_id as string | undefined,
@@ -48,15 +49,8 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
 }))
 
 router.get('/stats', asyncHandler(async (_req, res) => {
-  const stats = getDatabase().getAuditStats()
-  res.json({
-    success: true,
-    data: stats,
-  })
-}))
-
-router.get('/stats', asyncHandler(async (req, res) => {
-  const stats = getDatabase().getAuditStats()
+  const db = await getDatabase()
+  const stats = await db.getAuditStats()
   res.json({
     success: true,
     data: stats,
@@ -64,7 +58,8 @@ router.get('/stats', asyncHandler(async (req, res) => {
 }))
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  const log = getDatabase().getAuditLogById(req.params.id)
+  const db = await getDatabase()
+  const log = await db.getAuditLogById(req.params.id)
   if (!log) {
     res.status(404).json({ success: false, error: 'Audit log not found' })
     return

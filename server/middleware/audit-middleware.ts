@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getDatabase } from '../database/service'
+import { getDatabase } from '../database/service-async.js'
 import type { AuditAction } from '../database/types'
 import { getLogger } from '../lib/logger'
 
@@ -75,48 +75,48 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
 
-    // Attempt to write audit log, but don't let it break the response
-    try {
-      const db = getDatabase()
+    // Fire-and-forget async audit logging - don't block the response
+    getDatabase()
+      .then(db => {
+        const resourceType = extractResourceType(req.path)
+        const resourceId = req.params.id || req.params.jobId || null
 
-      const resourceType = extractResourceType(req.path)
-      const resourceId = req.params.id || req.params.jobId || null
+        const requestBody = req.body && Object.keys(req.body).length > 0
+          ? JSON.stringify(redactSensitiveData(req.body))
+          : null
 
-      const requestBody = req.body && Object.keys(req.body).length > 0
-        ? JSON.stringify(redactSensitiveData(req.body))
-        : null
-
-      db.createAuditLog({
-        action: methodToAction(req.method),
-        resource_type: resourceType,
-        resource_id: resourceId,
-        user_id: null,
-        ip_address: req.ip || null,
-        user_agent: req.get('user-agent') || null,
-        request_method: req.method,
-        request_path: req.originalUrl,
-        request_body: requestBody,
-        response_status: res.statusCode,
-        duration_ms: duration,
+        return db.createAuditLog({
+          action: methodToAction(req.method),
+          resource_type: resourceType,
+          resource_id: resourceId,
+          user_id: null,
+          ip_address: req.ip || null,
+          user_agent: req.get('user-agent') || null,
+          request_method: req.method,
+          request_path: req.originalUrl,
+          request_body: requestBody,
+          response_status: res.statusCode,
+          duration_ms: duration,
+        })
       })
-    } catch (error) {
-      // Fallback: write to log file if database write fails
-      const logger = getLogger()
-      logger.error({
-        type: 'audit_log_failure',
-        error: (error as Error).message,
-        stack: (error as Error).stack,
-        request: {
-          method: req.method,
-          path: req.originalUrl,
-          ip: req.ip,
-        },
-        response: {
-          statusCode: res.statusCode,
-          duration,
-        },
+      .catch(error => {
+        // Fallback: write to log file if database write fails
+        const logger = getLogger()
+        logger.error({
+          type: 'audit_log_failure',
+          error: (error as Error).message,
+          stack: (error as Error).stack,
+          request: {
+            method: req.method,
+            path: req.originalUrl,
+            ip: req.ip,
+          },
+          response: {
+            statusCode: res.statusCode,
+            duration,
+          },
+        })
       })
-    }
 
     // Always call originalEnd, even if audit logging failed
     try {

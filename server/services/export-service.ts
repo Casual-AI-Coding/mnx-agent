@@ -1,4 +1,5 @@
-import { DatabaseService, getDatabase } from '../database/service'
+import type { DatabaseService } from '../database/service-async.js'
+import { getDatabase } from '../database/service-async.js'
 import { ExecutionLog } from '../database/types'
 import { MediaRecord } from '../database/types'
 import { ExportFormat } from '../validation/export-schemas'
@@ -23,15 +24,15 @@ export interface ExportResult {
 export class ExportService {
   private db: DatabaseService
 
-  constructor(db?: DatabaseService) {
-    this.db = db ?? getDatabase()
+  constructor(db: DatabaseService) {
+    this.db = db
   }
 
   async exportExecutionLogs(options: ExportOptions): Promise<ExportResult> {
     const { format, startDate, endDate, page = 1, limit = 1000 } = options
     const offset = (page - 1) * limit
 
-    const result = this.db.getExecutionLogsPaginated({
+    const result = await this.db.getExecutionLogsPaginated({
       limit,
       offset,
       startDate,
@@ -61,7 +62,7 @@ export class ExportService {
     const { format, type, page = 1, limit = 1000 } = options
     const offset = (page - 1) * limit
 
-    const result = this.db.getMediaRecords({
+    const result = await this.db.getMediaRecords({
       type: type,
       limit: limit * page,
       offset: 0,
@@ -140,9 +141,10 @@ export class ExportService {
 
 let exportServiceInstance: ExportService | null = null
 
-export function getExportService(db?: DatabaseService): ExportService {
+export async function getExportService(db?: DatabaseService): Promise<ExportService> {
   if (!exportServiceInstance) {
-    exportServiceInstance = new ExportService(db)
+    const database = db ?? await getDatabase()
+    exportServiceInstance = new ExportService(database)
   }
   return exportServiceInstance
 }

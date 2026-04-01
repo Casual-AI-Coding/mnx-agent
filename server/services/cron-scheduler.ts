@@ -1,6 +1,6 @@
 import cron, { ScheduledTask } from 'node-cron'
 import { CronExpressionParser } from 'cron-parser'
-import type { DatabaseService } from '../database'
+import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
 import { 
   CronJob, 
@@ -61,7 +61,7 @@ export class CronScheduler {
     }
   }
 
-  scheduleJob(job: CronJob): void {
+  async scheduleJob(job: CronJob): Promise<void> {
     if (!cron.validate(job.cron_expression)) {
       throw new Error(`Invalid cron expression for job ${job.id}: ${job.cron_expression}`)
     }
@@ -73,7 +73,7 @@ export class CronScheduler {
     // Calculate and save next_run_at
     const nextRun = this.calculateNextRun(job.cron_expression)
     if (nextRun) {
-      this.db.updateCronJob(job.id, { next_run_at: nextRun.toISOString() })
+      await this.db.updateCronJob(job.id, { next_run_at: nextRun.toISOString() })
     }
 
     const task = cron.schedule(
@@ -83,7 +83,7 @@ export class CronScheduler {
         // Update next_run_at after execution
         const nextRunAfter = this.calculateNextRun(job.cron_expression)
         if (nextRunAfter) {
-          this.db.updateCronJob(job.id, { next_run_at: nextRunAfter.toISOString() })
+          await this.db.updateCronJob(job.id, { next_run_at: nextRunAfter.toISOString() })
         }
       },
       { timezone: this.timezone }
@@ -251,7 +251,7 @@ export class CronScheduler {
     }
 
     try {
-      this.scheduleJob(job)
+      await this.scheduleJob(job)
       return true
     } catch (error) {
       console.error(`[CronScheduler] Failed to reschedule job ${jobId}:`, error)

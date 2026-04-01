@@ -18,7 +18,7 @@ router.get('/execution-logs', validateQuery(executionLogsExportQuerySchema), asy
     limit?: number
   }
 
-  const exportService = getExportService()
+  const exportService = await getExportService()
   const result = await exportService.exportExecutionLogs({
     format,
     startDate,
@@ -40,7 +40,7 @@ router.get('/media-records', validateQuery(mediaRecordsExportQuerySchema), async
     limit?: number
   }
 
-  const exportService = getExportService()
+  const exportService = await getExportService()
   const result = await exportService.exportMediaRecords({
     format,
     type,

@@ -1,6 +1,6 @@
 import { MiniMaxClient } from '../lib/minimax'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
-import type { DatabaseService } from '../database/service'
+import type { DatabaseService } from '../database/service-async.js'
 
 export interface BalanceResult {
   totalBalance: number
@@ -163,7 +163,7 @@ export class CapacityChecker {
   }
 
   private async fetchCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
-    return this.db.getCapacityRecord(serviceType)
+    return await this.db.getCapacityRecord(serviceType)
   }
 
   private async saveCapacityRecord(

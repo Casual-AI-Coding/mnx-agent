@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { DatabaseService } from '../database/service'
+import type { DatabaseService } from '../database/service-async.js'
 
 export interface WebhookPayload {
   event: string
@@ -22,7 +22,7 @@ export class NotificationService {
     event: 'on_start' | 'on_success' | 'on_failure',
     data: unknown
   ): Promise<void> {
-    const configs = this.getWebhookConfigsForJob(jobId, event)
+    const configs = await this.getWebhookConfigsForJob(jobId, event)
     
     const payload: WebhookPayload = {
       event,
@@ -36,27 +36,25 @@ export class NotificationService {
     )
   }
 
-  private getWebhookConfigsForJob(jobId: string, event: string): Array<{
+  private async getWebhookConfigsForJob(jobId: string, event: string): Promise<Array<{
     id: string
     url: string
     headers: Record<string, string>
     secret: string | null
-  }> {
-    const rows = this.db.getDatabase()
-      .prepare(`
-        SELECT * FROM webhook_configs 
-        WHERE is_active = 1 
-        AND (job_id = ? OR job_id IS NULL)
-        AND events LIKE ?
-      `)
-      .all(jobId, `%"${event}"%`) as Array<Record<string, unknown>>
-
-    return rows.map(row => ({
-      id: row.id as string,
-      url: row.url as string,
-      headers: row.headers ? JSON.parse(row.headers as string) : {},
-      secret: row.secret as string | null
-    }))
+  }>> {
+    const allConfigs = await this.db.getWebhookConfigs()
+    
+    return allConfigs
+      .filter(config => 
+        (config.job_id === jobId || config.job_id === null) &&
+        config.events.some(e => e === event)
+      )
+      .map(config => ({
+        id: config.id,
+        url: config.url,
+        headers: config.headers ?? {},
+        secret: config.secret
+      }))
   }
 
   private async sendWebhook(
@@ -101,7 +99,7 @@ export class NotificationService {
       errorMessage = error instanceof Error ? error.message : 'Unknown error'
     }
 
-    this.recordDelivery(config.id, payload, responseStatus, responseBody, errorMessage)
+    await this.recordDelivery(config.id, payload, responseStatus, responseBody, errorMessage)
   }
 
   private generateSignature(payload: string, secret: string): string {
@@ -111,43 +109,29 @@ export class NotificationService {
       .digest('hex')
   }
 
-  private recordDelivery(
+  private async recordDelivery(
     webhookId: string,
     payload: WebhookPayload,
     responseStatus: number | null,
     responseBody: string | null,
     errorMessage: string | null
-  ): void {
-    const id = crypto.randomUUID()
-    this.db.getDatabase().prepare(`
-      INSERT INTO webhook_deliveries (id, webhook_id, event, payload, response_status, response_body, error_message, delivered_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      webhookId,
-      payload.event,
-      JSON.stringify(payload),
-      responseStatus,
-      responseBody?.slice(0, 10000) ?? null,
-      errorMessage,
-      new Date().toISOString()
-    )
+  ): Promise<void> {
+    await this.db.createWebhookDelivery({
+      webhook_id: webhookId,
+      execution_log_id: null,
+      event: payload.event,
+      payload: JSON.stringify(payload),
+      response_status: responseStatus,
+      response_body: responseBody?.slice(0, 10000) ?? null,
+      error_message: errorMessage,
+    })
   }
 
   async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
-    const row = this.db.getDatabase()
-      .prepare('SELECT * FROM webhook_configs WHERE id = ? AND is_active = 1')
-      .get(webhookId) as { id: string; url: string; headers: string | null; secret: string | null } | undefined
+    const config = await this.db.getWebhookConfigById(webhookId)
     
-    if (!row) {
+    if (!config || !config.is_active) {
       return { success: false, error: 'Webhook not found or inactive' }
-    }
-
-    const config = {
-      id: row.id,
-      url: row.url,
-      headers: row.headers ? JSON.parse(row.headers) : {},
-      secret: row.secret
     }
 
     const testPayload: WebhookPayload = {
@@ -158,7 +142,12 @@ export class NotificationService {
     }
 
     try {
-      await this.sendWebhook(config, testPayload)
+      await this.sendWebhook({
+        id: config.id,
+        url: config.url,
+        headers: config.headers ?? {},
+        secret: config.secret
+      }, testPayload)
       return { success: true }
     } catch (error) {
       return { 

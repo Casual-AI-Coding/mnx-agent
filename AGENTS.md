@@ -326,6 +326,41 @@ vitest run --coverage
    - `vitest run` 通过
    - TypeScript 无错误
 
+## 发布流程
+
+### 版本号规范
+- **MAJOR.MINOR.PATCH** (如 v1.0.2)
+- MAJOR: 不兼容的 API 变更
+- MINOR: 向后兼容的功能新增
+- PATCH: 向后兼容的问题修复
+
+### 发布步骤
+
+1. **更新 CHANGELOG.md**
+   - 添加 `[版本号] - 日期` 标题
+   - 按 `### Added`, `### Fixed`, `### Changed`, `### Performance` 组织
+   - 引用相关 commit: `(#pr)`
+
+2. **更新 package.json**
+   ```bash
+   npm version 1.0.2 --no-git-tag-version
+   ```
+
+3. **提交 Release**
+   ```bash
+   git add CHANGELOG.md package.json package-lock.json
+   git commit -m "chore: release v1.0.2"
+   git tag -a v1.0.2 -m "v1.0.2: 版本说明"
+   git push && git push --tags
+   ```
+
+### 发布检查清单
+- [ ] CHANGELOG.md 更新完整
+- [ ] `npm run build` 通过
+- [ ] `vitest run` 全部通过
+- [ ] TypeScript 无错误
+- [ ] push 后确认 tag 存在
+
 ## 常见问题
 
 ### Q: 媒体文件未显示？

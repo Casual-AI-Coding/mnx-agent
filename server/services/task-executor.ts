@@ -1,4 +1,4 @@
-import type { DatabaseService } from '../database'
+import type { DatabaseService } from '../database/service-async.js'
 import { MiniMaxClient } from '../lib/minimax'
 
 export type { DatabaseService }

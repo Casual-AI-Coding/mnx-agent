@@ -1,4 +1,4 @@
-import type { DatabaseService } from '../database'
+import type { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TaskQueueRow } from '../database/types'
 import type { TaskResult } from './workflow-engine'
 import { cronEvents } from './websocket-service'
@@ -122,7 +122,7 @@ export class QueueProcessor {
   }
 
   async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueRow[]> {
-    return this.db.getPendingTasks(jobId, limit)
+    return await this.db.getPendingTasks(jobId, limit)
   }
 
   async cancelPendingTasks(jobId: string): Promise<number> {
@@ -145,7 +145,7 @@ export class QueueProcessor {
 
     for (const task of pendingTasks) {
       if (task.status === TaskStatus.FAILED) {
-        this.db.updateTask(task.id, {
+        await this.db.updateTask(task.id, {
           status: TaskStatus.PENDING,
           retry_count: 0,
           error_message: null,
@@ -160,7 +160,7 @@ export class QueueProcessor {
   private async executeTaskWithLifecycle(task: TaskQueueRow): Promise<TaskResult> {
     const startTime = Date.now()
 
-    this.db.updateTask(task.id, {
+    await this.db.updateTask(task.id, {
       status: TaskStatus.RUNNING,
       started_at: new Date().toISOString(),
     })
@@ -169,7 +169,7 @@ export class QueueProcessor {
       const payload = JSON.parse(task.payload)
       const result = await this.taskExecutor.executeTask(task.task_type, payload)
 
-      this.db.updateTask(task.id, {
+      await this.db.updateTask(task.id, {
         status: TaskStatus.COMPLETED,
         completed_at: new Date().toISOString(),
         result: JSON.stringify(result.data),
@@ -182,7 +182,7 @@ export class QueueProcessor {
     } catch (error) {
       const errorMessage = (error as Error).message
 
-      this.db.updateTask(task.id, {
+      await this.db.updateTask(task.id, {
         status: TaskStatus.FAILED,
         completed_at: new Date().toISOString(),
         error_message: errorMessage,
@@ -199,7 +199,7 @@ export class QueueProcessor {
   }
 
   private async requeueTask(task: TaskQueueRow): Promise<void> {
-    this.db.updateTask(task.id, {
+    await this.db.updateTask(task.id, {
       status: TaskStatus.PENDING,
       retry_count: task.retry_count + 1,
       started_at: null,
@@ -208,19 +208,14 @@ export class QueueProcessor {
 
   private async moveToDeadLetterQueue(task: TaskQueueRow, error: string): Promise<void> {
     try {
-      // Insert into dead letter queue
-      this.db.getDatabase().prepare(`
-        INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count)
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
-      `).run(
-        crypto.randomUUID(),
-        task.id,
-        task.job_id,
-        task.task_type,
-        task.payload,
-        error,
-        task.retry_count
-      )
+      await this.db.createDeadLetterItem({
+        original_task_id: task.id,
+        job_id: task.job_id,
+        task_type: task.task_type,
+        payload: task.payload,
+        error_message: error,
+        retry_count: task.retry_count,
+      })
     } catch (dbError) {
       console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, dbError)
     }

@@ -22,7 +22,7 @@ import templatesRouter from './routes/templates'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
-import { getDatabase, runMigrations } from './database'
+import { getDatabase, closeDatabase } from './database/service-async.js'
 import { getMiniMaxClient } from './lib/minimax'
 import { TaskExecutor } from './services/task-executor'
 import { CapacityChecker } from './services/capacity-checker'
@@ -73,37 +73,60 @@ app.use('/api/audit', auditRouter)
 
 app.use(errorHandler)
 
-// Initialize services with dependency injection
-try {
-  const dbService = getDatabase()
-  runMigrations(dbService.getDatabase())
-
-  // Core services
+async function initializeServices() {
+  const dbService = await getDatabase()
+  
   const minimaxClient = getMiniMaxClient()
   const taskExecutor = new TaskExecutor(minimaxClient, dbService)
   const capacityChecker = new CapacityChecker(minimaxClient, dbService)
 
-  // Queue processor (capacity-aware execution)
   const queueProcessor = new QueueProcessor(dbService, taskExecutor, capacityChecker)
 
-  // Workflow engine
   const workflowEngine = new WorkflowEngine(dbService, taskExecutor, capacityChecker)
   workflowEngine.setQueueProcessor(queueProcessor)
 
-  // Cron scheduler (depends on workflow engine)
   const cronScheduler = new CronScheduler(dbService, workflowEngine)
 
-  // Initialize scheduler (load jobs from DB and start cron tasks)
-  cronScheduler.init().catch((error) => {
-    logger.warn({ msg: 'Cron scheduler initialization failed', error: (error as Error).message })
-  })
-} catch (error) {
-  logger.warn({ msg: 'Service initialization failed', error: (error as Error).message })
+  await cronScheduler.init()
+
+  return { dbService, cronScheduler }
 }
 
 const server = app.listen(PORT, () => {
   logger.info({ msg: 'MiniMax Proxy Server started', port: PORT })
 })
 
+initializeServices()
+  .then(({ cronScheduler }) => {
+    logger.info({ msg: 'Services initialized successfully' })
+  })
+  .catch((error) => {
+    logger.error({ msg: 'Service initialization failed', error: (error as Error).message })
+    process.exit(1)
+  })
+
 initCronWebSocket(server)
 logger.info({ msg: 'WebSocket server initialized', path: '/ws/cron' })
+
+async function gracefulShutdown(signal: string) {
+  logger.info({ msg: `${signal} received, starting graceful shutdown` })
+  
+  const shutdownTimeout = setTimeout(() => {
+    logger.warn({ msg: 'Graceful shutdown timed out, forcing exit' })
+    process.exit(1)
+  }, 10000)
+  
+  try {
+    await closeDatabase()
+    clearTimeout(shutdownTimeout)
+    logger.info({ msg: 'Database connection closed' })
+    process.exit(0)
+  } catch (error) {
+    clearTimeout(shutdownTimeout)
+    logger.error({ msg: 'Error during shutdown', error: (error as Error).message })
+    process.exit(1)
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
