@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-04-01
+
+### Added
+- **Auth Compatibility** - Complete owner_id support across all routes (#7)
+  - Stats routes: Add owner_id filtering via `buildOwnerFilter()`
+  - Audit routes: Non-admin users can only see their own audit logs
+  - Export routes: Add owner_id filtering for execution logs and media exports
+  - DatabaseService: Add `ownerId` parameter to stats methods (`getExecutionStatsOverview`, `getExecutionStatsTrend`, `getExecutionStatsDistribution`, `getExecutionStatsErrors`, `getAuditStats`)
+
+### Fixed
+- **Audit Middleware** - Populate `user_id` from JWT token instead of hardcoded `null`
+
+### Changed
+- **Data Isolation** - Non-admin users (user/pro) can now only see their own stats and audit logs
+- **Documentation** - Add authentication system section to AGENTS.md with role permissions table
+
 ## [1.1.3] - 2026-04-01
 
 ### Added
