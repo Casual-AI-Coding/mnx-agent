@@ -373,6 +373,40 @@ export class DatabaseService {
     return rows.map(rowToExecutionLog)
   }
 
+  getExecutionLogsPaginated(options: {
+    limit: number
+    offset: number
+    startDate?: string
+    endDate?: string
+  }): { logs: ExecutionLog[]; total: number } {
+    const { limit, offset, startDate, endDate } = options
+
+    const conditions: string[] = []
+    const params: (string | number)[] = []
+
+    if (startDate) {
+      conditions.push('started_at >= ?')
+      params.push(startDate)
+    }
+    if (endDate) {
+      conditions.push('started_at <= ?')
+      params.push(endDate)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const countResult = this.db.prepare(`SELECT COUNT(*) as count FROM execution_logs ${whereClause}`).get(...params) as { count: number }
+    const total = countResult.count
+
+    const query = `SELECT * FROM execution_logs ${whereClause} ORDER BY started_at DESC LIMIT ? OFFSET ?`
+    const rows = this.db.prepare(query).all(...params, limit, offset) as ExecutionLogRow[]
+
+    return {
+      logs: rows.map(rowToExecutionLog),
+      total,
+    }
+  }
+
   getExecutionLogById(id: string): ExecutionLog | null {
     const row = this.db.prepare('SELECT * FROM execution_logs WHERE id = ?').get(id) as ExecutionLogRow | undefined
     return row ? rowToExecutionLog(row) : null

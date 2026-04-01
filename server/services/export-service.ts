@@ -30,15 +30,14 @@ export class ExportService {
     const { format, startDate, endDate, page = 1, limit = 1000 } = options
     const offset = (page - 1) * limit
 
-    const logs = this.db.getAllExecutionLogs(undefined, limit * page)
+    const result = this.db.getExecutionLogsPaginated({
+      limit,
+      offset,
+      startDate,
+      endDate,
+    })
 
-    const filteredLogs = logs.filter(log => {
-      if (startDate && log.started_at < startDate) return false
-      if (endDate && log.started_at > endDate) return false
-      return true
-    }).slice(offset, offset + limit)
-
-    const exportData = filteredLogs.map(log => this.formatExecutionLog(log))
+    const exportData = result.logs.map(log => this.formatExecutionLog(log))
 
     if (format === 'csv') {
       return {
