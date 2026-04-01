@@ -65,6 +65,9 @@ app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/auth')) {
     return next()
   }
+  if (req.path.match(/\/media\/[^/]+\/download$/)) {
+    return next()
+  }
   authenticateJWT(req, res, next)
 })
 
