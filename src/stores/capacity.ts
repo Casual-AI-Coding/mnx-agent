@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CapacityRecord, ServiceType } from '../types/cron'
 import { useAppStore } from './app'
+import { useAuthStore } from './auth'
 
 interface MiniMaxModelRemain {
   model_name: string
@@ -30,8 +31,13 @@ interface CapacityState {
 
 async function fetchCapacityFromApi(): Promise<{ records: CapacityRecord[]; codingPlan: CodingPlanResponse | null }> {
   const { apiKey, region } = useAppStore.getState()
+  const { accessToken } = useAuthStore.getState()
   
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
   
   if (apiKey && apiKey.trim()) {
     const cleanKey = apiKey.trim()
