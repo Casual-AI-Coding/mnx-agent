@@ -1,11 +1,13 @@
 import { Router } from 'express'
+import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service'
+import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
 import type { AuditAction } from '../database/types'
 
 const router = Router()
 
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req, res) => {
   const {
     action,
     resource_type,
@@ -26,22 +28,30 @@ router.get('/', asyncHandler(async (req, res) => {
     response_status: response_status ? Number(response_status) : undefined,
     start_date: start_date as string | undefined,
     end_date: end_date as string | undefined,
-    page: page ? Number(page) : 1,
-    limit: limit ? Math.min(Number(limit), 100) : 20,
+    page: Number(page),
+    limit: Number(limit),
   })
 
-  const currentLimit = limit ? Math.min(Number(limit), 100) : 20
+  const currentLimit = Number(limit)
   res.json({
     success: true,
     data: {
       logs: result.logs,
       pagination: {
-        page: page ? Number(page) : 1,
+        page: Number(page),
         limit: currentLimit,
         total: result.total,
         totalPages: Math.ceil(result.total / currentLimit),
       },
     },
+  })
+}))
+
+router.get('/stats', asyncHandler(async (_req, res) => {
+  const stats = getDatabase().getAuditStats()
+  res.json({
+    success: true,
+    data: stats,
   })
 }))
 
