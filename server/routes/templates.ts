@@ -36,7 +36,7 @@ router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req
         totalPages: Math.ceil(result.total / limitNum),
       }
     }
-  }))
+  })
 }))
 
 router.get('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
