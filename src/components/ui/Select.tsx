@@ -430,15 +430,11 @@ const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ className, variant, value, disabled, children, ...props }, ref) => {
     const { value: selectedValue, onValueChange, highlightedIndex, itemIds, registerItem } = useSelectContext()
     const isSelected = selectedValue === value
-    const [itemId, setItemId] = React.useState<string>('')
-    const [itemIndex, setItemIndex] = React.useState<number>(-1)
+    const itemId = React.useId()
     
     React.useEffect(() => {
-      const id = `select-item-${React.useId()}`
-      setItemId(id)
-      const index = registerItem(id)
-      setItemIndex(index)
-    }, [registerItem])
+      registerItem(itemId)
+    }, [registerItem, itemId])
     
     const isHighlighted = itemIds[highlightedIndex] === itemId
     
