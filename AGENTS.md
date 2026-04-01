@@ -118,6 +118,49 @@ class QueueProcessor {
 
 **重试策略：** 指数退避 (1s → 2s → 4s → ...)，最大 5 分钟
 
+## 认证系统
+
+### 角色权限
+
+| 角色 | 调试台 | 管理功能 | 查看他人数据 | 用户管理 | 邀请码管理 |
+|------|--------|----------|-------------|----------|-----------|
+| user | ✅ | ❌ | ❌ | ❌ | ❌ |
+| pro | ✅ | ✅ | ❌ | ❌ | ❌ |
+| admin | ✅ | ✅ | ✅ | ❌ | ❌ |
+| super | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### 数据隔离
+
+所有数据资源（cron jobs, media records, workflows, templates）都通过 `owner_id` 进行隔离：
+- 普通用户（user/pro）只能访问自己创建的资源
+- 管理员（admin/super）可以访问所有资源
+
+### API 认证
+
+所有 `/api/*` 路由需要 JWT Bearer token（`/api/auth` 除外）：
+
+```typescript
+// 请求头
+Authorization: Bearer <access_token>
+
+// 数据隔离中间件
+import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
+
+// 查询时过滤
+const ownerId = buildOwnerFilter(req).params[0]
+const jobs = await db.getAllCronJobs(ownerId)
+
+// 创建时注入
+const ownerId = getOwnerIdForInsert(req) ?? undefined
+const job = await db.createCronJob(data, ownerId)
+```
+
+### 审计日志
+
+审计日志自动记录所有 POST/PUT/PATCH/DELETE 操作：
+- `user_id` 从 JWT token 自动提取
+- 非管理员用户只能查看自己的审计日志
+
 ## 编码规范
 
 ### TypeScript
