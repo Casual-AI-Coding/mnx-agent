@@ -36,3 +36,7 @@ export const updateMediaRecordSchema = z.object({
 export const batchDeleteSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(100),
 })
+
+export const batchDownloadSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+})

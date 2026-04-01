@@ -44,6 +44,15 @@ import type {
   MediaRecordRow,
   CreateMediaRecord,
   UpdateMediaRecord,
+  PromptTemplate,
+  PromptTemplateRow,
+  CreatePromptTemplate,
+  UpdatePromptTemplate,
+  AuditLog,
+  AuditLogRow,
+  CreateAuditLog,
+  AuditLogQuery,
+  AuditStats,
 } from './types.js'
 
 function toISODate(): string {
@@ -109,6 +118,22 @@ function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
     source: row.source as MediaRecord['source'],
     is_deleted: row.is_deleted === 1,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
+  }
+}
+
+function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
+  return {
+    ...row,
+    category: row.category as PromptTemplate['category'],
+    is_builtin: row.is_builtin === 1,
+    variables: row.variables ? JSON.parse(row.variables) : [],
+  }
+}
+
+function rowToAuditLog(row: AuditLogRow): AuditLog {
+  return {
+    ...row,
+    action: row.action as AuditLog['action'],
   }
 }
 
@@ -865,6 +890,353 @@ export class DatabaseService {
   hardDeleteMediaRecord(id: string): boolean {
     const result = this.db.prepare('DELETE FROM media_records WHERE id = ?').run(id)
     return result.changes > 0
+  }
+
+  // ============================================================================
+  // Execution Statistics Aggregation
+  // ============================================================================
+
+  /**
+   * Get overview statistics for all execution logs
+   */
+  getExecutionStatsOverview(): {
+    totalExecutions: number
+    successRate: number
+    avgDuration: number
+    errorCount: number
+  } {
+    const stats = this.db.prepare(`
+      SELECT 
+        COUNT(*) as totalExecutions,
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as successCount,
+        COALESCE(AVG(duration_ms), 0) as avgDuration,
+        COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as errorCount
+      FROM execution_logs
+    `).get() as { totalExecutions: number; successCount: number; avgDuration: number; errorCount: number }
+
+    return {
+      totalExecutions: stats.totalExecutions,
+      successRate: stats.totalExecutions > 0 ? stats.successCount / stats.totalExecutions : 0,
+      avgDuration: Math.round(stats.avgDuration || 0),
+      errorCount: stats.errorCount,
+    }
+  }
+
+  /**
+   * Get success rate trend grouped by period (day, week, month)
+   */
+  getExecutionStatsTrend(period: 'day' | 'week' | 'month'): { date: string; total: number; success: number; failed: number }[] {
+    let dateFormat: string
+    switch (period) {
+      case 'day':
+        dateFormat = '%Y-%m-%d'
+        break
+      case 'week':
+        dateFormat = '%Y-%W'
+        break
+      case 'month':
+        dateFormat = '%Y-%m'
+        break
+    }
+
+    const rows = this.db.prepare(`
+      SELECT 
+        strftime('${dateFormat}', started_at) as date,
+        COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as success,
+        COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed
+      FROM execution_logs
+      GROUP BY strftime('${dateFormat}', started_at)
+      ORDER BY date DESC
+      LIMIT 90
+    `).all() as { date: string; total: number; success: number; failed: number }[]
+
+    return rows
+  }
+
+  /**
+   * Get task type distribution from execution log details
+   */
+  getExecutionStatsDistribution(): { type: string; count: number }[] {
+    const rows = this.db.prepare(`
+      SELECT 
+        COALESCE(eld.node_type, 'unknown') as type,
+        COUNT(DISTINCT el.id) as count
+      FROM execution_logs el
+      LEFT JOIN execution_log_details eld ON el.id = eld.log_id
+      GROUP BY COALESCE(eld.node_type, 'unknown')
+      ORDER BY count DESC
+    `).all() as { type: string; count: number }[]
+
+    return rows.length > 0 ? rows.filter(r => r.type !== 'unknown') : []
+  }
+
+  /**
+   * Get error summary rankings (top N errors by frequency)
+   */
+  getExecutionStatsErrors(limit: number = 10): { errorSummary: string; count: number }[] {
+    const rows = this.db.prepare(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(error_summary), ''), 'Unknown error') as errorSummary,
+        COUNT(*) as count
+      FROM execution_logs
+      WHERE error_summary IS NOT NULL AND error_summary != ''
+      GROUP BY error_summary
+      ORDER BY count DESC
+      LIMIT ?
+    `).all(limit) as { errorSummary: string; count: number }[]
+
+    return rows
+  }
+
+  // ============================================================================
+  // Prompt Templates
+  // ============================================================================
+
+  getPromptTemplates(options: {
+    category?: string
+    limit: number
+    offset: number
+  }): { templates: PromptTemplate[]; total: number } {
+    const { category, limit, offset } = options
+
+    let whereClause = ''
+    const params: (string | number)[] = []
+
+    if (category) {
+      whereClause = 'WHERE category = ?'
+      params.push(category)
+    }
+
+    const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM prompt_templates ${whereClause}`)
+    const countResult = countStmt.get(...params) as { count: number }
+    const total = countResult.count
+
+    const query = `SELECT * FROM prompt_templates ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    const stmt = this.db.prepare(query)
+    const rows = stmt.all(...params, limit, offset) as PromptTemplateRow[]
+
+    return {
+      templates: rows.map(rowToPromptTemplate),
+      total,
+    }
+  }
+
+  getPromptTemplateById(id: string): PromptTemplate | null {
+    const stmt = this.db.prepare('SELECT * FROM prompt_templates WHERE id = ?')
+    const row = stmt.get(id) as PromptTemplateRow | undefined
+    if (!row) return null
+    return rowToPromptTemplate(row)
+  }
+
+  createPromptTemplate(data: CreatePromptTemplate): PromptTemplate {
+    const id = uuidv4()
+    const now = toISODate()
+    const variables = data.variables ? JSON.stringify(data.variables) : null
+
+    const stmt = this.db.prepare(`
+      INSERT INTO prompt_templates (id, name, description, content, category, variables, is_builtin, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+
+    stmt.run(
+      id,
+      data.name,
+      data.description ?? null,
+      data.content,
+      data.category ?? null,
+      variables,
+      data.is_builtin === true ? 1 : 0,
+      now,
+      now
+    )
+
+    return this.getPromptTemplateById(id)!
+  }
+
+  updatePromptTemplate(id: string, data: UpdatePromptTemplate): PromptTemplate | null {
+    const existing = this.getPromptTemplateById(id)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | number | null)[] = []
+
+    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name) }
+    if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description) }
+    if (data.content !== undefined) { fields.push('content = ?'); values.push(data.content) }
+    if (data.category !== undefined) { fields.push('category = ?'); values.push(data.category) }
+    if (data.variables !== undefined) { fields.push('variables = ?'); values.push(JSON.stringify(data.variables)) }
+
+    if (fields.length === 0) return existing
+
+    fields.push('updated_at = ?')
+    values.push(toISODate())
+    values.push(id)
+
+    const stmt = this.db.prepare(`UPDATE prompt_templates SET ${fields.join(', ')} WHERE id = ?`)
+    stmt.run(...values)
+
+    return this.getPromptTemplateById(id)
+  }
+
+  deletePromptTemplate(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM prompt_templates WHERE id = ?').run(id)
+    return result.changes > 0
+  }
+
+  // ============================================================================
+  // Batch Media Operations
+  // ============================================================================
+
+  softDeleteMediaRecords(ids: string[]): { deleted: number; failed: number } {
+    if (ids.length === 0) {
+      return { deleted: 0, failed: 0 }
+    }
+
+    const now = toISODate()
+    const placeholders = ids.map(() => '?').join(',')
+    
+    const stmt = this.db.prepare(`
+      UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})
+    `)
+    
+    const result = stmt.run(now, now, ...ids)
+    const deleted = result.changes
+    
+    return {
+      deleted,
+      failed: ids.length - deleted,
+    }
+  }
+
+  getMediaRecordsByIds(ids: string[]): MediaRecord[] {
+    if (ids.length === 0) return []
+    
+    const placeholders = ids.map(() => '?').join(',')
+    const stmt = this.db.prepare(`SELECT * FROM media_records WHERE id IN (${placeholders}) AND is_deleted = 0`)
+    const rows = stmt.all(...ids) as MediaRecordRow[]
+    return rows.map(rowToMediaRecord)
+  }
+
+  // ============================================================================
+  // Audit Logs
+  // ============================================================================
+
+  createAuditLog(data: CreateAuditLog): AuditLog {
+    const id = uuidv4()
+    const now = toISODate()
+    this.db.prepare(`
+      INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, duration_ms, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      data.action,
+      data.resource_type,
+      data.resource_id ?? null,
+      data.user_id ?? null,
+      data.ip_address ?? null,
+      data.user_agent ?? null,
+      data.request_method ?? null,
+      data.request_path ?? null,
+      data.request_body ?? null,
+      data.response_status ?? null,
+      data.duration_ms ?? null,
+      now
+    )
+    return this.getAuditLogById(id)!
+  }
+
+  getAuditLogById(id: string): AuditLog | null {
+    const row = this.db.prepare('SELECT * FROM audit_logs WHERE id = ?').get(id) as AuditLogRow | undefined
+    return row ? rowToAuditLog(row) : null
+  }
+
+  getAuditLogs(query: AuditLogQuery): { logs: AuditLog[]; total: number } {
+    const { action, resource_type, resource_id, user_id, response_status, start_date, end_date, page = 1, limit = 20 } = query
+    const offset = (page - 1) * limit
+
+    const conditions: string[] = []
+    const params: (string | number)[] = []
+
+    if (action) {
+      conditions.push('action = ?')
+      params.push(action)
+    }
+    if (resource_type) {
+      conditions.push('resource_type = ?')
+      params.push(resource_type)
+    }
+    if (resource_id) {
+      conditions.push('resource_id = ?')
+      params.push(resource_id)
+    }
+    if (user_id) {
+      conditions.push('user_id = ?')
+      params.push(user_id)
+    }
+    if (response_status !== undefined) {
+      conditions.push('response_status = ?')
+      params.push(response_status)
+    }
+    if (start_date) {
+      conditions.push('created_at >= ?')
+      params.push(start_date)
+    }
+    if (end_date) {
+      conditions.push('created_at <= ?')
+      params.push(end_date)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const countResult = this.db.prepare(`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`).get(...params) as { count: number }
+    const total = countResult.count
+
+    const rows = this.db.prepare(`
+      SELECT * FROM audit_logs ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset) as AuditLogRow[]
+
+    return {
+      logs: rows.map(rowToAuditLog),
+      total,
+    }
+  }
+
+  getAuditStats(): AuditStats {
+    const totalResult = this.db.prepare('SELECT COUNT(*) as count FROM audit_logs').get() as { count: number }
+    const total_logs = totalResult.count
+
+    const actionRows = this.db.prepare(`
+      SELECT action, COUNT(*) as count FROM audit_logs GROUP BY action
+    `).all() as { action: string; count: number }[]
+    const by_action = { create: 0, update: 0, delete: 0, execute: 0 } as Record<string, number>
+    actionRows.forEach(row => { by_action[row.action] = row.count })
+
+    const resourceRows = this.db.prepare(`
+      SELECT resource_type, COUNT(*) as count FROM audit_logs GROUP BY resource_type
+    `).all() as { resource_type: string; count: number }[]
+    const by_resource_type: Record<string, number> = {}
+    resourceRows.forEach(row => { by_resource_type[row.resource_type] = row.count })
+
+    const statusRows = this.db.prepare(`
+      SELECT response_status, COUNT(*) as count FROM audit_logs WHERE response_status IS NOT NULL GROUP BY response_status
+    `).all() as { response_status: number; count: number }[]
+    const by_response_status: Record<string, number> = {}
+    statusRows.forEach(row => { by_response_status[String(row.response_status)] = row.count })
+
+    const avgDurationResult = this.db.prepare(`
+      SELECT COALESCE(AVG(duration_ms), 0) as avg_duration FROM audit_logs WHERE duration_ms IS NOT NULL
+    `).get() as { avg_duration: number }
+
+    return {
+      total_logs,
+      by_action: by_action as Record<'create' | 'update' | 'delete' | 'execute', number>,
+      by_resource_type,
+      by_response_status,
+      avg_duration_ms: Math.round(avgDurationResult.avg_duration),
+    }
   }
 }
 

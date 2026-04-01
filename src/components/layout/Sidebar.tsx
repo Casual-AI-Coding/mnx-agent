@@ -18,6 +18,9 @@ import {
   Gauge,
   Keyboard,
   HardDrive,
+  FileText,
+  BarChart3,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -41,7 +44,10 @@ export default function Sidebar() {
     { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
     { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
     { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
+    { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
     { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
+    { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
+    { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield },
     { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
     { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
   ]

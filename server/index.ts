@@ -3,6 +3,9 @@ import cors from 'cors'
 import { config } from 'dotenv'
 import { errorHandler } from './middleware/errorHandler'
 import { rateLimiter } from './middleware/rateLimit'
+import { requestLogger } from './middleware/logger-middleware'
+import { auditMiddleware } from './middleware/audit-middleware'
+import { getLogger } from './lib/logger'
 import textRouter from './routes/text'
 import voiceRouter from './routes/voice'
 import imageRouter from './routes/image'
@@ -15,6 +18,10 @@ import usageRouter from './routes/usage'
 import capacityRouter from './routes/capacity'
 import cronRouter from './routes/cron'
 import mediaRouter from './routes/media'
+import templatesRouter from './routes/templates'
+import statsRouter from './routes/stats'
+import exportRouter from './routes/export'
+import auditRouter from './routes/audit'
 import { getDatabase, runMigrations } from './database'
 import { getMiniMaxClient } from './lib/minimax'
 import { TaskExecutor } from './services/task-executor'
@@ -25,6 +32,8 @@ import { CronScheduler } from './services/cron-scheduler'
 import { initCronWebSocket } from './services/websocket-service'
 
 config()
+
+const logger = getLogger()
 
 const app = express()
 const PORT = process.env.PORT || 4511
@@ -41,7 +50,9 @@ app.use(cors({
 }))
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
+app.use(requestLogger)
 app.use(rateLimiter)
+app.use(auditMiddleware)
 
 app.use('/api/text', textRouter)
 app.use('/api/voice', voiceRouter)
@@ -55,6 +66,10 @@ app.use('/api/usage', usageRouter)
 app.use('/api/capacity', capacityRouter)
 app.use('/api/cron', cronRouter)
 app.use('/api/media', mediaRouter)
+app.use('/api/templates', templatesRouter)
+app.use('/api/stats', statsRouter)
+app.use('/api/export', exportRouter)
+app.use('/api/audit', auditRouter)
 
 app.use(errorHandler)
 
@@ -80,15 +95,15 @@ try {
 
   // Initialize scheduler (load jobs from DB and start cron tasks)
   cronScheduler.init().catch((error) => {
-    console.warn('⚠️  Cron scheduler initialization failed:', (error as Error).message)
+    logger.warn({ msg: 'Cron scheduler initialization failed', error: (error as Error).message })
   })
 } catch (error) {
-  console.warn('⚠️  Service initialization failed:', (error as Error).message)
+  logger.warn({ msg: 'Service initialization failed', error: (error as Error).message })
 }
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 MiniMax Proxy Server running on http://localhost:${PORT}`)
+  logger.info({ msg: 'MiniMax Proxy Server started', port: PORT })
 })
 
 initCronWebSocket(server)
-console.log('📡 WebSocket server initialized on /ws/cron')
+logger.info({ msg: 'WebSocket server initialized', path: '/ws/cron' })

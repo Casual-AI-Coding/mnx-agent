@@ -152,6 +152,55 @@ CREATE INDEX IF NOT EXISTS idx_media_records_created_at ON media_records(created
 CREATE INDEX IF NOT EXISTS idx_media_records_is_deleted ON media_records(is_deleted);
 `,
   },
+  {
+    id: 6,
+    name: 'migration_006_prompt_templates',
+    sql: `
+CREATE TABLE IF NOT EXISTS prompt_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  content TEXT NOT NULL,
+  category TEXT CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
+  variables TEXT,
+  is_builtin INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_category ON prompt_templates(category);
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_is_builtin ON prompt_templates(is_builtin);
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_created_at ON prompt_templates(created_at DESC);
+`,
+  },
+  {
+    id: 7,
+    name: 'migration_007_audit_logs',
+    sql: `
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL CHECK(action IN ('create', 'update', 'delete', 'execute')),
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  user_id TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  request_method TEXT,
+  request_path TEXT,
+  request_body TEXT,
+  response_status INTEGER,
+  duration_ms INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_type ON audit_logs(resource_type);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON audit_logs(resource_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_response_status ON audit_logs(response_status);
+`,
+  },
 ]
 
 function getExecutedMigrations(db: DatabaseType): Set<string> {

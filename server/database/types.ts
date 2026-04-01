@@ -559,6 +559,60 @@ export interface MediaRecordRow {
 }
 
 // ============================================================================
+// Prompt Templates
+// ============================================================================
+
+export type TemplateCategory = 'text' | 'image' | 'music' | 'video' | 'general'
+
+export interface TemplateVariable {
+  name: string
+  description?: string
+  required?: boolean
+  default_value?: string
+}
+
+export interface PromptTemplate {
+  id: string
+  name: string
+  description: string | null
+  content: string
+  category: TemplateCategory | null
+  variables: TemplateVariable[]
+  is_builtin: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PromptTemplateRow {
+  id: string
+  name: string
+  description: string | null
+  content: string
+  category: string | null
+  variables: string | null
+  is_builtin: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreatePromptTemplate {
+  name: string
+  description?: string | null
+  content: string
+  category?: TemplateCategory | null
+  variables?: TemplateVariable[]
+  is_builtin?: boolean
+}
+
+export interface UpdatePromptTemplate {
+  name?: string
+  description?: string | null
+  content?: string
+  category?: TemplateCategory | null
+  variables?: TemplateVariable[]
+}
+
+// ============================================================================
 // Utility Types
 // ============================================================================
 
@@ -567,4 +621,76 @@ export type JobWithDependencies = CronJob & {
   tags: string[]
   dependencies: string[] 
   dependents: string[]
+}
+
+// ============================================================================
+// Audit Logs
+// ============================================================================
+
+export type AuditAction = 'create' | 'update' | 'delete' | 'execute'
+
+export interface AuditLog {
+  id: string
+  action: AuditAction
+  resource_type: string
+  resource_id: string | null
+  user_id: string | null
+  ip_address: string | null
+  user_agent: string | null
+  request_method: string | null
+  request_path: string | null
+  request_body: string | null
+  response_status: number | null
+  duration_ms: number | null
+  created_at: string
+}
+
+export interface AuditLogRow {
+  id: string
+  action: string
+  resource_type: string
+  resource_id: string | null
+  user_id: string | null
+  ip_address: string | null
+  user_agent: string | null
+  request_method: string | null
+  request_path: string | null
+  request_body: string | null
+  response_status: number | null
+  duration_ms: number | null
+  created_at: string
+}
+
+export interface CreateAuditLog {
+  action: AuditAction
+  resource_type: string
+  resource_id?: string | null
+  user_id?: string | null
+  ip_address?: string | null
+  user_agent?: string | null
+  request_method?: string | null
+  request_path?: string | null
+  request_body?: string | null
+  response_status?: number | null
+  duration_ms?: number | null
+}
+
+export interface AuditLogQuery {
+  action?: AuditAction
+  resource_type?: string
+  resource_id?: string
+  user_id?: string
+  response_status?: number
+  start_date?: string
+  end_date?: string
+  page?: number
+  limit?: number
+}
+
+export interface AuditStats {
+  total_logs: number
+  by_action: Record<AuditAction, number>
+  by_resource_type: Record<string, number>
+  by_response_status: Record<string, number>
+  avg_duration_ms: number
 }

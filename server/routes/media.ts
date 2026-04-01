@@ -7,11 +7,14 @@ import {
   mediaIdParamsSchema,
   createMediaRecordSchema,
   updateMediaRecordSchema,
+  batchDeleteSchema,
+  batchDownloadSchema,
 } from '../validation/media-schemas'
 import { saveMediaFile, readMediaFile, deleteMediaFile } from '../lib/media-storage'
 import type { Request, Response } from 'express'
 import multer from 'multer'
 import axios from 'axios'
+import archiver from 'archiver'
 
 const router = Router()
 
@@ -148,6 +151,41 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
   res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
   res.setHeader('Content-Disposition', `attachment; filename="${record.original_name || record.filename}"`)
   res.send(buffer)
+}))
+
+router.post('/batch/delete', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
+  const { ids } = req.body as { ids: string[] }
+  const result = getDatabase().softDeleteMediaRecords(ids)
+  res.json({ success: true, data: result })
+}))
+
+router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
+  const { ids } = req.body as { ids: string[] }
+  const records = getDatabase().getMediaRecordsByIds(ids)
+
+  if (records.length === 0) {
+    res.status(404).json({ success: false, error: 'No valid media found' })
+    return
+  }
+
+  const archive = archiver('zip', { zlib: { level: 9 } })
+
+  res.setHeader('Content-Type', 'application/zip')
+  res.setHeader('Content-Disposition', `attachment; filename="media_batch_${Date.now()}.zip"`)
+
+  archive.pipe(res)
+
+  for (const record of records) {
+    try {
+      const buffer = await readMediaFile(record.filepath)
+      const filename = record.original_name || record.filename
+      archive.append(buffer, { name: filename })
+    } catch (error) {
+      console.error(`Failed to add file ${record.filename} to zip:`, error)
+    }
+  }
+
+  archive.finalize()
 }))
 
 export default router

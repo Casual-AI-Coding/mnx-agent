@@ -1,0 +1,65 @@
+import { Router } from 'express'
+import { asyncHandler } from '../middleware/asyncHandler'
+import { getDatabase } from '../database/service'
+import type { AuditAction } from '../database/types'
+
+const router = Router()
+
+router.get('/', asyncHandler(async (req, res) => {
+  const {
+    action,
+    resource_type,
+    resource_id,
+    user_id,
+    response_status,
+    start_date,
+    end_date,
+    page,
+    limit,
+  } = req.query
+
+  const result = getDatabase().getAuditLogs({
+    action: action as AuditAction | undefined,
+    resource_type: resource_type as string | undefined,
+    resource_id: resource_id as string | undefined,
+    user_id: user_id as string | undefined,
+    response_status: response_status ? Number(response_status) : undefined,
+    start_date: start_date as string | undefined,
+    end_date: end_date as string | undefined,
+    page: page ? Number(page) : 1,
+    limit: limit ? Math.min(Number(limit), 100) : 20,
+  })
+
+  const currentLimit = limit ? Math.min(Number(limit), 100) : 20
+  res.json({
+    success: true,
+    data: {
+      logs: result.logs,
+      pagination: {
+        page: page ? Number(page) : 1,
+        limit: currentLimit,
+        total: result.total,
+        totalPages: Math.ceil(result.total / currentLimit),
+      },
+    },
+  })
+}))
+
+router.get('/stats', asyncHandler(async (req, res) => {
+  const stats = getDatabase().getAuditStats()
+  res.json({
+    success: true,
+    data: stats,
+  })
+}))
+
+router.get('/:id', asyncHandler(async (req, res) => {
+  const log = getDatabase().getAuditLogById(req.params.id)
+  if (!log) {
+    res.status(404).json({ success: false, error: 'Audit log not found' })
+    return
+  }
+  res.json({ success: true, data: log })
+}))
+
+export default router

@@ -1,0 +1,195 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { Plus, Search, FileText, Image, Music, Video, FolderOpen, Edit3, Trash2, Copy } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
+import { useTemplatesStore } from '@/stores/templates'
+import type { PromptTemplate, TemplateCategory } from '@/lib/api/templates'
+import { toastSuccess, toastError } from '@/lib/toast'
+import { cn } from '@/lib/utils'
+
+const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
+  text: FileText,
+  image: Image,
+  music: Music,
+  video: Video,
+  general: FolderOpen,
+}
+
+const CATEGORY_COLORS: Record<TemplateCategory, string> = {
+  text: 'bg-blue-500/20 text-blue-400',
+  image: 'bg-purple-500/20 text-purple-400',
+  music: 'bg-pink-500/20 text-pink-400',
+  video: 'bg-orange-500/20 text-orange-400',
+  general: 'bg-gray-500/20 text-gray-400',
+}
+
+export default function TemplateLibrary() {
+  const { t } = useTranslation()
+  const { templates, isLoading, fetchTemplates, removeTemplate } = useTemplatesStore()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all')
+
+  useEffect(() => {
+    fetchTemplates(selectedCategory === 'all' ? undefined : selectedCategory)
+  }, [selectedCategory, fetchTemplates])
+
+  const filteredTemplates = templates.filter(template =>
+    template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    template.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`确定要删除模板 "${name}" 吗？`)) return
+    
+    const success = await removeTemplate(id)
+    if (success) {
+      toastSuccess('删除成功', `模板 "${name}" 已删除`)
+    } else {
+      toastError('删除失败', '请稍后重试')
+    }
+  }
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content)
+    toastSuccess('已复制', '模板内容已复制到剪贴板')
+  }
+
+  const categories: (TemplateCategory | 'all')[] = ['all', 'text', 'image', 'music', 'video', 'general']
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{t('templates.title', '模板库')}</h1>
+          <p className="text-dark-400 mt-1">{t('templates.subtitle', '管理和使用提示词模板')}</p>
+        </div>
+        <Button className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          {t('templates.create', '创建模板')}
+        </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+          <Input
+            placeholder={t('templates.searchPlaceholder', '搜索模板...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-dark-950 border-dark-700"
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+              className="capitalize"
+            >
+              {t(`templates.category.${category}`, category)}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : filteredTemplates.length === 0 ? (
+        <Card className="border-dark-800">
+          <CardContent className="py-12 text-center">
+            <FileText className="w-12 h-12 mx-auto mb-4 text-dark-500" />
+            <p className="text-dark-400">{t('templates.empty', '暂无模板')}</p>
+            <p className="text-dark-500 text-sm mt-1">{t('templates.emptyHint', '创建您的第一个提示词模板')}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTemplates.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onCopy={handleCopy}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TemplateCard({
+  template,
+  onCopy,
+  onDelete,
+}: {
+  template: PromptTemplate
+  onCopy: (content: string) => void
+  onDelete: (id: string, name: string) => void
+}) {
+  const Icon = CATEGORY_ICONS[template.category] || FileText
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Card className="border-dark-800 hover:border-dark-700 transition-colors">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <div className={cn('p-2 rounded-lg', CATEGORY_COLORS[template.category])}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{template.name}</CardTitle>
+                {template.is_builtin && (
+                  <Badge variant="secondary" className="text-xs mt-1">内置</Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={() => onCopy(template.content)}>
+                <Copy className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <Edit3 className="w-4 h-4" />
+              </Button>
+              {!template.is_builtin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => onDelete(template.id, template.name)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-dark-400 text-sm line-clamp-2">{template.description || template.content.slice(0, 100)}</p>
+          {template.variables && template.variables.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {template.variables.map((v) => (
+                <Badge key={v.name} variant="outline" className="text-xs">
+                  {`{{${v.name}}}`}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}

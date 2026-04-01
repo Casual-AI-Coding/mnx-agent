@@ -24,6 +24,9 @@ const Settings = lazy(() => import('@/pages/Settings'))
 const CronManagement = lazy(() => import('@/pages/CronManagement'))
 const WorkflowBuilder = lazy(() => import('@/pages/WorkflowBuilder'))
 const CapacityMonitor = lazy(() => import('@/pages/CapacityMonitor'))
+const TemplateLibrary = lazy(() => import('@/pages/TemplateLibrary'))
+const StatsDashboard = lazy(() => import('@/pages/StatsDashboard'))
+const AuditLogs = lazy(() => import('@/pages/AuditLogs'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -259,6 +262,30 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="工作流构建器">
               <WorkflowBuilder />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="templates"
+          element={
+            <RouteWithErrorBoundary pageName="模板库">
+              <TemplateLibrary />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="stats"
+          element={
+            <RouteWithErrorBoundary pageName="执行统计">
+              <StatsDashboard />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <RouteWithErrorBoundary pageName="审计日志">
+              <AuditLogs />
             </RouteWithErrorBoundary>
           }
         />
