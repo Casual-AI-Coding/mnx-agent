@@ -125,10 +125,27 @@ export default function TemplateLibrary() {
               template={template}
               onCopy={handleCopy}
               onDelete={handleDelete}
+              openDeleteConfirm={openDeleteConfirm}
             />
           ))}
         </div>
       )}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title="确认删除"
+        description={`确定要删除模板 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
+      >
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+            取消
+          </Button>
+          <Button variant="destructive" onClick={handleDelete}>
+            删除
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }
@@ -137,10 +154,12 @@ function TemplateCard({
   template,
   onCopy,
   onDelete,
+  openDeleteConfirm,
 }: {
   template: PromptTemplate
   onCopy: (content: string) => void
   onDelete: () => void
+  openDeleteConfirm: (id: string, name: string) => void
 }) {
   const Icon = CATEGORY_ICONS[template.category] || FileText
 
@@ -176,7 +195,7 @@ function TemplateCard({
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => onDelete(template.id, template.name)}
+                  onClick={() => openDeleteConfirm(template.id, template.name)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
