@@ -34,6 +34,7 @@ import {
   batchDeleteMedia, 
   batchDownloadMedia,
   deleteMedia,
+  getMediaDownloadUrl,
 } from '@/lib/api/media'
 
 // ============================================================================
@@ -279,6 +280,7 @@ export default function MediaManagement() {
   const { apiKey } = useAppStore()
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({})
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
   const [isBatchDeleting, setIsBatchDeleting] = useState(false)
   const [isBatchDownloading, setIsBatchDownloading] = useState(false)
@@ -396,6 +398,27 @@ export default function MediaManagement() {
     }
   }, [activeTab, pagination.page])
 
+  // Fetch signed URLs for images
+  useEffect(() => {
+    if (records.length > 0) {
+      const imageRecords = records.filter(r => r.type === 'image')
+      Promise.all(
+        imageRecords.map(async (r) => {
+          try {
+            const url = await getMediaDownloadUrl(r.id)
+            return { id: r.id, url }
+          } catch {
+            return { id: r.id, url: '' }
+          }
+        })
+      ).then(results => {
+        const urlMap: Record<string, string> = {}
+        results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
+        setSignedUrls(urlMap)
+      })
+    }
+  }, [records])
+
   // Handle single delete
   const handleDelete = async () => {
     if (!deleteDialog.record) return
@@ -411,14 +434,14 @@ export default function MediaManagement() {
 
   // Handle download
   const handleDownload = (record: MediaRecord) => {
-    const url = getDownloadUrl(record.id)
+    const url = signedUrls[record.id] || getDownloadUrl(record.id)
     window.open(url, '_blank')
   }
 
   // Handle preview (for images)
   const handlePreview = (record: MediaRecord) => {
     if (record.type === 'image') {
-      const url = `/api/media/${record.id}/download`
+      const url = signedUrls[record.id] || `/api/media/${record.id}/download`
       setLightboxSrc(url)
       setLightboxOpen(true)
     }
@@ -562,7 +585,7 @@ export default function MediaManagement() {
                         <div className="flex items-center gap-3">
                           {record.type === 'image' ? (
                             <img
-                              src={`/api/media/${record.id}/download`}
+                              src={signedUrls[record.id] || ''}
                               alt={record.original_name || record.filename}
                               className="w-10 h-10 object-cover rounded border border-zinc-800"
                             />

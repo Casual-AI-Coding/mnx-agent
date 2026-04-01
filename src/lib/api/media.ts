@@ -80,8 +80,12 @@ export async function deleteMedia(id: string): Promise<{ success: boolean; data:
   return response.data
 }
 
-export function getMediaDownloadUrl(id: string): string {
-  return `/api/media/${id}/download`
+export async function getMediaDownloadUrl(id: string): Promise<string> {
+  const response = await client.get(`/media/${id}/token`)
+  if (response.data.success && response.data.data.downloadUrl) {
+    return response.data.data.downloadUrl
+  }
+  throw new Error(response.data.error || 'Failed to get download URL')
 }
 
 export async function batchDeleteMedia(ids: string[]): Promise<{ success: boolean; data: { deletedCount: number } }> {

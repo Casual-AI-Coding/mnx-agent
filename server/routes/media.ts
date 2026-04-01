@@ -11,6 +11,7 @@ import {
   batchDownloadSchema,
 } from '../validation/media-schemas'
 import { saveMediaFile, readMediaFile } from '../lib/media-storage'
+import { generateMediaToken, verifyMediaToken } from '../lib/media-token.js'
 import multer from 'multer'
 import axios from 'axios'
 import archiver from 'archiver'
@@ -155,7 +156,12 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: record })
 }))
 
-router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Unauthorized' })
+    return
+  }
+
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
@@ -164,9 +170,40 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
     return
   }
 
+  const token = generateMediaToken(req.params.id, req.user.userId)
+  const downloadUrl = `/api/media/${req.params.id}/download?token=${token}`
+  res.json({ success: true, data: { downloadUrl, token } })
+}))
+
+router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const { token } = req.query
+
+  if (!token || typeof token !== 'string') {
+    res.status(401).json({ success: false, error: 'Missing download token' })
+    return
+  }
+
+  const verified = verifyMediaToken(token)
+  if (!verified.valid) {
+    res.status(401).json({ success: false, error: verified.error || 'Invalid token' })
+    return
+  }
+
+  if (verified.mediaId !== req.params.id) {
+    res.status(403).json({ success: false, error: 'Token does not match media ID' })
+    return
+  }
+
+  const db = await getDatabase()
+  const record = await db.getMediaRecordById(req.params.id)
+  if (!record || record.is_deleted) {
+    res.status(404).json({ success: false, error: 'Media not found' })
+    return
+  }
+
   const buffer = await readMediaFile(record.filepath)
   res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
-  res.setHeader('Content-Disposition', `attachment; filename="${record.original_name || record.filename}"`)
+  res.setHeader('Content-Disposition', `inline; filename="${record.original_name || record.filename}"`)
   res.send(buffer)
 }))
 
