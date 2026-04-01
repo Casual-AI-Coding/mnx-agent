@@ -57,6 +57,18 @@ app.use(requestLogger)
 app.use(rateLimiter)
 app.use(auditMiddleware)
 
+// Auth routes (public - no authentication required)
+app.use('/api/auth', authRouter)
+
+// JWT authentication for all other API routes
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    return next()
+  }
+  authenticateJWT(req, res, next)
+})
+
+// Protected routes
 app.use('/api/text', textRouter)
 app.use('/api/voice', voiceRouter)
 app.use('/api/image', imageRouter)
@@ -74,14 +86,6 @@ app.use('/api/workflows', workflowsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
-app.use('/api/auth', authRouter)
-
-app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/auth')) {
-    return next()
-  }
-  authenticateJWT(req, res, next)
-})
 
 app.use(errorHandler)
 
@@ -113,7 +117,8 @@ initializeServices()
     logger.info({ msg: 'Services initialized successfully' })
   })
   .catch((error) => {
-    logger.error({ msg: 'Service initialization failed', error: (error as Error).message })
+    logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
+    console.error('Full error:', error)
     process.exit(1)
   })
 

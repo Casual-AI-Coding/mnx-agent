@@ -126,7 +126,7 @@ class PostgresConnection implements DatabaseConnection {
     const result = await this.pool.query(sql, params)
     return {
       changes: result.rowCount || 0,
-      lastInsertRowid: result.rows[0]?.id,
+      lastInsertRowid: result.rows?.[0]?.id,
     }
   }
   

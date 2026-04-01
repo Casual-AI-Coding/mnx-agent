@@ -213,26 +213,13 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Bootstrap: initial super user (ogslp / ll123123)
--- bcrypt hash generated with: bcrypt.hash('ll123123', 12)
-INSERT INTO users (id, username, email, password_hash, role, is_active, created_at, updated_at)
-VALUES (
-  '00000000-0000-0000-0000-000000000001',
-  'ogslp',
-  null,
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G.4m.XLP7VFSte',
-  'super',
-  true,
-  CURRENT_TIMESTAMP,
-  CURRENT_TIMESTAMP
-) ON CONFLICT (username) DO NOTHING;
-
 -- Bootstrap: initial invitation code (never expires, 100 uses)
+-- First user registers with this code, then manually update role to 'super' in database
 INSERT INTO invitation_codes (id, code, created_by, max_uses, used_count, is_active, created_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000002',
-  'MINIMAX-BOOTSTRAP-2026',
   '00000000-0000-0000-0000-000000000001',
+  'MINIMAX-BOOTSTRAP-2026',
+  null,
   100,
   0,
   true,
