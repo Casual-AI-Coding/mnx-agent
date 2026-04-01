@@ -4,7 +4,7 @@ import { requireRole } from '../middleware/auth-middleware.js'
 import { getConnection } from '../database/connection.js'
 import { UserService } from '../services/user-service.js'
 import { z } from 'zod'
-import { validateBody } from '../middleware/validate.js'
+import { validate } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -36,7 +36,7 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ success: true, data: rows })
 }))
 
-router.post('/', validateBody(createUserSchema), asyncHandler(async (req, res) => {
+router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
   const { username, password, email, role, minimax_api_key } = req.body
   const conn = getConnection()
   const passwordHash = await bcrypt.hash(password, 12)
@@ -54,7 +54,7 @@ router.post('/', validateBody(createUserSchema), asyncHandler(async (req, res) =
   res.status(201).json({ success: true, data: user })
 }))
 
-router.patch('/:id', validateBody(updateUserSchema), asyncHandler(async (req, res) => {
+router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) => {
   const { id } = req.params
   const updates = req.body
   const conn = getConnection()
