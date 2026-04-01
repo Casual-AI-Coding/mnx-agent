@@ -18,7 +18,7 @@ export interface AuditLog {
   user_agent: string | null
   request_method: string
   request_path: string
-  request_body: string | null
+  request_body: string | Record<string, unknown> | null
   response_status: number | null
   duration_ms: number | null
   created_at: string
@@ -29,7 +29,7 @@ interface BackendAuditStats {
   by_action: Record<string, number>
   by_resource_type: Record<string, number>
   by_response_status: Record<string, number>
-  avg_duration: number
+  avg_duration_ms: number
 }
 
 export interface AuditStats {
@@ -55,7 +55,7 @@ function transformAuditStats(backend: BackendAuditStats): AuditStats {
     byAction: Object.entries(backend.by_action).map(([action, count]) => ({ action, count })),
     byResourceType: Object.entries(backend.by_resource_type).map(([resource_type, count]) => ({ resource_type, count })),
     byResponseStatus: Object.entries(backend.by_response_status).map(([status, count]) => ({ response_status: parseInt(status), count })),
-    avgDuration: backend.avg_duration,
+    avgDuration: backend.avg_duration_ms,
   }
 }
 

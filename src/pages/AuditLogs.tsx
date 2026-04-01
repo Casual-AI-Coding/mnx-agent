@@ -277,13 +277,20 @@ export default function AuditLogs() {
             {selectedLog.request_body && (
               <div>
                 <label className="text-dark-500">{t('audit.requestBody', '请求体')}</label>
-                <pre className="text-dark-300 bg-dark-800 p-2 rounded mt-1 overflow-x-auto text-xs">
+                <pre className="text-dark-300 bg-dark-800 p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
                   {(() => {
-                    try {
-                      return JSON.stringify(JSON.parse(selectedLog.request_body), null, 2)
-                    } catch {
-                      return selectedLog.request_body
+                    const body = selectedLog.request_body
+                    if (typeof body === 'object') {
+                      return JSON.stringify(body, null, 2)
                     }
+                    if (typeof body === 'string') {
+                      try {
+                        return JSON.stringify(JSON.parse(body), null, 2)
+                      } catch {
+                        return body
+                      }
+                    }
+                    return String(body)
                   })()}
                 </pre>
               </div>
