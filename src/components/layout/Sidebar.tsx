@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -22,6 +22,10 @@ import {
   Shield,
   Users,
   Key,
+  FolderCog,
+  Activity,
+  Cog,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -34,13 +38,39 @@ const roleHierarchy: Record<UserRole, number> = {
   super: 3,
 }
 
+const EXPANDED_KEY = 'sidebar-expanded-sections'
+
+function getStoredExpanded(): Record<string, boolean> {
+  try {
+    const stored = localStorage.getItem(EXPANDED_KEY)
+    return stored ? JSON.parse(stored) : { debug: true }
+  } catch {
+    return { debug: true }
+  }
+}
+
+function setStoredExpanded(expanded: Record<string, boolean>) {
+  localStorage.setItem(EXPANDED_KEY, JSON.stringify(expanded))
+}
+
 export default function Sidebar() {
   const { t } = useTranslation()
   const location = useLocation()
-  const [isDebugExpanded, setIsDebugExpanded] = useState(true)
   const { user } = useAuthStore()
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
 
   const userRoleLevel = user ? roleHierarchy[user.role] : 0
+
+  useEffect(() => {
+    setStoredExpanded(expandedSections)
+  }, [expandedSections])
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }))
+  }
 
   const debugItems = [
     { path: '/text', label: t('sidebar.textGeneration'), icon: MessageSquare },
@@ -52,27 +82,110 @@ export default function Sidebar() {
     { path: '/video-agent', label: t('sidebar.videoAgent'), icon: VideoIcon },
   ]
 
-  const independentItems = [
-    { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User, minRole: 'pro' as UserRole },
-    { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen, minRole: 'pro' as UserRole },
-    { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive, minRole: 'pro' as UserRole },
-    { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText, minRole: 'pro' as UserRole },
-    { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge, minRole: 'pro' as UserRole },
-    { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3, minRole: 'pro' as UserRole },
-    { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield, minRole: 'pro' as UserRole },
-    { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock, minRole: 'pro' as UserRole },
-    { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch, minRole: 'pro' as UserRole },
-    { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users, minRole: 'super' as UserRole },
-    { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key, minRole: 'super' as UserRole },
+  const menuSections = [
+    {
+      id: 'resources',
+      label: '资源管理',
+      icon: FolderCog,
+      minRole: 'pro' as UserRole,
+      items: [
+        { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
+        { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
+        { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
+        { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
+      ],
+    },
+    {
+      id: 'monitoring',
+      label: '监控统计',
+      icon: Activity,
+      minRole: 'pro' as UserRole,
+      items: [
+        { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
+        { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
+        { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield },
+      ],
+    },
+    {
+      id: 'automation',
+      label: '自动化',
+      icon: Cog,
+      minRole: 'pro' as UserRole,
+      items: [
+        { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
+        { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+      ],
+    },
+    {
+      id: 'system',
+      label: '系统管理',
+      icon: Lock,
+      minRole: 'super' as UserRole,
+      items: [
+        { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
+        { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
+      ],
+    },
   ]
 
-  const visibleIndependentItems = independentItems.filter(
-    item => userRoleLevel >= roleHierarchy[item.minRole]
-  )
+  const visibleSections = menuSections
+    .filter(section => userRoleLevel >= roleHierarchy[section.minRole])
+    .map(section => ({
+      ...section,
+      items: section.items,
+    }))
 
-  const isInDebugSection = debugItems.some((item) =>
-    location.pathname.startsWith(item.path)
-  )
+  const renderNavItem = (item: { path: string; label: string; icon: React.ComponentType<{ className?: string }> }) => {
+    const isActive = location.pathname === item.path
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200 border-l-2',
+          isActive
+            ? 'text-white bg-primary-600/20 border-l-2 border-primary-500'
+            : 'text-dark-400 hover:text-white hover:bg-white/5 border-transparent'
+        )}
+      >
+        <item.icon className="w-4 h-4" />
+        {item.label}
+      </NavLink>
+    )
+  }
+
+  const renderSection = (section: typeof menuSections[0] & { items: typeof menuSections[0]['items'] }) => {
+    const isExpanded = expandedSections[section.id]
+    const SectionIcon = section.icon
+
+    return (
+      <div key={section.id} className="px-2 py-2 border-t border-dark-800/30">
+        <button
+          onClick={() => toggleSection(section.id)}
+          className="w-full flex items-center gap-3 px-3 py-2 text-dark-300 hover:text-white transition-colors"
+        >
+          <SectionIcon className="w-4 h-4" />
+          <span className="text-sm font-medium flex-1 text-left">{section.label}</span>
+          <ChevronRight
+            className={cn(
+              'w-4 h-4 transition-transform duration-200',
+              isExpanded && 'rotate-90'
+            )}
+          />
+        </button>
+        <div
+          className={cn(
+            'overflow-hidden transition-all duration-200',
+            isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          )}
+        >
+          <div className="pl-4 mt-1 space-y-0.5">
+            {section.items.map(renderNavItem)}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <aside
@@ -81,7 +194,7 @@ export default function Sidebar() {
       <nav className="flex flex-col min-h-full pb-20">
         <div className="px-2 py-2">
           <button
-            onClick={() => setIsDebugExpanded(!isDebugExpanded)}
+            onClick={() => toggleSection('debug')}
             className="w-full flex items-center gap-3 px-3 py-2 text-dark-300 hover:text-white transition-colors"
           >
             <Terminal className="w-4 h-4" />
@@ -89,7 +202,7 @@ export default function Sidebar() {
             <ChevronRight
               className={cn(
                 'w-4 h-4 transition-transform duration-200',
-                isDebugExpanded && 'rotate-90'
+                expandedSections['debug'] && 'rotate-90'
               )}
             />
           </button>
@@ -97,52 +210,16 @@ export default function Sidebar() {
           <div
             className={cn(
               'overflow-hidden transition-all duration-200',
-              isDebugExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+              expandedSections['debug'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
             )}
           >
             <div className="pl-4 mt-1 space-y-0.5">
-              {debugItems.map((item) => {
-                const isActive = location.pathname === item.path
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200 border-l-2',
-                      isActive
-                        ? 'text-white bg-primary-600/20 border-l-2 border-primary-500'
-                        : 'text-dark-400 hover:text-white hover:bg-white/5 border-transparent'
-                    )}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    {item.label}
-                  </NavLink>
-                )
-              })}
+              {debugItems.map(renderNavItem)}
             </div>
           </div>
         </div>
 
-        <div className="px-2 py-2 border-t border-dark-800/30">
-          {visibleIndependentItems.map((item) => {
-            const isActive = location.pathname === item.path
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200 border-l-2',
-                  isActive
-                    ? 'text-white bg-primary-600/20 border-l-2 border-primary-500'
-                    : 'text-dark-400 hover:text-white hover:bg-white/5 border-transparent'
-                )}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </NavLink>
-            )
-          })}
-        </div>
+        {visibleSections.map(renderSection)}
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-dark-800/50 bg-dark-950/80 backdrop-blur-sm">
