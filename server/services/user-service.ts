@@ -1,0 +1,211 @@
+import { v4 as uuidv4 } from 'uuid'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+import { DatabaseConnection } from '../database/connection.js'
+import type { User, UserRow, UserRole } from '../database/types.js'
+
+const BCRYPT_ROUNDS = 12
+
+export interface RegisterInput {
+  username: string
+  password: string
+  invitationCode: string
+  email?: string | null
+}
+
+export interface RegisterResult {
+  success: boolean
+  user?: Omit<User, 'password_hash'>
+  error?: string
+}
+
+export interface LoginResult {
+  success: boolean
+  user?: Omit<User, 'password_hash'>
+  accessToken?: string
+  refreshToken?: string
+  error?: string
+}
+
+export interface TokenPayload {
+  userId: string
+  username: string
+  role: UserRole
+}
+
+export class UserService {
+  private conn: DatabaseConnection
+
+  constructor(conn: DatabaseConnection) {
+    this.conn = conn
+  }
+
+  async register(input: RegisterInput): Promise<RegisterResult> {
+    if (input.password.length < 6) {
+      return { success: false, error: '密码至少6位' }
+    }
+
+    const codeValidation = await this.validateInvitationCode(input.invitationCode)
+    if (!codeValidation.valid) {
+      return { success: false, error: codeValidation.error }
+    }
+
+    const existing = await this.conn.query<UserRow>(
+      'SELECT id FROM users WHERE username = $1',
+      [input.username]
+    )
+    if (existing.length > 0) {
+      return { success: false, error: '用户名已存在' }
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
+    const id = uuidv4()
+    const now = new Date().toISOString()
+
+    await this.conn.execute(
+      `INSERT INTO users (id, username, email, password_hash, minimax_api_key, minimax_region, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, input.username, input.email ?? null, passwordHash, null, 'cn', 'user', true, now, now]
+    )
+
+    await this.conn.execute(
+      'UPDATE invitation_codes SET used_count = used_count + 1 WHERE id = $1',
+      [codeValidation.codeId]
+    )
+
+    const user = await this.getUserById(id)
+    return { success: true, user: user! }
+  }
+
+  async login(username: string, password: string): Promise<LoginResult> {
+    const rows = await this.conn.query<UserRow>(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    )
+    if (rows.length === 0) {
+      return { success: false, error: '用户名或密码错误' }
+    }
+
+    const userRow = rows[0]
+
+    if (!userRow.is_active) {
+      return { success: false, error: '账户已被禁用' }
+    }
+
+    const passwordValid = await bcrypt.compare(password, userRow.password_hash)
+    if (!passwordValid) {
+      return { success: false, error: '用户名或密码错误' }
+    }
+
+    await this.conn.execute(
+      'UPDATE users SET last_login_at = $1 WHERE id = $2',
+      [new Date().toISOString(), userRow.id]
+    )
+
+    const accessToken = this.generateAccessToken({
+      userId: userRow.id,
+      username: userRow.username,
+      role: userRow.role as UserRole,
+    })
+    const refreshToken = this.generateRefreshToken({
+      userId: userRow.id,
+      username: userRow.username,
+      role: userRow.role as UserRole,
+    })
+
+    const { password_hash, ...user } = userRow
+
+    return {
+      success: true,
+      user: user as Omit<User, 'password_hash'>,
+      accessToken,
+      refreshToken,
+    }
+  }
+
+  async getUserById(id: string): Promise<Omit<User, 'password_hash'> | null> {
+    const rows = await this.conn.query<Omit<UserRow, 'password_hash'>>(
+      'SELECT id, username, email, minimax_api_key, minimax_region, role, is_active, last_login_at, created_at, updated_at FROM users WHERE id = $1',
+      [id]
+    )
+    if (!rows[0]) return null
+    const row = rows[0]
+    return {
+      ...row,
+      role: row.role as UserRole,
+    }
+  }
+
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    if (newPassword.length < 6) {
+      return { success: false, error: '密码至少6位' }
+    }
+
+    const rows = await this.conn.query<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [userId]
+    )
+    if (rows.length === 0) {
+      return { success: false, error: '用户不存在' }
+    }
+
+    const valid = await bcrypt.compare(oldPassword, rows[0].password_hash)
+    if (!valid) {
+      return { success: false, error: '原密码错误' }
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
+    await this.conn.execute(
+      'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+      [newHash, new Date().toISOString(), userId]
+    )
+
+    return { success: true }
+  }
+
+  private async validateInvitationCode(code: string): Promise<{ valid: boolean; codeId?: string; error?: string }> {
+    const rows = await this.conn.query<{ id: string; max_uses: number; used_count: number; expires_at: string | null; is_active: boolean }>(
+      'SELECT id, max_uses, used_count, expires_at, is_active FROM invitation_codes WHERE code = $1',
+      [code]
+    )
+
+    if (rows.length === 0) {
+      return { valid: false, error: '邀请码无效' }
+    }
+
+    const invitationCode = rows[0]
+
+    if (!invitationCode.is_active) {
+      return { valid: false, error: '邀请码已失效' }
+    }
+
+    if (invitationCode.expires_at && new Date(invitationCode.expires_at) < new Date()) {
+      return { valid: false, error: '邀请码已过期' }
+    }
+
+    if (invitationCode.used_count >= invitationCode.max_uses) {
+      return { valid: false, error: '邀请码已用完' }
+    }
+
+    return { valid: true, codeId: invitationCode.id }
+  }
+
+  private generateAccessToken(payload: TokenPayload): string {
+    const secret = process.env.JWT_SECRET || 'fallback-secret'
+    return jwt.sign(payload, secret, { expiresIn: '15m' })
+  }
+
+  private generateRefreshToken(payload: TokenPayload): string {
+    const secret = process.env.JWT_SECRET || 'fallback-secret'
+    return jwt.sign({ ...payload, type: 'refresh' }, secret, { expiresIn: '7d' })
+  }
+
+  static verifyToken(token: string): TokenPayload | null {
+    try {
+      const secret = process.env.JWT_SECRET || 'fallback-secret'
+      return jwt.verify(token, secret) as TokenPayload
+    } catch {
+      return null
+    }
+  }
+}

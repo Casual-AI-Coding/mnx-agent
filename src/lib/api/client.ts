@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
 import { API_HOSTS } from '@/types'
 
 export class ApiError extends Error {
@@ -28,15 +29,23 @@ class InternalAPIClient {
 
     this.client.interceptors.request.use((config) => {
       const { apiKey, region } = useAppStore.getState()
+      const { accessToken } = useAuthStore.getState()
       config.headers['X-API-Key'] = apiKey
       config.headers['X-Region'] = region
       config.headers['X-API-Host'] = API_HOSTS[region]
+      if (accessToken) {
+        config.headers['Authorization'] = `Bearer ${accessToken}`
+      }
       return config
     })
 
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError<{ error?: string; base_resp?: { status_code: number; status_msg: string } }>) => {
+        if (error.response?.status === 401) {
+          useAuthStore.getState().logout()
+          window.location.href = '/login'
+        }
         const statusCode = error.response?.status
         const apiCode = error.response?.data?.base_resp?.status_code
         const message =

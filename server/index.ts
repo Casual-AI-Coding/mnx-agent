@@ -23,6 +23,8 @@ import workflowsRouter from './routes/workflows'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
+import authRouter from './routes/auth.js'
+import { authenticateJWT } from './middleware/auth-middleware.js'
 import { getDatabase, closeDatabase } from './database/service-async.js'
 import { getMiniMaxClient } from './lib/minimax'
 import { TaskExecutor } from './services/task-executor'
@@ -55,6 +57,18 @@ app.use(requestLogger)
 app.use(rateLimiter)
 app.use(auditMiddleware)
 
+// Auth routes (public - no authentication required)
+app.use('/api/auth', authRouter)
+
+// JWT authentication for all other API routes
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    return next()
+  }
+  authenticateJWT(req, res, next)
+})
+
+// Protected routes
 app.use('/api/text', textRouter)
 app.use('/api/voice', voiceRouter)
 app.use('/api/image', imageRouter)
@@ -103,7 +117,8 @@ initializeServices()
     logger.info({ msg: 'Services initialized successfully' })
   })
   .catch((error) => {
-    logger.error({ msg: 'Service initialization failed', error: (error as Error).message })
+    logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
+    console.error('Full error:', error)
     process.exit(1)
   })
 
