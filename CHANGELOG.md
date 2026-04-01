@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-04-01
+
+### Added
+- **PostgreSQL Support** - Migrate from SQLite to PostgreSQL with async API
+  - Connection pooling with timeout, keepAlive, and error recovery
+  - Async database service with full CRUD operations
+  - Migration system for PostgreSQL schema
+  - Data migration script from SQLite to PostgreSQL
+- **Onboarding Experience** - WelcomeModal with QuickStartGuide for new users
+- **Batch Media Operations** - Select multiple media records for batch delete/download
+- **Workflow Templates API** - CRUD endpoints for workflow templates management
+- **Select Keyboard Navigation** - Arrow keys, Enter, Escape support in Select component
+- **Select Size Variants** - CVA variants for `sm`, `md`, `lg` sizes
+
+### Fixed
+- **Audit Logs** - Skip GET requests from logging, only record operation types (POST/PUT/PATCH/DELETE)
+- **Audit Logs Detail** - Handle object type `request_body` rendering gracefully
+- **Audit Stats** - Fix `avg_duration_ms` field name mismatch with backend
+- **Workflow Engine** - Fix loop node result accumulation
+- **API Clients** - Use `internalAxios` for `/api` routes to skip rate limiting
+- **Select Component** - Handle edge cases with proper null checks
+
+### Changed
+- **Audit Logs UI** - Styled filter buttons instead of native select, add duration/time columns
+- **Template Creation Modal** - Redesigned with gradient header and custom dropdown
+- **VideoAgent Thumbnails** - Themed icons with gradient backgrounds
+- **Backend Architecture** - All routes and services converted to async/await pattern
+- **Database Layer** - New async service replaces sync SQLite operations
+
+### Performance
+- **PostgreSQL Connection Pool** - Efficient connection management with pg pool
+- **API Retry Logic** - Automatic retry for 429/503 errors with exponential backoff
+
+### Dependencies
+- **Added** - pg (PostgreSQL client)
+
+### Tests
+- Add tests for WorkflowEngine, Workflows API, BatchOperations, Select component
+- Add tests for CreateTemplateModal, WelcomeModal, QuickStartGuide
+
+### Documentation
+- Add `docs/sqlite-to-postgres-migration.md` - Comprehensive migration guide
+- Update `AGENTS.md` - Add PostgreSQL connection abstraction documentation
+
 ## [1.0.2] - 2026-04-01
 
 ### Added
