@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
@@ -94,6 +95,22 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
     }
   }, [open])
 
+  React.useEffect(() => {
+    if (!open) return
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(event.target as Node) &&
+        listboxRef.current && !listboxRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
   // Handle keyboard navigation
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (!open) {
@@ -167,10 +184,7 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
         listboxRef
       }}
     >
-      <div 
-        className="relative inline-block"
-        onKeyDown={handleKeyDown}
-      >
+      <div onKeyDown={handleKeyDown}>
         {children}
       </div>
     </SelectContext.Provider>
@@ -343,20 +357,32 @@ SelectContent.displayName = 'SelectContent'
 
 const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, variant, children, ...props }, forwardedRef) => {
-    const { open, selectId, listboxRef, highlightedIndex, itemIds } = useSelectContext()
+    const { open, selectId, listboxRef, highlightedIndex, itemIds, triggerRef } = useSelectContext()
     const innerRef = React.useRef<HTMLDivElement | null>(null)
     const listboxId = `${selectId}-listbox`
     const activeDescendantId = highlightedIndex >= 0 ? itemIds[highlightedIndex] : undefined
+    const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
     
     React.useImperativeHandle(
       listboxRef,
       () => innerRef.current as HTMLDivElement,
       []
     )
+
+    React.useEffect(() => {
+      if (open && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect()
+        setPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        })
+      }
+    }, [open, triggerRef])
     
     if (!open) return null
     
-    return (
+    return createPortal(
       <div
         ref={(node) => {
           innerRef.current = node
@@ -371,13 +397,19 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
         aria-activedescendant={activeDescendantId}
         tabIndex={0}
         className={cn(
-          'absolute top-full left-0 mt-1',
-          selectContentVariants({ variant, className })
+          'fixed z-50 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md',
+          className
         )}
+        style={{
+          top: position.top + 4,
+          left: position.left,
+          minWidth: position.width,
+        }}
         {...props}
       >
         <div className="p-1">{children}</div>
-      </div>
+      </div>,
+      document.body
     )
   }
 )
