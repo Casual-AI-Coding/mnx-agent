@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-04-01
+
+### Added
+- **User Management** - Super admin can manage users (CRUD operations)
+  - GET/POST/PATCH/DELETE `/api/users` endpoints with `requireRole(['super'])`
+  - User list with search, role badges, status toggle
+  - Create user dialog with password hashing (bcrypt)
+  - Edit user dialog for role/API key management
+  - Delete confirmation with self-delete protection
+
+- **Invitation Code Management** - Super admin can generate invitation codes
+  - GET/POST/batch/DELETE `/api/invitation-codes` endpoints
+  - Batch generation (1-100 codes) with `crypto.randomBytes`
+  - Invitation code list with creator info (JOIN users)
+  - Copy-to-clipboard functionality
+  - Soft delete via `is_active = false`
+  - Expiration support with status badges
+
+- **Sidebar Reorganization** - Collapsible menu sections with localStorage persistence
+  - Four categories: 资源管理, 监控统计, 自动化, 系统管理
+  - Default expanded: debug console only
+  - Role-based visibility (pro+ for most, super only for system management)
+
+### Fixed
+- **API URL Prefix** - Remove duplicate `/api` prefix in frontend API calls (#6)
+
+### Changed
+- **Sidebar Structure** - Group 11 menu items into 4 collapsible sections for better organization
+
 ## [1.1.2] - 2026-04-01
 
 ### Added
