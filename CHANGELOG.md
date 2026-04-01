@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-04-01
+
+### Added
+- **Template System** - Prompt template CRUD with variable substitution, category filtering
+- **Audit Logs** - All API operations logged with sensitive data redaction (passwords, tokens, apiKeys)
+- **Stats Dashboard** - Execution stats overview, success rate trends, task distribution, error ranking
+- **Structured Logging** - pino logger with file output and pretty printing, configurable levels
+- **UI Components** - Dialog, EmptyState, Tooltip components for consistent UI patterns
+- **Data Export** - Execution logs and media records export to CSV/JSON with date filtering
+- **Batch Operations** - Media record batch delete and download support
+
+### Fixed
+- **Export Pagination** - Use SQL LIMIT/OFFSET instead of in-memory filtering for large datasets
+- **Audit Middleware** - Add fallback file logging when database write fails, ensure response always completes
+- **Stats Route** - Move db initialization to handler to avoid race condition with service startup
+- **Logger Request ID** - Use uuid instead of Math.random() for cryptographically secure correlation IDs
+- **Logger Initialization** - Lazy initialization to avoid using default config before setup
+- **Audit Query Validation** - Add Zod validation schema for audit log endpoints
+- **Template Route** - Cache Number() conversions to avoid repeated calls
+
+### Changed
+- **CSV Export** - Extract shared `toCSV` utility to eliminate code duplication between log and media export
+- **Template Library** - Replace window.confirm with custom Dialog component for better UX
+
+### Performance
+- **Database** - New `getExecutionLogsPaginated` method with proper SQL pagination
+
+### Dependencies
+- **Added** - pino, pino-pretty, uuid
+- **Updated** - zod to v4.3.6
+
 ## [1.0.1] - 2026-04-01
 
 ### Fixed
