@@ -2,6 +2,7 @@ import { DatabaseService, getDatabase } from '../database/service'
 import { ExecutionLog } from '../database/types'
 import { MediaRecord } from '../database/types'
 import { ExportFormat } from '../validation/export-schemas'
+import { toCSV, EXECUTION_LOG_HEADERS, MEDIA_RECORD_HEADERS } from '../lib/csv-utils'
 
 export interface ExportOptions {
   format: ExportFormat
@@ -121,54 +122,19 @@ export class ExportService {
   }
 
   private executionLogsToCSV(logs: Record<string, unknown>[]): string {
-    if (logs.length === 0) {
-      return 'id,job_id,trigger_type,status,started_at,completed_at,duration_ms,tasks_executed,tasks_succeeded,tasks_failed,error_summary\n'
-    }
-
-    const headers = Object.keys(logs[0])
-    const csvRows = [headers.join(',')]
-
-    for (const log of logs) {
-      const values = headers.map(header => {
-        const value = log[header]
-        if (value === null || value === undefined) return ''
-        const stringValue = String(value)
-        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-          return `"${stringValue.replace(/"/g, '""')}"`
-        }
-        return stringValue
-      })
-      csvRows.push(values.join(','))
-    }
-
-    return csvRows.join('\n')
+    return toCSV(logs, { headers: EXECUTION_LOG_HEADERS })
   }
 
   private mediaRecordsToCSV(records: Record<string, unknown>[]): string {
-    if (records.length === 0) {
-      return 'id,filename,original_name,filepath,type,mime_type,size_bytes,source,task_id,metadata,created_at,updated_at\n'
-    }
-
-    const headers = Object.keys(records[0])
-    const csvRows = [headers.join(',')]
-
-    for (const record of records) {
-      const values = headers.map(header => {
-        const value = record[header]
-        if (value === null || value === undefined) return ''
-        if (header === 'metadata' && typeof value === 'object') {
-          return `"${JSON.stringify(value).replace(/"/g, '""')}"`
-        }
-        const stringValue = String(value)
-        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-          return `"${stringValue.replace(/"/g, '""')}"`
-        }
-        return stringValue
-      })
-      csvRows.push(values.join(','))
-    }
-
-    return csvRows.join('\n')
+    return toCSV(records, {
+      headers: MEDIA_RECORD_HEADERS,
+      formatters: {
+        metadata: (value) => {
+          const str = typeof value === 'object' ? JSON.stringify(value) : String(value)
+          return `"${str.replace(/"/g, '""')}"`
+        },
+      },
+    })
   }
 }
 

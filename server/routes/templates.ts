@@ -13,11 +13,15 @@ const router = Router()
 
 router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req, res) => {
   const { category, page, limit } = req.query
-  const offset = (Number(page) - 1) * Number(limit)
+
+  // Cache converted values
+  const pageNum = Number(page)
+  const limitNum = Number(limit)
+  const offset = (pageNum - 1) * limitNum
 
   const result = getDatabase().getPromptTemplates({
     category: category as string | undefined,
-    limit: Number(limit),
+    limit: limitNum,
     offset,
   })
 
@@ -26,13 +30,13 @@ router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req
     data: {
       templates: result.templates,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total: result.total,
-        totalPages: Math.ceil(result.total / Number(limit)),
+        totalPages: Math.ceil(result.total / limitNum),
       }
     }
-  })
+  }))
 }))
 
 router.get('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {

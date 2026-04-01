@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Search, FileText, Image, Music, Video, FolderOpen, Edit3, Trash2, Copy } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { useTemplatesStore } from '@/stores/templates'
@@ -32,6 +33,7 @@ export default function TemplateLibrary() {
   const { templates, isLoading, fetchTemplates, removeTemplate } = useTemplatesStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     fetchTemplates(selectedCategory === 'all' ? undefined : selectedCategory)
@@ -42,15 +44,20 @@ export default function TemplateLibrary() {
     template.description?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`确定要删除模板 "${name}" 吗？`)) return
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
     
-    const success = await removeTemplate(id)
+    const success = await removeTemplate(deleteConfirm.id)
     if (success) {
-      toastSuccess('删除成功', `模板 "${name}" 已删除`)
+      toastSuccess('删除成功', `模板 "${deleteConfirm.name}" 已删除`)
     } else {
       toastError('删除失败', '请稍后重试')
     }
+    setDeleteConfirm(null)
+  }
+
+  const openDeleteConfirm = (id: string, name: string) => {
+    setDeleteConfirm({ id, name })
   }
 
   const handleCopy = (content: string) => {
@@ -133,7 +140,7 @@ function TemplateCard({
 }: {
   template: PromptTemplate
   onCopy: (content: string) => void
-  onDelete: (id: string, name: string) => void
+  onDelete: () => void
 }) {
   const Icon = CATEGORY_ICONS[template.category] || FileText
 
