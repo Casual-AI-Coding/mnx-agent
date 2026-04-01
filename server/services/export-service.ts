@@ -12,6 +12,7 @@ export interface ExportOptions {
   type?: string
   page?: number
   limit?: number
+  ownerId?: string
 }
 
 export interface ExportResult {
@@ -29,7 +30,7 @@ export class ExportService {
   }
 
   async exportExecutionLogs(options: ExportOptions): Promise<ExportResult> {
-    const { format, startDate, endDate, page = 1, limit = 1000 } = options
+    const { format, startDate, endDate, page = 1, limit = 1000, ownerId } = options
     const offset = (page - 1) * limit
 
     const result = await this.db.getExecutionLogsPaginated({
@@ -37,6 +38,7 @@ export class ExportService {
       offset,
       startDate,
       endDate,
+      ownerId,
     })
 
     const exportData = result.logs.map(log => this.formatExecutionLog(log))
@@ -59,14 +61,15 @@ export class ExportService {
   }
 
   async exportMediaRecords(options: ExportOptions): Promise<ExportResult> {
-    const { format, type, page = 1, limit = 1000 } = options
+    const { format, type, page = 1, limit = 1000, ownerId } = options
     const offset = (page - 1) * limit
 
     const result = await this.db.getMediaRecords({
       type: type,
       limit: limit * page,
       offset: 0,
-      includeDeleted: false
+      includeDeleted: false,
+      ownerId,
     })
 
     const filteredRecords = result.records.slice(offset, offset + limit)
