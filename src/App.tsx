@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import { useAppStore } from '@/stores/app'
+import AuthGuard from '@/components/AuthGuard'
 import analytics from '@/lib/analytics'
 
 // Lazy load page components for code splitting
@@ -27,6 +28,7 @@ const CapacityMonitor = lazy(() => import('@/pages/CapacityMonitor'))
 const TemplateLibrary = lazy(() => import('@/pages/TemplateLibrary'))
 const StatsDashboard = lazy(() => import('@/pages/StatsDashboard'))
 const AuditLogs = lazy(() => import('@/pages/AuditLogs'))
+const Login = lazy(() => import('@/pages/Login'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -135,7 +137,22 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<AppLayout />}>
+      <Route
+        path="/login"
+        element={
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span>加载中...</span>
+              </div>
+            </div>
+          }>
+            <Login />
+          </Suspense>
+        }
+      />
+      <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
         <Route index element={<Navigate to="/text" replace />} />
         <Route
           path="text"

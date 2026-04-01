@@ -231,7 +231,7 @@ VALUES (
 INSERT INTO invitation_codes (id, code, created_by, max_uses, used_count, is_active, created_at)
 VALUES (
   '00000000-0000-0000-0000-000000000002',
-  'MINIMAX-INIT-2026',
+  'MINIMAX-BOOTSTRAP-2026',
   '00000000-0000-0000-0000-000000000001',
   100,
   0,
