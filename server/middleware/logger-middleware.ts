@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getLogger } from '../lib/logger'
-
-const logger = getLogger()
+import { v4 as uuidv4 } from 'uuid'
 
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
+  const logger = getLogger()
   const startTime = Date.now()
-  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  const requestId = uuidv4()
 
   logger.info({
     type: 'request',
@@ -19,7 +19,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
   const originalEnd = res.end
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
-    
+
     logger.info({
       type: 'response',
       requestId,
@@ -36,6 +36,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 }
 
 export function errorLogger(err: Error, req: Request, res: Response, next: NextFunction): void {
+  const logger = getLogger()
   logger.error({
     type: 'error',
     method: req.method,
