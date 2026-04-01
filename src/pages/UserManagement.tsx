@@ -94,7 +94,7 @@ export default function UserManagement() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.get<{ success: boolean; data: User[]; error?: string }>('/api/users')
+      const data = await apiClient.get<{ success: boolean; data: User[]; error?: string }>('/users')
       if (data.success) {
         setUsers(data.data)
       } else {
@@ -119,7 +119,7 @@ export default function UserManagement() {
   const handleCreate = async () => {
     setActionLoading(true)
     try {
-      const data = await apiClient.post<{ success: boolean; data: User; error?: string }>('/api/users', {
+      const data = await apiClient.post<{ success: boolean; data: User; error?: string }>('/users', {
         username: formData.username,
         password: formData.password,
         email: formData.email || null,
@@ -144,7 +144,7 @@ export default function UserManagement() {
     if (!selectedUser) return
     setActionLoading(true)
     try {
-      const data = await apiClient.patch<{ success: boolean; data: User; error?: string }>(`/api/users/${selectedUser.id}`, {
+      const data = await apiClient.patch<{ success: boolean; data: User; error?: string }>(`/users/${selectedUser.id}`, {
         email: formData.email || null,
         role: formData.role,
         minimax_api_key: formData.minimax_api_key || null,
@@ -165,7 +165,7 @@ export default function UserManagement() {
 
   const handleToggleActive = async (user: User) => {
     try {
-      const data = await apiClient.patch<{ success: boolean; error?: string }>(`/api/users/${user.id}`, {
+      const data = await apiClient.patch<{ success: boolean; error?: string }>(`/users/${user.id}`, {
         is_active: !user.is_active,
       })
       if (data.success) {
@@ -182,7 +182,7 @@ export default function UserManagement() {
     if (!selectedUser) return
     setActionLoading(true)
     try {
-      const data = await apiClient.delete<{ success: boolean; error?: string }>(`/api/users/${selectedUser.id}`)
+      const data = await apiClient.delete<{ success: boolean; error?: string }>(`/users/${selectedUser.id}`)
       if (data.success) {
         setDeleteDialogOpen(false)
         setSelectedUser(null)

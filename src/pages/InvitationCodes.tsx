@@ -63,7 +63,7 @@ export default function InvitationCodes() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.get<{ success: boolean; data: InvitationCode[]; error?: string }>('/api/invitation-codes')
+      const data = await apiClient.get<{ success: boolean; data: InvitationCode[]; error?: string }>('/invitation-codes')
       if (data.success) {
         setCodes(data.data)
       } else {
@@ -98,7 +98,7 @@ export default function InvitationCodes() {
   const handleGenerate = async () => {
     setActionLoading(true)
     try {
-      const data = await apiClient.post<{ success: boolean; error?: string }>('/api/invitation-codes/batch', {
+      const data = await apiClient.post<{ success: boolean; error?: string }>('/invitation-codes/batch', {
         count: generateForm.count,
         max_uses: generateForm.max_uses,
         expires_at: generateForm.expires_at || null,
@@ -119,7 +119,7 @@ export default function InvitationCodes() {
 
   const handleDeactivate = async (id: string) => {
     try {
-      const data = await apiClient.delete<{ success: boolean; error?: string }>(`/api/invitation-codes/${id}`)
+      const data = await apiClient.delete<{ success: boolean; error?: string }>(`/invitation-codes/${id}`)
       if (data.success) {
         fetchCodes()
       } else {
