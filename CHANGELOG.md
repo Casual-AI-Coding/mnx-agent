@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-04-01
+
+### Added
+- **JWT Authentication System** - Login/register with JWT tokens (#1)
+  - Access token (15min) and refresh token (7d)
+  - Invitation code required for registration
+  - Bootstrap invitation code: `MINIMAX-BOOTSTRAP-2026`
+- **RBAC Roles** - Four-level role system: user, pro, admin, super
+- **UserService** - Backend service for register, login, password change
+- **Login Page** - React Hook Form + Zod validation, invitation code support
+- **AuthGuard** - Route guard for protected pages
+- **Header User Info** - Username display, role badge, logout button
+
+### Dependencies
+- jsonwebtoken - JWT token generation and verification
+- bcrypt - Password hashing (cost factor 12)
+
+### Database
+- `users` table - User accounts with role, API key, region
+- `invitation_codes` table - Invitation code management
+
 ## [1.1.0] - 2026-04-01
 
 ### Added
