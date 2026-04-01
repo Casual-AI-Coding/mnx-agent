@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getDatabase } from '../database/service'
 import type { AuditAction } from '../database/types'
+import { getLogger } from '../lib/logger'
 
 const SENSITIVE_FIELDS = ['password', 'token', 'apiKey', 'api_key', 'secret', 'authorization', 'cookie']
 
@@ -74,6 +75,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
 
+    // Attempt to write audit log, but don't let it break the response
     try {
       const db = getDatabase()
 
@@ -98,10 +100,37 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         duration_ms: duration,
       })
     } catch (error) {
-      console.error('Failed to write audit log:', error)
+      // Fallback: write to log file if database write fails
+      const logger = getLogger()
+      logger.error({
+        type: 'audit_log_failure',
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        request: {
+          method: req.method,
+          path: req.originalUrl,
+          ip: req.ip,
+        },
+        response: {
+          statusCode: res.statusCode,
+          duration,
+        },
+      })
     }
 
-    return originalEnd.apply(this, args)
+    // Always call originalEnd, even if audit logging failed
+    try {
+      return originalEnd.apply(this, args)
+    } catch (endError) {
+      // If res.end itself fails, log and re-throw so Express can handle it
+      const logger = getLogger()
+      logger.error({
+        type: 'response_end_error',
+        error: (endError as Error).message,
+        stack: (endError as Error).stack,
+      })
+      throw endError
+    }
   } as typeof res.end
 
   next()
