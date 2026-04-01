@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import { Settings, Eye, EyeOff, Globe, Zap, Palette, Info, Save } from 'lucide-react'
-import { useAppStore, type ApiMode } from '@/stores/app'
+import { Settings, Eye, EyeOff, Globe, Zap, Palette, Info, Save, User } from 'lucide-react'
+import { useAuthStore, type UserRole } from '@/stores/auth'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { FormError } from '@/components/ui/FormError'
 import { settingsSchema, type SettingsFormData } from '@/lib/form-schemas'
+import { updateProfile } from '@/lib/api/auth'
 import { cn } from '@/lib/utils'
 
 const sectionVariants = {
@@ -29,51 +30,29 @@ const containerVariants = {
   },
 }
 
-const REGION_OPTIONS = [
-  { value: 'cn', label: '中国大陆 (CN)' },
-  { value: 'intl', label: '国际版 (International)' },
-]
-
-const API_MODE_OPTIONS = [
-  { value: 'direct', label: '直接模式 (Direct)' },
-  { value: 'proxy', label: '代理模式 (Proxy)' },
-]
-
 const THEME_OPTIONS = [
   { value: 'system', label: '跟随系统 (System)' },
   { value: 'light', label: '浅色模式 (Light)' },
   { value: 'dark', label: '深色模式 (Dark)' },
 ]
 
+const roleLabels: Record<UserRole, string> = {
+  super: '超级管理员',
+  admin: '管理员',
+  pro: '专业用户',
+  user: '普通用户',
+}
+
 export default function SettingsPage() {
   const { t } = useTranslation()
-  const {
-    apiKey,
-    region,
-    apiMode,
-    theme,
-    setApiKey,
-    setRegion,
-    setApiMode,
-    setTheme,
-  } = useAppStore()
+  const { user, accessToken, login } = useAuthStore()
 
   const [showApiKey, setShowApiKey] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const REGION_OPTIONS = [
     { value: 'cn', label: t('settings.regionCn') },
     { value: 'intl', label: t('settings.regionIntl') },
-  ]
-
-  const API_MODE_OPTIONS = [
-    { value: 'direct', label: t('settings.modeDirect') },
-    { value: 'proxy', label: t('settings.modeProxy') },
-  ]
-
-  const THEME_OPTIONS = [
-    { value: 'system', label: t('settings.themeSystem') },
-    { value: 'light', label: t('settings.themeLight') },
-    { value: 'dark', label: t('settings.themeDark') },
   ]
 
   const {
@@ -85,40 +64,60 @@ export default function SettingsPage() {
   } = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
-      apiKey,
-      region,
-      apiMode,
-      theme,
+      apiKey: user?.minimax_api_key ?? '',
+      region: (user?.minimax_region as 'cn' | 'intl') ?? 'cn',
+      apiMode: 'direct' as const,
+      theme: 'system' as const,
     },
   })
 
   const formApiKey = watch('apiKey')
   const formRegion = watch('region')
-  const formApiMode = watch('apiMode')
-  const formTheme = watch('theme')
 
   const hasChanges =
-    formApiKey !== apiKey ||
-    formRegion !== region ||
-    formApiMode !== apiMode ||
-    formTheme !== theme
+    formApiKey !== (user?.minimax_api_key ?? '') ||
+    formRegion !== (user?.minimax_region ?? 'cn')
 
-  const onSubmit = (data: SettingsFormData) => {
+  const handleSave = async () => {
+    const data = {
+      apiKey: formApiKey,
+      region: formRegion as 'cn' | 'intl',
+      apiMode: 'direct' as const,
+      theme: 'system' as const,
+    }
+    
+    if (!user || !accessToken) return
+
+    setIsSaving(true)
     try {
-      setApiKey(data.apiKey)
-      setRegion(data.region)
-      setApiMode(data.apiMode)
-      toastSuccess(t('settings.saveSuccess'), t('settings.configUpdated'))
+      const result = await updateProfile(accessToken, {
+        minimax_api_key: data.apiKey || null,
+        minimax_region: data.region,
+      })
+
+      if (result.success && result.data) {
+        login(result.data, accessToken, useAuthStore.getState().refreshToken || '')
+        toastSuccess(t('settings.saveSuccess'), t('settings.configUpdated'))
+      } else {
+        toastError(t('settings.saveError'), result.error || t('settings.checkConfig'))
+      }
     } catch {
       toastError(t('settings.saveError'), t('settings.checkConfig'))
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const handleThemeChange = (value: string) => {
-    const newTheme = value as 'light' | 'dark' | 'system'
-    setValue('theme', newTheme)
-    setTheme(newTheme)
-    toastSuccess(t('settings.themeUpdated'), `${t('settings.themeSwitched')}${THEME_OPTIONS.find(t => t.value === newTheme)?.label}`)
+  if (!user) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <Card className="border-dark-800/50 bg-dark-900/50">
+          <CardContent className="py-8 text-center text-dark-400">
+            {t('settings.pleaseLogin', '请先登录以查看设置')}
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -141,6 +140,33 @@ export default function SettingsPage() {
             <p className="text-dark-400 text-sm">{t('settings.subtitle')}</p>
           </div>
         </div>
+      </motion.div>
+
+      <motion.div variants={sectionVariants}>
+        <Card className="mb-6 border-dark-800/50 bg-dark-900/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-primary-500" />
+              <CardTitle className="text-white">{t('settings.accountInfo', '账户信息')}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
+              <span className="text-dark-400">{t('settings.username', '用户名')}</span>
+              <span className="text-white font-medium">{user.username}</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
+              <span className="text-dark-400">{t('settings.role', '角色')}</span>
+              <span className="text-primary-400 font-medium">{roleLabels[user.role]}</span>
+            </div>
+            {user.email && (
+              <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
+                <span className="text-dark-400">{t('settings.email', '邮箱')}</span>
+                <span className="text-white">{user.email}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
 
       <motion.div variants={sectionVariants}>
@@ -204,43 +230,17 @@ export default function SettingsPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-dark-300 flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5" />
-                {t('settings.apiMode')}
-              </label>
-              <Select value={formApiMode} onValueChange={(v) => setValue('apiMode', v as ApiMode)}>
-                <SelectTrigger className="w-full bg-dark-950 border-dark-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-dark-900 border-dark-700">
-                  {API_MODE_OPTIONS.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      className="text-dark-300 hover:text-white hover:bg-dark-800 focus:bg-dark-800 focus:text-white"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-dark-500">
-                {t('settings.proxyHint')}
-              </p>
-            </div>
-
             <div className="flex justify-end pt-2">
               <Button
-                onClick={handleSubmit(onSubmit)}
-                disabled={!hasChanges}
+                onClick={handleSave}
+                disabled={!hasChanges || isSaving}
                 className={cn(
                   'flex items-center gap-2',
-                  !hasChanges && 'opacity-50 cursor-not-allowed'
+                  (!hasChanges || isSaving) && 'opacity-50 cursor-not-allowed'
                 )}
               >
                 <Save className="w-4 h-4" />
-                {t('settings.saveConfig')}
+                {isSaving ? t('settings.saving', '保存中...') : t('settings.saveConfig')}
               </Button>
             </div>
           </CardContent>
@@ -258,7 +258,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="space-y-2">
               <label className="text-sm font-medium text-dark-300">{t('settings.themeMode')}</label>
-              <Select value={formTheme} onValueChange={handleThemeChange}>
+              <Select value="system" onValueChange={() => {}}>
                 <SelectTrigger className="w-full bg-dark-950 border-dark-700 text-white">
                   <SelectValue />
                 </SelectTrigger>

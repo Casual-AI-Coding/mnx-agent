@@ -25,6 +25,11 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6, '新密码至少6位'),
 })
 
+const updateProfileSchema = z.object({
+  minimax_api_key: z.string().optional().nullable(),
+  minimax_region: z.enum(['cn', 'intl']).optional(),
+})
+
 router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.body
   const conn = getConnection()
@@ -98,6 +103,24 @@ router.post('/change-password', authenticateJWT, validate(changePasswordSchema),
   }
 
   res.json({ success: true, message: '密码已修改' })
+}))
+
+router.patch('/me', authenticateJWT, validate(updateProfileSchema), asyncHandler(async (req: Request, res) => {
+  const { minimax_api_key, minimax_region } = req.body
+  const conn = getConnection()
+  const userService = new UserService(conn)
+
+  const user = await userService.updateUser(req.user!.userId, {
+    minimax_api_key,
+    minimax_region,
+  })
+
+  if (!user) {
+    res.status(404).json({ success: false, error: '用户不存在' })
+    return
+  }
+
+  res.json({ success: true, data: user })
 }))
 
 export default router

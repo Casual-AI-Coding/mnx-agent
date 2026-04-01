@@ -8,6 +8,7 @@ import {
   updateWorkflowSchema,
   listWorkflowsQuerySchema,
 } from '../validation/workflow-schemas'
+import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 
 const router = Router()
 
@@ -16,9 +17,10 @@ router.get('/', validateQuery(listWorkflowsQuerySchema), asyncHandler(async (req
   const pageNum = Number(page)
   const limitNum = Number(limit)
   const offset = (pageNum - 1) * limitNum
+  const ownerId = buildOwnerFilter(req).params[0]
 
   const db = await getDatabase()
-  const workflows = await db.getAllWorkflowTemplates()
+  const workflows = await db.getAllWorkflowTemplates(ownerId)
 
   let filtered = workflows
   if (is_template === 'true') {
@@ -46,7 +48,8 @@ router.get('/', validateQuery(listWorkflowsQuerySchema), asyncHandler(async (req
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const workflow = await db.getWorkflowTemplateById(req.params.id)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const workflow = await db.getWorkflowTemplateById(req.params.id, ownerId)
   if (!workflow) {
     res.status(404).json({ success: false, error: 'Workflow not found' })
     return
@@ -56,19 +59,21 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const ownerId = getOwnerIdForInsert(req) ?? undefined
   const workflow = await db.createWorkflowTemplate({
     name: req.body.name,
     description: req.body.description,
     nodes_json: req.body.nodes_json,
     edges_json: req.body.edges_json,
     is_template: req.body.is_template,
-  })
+  }, ownerId)
   res.status(201).json({ success: true, data: workflow })
 }))
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const workflow = await db.updateWorkflowTemplate(req.params.id, req.body, ownerId)
   if (!workflow) {
     res.status(404).json({ success: false, error: 'Workflow not found' })
     return
@@ -78,7 +83,8 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
 
 router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const success = await db.deleteWorkflowTemplate(req.params.id)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const success = await db.deleteWorkflowTemplate(req.params.id, ownerId)
   if (!success) {
     res.status(404).json({ success: false, error: 'Workflow not found' })
     return

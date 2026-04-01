@@ -27,4 +27,9 @@ export {
   type CapacityRecordRow,
   type WorkflowTemplateRow,
   type MigrationRow,
+  type UserRole,
+  type User,
+  type UserRow,
+  type CreateUser,
+  type UpdateUser,
 } from './types.js'

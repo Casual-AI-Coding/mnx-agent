@@ -28,3 +28,19 @@ export async function register(
   })
   return response.data
 }
+
+export interface UpdateProfileResponse {
+  success: boolean
+  data?: AuthUser
+  error?: string
+}
+
+export async function updateProfile(
+  accessToken: string,
+  updates: { minimax_api_key?: string | null; minimax_region?: string }
+): Promise<UpdateProfileResponse> {
+  const response = await authApi.patch<UpdateProfileResponse>('/me', updates, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  return response.data
+}
