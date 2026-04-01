@@ -226,6 +226,35 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- ============================================
+-- Authentication
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(36) PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255),
+  password_hash VARCHAR(255) NOT NULL,
+  minimax_api_key VARCHAR(255),
+  minimax_region VARCHAR(20) DEFAULT 'cn',
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  last_login_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invitation_codes (
+  id VARCHAR(36) PRIMARY KEY,
+  code VARCHAR(32) NOT NULL UNIQUE,
+  created_by VARCHAR(36) REFERENCES users(id),
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- Indexes for Performance
 -- ============================================
 

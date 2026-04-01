@@ -184,6 +184,62 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 CREATE INDEX IF NOT EXISTS idx_audit_logs_response_status ON audit_logs(response_status);
     `,
   },
+  {
+    id: 8,
+    name: 'migration_008_auth_system',
+    sql: `
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(36) PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255),
+  password_hash VARCHAR(255) NOT NULL,
+  minimax_api_key VARCHAR(255),
+  minimax_region VARCHAR(20) DEFAULT 'cn',
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  last_login_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invitation_codes (
+  id VARCHAR(36) PRIMARY KEY,
+  code VARCHAR(32) NOT NULL UNIQUE,
+  created_by VARCHAR(36) REFERENCES users(id),
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bootstrap: initial super user (ogslp / ll123123)
+-- bcrypt hash generated with: bcrypt.hash('ll123123', 12)
+INSERT INTO users (id, username, email, password_hash, role, is_active, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'ogslp',
+  null,
+  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.G.4m.XLP7VFSte',
+  'super',
+  true,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+) ON CONFLICT (username) DO NOTHING;
+
+-- Bootstrap: initial invitation code (never expires, 100 uses)
+INSERT INTO invitation_codes (id, code, created_by, max_uses, used_count, is_active, created_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000002',
+  'MINIMAX-INIT-2026',
+  '00000000-0000-0000-0000-000000000001',
+  100,
+  0,
+  true,
+  CURRENT_TIMESTAMP
+) ON CONFLICT (code) DO NOTHING;
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
