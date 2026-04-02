@@ -182,21 +182,21 @@ export default function TextGeneration() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
             {t('textGeneration.title')}
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             {t('textGeneration.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
-            <SelectTrigger className="w-48 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:border-violet-500/50 transition-colors">
+            <SelectTrigger className="w-48 bg-card/50 border-border text-foreground hover:border-violet-500/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectContent className="bg-popover border-border">
               {TEXT_MODELS.map(model => (
-                <SelectItem key={model.id} value={model.id} className="text-zinc-300 focus:bg-zinc-800">
+                <SelectItem key={model.id} value={model.id} className="text-foreground focus:bg-secondary">
                   <div className="flex flex-col">
                     <span>{model.name}</span>
-                    <span className="text-xs text-zinc-500">{model.description}</span>
+                    <span className="text-xs text-muted-foreground">{model.description}</span>
                   </div>
                 </SelectItem>
               ))}
@@ -204,30 +204,30 @@ export default function TextGeneration() {
           </Select>
 
           <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-            <SelectTrigger className="w-36 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:border-violet-500/50 transition-colors">
+            <SelectTrigger className="w-36 bg-card/50 border-border text-foreground hover:border-violet-500/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectContent className="bg-popover border-border">
               {SYSTEM_PROMPT_TEMPLATES.map(template => (
-                <SelectItem key={template.id} value={template.id} className="text-zinc-300 focus:bg-zinc-800">
+                <SelectItem key={template.id} value={template.id} className="text-foreground focus:bg-secondary">
                   {template.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-border rounded-lg">
             {promptCaching ? (
               <Zap className="w-4 h-4 text-amber-400" />
             ) : (
-              <ZapOff className="w-4 h-4 text-zinc-500" />
+              <ZapOff className="w-4 h-4 text-muted-foreground" />
             )}
             <Switch
               checked={promptCaching}
               onCheckedChange={setPromptCaching}
               className="data-[state=checked]:bg-amber-500"
             />
-            <Label className="text-sm text-zinc-400 cursor-pointer" onClick={() => setPromptCaching(!promptCaching)}>
+            <Label className="text-sm text-muted-foreground cursor-pointer" onClick={() => setPromptCaching(!promptCaching)}>
               {t('textGeneration.promptCaching') || '缓存'}
             </Label>
           </div>
@@ -236,7 +236,7 @@ export default function TextGeneration() {
             variant="ghost" 
             size="sm" 
             onClick={clearChat}
-            className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+            className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             {t('textGeneration.clearChat')}
@@ -272,14 +272,14 @@ export default function TextGeneration() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center h-full text-zinc-500"
+              className="flex flex-col items-center justify-center h-full text-muted-foreground"
             >
               <div className="relative">
                 <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
                 <Sparkles className="w-16 h-16 relative text-violet-400/50" />
               </div>
-              <p className="mt-6 text-lg font-medium text-zinc-400">{t('textGeneration.startConversation')}</p>
-              <p className="text-sm text-zinc-600 mt-2">{t('textGeneration.pressEnterToSend')}</p>
+              <p className="mt-6 text-lg font-medium text-muted-foreground">{t('textGeneration.startConversation')}</p>
+              <p className="text-sm text-muted-foreground/70 mt-2">{t('textGeneration.pressEnterToSend')}</p>
             </motion.div>
           )}
 
@@ -295,7 +295,7 @@ export default function TextGeneration() {
                 className={`relative group max-w-[85%] ${
                   message.role === 'user'
                     ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white'
-                    : 'bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 text-zinc-100'
+                    : 'bg-card/80 backdrop-blur-xl border border-border/50 text-foreground'
                 } rounded-2xl ${message.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'} shadow-lg`}
               >
                 {message.role === 'user' && (
@@ -320,7 +320,7 @@ export default function TextGeneration() {
                       )}
                     </div>
                     <span className={`text-xs font-medium ${
-                      message.role === 'user' ? 'text-white/80' : 'text-zinc-400'
+                      message.role === 'user' ? 'text-white/80' : 'text-muted-foreground'
                     }`}>
                       {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
                     </span>
@@ -340,7 +340,7 @@ export default function TextGeneration() {
                       className={`absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
                         message.role === 'user' 
                           ? 'hover:bg-white/20 text-white/70 hover:text-white' 
-                          : 'hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                          : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {copiedId === message.id ? (
@@ -362,14 +362,14 @@ export default function TextGeneration() {
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-start"
           >
-            <div className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl rounded-bl-md px-4 py-3">
+            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
-                <span className="text-zinc-500 text-sm">{t('textGeneration.thinking')}</span>
+                <span className="text-muted-foreground text-sm">{t('textGeneration.thinking')}</span>
               </div>
             </div>
           </motion.div>
@@ -402,7 +402,7 @@ export default function TextGeneration() {
       <div className="mt-4 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 blur-2xl rounded-2xl" />
         
-        <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-2">
+        <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-2">
           <div className="flex gap-2">
             <textarea
               ref={textareaRef}
@@ -410,7 +410,7 @@ export default function TextGeneration() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('textGeneration.placeholder')}
-              className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-600 resize-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed min-h-[52px] max-h-[200px]"
+              className="flex-1 bg-transparent text-foreground placeholder-muted-foreground/50 resize-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed min-h-[52px] max-h-[200px]"
               disabled={isLoading}
               rows={1}
             />
@@ -420,7 +420,7 @@ export default function TextGeneration() {
               className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
                 input.trim() && !isLoading
                   ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed'
+                  : 'bg-secondary/50 text-muted-foreground/50 cursor-not-allowed'
               }`}
             >
               {isLoading ? (
@@ -430,7 +430,7 @@ export default function TextGeneration() {
               )}
             </button>
           </div>
-          <div className="flex items-center justify-between px-4 py-2 text-xs text-zinc-600">
+          <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground/50">
             <span>{t('textGeneration.enterToSend')}</span>
             <span>{messages.filter(m => m.role !== 'system').length} {t('textGeneration.messages')}</span>
           </div>
