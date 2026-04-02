@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { apiClient } from '@/lib/api/client'
@@ -1088,35 +1089,56 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
               <p className="text-sm text-muted-foreground">
                 共 {pagination.total} 条记录，第 {pagination.page} / {pagination.totalPages} 页
               </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                {pageNumbers.map((page, index) => (
-                  <Button
-                    key={index}
-                    variant={page === pagination.page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => typeof page === 'number' && handlePageChange(page)}
-                    disabled={typeof page !== 'number'}
-                    className={typeof page !== 'number' ? 'cursor-default' : ''}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">跳转到</span>
+                  <Select
+                    value={String(pagination.page)}
+                    onValueChange={(value) => handlePageChange(Number(value))}
                   >
-                    {page}
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
+                        <SelectItem key={page} value={String(page)}>
+                          {page}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">页</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                  {pageNumbers.map((page, index) => (
+                    <Button
+                      key={index}
+                      variant={page === pagination.page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => typeof page === 'number' && handlePageChange(page)}
+                      disabled={typeof page !== 'number'}
+                      className={typeof page !== 'number' ? 'cursor-default' : ''}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page === pagination.totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
