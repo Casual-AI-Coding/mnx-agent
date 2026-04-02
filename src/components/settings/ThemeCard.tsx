@@ -16,22 +16,22 @@ export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
     <button
       onClick={onSelect}
       className={cn(
-        'group relative w-full p-4 rounded-2xl border-2 transition-all duration-300',
+        'group relative w-full p-4 rounded-2xl transition-all duration-300',
         'flex flex-col items-start gap-3 overflow-hidden',
         selected
-          ? 'border-primary-500 shadow-lg shadow-primary-500/20 scale-[1.02]'
-          : 'border-transparent hover:border-white/10 hover:scale-[1.02] hover:shadow-xl'
+          ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-background shadow-lg scale-[1.02]'
+          : 'ring-1 ring-border/50 hover:ring-primary-500/30 hover:scale-[1.02] hover:shadow-md'
       )}
       style={{ backgroundColor: `hsl(${theme.preview.background})` }}
     >
       <div 
         className={cn(
-          'absolute inset-0 opacity-0 transition-opacity duration-300',
-          selected ? 'opacity-100' : 'group-hover:opacity-100'
+          'absolute inset-0 transition-opacity duration-300 pointer-events-none',
+          selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         )}
         style={{
           background: `linear-gradient(135deg, hsl(${theme.preview.primary}) 0%, transparent 60%)`,
-          opacity: 0.15
+          opacity: selected ? 0.1 : 0.05
         }}
       />
 
@@ -49,15 +49,14 @@ export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
 
         <div 
           className={cn(
-            'w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300',
+            'w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 bg-primary-500',
             selected 
-              ? 'bg-white scale-100' 
-              : 'bg-white/0 scale-75 opacity-0 group-hover:opacity-50'
+              ? 'scale-100 opacity-100' 
+              : 'scale-75 opacity-0 group-hover:opacity-50'
           )}
         >
           <Check 
-            className="w-4 h-4" 
-            style={{ color: `hsl(${theme.preview.primary})` }}
+            className="w-4 h-4 text-white" 
           />
         </div>
       </div>
@@ -71,13 +70,6 @@ export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
       >
         {theme.name}
       </span>
-
-      {selected && (
-        <div 
-          className="absolute bottom-0 left-0 right-0 h-1 bg-primary-500"
-          style={{ backgroundColor: `hsl(${theme.preview.primary})` }}
-        />
-      )}
     </button>
   )
 }

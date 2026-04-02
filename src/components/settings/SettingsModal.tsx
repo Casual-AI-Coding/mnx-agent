@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { X, Settings, Sparkles, Monitor, Moon, Sun } from 'lucide-react'
+import { X, Settings, Monitor, Moon, Sun } from 'lucide-react'
 import { ThemePicker } from './ThemePicker'
 import { useEffect, useState } from 'react'
 
@@ -62,13 +62,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-500/5 via-transparent to-transparent pointer-events-none" />
         
-        <div className="relative flex items-center justify-between p-6 border-b border-white/5">
+        <div className="relative flex items-center justify-between p-6 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
-                <Settings className="w-5 h-5 text-foreground" />
-              </div>
-              <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-primary-400/60" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+              <Settings className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground">Settings</h2>
