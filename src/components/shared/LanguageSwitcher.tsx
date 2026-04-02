@@ -33,7 +33,7 @@ export default function LanguageSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+        className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
         title={t('languageSwitcher.switchLanguage')}
       >
         <Globe className="w-4 h-4" />
@@ -42,15 +42,15 @@ export default function LanguageSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1 z-50">
+        <div className="absolute top-full right-0 mt-2 w-32 bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-xl py-1 z-50">
           {languages.map((lang) => (
             <button
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
               className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
                 currentLanguage === lang.code
-                  ? 'text-white bg-white/10'
-                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  ? 'text-foreground bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
               <span className="w-4 h-4 flex items-center justify-center">

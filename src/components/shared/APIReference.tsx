@@ -63,7 +63,7 @@ export function APIReference({
         </button>
       </CardHeader>
       <CardContent>
-        <pre className="text-xs text-dark-500 font-mono whitespace-pre-wrap bg-dark-800/50 p-3 rounded-lg overflow-x-auto">
+        <pre className="text-xs text-muted-foreground/50 font-mono whitespace-pre-wrap bg-secondary/50 p-3 rounded-lg overflow-x-auto">
           {generateCurlCommand()}
         </pre>
       </CardContent>

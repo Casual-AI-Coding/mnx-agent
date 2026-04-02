@@ -79,7 +79,7 @@ function ShortcutsHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                 {section.shortcuts.map((shortcut) => (
                   <div key={shortcut.key} className="flex items-center justify-between py-1">
                     <span className="text-sm">{shortcut.description}</span>
-                    <kbd className="bg-gray-700 dark:bg-gray-600 rounded px-2 py-1 text-xs font-mono text-white shrink-0 ml-4">
+                    <kbd className="bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground shrink-0 ml-4">
                       {shortcut.key}
                     </kbd>
                   </div>
@@ -90,7 +90,7 @@ function ShortcutsHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         </CardContent>
         <div className="p-4 border-t bg-muted/50">
           <p className="text-xs text-muted-foreground text-center">
-            按 <kbd className="bg-gray-700 dark:bg-gray-600 rounded px-1.5 py-0.5 text-xs font-mono text-white">Esc</kbd> 或点击外部关闭此窗口
+            按 <kbd className="bg-secondary border border-border rounded px-1.5 py-0.5 text-xs font-mono text-foreground">Esc</kbd> 或点击外部关闭此窗口
           </p>
         </div>
       </Card>
@@ -122,7 +122,7 @@ export function ShortcutsHelpButton() {
     <>
       <button
         onClick={openHelp}
-        className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+        className="p-1.5 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors"
         title="快捷键帮助 (Ctrl+/)"
       >
         <Keyboard className="w-4 h-4" />

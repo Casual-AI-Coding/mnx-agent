@@ -48,16 +48,16 @@ export function ExportButton({ data, filename, disabled }: ExportButtonProps) {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-40 rounded-md border border-dark-700 bg-dark-900 shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-40 rounded-md border border-border bg-dark-900 shadow-lg z-50">
           <button
             onClick={handleExportCSV}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-dark-800 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-secondary transition-colors"
           >
             导出为 CSV
           </button>
           <button
             onClick={handleExportJSON}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-dark-800 transition-colors border-t border-dark-700"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-secondary transition-colors border-t border-border"
           >
             导出为 JSON
           </button>
