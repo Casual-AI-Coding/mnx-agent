@@ -180,7 +180,7 @@ export default function VoiceManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">音色管理</h1>
+          <h1 className="text-2xl font-semibold text-foreground">音色管理</h1>
           <p className="text-muted-foreground text-sm">
             浏览系统音色、试听和收藏喜爱的声音
           </p>

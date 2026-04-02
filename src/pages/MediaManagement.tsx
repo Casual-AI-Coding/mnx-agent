@@ -799,7 +799,7 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">媒体管理</h1>
+          <h1 className="text-2xl font-bold text-foreground">媒体管理</h1>
           <p className="text-muted-foreground mt-1">管理生成的音频、图片、视频和音乐文件</p>
         </div>
         <div className="flex items-center gap-2">
