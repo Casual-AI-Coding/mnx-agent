@@ -4,17 +4,18 @@ import type { ConnectionStatus } from '@/lib/websocket-client'
 
 export type ApiMode = 'direct' | 'proxy'
 export const PROXY_BASE_URL = '/api'
+export type ThemeState = 'system' | string
 
 interface AppState {
   apiKey: string
   region: 'cn' | 'intl'
-  theme: 'light' | 'dark' | 'system'
+  theme: ThemeState
   apiMode: ApiMode
   wsStatus: ConnectionStatus
   hasCompletedOnboarding: boolean
   setApiKey: (key: string) => void
   setRegion: (region: 'cn' | 'intl') => void
-  setTheme: (theme: 'light' | 'dark' | 'system') => void
+  setTheme: (theme: ThemeState) => void
   setApiMode: (mode: ApiMode) => void
   setWsStatus: (status: ConnectionStatus) => void
   setHasCompletedOnboarding: (value: boolean) => void
