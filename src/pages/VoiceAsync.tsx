@@ -385,8 +385,8 @@ export default function VoiceAsync() {
         )
       default:
         return (
-          <div className="w-8 h-8 rounded-full bg-zinc-500/10 flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 text-zinc-400" />
+          <div className="w-8 h-8 rounded-full bg-muted/10 flex items-center justify-center">
+            <AlertCircle className="w-4 h-4 text-muted-foreground/70" />
           </div>
         )
     }
@@ -420,7 +420,7 @@ export default function VoiceAsync() {
         )
       default:
         return (
-          <Badge className="bg-zinc-500/10 text-zinc-300 border-zinc-500/20">
+          <Badge className="bg-muted/10 text-foreground border-muted/20">
             未知
           </Badge>
         )
@@ -453,7 +453,7 @@ export default function VoiceAsync() {
       case 'failed':
         return 'from-rose-500/40 to-red-400/40'
       default:
-        return 'from-zinc-500/40 to-zinc-400/40'
+        return 'from-muted/40 to-muted-foreground/70/40'
     }
   }
 
@@ -478,7 +478,7 @@ export default function VoiceAsync() {
                 </h1>
               </div>
             </div>
-            <p className="text-zinc-400 text-sm pl-1">
+            <p className="text-muted-foreground/70 text-sm pl-1">
               支持长文本（最大 {MAX_CHARS.toLocaleString()} 字符）或文件输入，任务完成后可下载音频文件
             </p>
           </div>
@@ -490,17 +490,17 @@ export default function VoiceAsync() {
           <motion.div variants={cardVariants}>
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
-              <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-800/50 flex items-center gap-3">
+              <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-teal-400" />
                   </div>
-                  <div className="font-semibold text-zinc-100">输入内容</div>
+                  <div className="font-semibold text-foreground">输入内容</div>
                 </div>
 
                 <div className="p-6">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-2 bg-zinc-950/50 border border-zinc-800/50 p-1 rounded-xl">
+                    <TabsList className="grid w-full grid-cols-2 bg-background/50 border border-border/50 p-1 rounded-xl">
                       <TabsTrigger
                         value="text"
                         className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/20 data-[state=active]:to-cyan-500/20 data-[state=active]:text-teal-300 data-[state=active]:border-teal-500/30 rounded-lg transition-all duration-200"
@@ -528,7 +528,7 @@ export default function VoiceAsync() {
                           value={text}
                           onChange={e => setText(e.target.value)}
                           placeholder={`输入要转换为语音的文本（最大 ${MAX_CHARS.toLocaleString()} 字符）...`}
-                          className="relative min-h-[200px] resize-none bg-zinc-950/50 border-zinc-800/50 text-zinc-100 placeholder:text-zinc-600 focus:border-teal-500/50 focus:ring-teal-500/20 rounded-xl"
+                          className="relative min-h-[200px] resize-none bg-background/50 border-border/50 text-zinc-100 placeholder:text-muted-foreground/50 focus:border-teal-500/50 focus:ring-teal-500/20 rounded-xl"
                         />
                       </div>
                       <div className="flex items-center justify-between text-sm">
@@ -536,7 +536,7 @@ export default function VoiceAsync() {
                           <div
                             className={`w-2 h-2 rounded-full ${isOverLimit ? 'bg-rose-500' : 'bg-teal-500'} animate-pulse`}
                           />
-                          <span className={isOverLimit ? 'text-rose-400' : 'text-zinc-400'}>
+                          <span className={isOverLimit ? 'text-rose-400' : 'text-muted-foreground/70'}>
                             {charCount.toLocaleString()} / {MAX_CHARS.toLocaleString()} 字符
                           </span>
                         </div>
@@ -553,7 +553,7 @@ export default function VoiceAsync() {
                         className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
                           isDragging
                             ? 'border-teal-500 bg-teal-500/10'
-                            : 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/30'
+                            : 'border-border hover:border-border hover:bg-secondary/30'
                         }`}
                         onClick={() => fileInputRef.current?.click()}
                         onDrop={handleDrop}
@@ -565,10 +565,10 @@ export default function VoiceAsync() {
                           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center">
                             <Upload className="w-8 h-8 text-teal-400" />
                           </div>
-                          <p className="text-zinc-300 font-medium mb-2">
+                          <p className="text-foreground font-medium mb-2">
                             拖放文件或点击上传
                           </p>
-                          <p className="text-xs text-zinc-500">支持 .txt 和 .zip 格式</p>
+                          <p className="text-xs text-muted-foreground">支持 .txt 和 .zip 格式</p>
                         </div>
                         <input
                           ref={fileInputRef}
@@ -639,18 +639,18 @@ export default function VoiceAsync() {
           <motion.div variants={cardVariants}>
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
-              <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-800/50 flex items-center gap-3">
+              <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center">
                     <Zap className="w-4 h-4 text-violet-400" />
                   </div>
-                  <div className="font-semibold text-zinc-100">参数设置</div>
+                  <div className="font-semibold text-foreground">参数设置</div>
                 </div>
 
                 <div className="p-6 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Layers className="w-3.5 h-3.5 text-violet-400" />
                         模型
                       </label>
@@ -658,15 +658,15 @@ export default function VoiceAsync() {
                         value={model}
                         onValueChange={v => setModel(v as SpeechModel)}
                       >
-                        <SelectTrigger className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectContent className="bg-card border-border">
                           {SPEECH_MODELS.map(m => (
                             <SelectItem
                               key={m.id}
                               value={m.id}
-                              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                              className="text-foreground focus:bg-secondary focus:text-foreground"
                             >
                               {m.name}
                             </SelectItem>
@@ -676,20 +676,20 @@ export default function VoiceAsync() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Mic className="w-3.5 h-3.5 text-violet-400" />
                         音色
                       </label>
                       <Select value={voiceId} onValueChange={setVoiceId}>
-                        <SelectTrigger className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectContent className="bg-card border-border">
                           {VOICE_OPTIONS.map(voice => (
                             <SelectItem
                               key={voice.id}
                               value={voice.id}
-                              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                              className="text-foreground focus:bg-secondary focus:text-foreground"
                             >
                               {voice.name}
                             </SelectItem>
@@ -699,7 +699,7 @@ export default function VoiceAsync() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Sparkles className="w-3.5 h-3.5 text-violet-400" />
                         情绪
                       </label>
@@ -707,15 +707,15 @@ export default function VoiceAsync() {
                         value={emotion}
                         onValueChange={v => setEmotion(v as Emotion)}
                       >
-                        <SelectTrigger className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectContent className="bg-card border-border">
                           {EMOTIONS.map(e => (
                             <SelectItem
                               key={e.id}
                               value={e.id}
-                              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                              className="text-foreground focus:bg-secondary focus:text-foreground"
                             >
                               <span className="mr-2">{e.emoji}</span>
                               {e.label}
@@ -726,7 +726,7 @@ export default function VoiceAsync() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-violet-400" />
                         语速 ({speed.toFixed(1)}x)
                       </label>
@@ -737,7 +737,7 @@ export default function VoiceAsync() {
                         step={0.1}
                         value={speed}
                         onChange={e => setSpeed(parseFloat(e.target.value))}
-                        className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 focus:border-violet-500/50 focus:ring-violet-500/20 rounded-xl"
+                        className="bg-background/50 border-border/50 text-foreground focus:border-violet-500/50 focus:ring-violet-500/20 rounded-xl"
                       />
                     </div>
                   </div>
@@ -753,7 +753,7 @@ export default function VoiceAsync() {
                       className={`relative w-full py-4 rounded-xl font-semibold text-base transition-all duration-300 ${
                         (activeTab === 'text' && (!text.trim() || isOverLimit)) ||
                         (activeTab === 'file' && !fileId)
-                          ? 'bg-zinc-800/50 text-zinc-500 cursor-not-allowed'
+                          ? 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
                           : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.02] active:scale-[0.98]'
                       }`}
                     >
@@ -772,15 +772,15 @@ export default function VoiceAsync() {
         <motion.div variants={cardVariants}>
           <div className="relative group h-full">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
-            <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden h-full">
-              <div className="px-6 py-4 border-b border-zinc-800/50 flex items-center justify-between">
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden h-full">
+              <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
                     <Clock className="w-4 h-4 text-amber-400" />
                   </div>
-                  <div className="font-semibold text-zinc-100">任务列表</div>
+                  <div className="font-semibold text-foreground">任务列表</div>
                 </div>
-                <div className="text-xs text-zinc-500">
+                <div className="text-xs text-muted-foreground">
                   {tasks.length} 个任务
                 </div>
               </div>
@@ -790,16 +790,16 @@ export default function VoiceAsync() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center justify-center py-16 text-zinc-500"
+                    className="flex flex-col items-center justify-center py-16 text-muted-foreground"
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full" />
-                      <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center">
-                        <Volume2 className="w-10 h-10 text-zinc-600" />
+                      <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-card border border-border flex items-center justify-center">
+                        <Volume2 className="w-10 h-10 text-muted-foreground/50" />
                       </div>
                     </div>
-                    <p className="mt-6 text-lg font-medium text-zinc-400">暂无任务</p>
-                    <p className="text-sm text-zinc-600 mt-2">
+                    <p className="mt-6 text-lg font-medium text-muted-foreground/70">暂无任务</p>
+                    <p className="text-sm text-muted-foreground/50 mt-2">
                       创建任务后将显示在这里
                     </p>
                   </motion.div>
@@ -824,12 +824,12 @@ export default function VoiceAsync() {
                           <div
                             className={`relative overflow-hidden rounded-xl border transition-all duration-300 ${
                               task.status === 'completed'
-                                ? 'bg-zinc-900/80 border-teal-500/30'
+                                ? 'bg-card/80 border-teal-500/30'
                                 : task.status === 'processing'
-                                  ? 'bg-zinc-900/80 border-cyan-500/40'
+                                  ? 'bg-card/80 border-cyan-500/40'
                                   : task.status === 'failed'
-                                    ? 'bg-zinc-900/80 border-rose-500/30'
-                                    : 'bg-zinc-900/60 border-zinc-800/50'
+                                    ? 'bg-card/80 border-rose-500/30'
+                                    : 'bg-card/60 border-border/50'
                             }`}
                           >
                             <div
@@ -843,19 +843,19 @@ export default function VoiceAsync() {
                                   {getStatusIcon(task.status)}
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-mono text-sm text-zinc-300">
+                                      <span className="font-mono text-sm text-foreground">
                                         {task.taskId.slice(0, 8)}...
                                       </span>
                                       {getStatusBadge(task.status)}
                                     </div>
-                                    <p className="text-xs text-zinc-500 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                       {new Date(task.createdAt).toLocaleString()}
                                     </p>
                                   </div>
                                 </div>
                                 <button
                                   onClick={() => removeTask(task.taskId)}
-                                  className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                  className="p-2 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -870,10 +870,10 @@ export default function VoiceAsync() {
                                         ? 'bg-cyan-500'
                                         : task.status === 'failed'
                                           ? 'bg-rose-500'
-                                          : 'bg-zinc-500'
+                                          : 'bg-muted'
                                   }`}
                                 />
-                                <p className="relative p-3 text-sm text-zinc-400 line-clamp-2">
+                                <p className="relative p-3 text-sm text-muted-foreground/70 line-clamp-2">
                                   {task.text.slice(0, 150)}
                                   {task.text.length > 150 ? '...' : ''}
                                 </p>
@@ -914,7 +914,7 @@ export default function VoiceAsync() {
                                           `subtitle-${task.taskId}.srt`
                                         )
                                       }
-                                      className="flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700 text-zinc-300 rounded-lg transition-all duration-200"
+                                      className="flex items-center justify-center gap-2 py-2.5 px-4 bg-secondary/50 hover:bg-secondary/50 border border-border text-foreground rounded-lg transition-all duration-200"
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>字幕</span>
