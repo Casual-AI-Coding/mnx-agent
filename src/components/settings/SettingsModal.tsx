@@ -50,7 +50,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
       <div 
         className={`
-          relative w-full max-w-2xl max-h-[85vh] overflow-hidden
+          relative w-full max-w-3xl max-h-[90vh] overflow-hidden
           bg-gradient-to-br from-card via-secondary to-card
           border border-border rounded-2xl shadow-2xl
           transition-all duration-300 ease-out
@@ -81,7 +81,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           </button>
         </div>
 
-        <div className="relative p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
+        <div className="relative p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           <section>
             <div className="flex items-center gap-2 mb-5">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20">
