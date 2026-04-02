@@ -33,6 +33,10 @@ export interface TokenPayload {
   role: UserRole
 }
 
+export interface RefreshTokenPayload extends TokenPayload {
+  type: 'refresh'
+}
+
 export class UserService {
   private conn: DatabaseConnection
 
@@ -225,19 +229,28 @@ export class UserService {
     return { valid: true, codeId: invitationCode.id }
   }
 
+  private getSecret(): string {
+    const secret = process.env.JWT_SECRET
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is required')
+    }
+    return secret
+  }
+
   private generateAccessToken(payload: TokenPayload): string {
-    const secret = process.env.JWT_SECRET || 'fallback-secret'
-    return jwt.sign(payload, secret, { expiresIn: '15m' })
+    return jwt.sign(payload, this.getSecret(), { expiresIn: '15m' })
   }
 
   private generateRefreshToken(payload: TokenPayload): string {
-    const secret = process.env.JWT_SECRET || 'fallback-secret'
-    return jwt.sign({ ...payload, type: 'refresh' }, secret, { expiresIn: '7d' })
+    return jwt.sign({ ...payload, type: 'refresh' }, this.getSecret(), { expiresIn: '7d' })
   }
 
   static verifyToken(token: string): TokenPayload | null {
     try {
-      const secret = process.env.JWT_SECRET || 'fallback-secret'
+      const secret = process.env.JWT_SECRET
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required')
+      }
       return jwt.verify(token, secret) as TokenPayload
     } catch {
       return null

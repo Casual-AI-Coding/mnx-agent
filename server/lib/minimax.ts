@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
+import { retryWithBackoff } from './retry.js'
 
 const API_HOSTS = {
   domestic: 'https://api.minimaxi.com',
@@ -74,12 +75,14 @@ export class MiniMaxClient {
   }
 
   async chatCompletion(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/text/chatcompletion_v2', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/text/chatcompletion_v2', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async chatCompletionStream(body: Record<string, unknown>): Promise<{ data: string; isEnd: boolean }[]> {
@@ -112,21 +115,25 @@ export class MiniMaxClient {
   }
 
   async textToAudioSync(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/t2a_v2', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/t2a_v2', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async textToAudioAsync(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/t2a_async_v2', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/t2a_async_v2', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async textToAudioAsyncStatus(taskId: string): Promise<unknown> {
@@ -139,30 +146,36 @@ export class MiniMaxClient {
   }
 
   async imageGeneration(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/image_generation', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/image_generation', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/music_generation', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/music_generation', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async videoGeneration(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/video_generation', body)
-      return response.data
-    } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return retryWithBackoff(async () => {
+      try {
+        const response = await this.client.post('/v1/video_generation', body)
+        return response.data
+      } catch (error) {
+        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      }
+    })
   }
 
   async videoGenerationStatus(taskId: string): Promise<unknown> {

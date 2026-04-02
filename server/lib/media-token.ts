@@ -1,6 +1,13 @@
 import { createHash, randomBytes } from 'crypto'
 
-const MEDIA_TOKEN_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+function getMediaTokenSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required')
+  }
+  return secret
+}
+
 const TOKEN_EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 
 interface MediaToken {
@@ -15,9 +22,10 @@ export function generateMediaToken(mediaId: string, userId: string): string {
     userId,
     expiresAt: Date.now() + TOKEN_EXPIRY_MS,
   }
+  const secret = getMediaTokenSecret()
   const data = JSON.stringify(payload)
   const signature = createHash('sha256')
-    .update(data + MEDIA_TOKEN_SECRET)
+    .update(data + secret)
     .digest('hex')
     .slice(0, 32)
   
@@ -32,9 +40,10 @@ export function verifyMediaToken(token: string): { valid: boolean; mediaId?: str
       return { valid: false, error: 'Invalid token format' }
     }
 
+    const secret = getMediaTokenSecret()
     const data = Buffer.from(dataB64, 'base64url').toString()
     const expectedSignature = createHash('sha256')
-      .update(data + MEDIA_TOKEN_SECRET)
+      .update(data + secret)
       .digest('hex')
       .slice(0, 32)
 

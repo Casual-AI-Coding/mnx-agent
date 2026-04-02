@@ -1,21 +1,7 @@
 import { Request } from 'express'
-import { UserRole } from '../database/types.js'
+import '../types/express.d.ts'
 
-interface AuthUser {
-  userId: string
-  username: string
-  role: UserRole
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser
-    }
-  }
-}
-
-export function buildOwnerFilter(req: Request): { whereClause: string; params: string[] } {
+export function buildOwnerFilter(req: Request): { whereClause: string; params: string[]; ownerId?: string } {
   const user = req.user
   if (!user) return { whereClause: '', params: [] }
 
@@ -26,6 +12,7 @@ export function buildOwnerFilter(req: Request): { whereClause: string; params: s
   return {
     whereClause: 'WHERE owner_id = $1',
     params: [user.userId],
+    ownerId: user.userId,
   }
 }
 

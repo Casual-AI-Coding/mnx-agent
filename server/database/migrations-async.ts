@@ -254,14 +254,16 @@ CREATE INDEX IF NOT EXISTS idx_dead_letter_queue_owner ON dead_letter_queue(owne
     id: 10,
     name: 'migration_010_add_performance_indexes',
     sql: `
--- Index on execution_logs.status: speeds up filtering logs by status (pending/running/success/failure)
 CREATE INDEX IF NOT EXISTS idx_execution_logs_status ON execution_logs(status);
-
--- Index on task_queue.task_type: speeds up filtering queue by task type (text/voice/image/music/video)
 CREATE INDEX IF NOT EXISTS idx_task_queue_type ON task_queue(task_type);
-
--- Index on workflow_templates.name: speeds up template lookups by name
 CREATE INDEX IF NOT EXISTS idx_workflow_templates_name ON workflow_templates(name);
+    `,
+  },
+  {
+    id: 11,
+    name: 'migration_011_audit_logs_error_message',
+    sql: `
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS error_message TEXT;
     `,
   },
 ]

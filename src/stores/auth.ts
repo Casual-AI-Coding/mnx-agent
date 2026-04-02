@@ -22,6 +22,11 @@ interface AuthState {
   logout: () => void
 }
 
+// SECURITY NOTE: Tokens are persisted to localStorage for convenience.
+// This is vulnerable to XSS attacks. For production with higher security requirements:
+// 1. Use httpOnly cookies for refresh tokens (server-set via Set-Cookie header)
+// 2. Keep access tokens in memory only (remove from persist)
+// 3. Implement token rotation on each refresh
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({

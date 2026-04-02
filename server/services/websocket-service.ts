@@ -103,13 +103,21 @@ class CronEventEmitter extends EventEmitter {
 
 export const cronEvents = new CronEventEmitter()
 
+// Heartbeat and connection limit constants
+const HEARTBEAT_INTERVAL = 30000 // 30 seconds
+const HEARTBEAT_TIMEOUT = 10000 // 10 seconds
+const MAX_CONNECTIONS = 1000
+
 interface WebSocketClient {
   ws: WebSocket
   subscriptions: Set<string>
+  isAlive: boolean
+  lastPong: number
 }
 
 let wss: WebSocketServer | null = null
 const clients: Set<WebSocketClient> = new Set()
+let heartbeatInterval: NodeJS.Timeout | null = null
 
 export function initCronWebSocket(server: Server): WebSocketServer {
   if (wss) return wss
@@ -117,6 +125,11 @@ export function initCronWebSocket(server: Server): WebSocketServer {
   wss = new WebSocketServer({ server, path: '/ws/cron' })
 
   wss.on('connection', (ws: WebSocket, req) => {
+    if (clients.size >= MAX_CONNECTIONS) {
+      ws.close(1013, 'Max connections exceeded')
+      return
+    }
+
     const url = new URL(req.url || '', `http://${req.headers.host}`)
     const token = url.searchParams.get('token')
 
@@ -136,9 +149,16 @@ export function initCronWebSocket(server: Server): WebSocketServer {
 
     const client: WebSocketClient = {
       ws,
-      subscriptions: new Set(['all'])
+      subscriptions: new Set(['all']),
+      isAlive: true,
+      lastPong: Date.now()
     }
     clients.add(client)
+
+    ws.on('pong', () => {
+      client.isAlive = true
+      client.lastPong = Date.now()
+    })
 
     ws.on('message', (data: Buffer) => {
       try {
@@ -180,10 +200,37 @@ export function initCronWebSocket(server: Server): WebSocketServer {
   cronEvents.on('task_event', (event: CronEvent) => sendToClients('tasks', event))
   cronEvents.on('log_event', (event: CronEvent) => sendToClients('logs', event))
 
+  startHeartbeat()
+
   return wss
 }
 
+function startHeartbeat(): void {
+  if (heartbeatInterval) return
+
+  heartbeatInterval = setInterval(() => {
+    const now = Date.now()
+    for (const client of clients) {
+      if (!client.isAlive) {
+        client.ws.terminate()
+        clients.delete(client)
+        continue
+      }
+      client.isAlive = false
+      client.ws.ping()
+    }
+  }, HEARTBEAT_INTERVAL)
+}
+
+function stopHeartbeat(): void {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval)
+    heartbeatInterval = null
+  }
+}
+
 export function closeCronWebSocket(): void {
+  stopHeartbeat()
   if (wss) {
     wss.close()
     wss = null

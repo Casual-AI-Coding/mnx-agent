@@ -74,12 +74,18 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   }
 
   const startTime = Date.now()
+  let responseBody: unknown = null
+
+  const originalJson = res.json
+  res.json = function (this: Response, body: unknown): Response {
+    responseBody = body
+    return originalJson.call(this, body)
+  }
 
   const originalEnd = res.end
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
 
-    // Fire-and-forget async audit logging - don't block the response
     getDatabase()
       .then(db => {
         const resourceType = extractResourceType(req.path)
@@ -88,6 +94,14 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         const requestBody = req.body && Object.keys(req.body).length > 0
           ? JSON.stringify(redactSensitiveData(req.body))
           : null
+
+        let errorMessage: string | null = null
+        if (res.statusCode >= 400 && responseBody) {
+          if (typeof responseBody === 'object' && responseBody !== null) {
+            const body = responseBody as Record<string, unknown>
+            errorMessage = (body.error as string) || (body.message as string) || null
+          }
+        }
 
         return db.createAuditLog({
           action: methodToAction(req.method),
@@ -100,11 +114,11 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
           request_path: req.originalUrl,
           request_body: requestBody,
           response_status: res.statusCode,
+          error_message: errorMessage,
           duration_ms: duration,
         })
       })
       .catch(error => {
-        // Fallback: write to log file if database write fails
         const logger = getLogger()
         logger.error({
           type: 'audit_log_failure',
@@ -122,11 +136,9 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         })
       })
 
-    // Always call originalEnd, even if audit logging failed
     try {
       return originalEnd.apply(this, args)
     } catch (endError) {
-      // If res.end itself fails, log and re-throw so Express can handle it
       const logger = getLogger()
       logger.error({
         type: 'response_end_error',

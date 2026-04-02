@@ -1,13 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { UserService, TokenPayload } from '../services/user-service.js'
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: TokenPayload
-    }
-  }
-}
+import '../types/express.d.ts'
+import { UserService, TokenPayload, RefreshTokenPayload } from '../services/user-service.js'
 
 export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
@@ -28,13 +21,17 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
     return
   }
 
-  if ((payload as any).type === 'refresh') {
+  if (isRefreshToken(payload)) {
     res.status(401).json({ success: false, error: '认证令牌类型错误' })
     return
   }
 
   req.user = payload
   next()
+}
+
+function isRefreshToken(payload: TokenPayload): boolean {
+  return (payload as RefreshTokenPayload).type === 'refresh'
 }
 
 export function requireRole(allowedRoles: string[]) {

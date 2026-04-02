@@ -3,9 +3,13 @@
   "private": true,
   "version": "1.1.4",
   "type": "module",
+  "bin": {
+    "mnx-dev": "./scripts/dev.js"
+  },
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
+    "dev:cli": "node scripts/dev.js",
     "server": "tsx server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -375,33 +375,49 @@ export class DatabaseService {
     }
   }
 
-  async getAllTasks(status?: TaskStatus, ownerId?: string): Promise<TaskQueueItem[]> {
-    let rows: TaskQueueRow[]
+  async getAllTasks(options?: { status?: TaskStatus; ownerId?: string; jobId?: string; limit?: number; offset?: number }): Promise<{ tasks: TaskQueueItem[]; total: number }> {
+    const { status, ownerId, jobId, limit = 50, offset = 0 } = options ?? {}
+    
+    const conditions: string[] = []
+    const params: (string | number)[] = []
+    let paramIndex = 1
+
     if (ownerId) {
-      if (status) {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE status = $1 AND owner_id = $2 ORDER BY priority DESC, created_at ASC',
-          [status, ownerId]
-        )
-      } else {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE owner_id = $1 ORDER BY priority DESC, created_at ASC',
-          [ownerId]
-        )
-      }
-    } else {
-      if (status) {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE status = $1 ORDER BY priority DESC, created_at ASC',
-          [status]
-        )
-      } else {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue ORDER BY priority DESC, created_at ASC'
-        )
-      }
+      conditions.push(`owner_id = $${paramIndex}`)
+      params.push(ownerId)
+      paramIndex++
     }
-    return rows.map(rowToTaskQueueItem)
+
+    if (status) {
+      conditions.push(`status = $${paramIndex}`)
+      params.push(status)
+      paramIndex++
+    }
+
+    if (jobId) {
+      conditions.push(`job_id = $${paramIndex}`)
+      params.push(jobId)
+      paramIndex++
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const countRows = await this.conn.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM task_queue ${whereClause}`,
+      params
+    )
+    const total = parseInt(countRows[0]?.count ?? '0', 10)
+
+    params.push(limit, offset)
+    const rows = await this.conn.query<TaskQueueRow>(
+      `SELECT * FROM task_queue ${whereClause} ORDER BY priority DESC, created_at ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      params
+    )
+
+    return {
+      tasks: rows.map(rowToTaskQueueItem),
+      total,
+    }
   }
 
   async getTaskById(id: string, ownerId?: string): Promise<TaskQueueItem | null> {
@@ -808,11 +824,7 @@ export class DatabaseService {
 
     if (isTemplate !== undefined) {
       conditions.push(`is_template = $${paramIndex}`)
-      if (this.conn.isPostgres()) {
-        params.push(isTemplate ? 'true' : 'false')
-      } else {
-        params.push(isTemplate ? 1 : 0)
-      }
+      params.push(isTemplate ? 1 : 0)
       paramIndex++
     }
 
@@ -1919,9 +1931,9 @@ export class DatabaseService {
     const id = uuidv4()
     const now = toISODate()
     await this.conn.execute(
-      `INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, duration_ms, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, data.action, data.resource_type, data.resource_id ?? null, data.user_id ?? null, data.ip_address ?? null, data.user_agent ?? null, data.request_method ?? null, data.request_path ?? null, data.request_body ?? null, data.response_status ?? null, data.duration_ms ?? null, now]
+      `INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, error_message, duration_ms, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [id, data.action, data.resource_type, data.resource_id ?? null, data.user_id ?? null, data.ip_address ?? null, data.user_agent ?? null, data.request_method ?? null, data.request_path ?? null, data.request_body ?? null, data.response_status ?? null, data.error_message ?? null, data.duration_ms ?? null, now]
     )
     return (await this.getAuditLogById(id))!
   }

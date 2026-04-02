@@ -221,6 +221,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   request_path VARCHAR(500),
   request_body JSONB,
   response_status INTEGER,
+  error_message TEXT,
   duration_ms INTEGER,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Shield, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { Shield, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -39,6 +39,7 @@ export default function AuditLogs() {
   const [stats, setStats] = useState<AuditStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
+  const [copied, setCopied] = useState(false)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [filters, setFilters] = useState<{ action?: AuditAction; resource_type?: string }>({})
@@ -83,6 +84,37 @@ export default function AuditLogs() {
     if (!ms) return '-'
     if (ms < 1000) return `${ms}ms`
     return `${(ms / 1000).toFixed(2)}s`
+  }
+
+  const copyLogToClipboard = async (log: AuditLog) => {
+    const content = `## 审计日志详情
+
+**操作**: ${getActionConfig(log.action).label}
+**状态**: ${log.response_status || '-'}
+**路径**: ${log.request_method || '-'} ${log.request_path || '-'}
+**资源类型**: ${log.resource_type || '-'}
+**资源ID**: ${log.resource_id || '-'}
+**IP地址**: ${log.ip_address || '-'}
+**耗时**: ${formatDuration(log.duration_ms)}
+**时间**: ${new Date(log.created_at).toLocaleString('zh-CN')}
+${log.error_message ? `\n**错误信息**:\n\`\`\`\n${log.error_message}\n\`\`\`` : ''}
+${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body === 'object' ? JSON.stringify(log.request_body, null, 2) : log.request_body}\n\`\`\`` : ''}`
+
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = content
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   return (
@@ -274,6 +306,14 @@ export default function AuditLogs() {
               <label className="text-dark-500">{t('audit.time', '时间')}</label>
               <p className="text-dark-200">{new Date(selectedLog.created_at).toLocaleString('zh-CN')}</p>
             </div>
+            {selectedLog.error_message && (
+              <div>
+                <label className="text-red-400">{t('audit.errorMessage', '错误信息')}</label>
+                <pre className="text-red-300 bg-red-950/20 border border-red-900/50 p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
+                  {selectedLog.error_message}
+                </pre>
+              </div>
+            )}
             {selectedLog.request_body && (
               <div>
                 <label className="text-dark-500">{t('audit.requestBody', '请求体')}</label>
@@ -296,7 +336,20 @@ export default function AuditLogs() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => copyLogToClipboard(selectedLog)}>
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  {t('common.copied', '已复制')}
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  {t('common.copy', '复制')}
+                </>
+              )}
+            </Button>
             <Button variant="outline" onClick={() => setSelectedLog(null)}>
               {t('common.close', '关闭')}
             </Button>

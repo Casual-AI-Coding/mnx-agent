@@ -343,6 +343,31 @@ vitest run --coverage
 - 后端: `server/**/*.test.ts`
 - 前端: `src/**/*.test.{ts,tsx}`
 
+## 开发 CLI 工具
+
+项目提供 `mnx-dev` CLI 工具，用于管理开发服务器：
+
+```bash
+# 启动开发服务器（后台运行）
+node scripts/dev.js start
+
+# 查看状态
+node scripts/dev.js status
+
+# 查看日志（实时）
+node scripts/dev.js log
+
+# 停止服务器
+node scripts/dev.js stop
+
+# 重启服务器
+node scripts/dev.js restart
+```
+
+**与 `npm run dev:full` 的区别**：
+- `dev:full`: 前台运行，Ctrl+C 停止
+- `dev.js`: 后台运行，支持 start/stop/status/log 命令
+
 ## 开发流程
 
 1. **创建功能分支** (使用 worktree)

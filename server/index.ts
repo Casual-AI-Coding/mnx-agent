@@ -64,9 +64,12 @@ app.use('/api/auth', authRouter)
 
 // JWT authentication for all other API routes
 app.use('/api', (req, res, next) => {
+  // Skip auth for login/register routes
   if (req.path.startsWith('/auth')) {
     return next()
   }
+  // Media downloads use signed tokens instead of JWT (see media-token.ts)
+  // This allows direct browser downloads with short-lived tokens
   if (req.path.match(/\/media\/[^/]+\/download$/)) {
     return next()
   }

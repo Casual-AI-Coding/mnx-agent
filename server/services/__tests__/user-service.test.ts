@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { UserService } from '../user-service'
 import { DatabaseConnection } from '../../database/connection'
 
+process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing'
+
 vi.mock('bcrypt', () => {
   const mockBcrypt = {
     hash: vi.fn().mockResolvedValue('$2b$12$mockedhash'),
@@ -18,7 +20,6 @@ const mockDb = {
   execute: vi.fn(),
   transaction: vi.fn((fn) => fn(mockDb)),
   isPostgres: vi.fn().mockReturnValue(true),
-  isSqlite: vi.fn().mockReturnValue(false),
 } as unknown as DatabaseConnection
 
 describe('UserService', () => {

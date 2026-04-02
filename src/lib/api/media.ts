@@ -89,7 +89,7 @@ export async function getMediaDownloadUrl(id: string): Promise<string> {
 }
 
 export async function batchDeleteMedia(ids: string[]): Promise<{ success: boolean; data: { deletedCount: number } }> {
-  const response = await client.post('/media/batch/delete', { ids })
+  const response = await client.delete('/media/batch', { data: { ids } })
   return response.data
 }
 

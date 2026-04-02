@@ -1,6 +1,7 @@
 import { Router, Request } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { validate } from '../middleware/validate.js'
+import { authRateLimiter } from '../middleware/rateLimit.js'
 import { z } from 'zod'
 import { UserService } from '../services/user-service.js'
 import { getConnection } from '../database/connection.js'
@@ -30,7 +31,7 @@ const updateProfileSchema = z.object({
   minimax_region: z.enum(['cn', 'intl']).optional(),
 })
 
-router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
+router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.body
   const conn = getConnection()
   const userService = new UserService(conn)
@@ -52,7 +53,7 @@ router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
   })
 }))
 
-router.post('/register', validate(registerSchema), asyncHandler(async (req, res) => {
+router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, invitationCode, email } = req.body
   const conn = getConnection()
   const userService = new UserService(conn)
@@ -90,7 +91,7 @@ router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {
   res.json({ success: true, data: user })
 }))
 
-router.post('/change-password', authenticateJWT, validate(changePasswordSchema), asyncHandler(async (req: Request, res) => {
+router.post('/change-password', authRateLimiter, authenticateJWT, validate(changePasswordSchema), asyncHandler(async (req: Request, res) => {
   const { oldPassword, newPassword } = req.body
   const conn = getConnection()
   const userService = new UserService(conn)

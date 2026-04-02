@@ -720,6 +720,7 @@ export interface AuditLog {
   request_path: string | null
   request_body: string | null
   response_status: number | null
+  error_message: string | null
   duration_ms: number | null
   created_at: string
 }
@@ -736,6 +737,7 @@ export interface AuditLogRow {
   request_path: string | null
   request_body: string | null
   response_status: number | null
+  error_message: string | null
   duration_ms: number | null
   created_at: string
 }
@@ -751,6 +753,7 @@ export interface CreateAuditLog {
   request_path?: string | null
   request_body?: string | null
   response_status?: number | null
+  error_message?: string | null
   duration_ms?: number | null
 }
 

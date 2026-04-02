@@ -82,6 +82,14 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
   res.json({ success: true, data: record })
 }))
 
+router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
+  const { ids } = req.body as { ids: string[] }
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const result = await db.softDeleteMediaRecords(ids)
+  res.json({ success: true, data: result })
+}))
+
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -205,14 +213,6 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
   res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
   res.setHeader('Content-Disposition', `inline; filename="${record.original_name || record.filename}"`)
   res.send(buffer)
-}))
-
-router.post('/batch/delete', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
-  const { ids } = req.body as { ids: string[] }
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const result = await db.softDeleteMediaRecords(ids)
-  res.json({ success: true, data: result })
 }))
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {

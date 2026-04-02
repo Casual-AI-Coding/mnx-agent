@@ -397,13 +397,9 @@ router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (re
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { status?: TaskStatus; job_id?: string; page: number; limit: number }
   const { status, job_id, page, limit } = query
-  let tasks: TaskQueueItem[] = await db.getAllTasks(status, ownerId)
-  if (job_id) {
-    tasks = tasks.filter((t: TaskQueueItem) => t.job_id === job_id)
-  }
   const offset = (page - 1) * limit
-  const paginatedTasks = tasks.slice(offset, offset + limit)
-  res.json({ success: true, data: { tasks: paginatedTasks, total: tasks.length, page, limit } })
+  const result = await db.getAllTasks({ status, ownerId, jobId: job_id, limit, offset })
+  res.json({ success: true, data: { tasks: result.tasks, total: result.total, page, limit } })
 }))
 
 router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) => {

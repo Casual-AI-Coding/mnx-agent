@@ -20,27 +20,30 @@ router.get('/', validateQuery(listWorkflowsQuerySchema), asyncHandler(async (req
   const ownerId = buildOwnerFilter(req).params[0]
 
   const db = await getDatabase()
-  const workflows = await db.getAllWorkflowTemplates(ownerId)
-
-  let filtered = workflows
+  
+  let isTemplateFilter: boolean | undefined
   if (is_template === 'true') {
-    filtered = workflows.filter(w => w.is_template)
+    isTemplateFilter = true
   } else if (is_template === 'false') {
-    filtered = workflows.filter(w => !w.is_template)
+    isTemplateFilter = false
   }
 
-  const total = filtered.length
-  const paginated = filtered.slice(offset, offset + limitNum)
+  const result = await db.getWorkflowTemplatesPaginated({
+    ownerId,
+    isTemplate: isTemplateFilter,
+    limit: limitNum,
+    offset,
+  })
 
   res.json({
     success: true,
     data: {
-      workflows: paginated,
+      workflows: result.templates,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
+        total: result.total,
+        totalPages: Math.ceil(result.total / limitNum),
       },
     },
   })
