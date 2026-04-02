@@ -111,8 +111,8 @@ export default function SettingsPage() {
   if (!user) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <Card className="border-dark-800/50 bg-dark-900/50">
-          <CardContent className="py-8 text-center text-dark-400">
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="py-8 text-center text-muted-foreground/70">
             {t('settings.pleaseLogin', '请先登录以查看设置')}
           </CardContent>
         </Card>
@@ -136,33 +136,33 @@ export default function SettingsPage() {
             <Settings className="w-5 h-5 text-primary-500" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{t('settings.title')}</h1>
-            <p className="text-dark-400 text-sm">{t('settings.subtitle')}</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('settings.title')}</h1>
+            <p className="text-muted-foreground/70 text-sm">{t('settings.subtitle')}</p>
           </div>
         </div>
       </motion.div>
 
       <motion.div variants={sectionVariants}>
-        <Card className="mb-6 border-dark-800/50 bg-dark-900/50">
+        <Card className="mb-6 border-border/50 bg-card/50">
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-primary-500" />
-              <CardTitle className="text-white">{t('settings.accountInfo', '账户信息')}</CardTitle>
+              <CardTitle className="text-foreground">{t('settings.accountInfo', '账户信息')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
-              <span className="text-dark-400">{t('settings.username', '用户名')}</span>
-              <span className="text-white font-medium">{user.username}</span>
+              <span className="text-muted-foreground/70">{t('settings.username', '用户名')}</span>
+              <span className="text-foreground font-medium">{user.username}</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
-              <span className="text-dark-400">{t('settings.role', '角色')}</span>
+              <span className="text-muted-foreground/70">{t('settings.role', '角色')}</span>
               <span className="text-primary-400 font-medium">{roleLabels[user.role]}</span>
             </div>
             {user.email && (
               <div className="flex items-center justify-between py-2 border-b border-dark-800/30">
-                <span className="text-dark-400">{t('settings.email', '邮箱')}</span>
-                <span className="text-white">{user.email}</span>
+                <span className="text-muted-foreground/70">{t('settings.email', '邮箱')}</span>
+                <span className="text-foreground">{user.email}</span>
               </div>
             )}
           </CardContent>
@@ -170,16 +170,16 @@ export default function SettingsPage() {
       </motion.div>
 
       <motion.div variants={sectionVariants}>
-        <Card className="mb-6 border-dark-800/50 bg-dark-900/50">
+        <Card className="mb-6 border-border/50 bg-card/50">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-primary-500" />
-              <CardTitle className="text-white">{t('settings.apiConfig')}</CardTitle>
+              <CardTitle className="text-foreground">{t('settings.apiConfig')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-dark-300">
+              <label className="text-sm font-medium text-muted-foreground">
                 {t('settings.apiKey')}
               </label>
               <div className="relative">
@@ -187,12 +187,12 @@ export default function SettingsPage() {
                   type={showApiKey ? 'text' : 'password'}
                   {...register('apiKey')}
                   placeholder={t('settings.apiKeyPlaceholder')}
-                  className="pr-10 bg-dark-950 border-dark-700 text-white placeholder:text-dark-500"
+                  className="pr-10 bg-background border-border text-foreground placeholder:text-muted-foreground/50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
                 >
                   {showApiKey ? (
                     <EyeOff className="w-4 h-4" />
@@ -202,26 +202,26 @@ export default function SettingsPage() {
                 </button>
               </div>
               <FormError message={errors.apiKey?.message} />
-              <p className="text-xs text-dark-500">
+              <p className="text-xs text-muted-foreground/50">
                 {t('settings.apiKeyHint')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-dark-300 flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Globe className="w-3.5 h-3.5" />
                 {t('settings.region')}
               </label>
               <Select value={formRegion} onValueChange={(v) => setValue('region', v as 'cn' | 'intl')}>
-                <SelectTrigger className="w-full bg-dark-950 border-dark-700 text-white">
+                <SelectTrigger className="w-full bg-background border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-dark-900 border-dark-700">
+                <SelectContent className="bg-dark-900 border-border">
                   {REGION_OPTIONS.map((option) => (
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="text-dark-300 hover:text-white hover:bg-dark-800 focus:bg-dark-800 focus:text-white"
+                      className="text-muted-foreground hover:text-foreground hover:bg-secondary focus:bg-dark-800 focus:text-foreground"
                     >
                       {option.label}
                     </SelectItem>
@@ -248,26 +248,26 @@ export default function SettingsPage() {
       </motion.div>
 
       <motion.div variants={sectionVariants}>
-        <Card className="mb-6 border-dark-800/50 bg-dark-900/50">
+        <Card className="mb-6 border-border/50 bg-card/50">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Palette className="w-4 h-4 text-primary-500" />
-              <CardTitle className="text-white">{t('settings.appearance')}</CardTitle>
+              <CardTitle className="text-foreground">{t('settings.appearance')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-dark-300">{t('settings.themeMode')}</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('settings.themeMode')}</label>
               <Select value="system" onValueChange={() => {}}>
-                <SelectTrigger className="w-full bg-dark-950 border-dark-700 text-white">
+                <SelectTrigger className="w-full bg-background border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-dark-900 border-dark-700">
+                <SelectContent className="bg-dark-900 border-border">
                   {THEME_OPTIONS.map((option) => (
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="text-dark-300 hover:text-white hover:bg-dark-800 focus:bg-dark-800 focus:text-white"
+                      className="text-muted-foreground hover:text-foreground hover:bg-secondary focus:bg-dark-800 focus:text-foreground"
                     >
                       {option.label}
                     </SelectItem>
@@ -280,22 +280,22 @@ export default function SettingsPage() {
       </motion.div>
 
       <motion.div variants={sectionVariants}>
-        <Card className="border-dark-800/50 bg-dark-900/50">
+        <Card className="border-border/50 bg-card/50">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-primary-500" />
-              <CardTitle className="text-white">{t('settings.about')}</CardTitle>
+              <CardTitle className="text-foreground">{t('settings.about')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">M</span>
+                <span className="text-foreground font-bold text-lg">M</span>
               </div>
               <div>
-                <h3 className="text-white font-semibold">{t('settings.appName')}</h3>
-                <p className="text-dark-400 text-sm">{t('settings.version')}</p>
-                <p className="text-dark-500 text-xs mt-1">
+                <h3 className="text-foreground font-semibold">{t('settings.appName')}</h3>
+                <p className="text-muted-foreground/70 text-sm">{t('settings.version')}</p>
+                <p className="text-muted-foreground/50 text-xs mt-1">
                   {t('settings.description')}
                 </p>
               </div>

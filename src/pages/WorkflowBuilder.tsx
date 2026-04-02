@@ -328,7 +328,7 @@ function Toolbar({
 
         <button
           onClick={onLoad}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-dark-800 text-dark-200 hover:bg-dark-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-secondary text-foreground/80 hover:bg-secondary/80 transition-colors"
         >
           <Upload className="w-4 h-4" />
           Load
@@ -358,7 +358,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
     <div className="w-64 bg-dark-950 border-r border-dark-800 flex flex-col h-full">
       <div className="p-4 border-b border-dark-800">
         <h3 className="text-sm font-semibold text-foreground">Node Palette</h3>
-        <p className="text-xs text-dark-400 mt-1">Drag nodes onto the canvas</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">Drag nodes onto the canvas</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
@@ -377,9 +377,9 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                       key={item.type}
                       draggable
                       onDragStart={(e) => onDragStart(e, item.type)}
-                      className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-dark-800 transition-colors group"
+                      className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
                     >
-                      <div className="p-2 rounded-md bg-dark-800 group-hover:bg-dark-700">
+                      <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
                         <Icon className="w-4 h-4 text-dark-300" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -449,12 +449,12 @@ function ConfigPanel({
             <h3 className="text-sm font-semibold text-foreground">
               {(config.label as string) || nodeType}
             </h3>
-            <p className="text-xs text-dark-400 capitalize">{nodeType} Configuration</p>
+            <p className="text-xs text-muted-foreground/70 capitalize">{nodeType} Configuration</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-dark-800 transition-colors"
+          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
         >
           <X className="w-4 h-4 text-dark-400" />
         </button>
@@ -469,7 +469,7 @@ function ConfigPanel({
             type="text"
             value={(config.label as string) || ''}
             onChange={(e) => updateConfig('label', e.target.value)}
-            className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="Node label"
           />
         </div>
@@ -483,7 +483,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.cronExpression as string) || ''}
                 onChange={(e) => updateConfig('cronExpression', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="0 0 * * *"
               />
             </div>
@@ -492,7 +492,7 @@ function ConfigPanel({
               <select
                 value={(config.timezone as string) || 'UTC'}
                 onChange={(e) => updateConfig('timezone', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="UTC">UTC</option>
                 <option value="America/New_York">America/New_York</option>
@@ -530,7 +530,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'kimi-k2.5'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="kimi-k2.5">Kimi K2.5</option>
                 <option value="kimi-k2">Kimi K2</option>
@@ -558,7 +558,7 @@ function ConfigPanel({
                 type="number"
                 value={(config.maxTokens as number) || 2048}
                 onChange={(e) => updateConfig('maxTokens', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -567,7 +567,7 @@ function ConfigPanel({
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Enter your prompt..."
               />
             </div>
@@ -582,7 +582,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'speech-01-turbo'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="speech-01-turbo">Speech-01 Turbo</option>
                 <option value="speech-01">Speech-01</option>
@@ -594,7 +594,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.voiceId as string) || ''}
                 onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Enter voice ID"
               />
             </div>
@@ -651,7 +651,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'speech-01-turbo'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="speech-01-turbo">Speech-01 Turbo</option>
                 <option value="speech-01">Speech-01</option>
@@ -663,7 +663,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.voiceId as string) || ''}
                 onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Enter voice ID"
               />
             </div>
@@ -678,7 +678,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'image-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="image-01">Image-01</option>
                 <option value="image-01-preview">Image-01 Preview</option>
@@ -690,7 +690,7 @@ function ConfigPanel({
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the image you want to generate..."
               />
             </div>
@@ -699,7 +699,7 @@ function ConfigPanel({
               <select
                 value={(config.size as string) || '1024x1024'}
                 onChange={(e) => updateConfig('size', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="1024x1024">1024x1024</option>
                 <option value="1024x1792">1024x1792</option>
@@ -714,7 +714,7 @@ function ConfigPanel({
                 max="4"
                 value={(config.count as number) || 1}
                 onChange={(e) => updateConfig('count', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -722,7 +722,7 @@ function ConfigPanel({
               <select
                 value={(config.style as string) || 'general'}
                 onChange={(e) => updateConfig('style', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="general">General</option>
                 <option value="vivid">Vivid</option>
@@ -757,7 +757,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'music-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="music-01">Music-01</option>
                 <option value="music-01-preview">Music-01 Preview</option>
@@ -769,7 +769,7 @@ function ConfigPanel({
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the music you want to generate..."
               />
             </div>
@@ -783,7 +783,7 @@ function ConfigPanel({
                 max="180"
                 value={(config.duration as number) || 30}
                 onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -797,7 +797,7 @@ function ConfigPanel({
               <select
                 value={(config.model as string) || 'video-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="video-01">Video-01</option>
                 <option value="video-01-preview">Video-01 Preview</option>
@@ -809,7 +809,7 @@ function ConfigPanel({
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the video you want to generate..."
               />
             </div>
@@ -823,7 +823,7 @@ function ConfigPanel({
                 max="60"
                 value={(config.duration as number) || 5}
                 onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -837,7 +837,7 @@ function ConfigPanel({
               <select
                 value={(config.conditionType as string) || 'equals'}
                 onChange={(e) => updateConfig('conditionType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="equals">Equals</option>
                 <option value="not_equals">Not Equals</option>
@@ -851,7 +851,7 @@ function ConfigPanel({
               <select
                 value={(config.serviceType as string) || 'text'}
                 onChange={(e) => updateConfig('serviceType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="text">Text</option>
                 <option value="voice_sync">Voice Sync</option>
@@ -867,7 +867,7 @@ function ConfigPanel({
                 type="number"
                 value={(config.threshold as number) || 0}
                 onChange={(e) => updateConfig('threshold', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -882,7 +882,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.queueName as string) || 'default'}
                 onChange={(e) => updateConfig('queueName', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Queue name"
               />
             </div>
@@ -893,7 +893,7 @@ function ConfigPanel({
                 min="1"
                 value={(config.batchSize as number) || 10}
                 onChange={(e) => updateConfig('batchSize', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -901,7 +901,7 @@ function ConfigPanel({
               <select
                 value={(config.pullStrategy as string) || 'fifo'}
                 onChange={(e) => updateConfig('pullStrategy', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="fifo">FIFO (First In, First Out)</option>
                 <option value="lifo">LIFO (Last In, First Out)</option>
@@ -920,7 +920,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.condition as string) || ''}
                 onChange={(e) => updateConfig('condition', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="While condition is true"
               />
             </div>
@@ -931,7 +931,7 @@ function ConfigPanel({
                 min="1"
                 value={(config.maxIterations as number) || 100}
                 onChange={(e) => updateConfig('maxIterations', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -945,7 +945,7 @@ function ConfigPanel({
               <select
                 value={(config.transformType as string) || 'map'}
                 onChange={(e) => updateConfig('transformType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="map">Map Fields</option>
                 <option value="filter">Filter</option>
@@ -959,7 +959,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.inputType as string) || ''}
                 onChange={(e) => updateConfig('inputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="e.g., JSON"
               />
             </div>
@@ -969,7 +969,7 @@ function ConfigPanel({
                 type="text"
                 value={(config.outputType as string) || ''}
                 onChange={(e) => updateConfig('outputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="e.g., JSON"
               />
             </div>
@@ -983,7 +983,7 @@ function ConfigPanel({
                   } catch {}
                 }}
                 rows={4}
-                className="w-full px-3 py-2 rounded-md bg-dark-800 border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder='{"key": "value"}'
               />
             </div>
@@ -1001,7 +1001,7 @@ function ConfigPanel({
         </button>
         <button
           onClick={onClose}
-          className="px-4 py-2 rounded-md bg-dark-800 text-dark-200 text-sm font-medium hover:bg-dark-700 transition-colors"
+          className="px-4 py-2 rounded-md bg-secondary text-foreground/80 text-sm font-medium hover:bg-secondary/80 transition-colors"
         >
           Cancel
         </button>
@@ -1276,7 +1276,7 @@ function WorkflowBuilderInner() {
             }}
             className="bg-dark-900"
           >
-            <Controls className="bg-dark-800 border border-dark-700 rounded-md" />
+            <Controls className="bg-secondary border border-dark-700 rounded-md" />
             <MiniMap
               className="bg-dark-950 border border-dark-700 rounded-md"
               nodeColor={(node) => {
