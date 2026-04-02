@@ -53,7 +53,7 @@ export function SystemOption({ selected, onSelect }: SystemOptionProps) {
           'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300',
           selected 
             ? 'bg-primary-500 scale-100' 
-            : 'bg-secondary scale-90 opacity-50'
+            : 'bg-secondary scale-90'
         )}
       >
         <Check 
