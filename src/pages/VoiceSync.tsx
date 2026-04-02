@@ -136,7 +136,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
       
       <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-5 overflow-hidden">
+      <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-5 overflow-hidden">
         
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 pointer-events-none" />
 
@@ -161,7 +161,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
             <VoiceWaveform isPlaying={isPlaying} />
 
             
-            <div className="mt-3 relative h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="mt-3 relative h-1.5 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
                 style={{ width: `${progress}%` }}
@@ -171,7 +171,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             </div>
 
-            <div className="flex justify-between mt-2 text-xs text-zinc-500">
+            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
@@ -180,7 +180,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
           
           <button
             onClick={onDownload}
-            className="shrink-0 w-10 h-10 rounded-lg bg-zinc-800/80 hover:bg-zinc-700/80 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition-all duration-200"
+            className="shrink-0 w-10 h-10 rounded-lg bg-secondary/80 hover:bg-secondary/80 flex items-center justify-center text-muted-foreground/70 hover:text-emerald-400 transition-all duration-200"
           >
             <Download className="w-5 h-5" />
           </button>
@@ -294,7 +294,7 @@ export default function VoiceSync() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
             {t('voiceSync.title')}
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             {t('voiceSync.subtitleWithLimit', { count: MAX_CHARS.toLocaleString() })}
           </p>
         </div>
@@ -319,15 +319,15 @@ export default function VoiceSync() {
               
               <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-              <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden">
+              <div className="relative bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl overflow-hidden">
                 
-                <div className="px-6 py-4 border-b border-zinc-800/60 flex items-center gap-3">
+                <div className="px-6 py-4 border-b border-border/60 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
                     <Sparkles className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.textInputTitle')}</h2>
-                    <p className="text-xs text-zinc-500">{t('voiceSync.textInputDesc')}</p>
+                    <h2 className="text-lg font-semibold text-foreground">{t('voiceSync.textInputTitle')}</h2>
+                    <p className="text-xs text-muted-foreground">{t('voiceSync.textInputDesc')}</p>
                   </div>
                 </div>
 
@@ -337,13 +337,13 @@ export default function VoiceSync() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={t('voiceSync.placeholder')}
-                    className="min-h-[200px] resize-none bg-zinc-950/50 border-zinc-800/60 text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl"
+                    className="min-h-[200px] resize-none bg-background/50 border-border/60 text-foreground placeholder:text-muted-foreground/50 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl"
                   />
 
                   
                   <div className="mt-4 flex items-center justify-between">
                     <div className="flex-1 mr-4">
-                      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                         <motion.div
                           className={`h-full rounded-full transition-colors duration-300 ${
                             isOverLimit
@@ -420,14 +420,14 @@ export default function VoiceSync() {
                     </motion.div>
                   </div>
 
-                  <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-6">
+                  <div className="bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
                         <Music2 className="w-5 h-5 text-emerald-400" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.resultTitle')}</h2>
-                        <p className="text-xs text-zinc-500">{t('voiceSync.resultDesc')}</p>
+                        <h2 className="text-lg font-semibold text-foreground">{t('voiceSync.resultTitle')}</h2>
+                        <p className="text-xs text-muted-foreground">{t('voiceSync.resultDesc')}</p>
                       </div>
                     </div>
 
@@ -443,18 +443,18 @@ export default function VoiceSync() {
         <div className="space-y-6">
           
           <motion.div variants={itemVariants}>
-            <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden">
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl overflow-hidden">
               
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 pointer-events-none" />
 
               
-              <div className="relative px-6 py-4 border-b border-zinc-800/60 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-                  <SlidersHorizontal className="w-5 h-5 text-zinc-400" />
+              <div className="relative px-6 py-4 border-b border-border/60 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-secondary to-card flex items-center justify-center">
+                  <SlidersHorizontal className="w-5 h-5 text-muted-foreground/70" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-100">{t('voiceSync.paramsTitle')}</h2>
-                  <p className="text-xs text-zinc-500">{t('voiceSync.paramsDesc')}</p>
+                  <h2 className="text-lg font-semibold text-foreground">{t('voiceSync.paramsTitle')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('voiceSync.paramsDesc')}</p>
                 </div>
               </div>
 
@@ -462,17 +462,17 @@ export default function VoiceSync() {
               <div className="relative p-6 space-y-6">
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">{t('voiceSync.modelLabel')}</Label>
+                  <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.modelLabel')}</Label>
                   <Select value={model} onValueChange={(v) => setModel(v as SpeechModel)}>
-                    <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                    <SelectContent className="bg-card border-border">
                       {SPEECH_MODELS.map((m) => (
                         <SelectItem
                           key={m.id}
                           value={m.id}
-                          className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                          className="text-foreground focus:bg-secondary focus:text-foreground"
                         >
                           <div className="flex flex-col py-1">
                             <div className="flex items-center gap-2">
@@ -484,7 +484,7 @@ export default function VoiceSync() {
                                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                                     : m.tier === 'recommended'
                                       ? 'bg-teal-500/20 text-teal-400 border-teal-500/30'
-                                      : 'bg-zinc-700/50 text-zinc-400'
+                                      : 'bg-secondary/50 text-zinc-400'
                                 }`}
                               >
                                 {m.tier === 'latest'
@@ -496,7 +496,7 @@ export default function VoiceSync() {
                                       : t('voiceSync.stable')}
                               </Badge>
                             </div>
-                            <span className="text-xs text-zinc-500 mt-0.5">
+                            <span className="text-xs text-muted-foreground mt-0.5">
                               {m.description}
                             </span>
                           </div>
@@ -508,17 +508,17 @@ export default function VoiceSync() {
 
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">{t('voiceSync.voiceLabel')}</Label>
+                  <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.voiceLabel')}</Label>
                   <Select value={voiceId} onValueChange={setVoiceId}>
-                    <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800 max-h-64">
+                    <SelectContent className="bg-card border-border max-h-64">
                       {VOICE_OPTIONS.map((voice) => (
                         <SelectItem
                           key={voice.id}
                           value={voice.id}
-                          className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                          className="text-foreground focus:bg-secondary focus:text-foreground"
                         >
                           <div className="flex items-center gap-3 py-1">
                             <div
@@ -540,17 +540,17 @@ export default function VoiceSync() {
 
                 
                 <div className="space-y-2.5">
-                  <Label className="text-zinc-400 text-sm">{t('voiceSync.emotionLabel')}</Label>
+                  <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.emotionLabel')}</Label>
                   <Select value={emotion} onValueChange={(v) => setEmotion(v as Emotion)}>
-                    <SelectTrigger className="bg-zinc-950/50 border-zinc-800/60 text-zinc-100 hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                    <SelectContent className="bg-card border-border">
                       {EMOTIONS.map((e) => (
                         <SelectItem
                           key={e.id}
                           value={e.id}
-                          className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                          className="text-foreground focus:bg-secondary focus:text-foreground"
                         >
                           <span className="mr-2">{e.emoji}</span>
                           {e.label}
@@ -561,13 +561,13 @@ export default function VoiceSync() {
                 </div>
 
                 
-                <div className="space-y-5 pt-2 border-t border-zinc-800/60">
+                <div className="space-y-5 pt-2 border-t border-border/60">
                   
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Gauge className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">{t('voiceSync.speedLabel')}</Label>
+                        <Gauge className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.speedLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {speed.toFixed(1)}x
@@ -587,8 +587,8 @@ export default function VoiceSync() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Volume2 className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">{t('voiceSync.volumeLabel')}</Label>
+                        <Volume2 className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.volumeLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {Math.round(volume * 100)}%
@@ -608,8 +608,8 @@ export default function VoiceSync() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Music2 className="w-4 h-4 text-zinc-500" />
-                        <Label className="text-zinc-400 text-sm">{t('voiceSync.pitchLabel')}</Label>
+                        <Music2 className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.pitchLabel')}</Label>
                       </div>
                       <span className="text-sm font-medium text-emerald-400">
                         {pitch > 0 ? `+${pitch}` : pitch}
@@ -635,7 +635,7 @@ export default function VoiceSync() {
                   className={`w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 ${
                     text.trim() && !isOverLimit && !isGenerating
                       ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 cursor-pointer'
-                      : 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed'
+                      : 'bg-secondary/50 text-muted-foreground/50 cursor-not-allowed'
                   }`}
                 >
                   {isGenerating ? (
@@ -656,48 +656,48 @@ export default function VoiceSync() {
 
           
           <motion.div variants={itemVariants}>
-            <div className="bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/40 rounded-xl p-5">
-              <h3 className="text-sm font-medium text-zinc-400 mb-4 flex items-center gap-2">
+            <div className="bg-card/40 backdrop-blur-sm border border-border/40 rounded-xl p-5">
+              <h3 className="text-sm font-medium text-muted-foreground/70 mb-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {t('voiceSync.currentConfig')}
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.modelLabel')}</span>
-                  <span className="text-zinc-300 font-medium">{selectedModel?.name}</span>
+                  <span className="text-muted-foreground">{t('voiceSync.modelLabel')}</span>
+                  <span className="text-foreground font-medium">{selectedModel?.name}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.voiceLabel')}</span>
+                  <span className="text-muted-foreground">{t('voiceSync.voiceLabel')}</span>
                   <div className="flex items-center gap-2">
                     <span
                       className={`w-2 h-2 rounded-full ${
                         selectedVoice?.gender === 'male' ? 'bg-blue-400' : 'bg-pink-400'
                       }`}
                     />
-                    <span className="text-zinc-300">{selectedVoice?.name}</span>
+                    <span className="text-foreground">{selectedVoice?.name}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.emotionLabel')}</span>
-                  <span className="text-zinc-300">
+                  <span className="text-muted-foreground">{t('voiceSync.emotionLabel')}</span>
+                  <span className="text-foreground">
                     {selectedEmotion?.emoji} {selectedEmotion?.label}
                   </span>
                 </div>
-                <div className="h-px bg-zinc-800/60 my-3" />
+                <div className="h-px bg-secondary/60 my-3" />
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.speedLabel')}</span>
+                  <span className="text-muted-foreground">{t('voiceSync.speedLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">
                     {speed.toFixed(1)}x
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.volumeLabel')}</span>
+                  <span className="text-muted-foreground">{t('voiceSync.volumeLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">
                     {Math.round(volume * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">{t('voiceSync.pitchLabel')}</span>
+                  <span className="text-muted-foreground">{t('voiceSync.pitchLabel')}</span>
                   <span className="text-emerald-400/80 font-mono text-xs">{pitch}</span>
                 </div>
               </div>
