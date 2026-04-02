@@ -25,7 +25,6 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { apiClient } from '@/lib/api/client'
@@ -517,6 +516,7 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
   const [isBatchDeleting, setIsBatchDeleting] = useState(false)
   const [isBatchDownloading, setIsBatchDownloading] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'timeline' | 'card'>('table')
+  const [pageInput, setPageInput] = useState('')
 
   const [timelineRecords, setTimelineRecords] = useState<MediaRecord[]>([])
   const [timelinePage, setTimelinePage] = useState(1)
@@ -1092,21 +1092,24 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">跳转到</span>
-                  <Select
-                    value={String(pagination.page)}
-                    onValueChange={(value) => handlePageChange(Number(value))}
-                  >
-                    <SelectTrigger className="w-20 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                        <SelectItem key={page} value={String(page)}>
-                          {page}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={pagination.totalPages}
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const page = parseInt(pageInput)
+                        if (page >= 1 && page <= pagination.totalPages) {
+                          handlePageChange(page)
+                          setPageInput('')
+                        }
+                      }
+                    }}
+                    placeholder={String(pagination.page)}
+                    className="w-16 h-8 text-center"
+                  />
                   <span className="text-sm text-muted-foreground">页</span>
                 </div>
                 <div className="flex items-center gap-1">
