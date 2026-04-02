@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-04-02
+
+### Added
+- **Theme System** - Complete theme customization
+  - 22 pre-configured themes (11 dark + 11 light)
+  - SettingsModal with theme picker UI (animations, gradients, polish)
+  - ThemePicker and ThemeCard components
+  - useThemeEffect hook for theme application
+  - Theme registry system with theme metadata
+
+- **Light Theme Support** - Systematic light theme compatibility
+  - All pages updated with semantic CSS tokens
+  - Settings page fully styled for light themes
+  - Header, Sidebar, HistoryPanel support light themes
+  - Shared components (LanguageSwitcher, ShortcutsHelp, etc.) updated
+
+### Fixed
+- **Theme System** - UI/UX improvements
+  - Settings modal size enlarged (max-w-3xl, max-h-[90vh])
+  - Theme picker grid padding for ring-offset visibility
+  - Tab hover overlap fixed
+  - SystemOption opacity mask removed
+  - Settings icon decoration overlap fixed
+
+- **Light Theme Colors** - Systematic color fixes
+  - All pages: text-white → text-foreground
+  - All pages: text-dark-* → text-muted-foreground
+  - All pages: bg-dark-* → bg-card/bg-secondary
+  - All pages: border-dark-* → border-border
+  - Page h1 titles now use text-foreground for light theme support
+
+### Performance
+- **Theme Application** - Media query caching
+  - Cached MediaQueryList instance in useThemeEffect
+
 ## [1.1.5] - 2026-04-02
 
 ### Added
