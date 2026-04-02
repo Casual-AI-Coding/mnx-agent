@@ -221,7 +221,7 @@ export default function ImageGeneration() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
             {t('imageGeneration.title') || '图片生成'}
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             {t('imageGeneration.subtitle') || '使用 AI 根据文本描述生成精美图片'}
           </p>
         </div>
@@ -245,17 +245,17 @@ export default function ImageGeneration() {
           {/* Prompt Input Card */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 via-fuchsia-500/20 to-pink-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/50">
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
                 <Zap className="w-4 h-4 text-violet-400" />
-                <span className="text-sm font-medium text-zinc-300">{t('imageGeneration.prompt') || '提示词'}</span>
+                <span className="text-sm font-medium text-foreground">{t('imageGeneration.prompt') || '提示词'}</span>
               </div>
               <div className="p-4 space-y-4">
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t('imageGeneration.placeholder') || "描述你想要生成的图片，例如：一只戴着墨镜的猫在海滩上..."}
-                  className="min-h-[120px] resize-none bg-zinc-950/50 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus:border-violet-500/50 focus:ring-violet-500/20"
+                  className="min-h-[120px] resize-none bg-background/50 border-zinc-800 text-zinc-100 placeholder:text-muted-foreground/50 focus:border-violet-500/50 focus:ring-violet-500/20"
                 />
                 
                 {/* Template Buttons */}
@@ -267,7 +267,7 @@ export default function ImageGeneration() {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                         activeTemplate === template.id
                           ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25'
-                          : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                          : 'bg-secondary/50 text-muted-foreground/70 hover:bg-secondary hover:text-foreground'
                       }`}
                     >
                       {template.name}
@@ -281,13 +281,13 @@ export default function ImageGeneration() {
           {/* Reference Image Card */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                   <Upload className="w-4 h-4 text-fuchsia-400" />
-                  <span className="text-sm font-medium text-zinc-300">{t('imageGeneration.reference') || '参考图片'}</span>
+                  <span className="text-sm font-medium text-foreground">{t('imageGeneration.reference') || '参考图片'}</span>
                 </div>
-                <span className="text-xs text-zinc-500">可选</span>
+                <span className="text-xs text-muted-foreground">可选</span>
               </div>
               <div className="p-4">
                 {referenceImage ? (
@@ -295,11 +295,11 @@ export default function ImageGeneration() {
                     <img
                       src={referenceImage}
                       alt="Reference"
-                      className="w-full max-h-48 object-contain rounded-lg border border-zinc-800/50"
+                      className="w-full max-h-48 object-contain rounded-lg border border-border/50"
                     />
                     <button
                       onClick={removeReferenceImage}
-                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-zinc-950/80 text-zinc-400 hover:text-red-400 hover:bg-zinc-900 transition-colors opacity-0 group-hover/image:opacity-100"
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground/70 hover:text-red-400 hover:bg-card transition-colors opacity-0 group-hover/image:opacity-100"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -311,12 +311,12 @@ export default function ImageGeneration() {
                   >
                     <div className="relative mx-auto w-12 h-12 mb-3">
                       <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full group-hover/upload:blur-2xl transition-all" />
-                      <Upload className="w-12 h-12 relative text-zinc-600 group-hover/upload:text-violet-400 transition-colors" />
+                      <Upload className="w-12 h-12 relative text-muted-foreground/50 group-hover/upload:text-violet-400 transition-colors" />
                     </div>
-                    <p className="text-sm font-medium text-zinc-400 group-hover/upload:text-zinc-300 transition-colors">
+                    <p className="text-sm font-medium text-muted-foreground/70 group-hover/upload:text-foreground transition-colors">
                       {t('imageGeneration.clickToUpload') || '点击上传参考图片'}
                     </p>
-                    <p className="text-xs text-zinc-600 mt-1">JPG, PNG</p>
+                    <p className="text-xs text-muted-foreground/50 mt-1">JPG, PNG</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -333,27 +333,27 @@ export default function ImageGeneration() {
           {/* Parameters Card */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                   <Settings2 className="w-4 h-4 text-pink-400" />
-                  <span className="text-sm font-medium text-zinc-300">{t('imageGeneration.settings') || '参数设置'}</span>
+                  <span className="text-sm font-medium text-foreground">{t('imageGeneration.settings') || '参数设置'}</span>
                 </div>
               </div>
               <div className="p-4 space-y-5">
                 {/* Model Selection */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{t('imageGeneration.model') || '模型'}</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.model') || '模型'}</label>
                   <Select value={model} onValueChange={(v) => setModel(v as ImageModel)}>
-                    <SelectTrigger className="w-full bg-zinc-950/50 border-zinc-800 text-zinc-300 hover:border-violet-500/50 transition-colors">
+                    <SelectTrigger className="w-full bg-background/50 border-zinc-800 text-foreground hover:border-violet-500/50 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                    <SelectContent className="bg-card border-border">
                       {IMAGE_MODELS.map(m => (
-                        <SelectItem key={m.id} value={m.id} className="text-zinc-300 focus:bg-zinc-800">
+                        <SelectItem key={m.id} value={m.id} className="text-foreground focus:bg-secondary">
                           <div className="flex flex-col">
                             <span>{m.name}</span>
-                            <span className="text-xs text-zinc-500">{m.description}</span>
+                            <span className="text-xs text-muted-foreground">{m.description}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -363,7 +363,7 @@ export default function ImageGeneration() {
 
                 {/* Aspect Ratio */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{t('imageGeneration.aspectRatio') || '宽高比'}</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.aspectRatio') || '宽高比'}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {ASPECT_RATIOS.slice(0, 4).map(ratio => (
                       <button
@@ -372,7 +372,7 @@ export default function ImageGeneration() {
                         className={`flex flex-col items-center justify-center py-2.5 rounded-lg transition-all duration-200 border ${
                           aspectRatio === ratio.id
                             ? 'bg-gradient-to-br from-violet-600/80 to-fuchsia-600/80 border-violet-500/50 text-white shadow-lg shadow-violet-500/20'
-                            : 'bg-zinc-950/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                            : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
                         }`}
                       >
                         <span className="text-lg leading-none mb-1">{ratio.icon}</span>
@@ -384,7 +384,7 @@ export default function ImageGeneration() {
 
                 {/* Number of Images */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{t('imageGeneration.count') || '生成数量'}</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.count') || '生成数量'}</label>
                   <div className="flex flex-wrap gap-2">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
                       <button
@@ -393,7 +393,7 @@ export default function ImageGeneration() {
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
                           numImages === n
                             ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-violet-500/50 text-white shadow-lg shadow-violet-500/20'
-                            : 'bg-zinc-950/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                            : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
                         }`}
                       >
                         {n}
@@ -405,7 +405,7 @@ export default function ImageGeneration() {
                 {/* Advanced Settings Toggle */}
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <RefreshCw className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                   {t('imageGeneration.advanced') || '高级设置'}
@@ -420,23 +420,23 @@ export default function ImageGeneration() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-2 overflow-hidden"
                     >
-                      <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
                       <div className="flex gap-2">
                         <Input
                           type="number"
                           value={seed || ''}
                           onChange={(e) => setSeed(e.target.value ? parseInt(e.target.value) : undefined)}
                           placeholder={t('imageGeneration.seedPlaceholder') || '留空则随机'}
-                          className="flex-1 bg-zinc-950/50 border-zinc-800 text-zinc-300 focus:border-violet-500/50"
+                          className="flex-1 bg-background/50 border-zinc-800 text-foreground focus:border-violet-500/50"
                         />
                         <button
                           onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                          className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+                          className="px-3 py-2 rounded-lg bg-zinc-800 text-muted-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
                         >
                           <RefreshCw className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-xs text-zinc-600">{t('imageGeneration.seedTip') || '使用相同的种子可重现相似结果'}</p>
+                      <p className="text-xs text-muted-foreground/50">{t('imageGeneration.seedTip') || '使用相同的种子可重现相似结果'}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -493,15 +493,15 @@ export default function ImageGeneration() {
         <motion.div variants={itemVariants} className="xl:col-span-7">
           <div className="relative h-full">
             <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-pink-500/20 rounded-2xl blur opacity-50" />
-            <div className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/50 rounded-xl h-full min-h-[500px] overflow-hidden">
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full min-h-[500px] overflow-hidden">
               {/* Results Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                   <Grid3x3 className="w-4 h-4 text-violet-400" />
-                  <span className="text-sm font-medium text-zinc-300">{t('imageGeneration.results') || '生成结果'}</span>
+                  <span className="text-sm font-medium text-foreground">{t('imageGeneration.results') || '生成结果'}</span>
                 </div>
                 {generatedImages.length > 0 && (
-                  <span className="text-xs text-zinc-500">{generatedImages.length} 张图片</span>
+                  <span className="text-xs text-muted-foreground">{generatedImages.length} 张图片</span>
                 )}
               </div>
 
@@ -525,8 +525,8 @@ export default function ImageGeneration() {
                           <Loader2 className="absolute inset-0 w-full h-full text-violet-400 animate-spin" />
                         </div>
                       </div>
-                      <p className="mt-8 text-lg font-medium text-zinc-300">{t('imageGeneration.creating') || '正在创造...'}</p>
-                      <p className="text-sm text-zinc-500 mt-2">{t('imageGeneration.pleaseWait') || '请稍候，AI正在绘制'}</p>
+                      <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
+                      <p className="text-sm text-muted-foreground mt-2">{t('imageGeneration.pleaseWait') || '请稍候，AI正在绘制'}</p>
                     </motion.div>
                   ) : generatedImages.length > 0 ? (
                     <motion.div
@@ -547,7 +547,7 @@ export default function ImageGeneration() {
                         >
                           <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300" />
                           <div
-                            className="relative overflow-hidden rounded-xl border border-zinc-800/50 bg-zinc-950/50 cursor-pointer"
+                            className="relative overflow-hidden rounded-xl border border-border/50 bg-background/50 cursor-pointer"
                             onClick={() => handleImagePreview(index)}
                           >
                             <img
@@ -575,7 +575,7 @@ export default function ImageGeneration() {
                               </div>
                             </div>
                             {/* Image Number Badge */}
-                            <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-zinc-950/80 backdrop-blur-sm text-xs font-medium text-zinc-400 border border-zinc-800/50">
+                            <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm text-xs font-medium text-muted-foreground/70 border border-border/50">
                               {index + 1} / {generatedImages.length}
                             </div>
                           </div>
@@ -587,23 +587,23 @@ export default function ImageGeneration() {
                       key="empty"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex flex-col items-center justify-center py-20 text-zinc-500"
+                      className="flex flex-col items-center justify-center py-20 text-muted-foreground"
                     >
                       <div className="relative">
                         <div className="absolute inset-0 bg-violet-500/10 blur-3xl rounded-full" />
-                        <ImageIcon className="w-16 h-16 relative text-zinc-600" />
+                        <ImageIcon className="w-16 h-16 relative text-muted-foreground/50" />
                       </div>
-                      <p className="mt-6 text-lg font-medium text-zinc-400">
+                      <p className="mt-6 text-lg font-medium text-muted-foreground/70">
                         {t('imageGeneration.ready') || '准备生成'}
                       </p>
-                      <p className="text-sm text-zinc-600 mt-2 max-w-sm text-center">
+                      <p className="text-sm text-muted-foreground/50 mt-2 max-w-sm text-center">
                         {t('imageGeneration.emptyTip') || '在左侧输入提示词并点击生成按钮，AI将为你创造精美图片'}
                       </p>
                       
                       {/* Tips Section */}
                       <div className="mt-8 flex flex-wrap gap-2 justify-center">
                         {['添加细节', '指定风格', '描述光线', '设置场景'].map((tip) => (
-                          <span key={tip} className="px-3 py-1 rounded-full bg-zinc-800/50 text-xs text-zinc-500 border border-zinc-800">
+                          <span key={tip} className="px-3 py-1 rounded-full bg-secondary/50 text-xs text-muted-foreground border border-border">
                             <Lightbulb className="w-3 h-3 inline mr-1" />
                             {tip}
                           </span>
