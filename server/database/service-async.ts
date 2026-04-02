@@ -187,6 +187,40 @@ export class DatabaseService {
     return rows.map(rowToCronJob)
   }
 
+  async getCronJobsWithTags(ownerId?: string): Promise<(CronJob & { tags: string[] })[]> {
+    const isPostgres = this.conn.isPostgres()
+    const aggFn = isPostgres ? 'string_agg(t.tag, \',\')' : 'GROUP_CONCAT(t.tag, \',\')'
+
+    let query: string
+    let rows: (CronJobRow & { tags: string | null })[]
+
+    if (ownerId) {
+      query = `
+        SELECT j.*, ${aggFn} as tags
+        FROM cron_jobs j
+        LEFT JOIN job_tags t ON j.id = t.job_id
+        WHERE j.owner_id = $1
+        GROUP BY j.id
+        ORDER BY j.created_at DESC
+      `
+      rows = await this.conn.query<CronJobRow & { tags: string | null }>(query, [ownerId])
+    } else {
+      query = `
+        SELECT j.*, ${aggFn} as tags
+        FROM cron_jobs j
+        LEFT JOIN job_tags t ON j.id = t.job_id
+        GROUP BY j.id
+        ORDER BY j.created_at DESC
+      `
+      rows = await this.conn.query<CronJobRow & { tags: string | null }>(query)
+    }
+
+    return rows.map(row => ({
+      ...rowToCronJob(row),
+      tags: row.tags ? row.tags.split(',').filter(tag => tag.length > 0) : [],
+    }))
+  }
+
   async getCronJobById(id: string, ownerId?: string): Promise<CronJob | null> {
     if (ownerId) {
       const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE id = $1 AND owner_id = $2', [id, ownerId])
@@ -477,6 +511,32 @@ export class DatabaseService {
     return parseInt(rows[0]?.count ?? '0', 10)
   }
 
+  async getTaskCountsByStatus(ownerId?: string): Promise<{
+    pending: number
+    running: number
+    completed: number
+    failed: number
+    cancelled: number
+    total: number
+  }> {
+    const sql = ownerId
+      ? `SELECT status, COUNT(*) as count FROM task_queue WHERE owner_id = $1 GROUP BY status`
+      : `SELECT status, COUNT(*) as count FROM task_queue GROUP BY status`
+    const rows = await this.conn.query<{ status: string; count: string }>(
+      ownerId ? sql : sql.replace('WHERE owner_id = $1', ''),
+      ownerId ? [ownerId] : []
+    )
+    const counts = { pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }
+    for (const row of rows) {
+      const count = parseInt(row.count, 10)
+      counts.total += count
+      if (row.status in counts) {
+        (counts as Record<string, number>)[row.status] = count
+      }
+    }
+    return counts
+  }
+
   async markTaskRunning(id: string): Promise<TaskQueueItem | null> {
     await this.conn.execute(
       `UPDATE task_queue SET status = 'running', started_at = $1 WHERE id = $2`,
@@ -728,6 +788,54 @@ export class DatabaseService {
     return rows.map(rowToWorkflowTemplate)
   }
 
+  async getWorkflowTemplatesPaginated(options: {
+    ownerId?: string
+    isTemplate?: boolean
+    limit?: number
+    offset?: number
+  }): Promise<{ templates: WorkflowTemplate[]; total: number }> {
+    const { ownerId, isTemplate, limit = 50, offset = 0 } = options
+
+    const conditions: string[] = []
+    const params: (string | number)[] = []
+    let paramIndex = 1
+
+    if (ownerId) {
+      conditions.push(`owner_id = $${paramIndex}`)
+      params.push(ownerId)
+      paramIndex++
+    }
+
+    if (isTemplate !== undefined) {
+      conditions.push(`is_template = $${paramIndex}`)
+      if (this.conn.isPostgres()) {
+        params.push(isTemplate ? 'true' : 'false')
+      } else {
+        params.push(isTemplate ? 1 : 0)
+      }
+      paramIndex++
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const countRows = await this.conn.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM workflow_templates ${whereClause}`,
+      params
+    )
+    const total = parseInt(countRows[0]?.count ?? '0', 10)
+
+    params.push(limit, offset)
+    const rows = await this.conn.query<WorkflowTemplateRow>(
+      `SELECT * FROM workflow_templates ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      params
+    )
+
+    return {
+      templates: rows.map(rowToWorkflowTemplate),
+      total,
+    }
+  }
+
   async getWorkflowTemplateById(id: string, ownerId?: string): Promise<WorkflowTemplate | null> {
     if (ownerId) {
       const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates WHERE id = $1 AND owner_id = $2', [id, ownerId])
@@ -967,6 +1075,67 @@ export class DatabaseService {
     return rows.map(rowToWebhookConfig)
   }
 
+  async getWebhookConfigsForJob(
+    jobId: string | null,
+    ownerId?: string
+  ): Promise<WebhookConfig[]> {
+    let rows: WebhookConfigRow[]
+
+    if (ownerId) {
+      if (jobId !== null) {
+        if (this.conn.isPostgres()) {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE (job_id = $1 OR job_id IS NULL) AND is_active = true AND owner_id = $2',
+            [jobId, ownerId]
+          )
+        } else {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE (job_id = ? OR job_id IS NULL) AND is_active = 1 AND owner_id = ?',
+            [jobId, ownerId]
+          )
+        }
+      } else {
+        if (this.conn.isPostgres()) {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = true AND owner_id = $1',
+            [ownerId]
+          )
+        } else {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = 1 AND owner_id = ?',
+            [ownerId]
+          )
+        }
+      }
+    } else {
+      if (jobId !== null) {
+        if (this.conn.isPostgres()) {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE (job_id = $1 OR job_id IS NULL) AND is_active = true',
+            [jobId]
+          )
+        } else {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE (job_id = ? OR job_id IS NULL) AND is_active = 1',
+            [jobId]
+          )
+        }
+      } else {
+        if (this.conn.isPostgres()) {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = true'
+          )
+        } else {
+          rows = await this.conn.query<WebhookConfigRow>(
+            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = 1'
+          )
+        }
+      }
+    }
+
+    return rows.map(rowToWebhookConfig)
+  }
+
   async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
     if (ownerId) {
       const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
@@ -1154,12 +1323,98 @@ export class DatabaseService {
     )
   }
 
+  async updateTasksStatusBatch(
+    taskIds: string[],
+    status: TaskStatus,
+    ownerId?: string
+  ): Promise<number> {
+    if (taskIds.length === 0) {
+      return 0
+    }
+
+    const values: (string | number)[] = [status]
+    let paramIndex = 2
+
+    const idPlaceholders: string[] = []
+    for (let i = 0; i < taskIds.length; i++) {
+      idPlaceholders.push(this.conn.isPostgres() ? `$${paramIndex}` : '?')
+      values.push(taskIds[i])
+      paramIndex++
+    }
+
+    let sql: string
+    if (ownerId) {
+      values.push(ownerId)
+      sql = `UPDATE task_queue SET status = $1 WHERE id IN (${idPlaceholders.join(', ')}) AND owner_id = $${paramIndex}`
+    } else {
+      sql = `UPDATE task_queue SET status = $1 WHERE id IN (${idPlaceholders.join(', ')})`
+    }
+
+    const result = await this.conn.execute(sql, values)
+    return result.changes
+  }
+
   async getCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
     return this.getCapacityByService(serviceType)
   }
 
   async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> {
     return this.getPendingTasksByJob(jobId, limit)
+  }
+
+  async getQueueStats(jobId?: string): Promise<{
+    pending: number
+    running: number
+    completed: number
+    failed: number
+    cancelled: number
+    total: number
+  }> {
+    const stats = {
+      pending: 0,
+      running: 0,
+      completed: 0,
+      failed: 0,
+      cancelled: 0,
+      total: 0,
+    }
+
+    let rows: { status: string; count: string }[]
+
+    if (jobId) {
+      rows = await this.conn.query<{ status: string; count: string }>(
+        'SELECT status, COUNT(*) as count FROM task_queue WHERE job_id = $1 GROUP BY status',
+        [jobId]
+      )
+    } else {
+      rows = await this.conn.query<{ status: string; count: string }>(
+        'SELECT status, COUNT(*) as count FROM task_queue GROUP BY status'
+      )
+    }
+
+    for (const row of rows) {
+      const count = parseInt(row.count, 10)
+      stats.total += count
+      switch (row.status) {
+        case 'pending':
+          stats.pending = count
+          break
+        case 'running':
+          stats.running = count
+          break
+        case 'completed':
+          stats.completed = count
+          break
+        case 'failed':
+          stats.failed = count
+          break
+        case 'cancelled':
+          stats.cancelled = count
+          break
+      }
+    }
+
+    return stats
   }
 
   async createTaskQueueItem(data: { job_id?: string | null; task_type: string; payload: string; priority?: number; status?: string; max_retries?: number }): Promise<string> {

@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.23",
     "@types/archiver": "^7.0.0",
     "@types/multer": "^2.1.0",
     "@types/ws": "^8.18.1",

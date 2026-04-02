@@ -297,6 +297,14 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON audit_logs(resource_id)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_response_status ON audit_logs(response_status);
+
+-- Performance indexes for frequently filtered columns
+-- execution_logs.status: filter logs by status (pending/running/success/failure)
+CREATE INDEX IF NOT EXISTS idx_execution_logs_status ON execution_logs(status);
+-- task_queue.task_type: filter queue by task type (text/voice/image/music/video)
+CREATE INDEX IF NOT EXISTS idx_task_queue_type ON task_queue(task_type);
+-- workflow_templates.name: lookup templates by name
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_name ON workflow_templates(name);
 `
 
 export const PG_MIGRATIONS = [

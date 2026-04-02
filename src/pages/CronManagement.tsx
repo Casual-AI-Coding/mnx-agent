@@ -1,4 +1,5 @@
-import { useState, useEffect, memo, useCallback, useMemo } from 'react'
+import { useState, useEffect, memo, useCallback, useMemo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
@@ -317,13 +318,41 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
 }
 
 // ============================================
-// Jobs List Tab
+// Virtualized Table Components
+// ============================================
+
+interface VirtualTableContainerProps {
+  children: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+}
+
+const VirtualTableContainer = memo(function VirtualTableContainer({
+  children,
+  className = '',
+  style,
+}: VirtualTableContainerProps) {
+  return (
+    <div
+      className={`overflow-auto ${className}`}
+      style={{
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  )
+})
+
+// ============================================
+// Jobs List Tab - Virtualized
 // ============================================
 
 const JobsListTab = memo(function JobsListTab() {
   const { jobs, loading, fetchJobs, createJob, deleteJob, toggleJob, runJobManually } =
     useCronJobsStore()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const parentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchJobs()
@@ -338,6 +367,15 @@ const JobsListTab = memo(function JobsListTab() {
       await deleteJob(id)
     }
   }
+
+  const rowVirtualizer = useVirtualizer({
+    count: jobs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 68,
+    overscan: 10,
+  })
+
+  const virtualItems = rowVirtualizer.getVirtualItems()
 
   if (loading && jobs.length === 0) {
     return (
@@ -375,88 +413,107 @@ const JobsListTab = memo(function JobsListTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-800">
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Name</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Cron Expression</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Last Run</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Next Run</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Total Runs</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => (
-                <motion.tr
-                  key={job.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium text-white">{job.name}</p>
-                      {job.description && (
-                        <p className="text-xs text-dark-500">{job.description}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <code className="text-sm text-primary-400 font-mono bg-dark-950 px-2 py-1 rounded">
-                      {job.cronExpression}
-                    </code>
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
-                  </td>
-                  <td className="py-3 px-4 text-sm text-dark-300">
-                    {formatDate(job.lastRunAt)}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-dark-300">
-                    {formatDate(job.nextRunAt)}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-dark-300">
-                    {job.totalRuns}
-                    {job.totalFailures > 0 && (
-                      <span className="text-destructive ml-1">({job.totalFailures} failed)</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => toggleJob(job.id)}
-                        className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-white transition-colors"
-                        title={job.isActive ? 'Pause' : 'Activate'}
-                      >
-                        {job.isActive ? (
-                          <Pause className="w-4 h-4" />
-                        ) : (
-                          <Play className="w-4 h-4" />
+        <div className="overflow-hidden rounded-lg border border-dark-800">
+          <div className="bg-dark-900 border-b border-dark-800">
+            <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3">
+              <div className="text-sm font-medium text-dark-400">Name</div>
+              <div className="text-sm font-medium text-dark-400">Cron Expression</div>
+              <div className="text-sm font-medium text-dark-400">Status</div>
+              <div className="text-sm font-medium text-dark-400">Last Run</div>
+              <div className="text-sm font-medium text-dark-400">Next Run</div>
+              <div className="text-sm font-medium text-dark-400">Total Runs</div>
+              <div className="text-sm font-medium text-dark-400 text-right">Actions</div>
+            </div>
+          </div>
+          <div
+            ref={parentRef}
+            className="overflow-auto"
+            style={{ maxHeight: '60vh' }}
+          >
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualItems.map((virtualRow) => {
+                const job = jobs[virtualRow.index]
+                return (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
+                  >
+                    <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3 items-center h-full">
+                      <div>
+                        <p className="font-medium text-white truncate">{job.name}</p>
+                        {job.description && (
+                          <p className="text-xs text-dark-500 truncate">{job.description}</p>
                         )}
-                      </button>
-                      <button
-                        onClick={() => runJobManually(job.id)}
-                        className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
-                        title="Run Now"
-                      >
-                        <Zap className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(job.id)}
-                        className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      </div>
+                      <div>
+                        <code className="text-sm text-primary-400 font-mono bg-dark-950 px-2 py-1 rounded">
+                          {job.cronExpression}
+                        </code>
+                      </div>
+                      <div>
+                        <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
+                      </div>
+                      <div className="text-sm text-dark-300">
+                        {formatDate(job.lastRunAt)}
+                      </div>
+                      <div className="text-sm text-dark-300">
+                        {formatDate(job.nextRunAt)}
+                      </div>
+                      <div className="text-sm text-dark-300">
+                        {job.totalRuns}
+                        {job.totalFailures > 0 && (
+                          <span className="text-destructive ml-1">({job.totalFailures} failed)</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggleJob(job.id)}
+                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-white transition-colors"
+                          title={job.isActive ? 'Pause' : 'Activate'}
+                        >
+                          {job.isActive ? (
+                            <Pause className="w-4 h-4" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => runJobManually(job.id)}
+                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
+                          title="Run Now"
+                        >
+                          <Zap className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -476,6 +533,7 @@ const JobsListTab = memo(function JobsListTab() {
 const TaskQueueTab = memo(function TaskQueueTab() {
   const { tasks, loading, filter, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const parentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchTasks(statusFilter === 'all' ? {} : { status: statusFilter })
@@ -490,6 +548,15 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       await deleteTask(id)
     }
   }
+
+  const rowVirtualizer = useVirtualizer({
+    count: tasks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56,
+    overscan: 10,
+  })
+
+  const virtualItems = rowVirtualizer.getVirtualItems()
 
   return (
     <div className="space-y-4">
@@ -596,71 +663,92 @@ const TaskQueueTab = memo(function TaskQueueTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-800">
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Task Type</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Job ID</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Priority</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Created</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Retries</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task) => (
-                <motion.tr
-                  key={task.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <span className="text-sm text-white font-medium">{task.taskType}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <code className="text-xs text-dark-400 font-mono">{task.jobId}</code>
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={task.status} />
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge variant={task.priority > 5 ? 'default' : 'secondary'}>
-                      {task.priority}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-dark-300">
-                    {formatDate(task.createdAt)}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-dark-300">
-                    {task.retryCount}/{task.maxRetries}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center justify-end gap-2">
-                      {task.status === 'failed' && task.retryCount < task.maxRetries && (
+        <div className="overflow-hidden rounded-lg border border-dark-800">
+          <div className="bg-dark-900 border-b border-dark-800">
+            <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3">
+              <div className="text-sm font-medium text-dark-400">Task Type</div>
+              <div className="text-sm font-medium text-dark-400">Job ID</div>
+              <div className="text-sm font-medium text-dark-400">Status</div>
+              <div className="text-sm font-medium text-dark-400">Priority</div>
+              <div className="text-sm font-medium text-dark-400">Created</div>
+              <div className="text-sm font-medium text-dark-400">Retries</div>
+              <div className="text-sm font-medium text-dark-400 text-right">Actions</div>
+            </div>
+          </div>
+          <div
+            ref={parentRef}
+            className="overflow-auto"
+            style={{ maxHeight: '50vh' }}
+          >
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualItems.map((virtualRow) => {
+                const task = tasks[virtualRow.index]
+                return (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
+                  >
+                    <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3 items-center h-full">
+                      <div>
+                        <span className="text-sm text-white font-medium">{task.taskType}</span>
+                      </div>
+                      <div>
+                        <code className="text-xs text-dark-400 font-mono truncate block">{task.jobId}</code>
+                      </div>
+                      <div>
+                        <StatusBadge status={task.status} />
+                      </div>
+                      <div>
+                        <Badge variant={task.priority > 5 ? 'default' : 'secondary'}>
+                          {task.priority}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-dark-300">
+                        {formatDate(task.createdAt)}
+                      </div>
+                      <div className="text-sm text-dark-300">
+                        {task.retryCount}/{task.maxRetries}
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        {task.status === 'failed' && task.retryCount < task.maxRetries && (
+                          <button
+                            onClick={() => handleRetry(task)}
+                            className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
+                            title="Retry"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleRetry(task)}
-                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
-                          title="Retry"
+                          onClick={() => handleDelete(task.id)}
+                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
+                          title="Delete"
                         >
-                          <RotateCcw className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(task.id)}
-                        className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      </div>
                     </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -675,6 +763,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
   const { logs, loading, fetchLogs } = useExecutionLogsStore()
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const parentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchLogs()
@@ -687,6 +776,16 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
   const filteredLogs = statusFilter === 'all' 
     ? logs 
     : logs.filter((log) => log.status === statusFilter)
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredLogs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 100,
+    overscan: 5,
+    measureElement: (el) => el.getBoundingClientRect().height,
+  })
+
+  const virtualItems = rowVirtualizer.getVirtualItems()
 
   return (
     <div className="space-y-4">
@@ -728,112 +827,137 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filteredLogs.map((log) => (
-            <motion.div
-              key={log.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card
-                className={`cursor-pointer transition-colors ${
-                  expandedLogId === log.id ? 'bg-dark-800/50' : 'hover:bg-dark-800/30'
-                }`}
-                onClick={() => toggleExpand(log.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <StatusBadge status={log.status} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm text-dark-300 font-mono">{log.jobId}</code>
-                        <Badge variant="outline" className="text-xs">
-                          {log.triggerType}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-dark-500 mt-1">
-                        {formatDate(log.startedAt)} • Duration: {formatDuration(log.durationMs)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-6 text-sm">
-                      <div className="text-center">
-                        <p className="text-white font-medium">{log.tasksExecuted}</p>
-                        <p className="text-xs text-dark-500">Executed</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-green-400 font-medium">{log.tasksSucceeded}</p>
-                        <p className="text-xs text-dark-500">Succeeded</p>
-                      </div>
-                      <div className="text-center">
-                        <p className={`font-medium ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
-                          {log.tasksFailed}
-                        </p>
-                        <p className="text-xs text-dark-500">Failed</p>
-                      </div>
-                    </div>
-                    <button className="p-1 rounded hover:bg-dark-700">
-                      {expandedLogId === log.id ? (
-                        <ChevronUp className="w-5 h-5 text-dark-400" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-dark-400" />
-                      )}
-                    </button>
-                  </div>
-
-                  <AnimatePresence>
-                    {expandedLogId === log.id && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pt-4 mt-4 border-t border-dark-800">
-                          <h4 className="text-sm font-medium text-dark-300 mb-3">Task Breakdown</h4>
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div className="bg-dark-950 rounded-lg p-3">
-                              <p className="text-2xl font-bold text-white">{log.tasksExecuted}</p>
-                              <p className="text-xs text-dark-500">Total Tasks</p>
-                            </div>
-                            <div className="bg-dark-950 rounded-lg p-3">
-                              <p className="text-2xl font-bold text-green-400">{log.tasksSucceeded}</p>
-                              <p className="text-xs text-dark-500">Succeeded</p>
-                            </div>
-                            <div className="bg-dark-950 rounded-lg p-3">
-                              <p className={`text-2xl font-bold ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
-                                {log.tasksFailed}
-                              </p>
-                              <p className="text-xs text-dark-500">Failed</p>
-                            </div>
+        <div
+          ref={parentRef}
+          className="overflow-auto"
+          style={{ maxHeight: '70vh' }}
+        >
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualItems.map((virtualRow) => {
+              const log = filteredLogs[virtualRow.index]
+              return (
+                <motion.div
+                  key={log.id}
+                  ref={rowVirtualizer.measureElement}
+                  data-index={virtualRow.index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="pb-3"
+                >
+                  <Card
+                    className={`cursor-pointer transition-colors ${
+                      expandedLogId === log.id ? 'bg-dark-800/50' : 'hover:bg-dark-800/30'
+                    }`}
+                    onClick={() => toggleExpand(log.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <StatusBadge status={log.status} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm text-dark-300 font-mono">{log.jobId}</code>
+                            <Badge variant="outline" className="text-xs">
+                              {log.triggerType}
+                            </Badge>
                           </div>
-                          {log.errorSummary && (
-                            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <AlertCircle className="w-4 h-4 text-destructive" />
-                                <span className="text-sm font-medium text-destructive">Error Summary</span>
-                              </div>
-                              <p className="text-sm text-destructive/80">{log.errorSummary}</p>
-                            </div>
-                          )}
-                          {log.logDetail && (
-                            <div className="mt-4">
-                              <h5 className="text-sm font-medium text-dark-300 mb-2 flex items-center gap-2">
-                                <Terminal className="w-4 h-4" />
-                                Log Details
-                              </h5>
-                              <pre className="bg-dark-950 rounded-lg p-3 text-xs text-dark-400 font-mono overflow-x-auto">
-                                {log.logDetail}
-                              </pre>
-                            </div>
-                          )}
+                          <p className="text-xs text-dark-500 mt-1">
+                            {formatDate(log.startedAt)} • Duration: {formatDuration(log.durationMs)}
+                          </p>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <p className="text-white font-medium">{log.tasksExecuted}</p>
+                            <p className="text-xs text-dark-500">Executed</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-green-400 font-medium">{log.tasksSucceeded}</p>
+                            <p className="text-xs text-dark-500">Succeeded</p>
+                          </div>
+                          <div className="text-center">
+                            <p className={`font-medium ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
+                              {log.tasksFailed}
+                            </p>
+                            <p className="text-xs text-dark-500">Failed</p>
+                          </div>
+                        </div>
+                        <button className="p-1 rounded hover:bg-dark-700">
+                          {expandedLogId === log.id ? (
+                            <ChevronUp className="w-5 h-5 text-dark-400" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-dark-400" />
+                          )}
+                        </button>
+                      </div>
+
+                      <AnimatePresence>
+                        {expandedLogId === log.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 mt-4 border-t border-dark-800">
+                              <h4 className="text-sm font-medium text-dark-300 mb-3">Task Breakdown</h4>
+                              <div className="grid grid-cols-3 gap-4 mb-4">
+                                <div className="bg-dark-950 rounded-lg p-3">
+                                  <p className="text-2xl font-bold text-white">{log.tasksExecuted}</p>
+                                  <p className="text-xs text-dark-500">Total Tasks</p>
+                                </div>
+                                <div className="bg-dark-950 rounded-lg p-3">
+                                  <p className="text-2xl font-bold text-green-400">{log.tasksSucceeded}</p>
+                                  <p className="text-xs text-dark-500">Succeeded</p>
+                                </div>
+                                <div className="bg-dark-950 rounded-lg p-3">
+                                  <p className={`text-2xl font-bold ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
+                                    {log.tasksFailed}
+                                  </p>
+                                  <p className="text-xs text-dark-500">Failed</p>
+                                </div>
+                              </div>
+                              {log.errorSummary && (
+                                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <AlertCircle className="w-4 h-4 text-destructive" />
+                                    <span className="text-sm font-medium text-destructive">Error Summary</span>
+                                  </div>
+                                  <p className="text-sm text-destructive/80">{log.errorSummary}</p>
+                                </div>
+                              )}
+                              {log.logDetail && (
+                                <div className="mt-4">
+                                  <h5 className="text-sm font-medium text-dark-300 mb-2 flex items-center gap-2">
+                                    <Terminal className="w-4 h-4" />
+                                    Log Details
+                                  </h5>
+                                  <pre className="bg-dark-950 rounded-lg p-3 text-xs text-dark-400 font-mono overflow-x-auto">
+                                    {log.logDetail}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

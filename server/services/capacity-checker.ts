@@ -1,6 +1,9 @@
 import { MiniMaxClient } from '../lib/minimax'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
 import type { DatabaseService } from '../database/service-async.js'
+import { SimpleCache } from '../lib/cache.js'
+
+const BALANCE_CACHE_TTL_MS = 30000
 
 export interface BalanceResult {
   totalBalance: number
@@ -32,16 +35,24 @@ const MIN_BALANCE_THRESHOLD = 1.0
 export class CapacityChecker {
   private client: MiniMaxClient
   private db: DatabaseService
+  private balanceCache: SimpleCache<BalanceResult>
 
   constructor(client: MiniMaxClient, db: DatabaseService) {
     this.client = client
     this.db = db
+    this.balanceCache = new SimpleCache<BalanceResult>()
   }
 
   async checkBalance(): Promise<BalanceResult> {
+    const cached = this.balanceCache.get('balance')
+    if (cached) {
+      return cached
+    }
+
     const rawResponse = await this.client.getBalance()
     const result = this.parseBalanceResponse(rawResponse)
     await this.saveCapacityRecord('all', result.totalBalance, result.totalBalance)
+    this.balanceCache.set('balance', result, BALANCE_CACHE_TTL_MS)
     return result
   }
 
@@ -101,6 +112,8 @@ export class CapacityChecker {
   }
 
   async refreshAllCapacity(): Promise<void> {
+    this.balanceCache.delete('balance')
+
     const balance = await this.checkBalance()
     await this.saveCapacityRecord('all', balance.totalBalance, balance.totalBalance)
 

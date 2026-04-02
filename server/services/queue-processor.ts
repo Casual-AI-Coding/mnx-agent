@@ -127,16 +127,15 @@ export class QueueProcessor {
 
   async cancelPendingTasks(jobId: string): Promise<number> {
     const pendingTasks = await this.db.getPendingTasks(jobId, 1000)
-    let cancelledCount = 0
+    const pendingTaskIds = pendingTasks
+      .filter(task => task.status === TaskStatus.PENDING)
+      .map(task => task.id)
 
-    for (const task of pendingTasks) {
-      if (task.status === TaskStatus.PENDING) {
-        await this.db.updateTaskStatus(task.id, TaskStatus.CANCELLED, {})
-        cancelledCount++
-      }
+    if (pendingTaskIds.length === 0) {
+      return 0
     }
 
-    return cancelledCount
+    return await this.db.updateTasksStatusBatch(pendingTaskIds, TaskStatus.CANCELLED)
   }
 
   async retryFailedTasks(jobId: string): Promise<number> {
@@ -228,37 +227,9 @@ export class QueueProcessor {
     failed: number
     cancelled: number
   }> {
-    const tasks = await this.db.getPendingTasks(jobId, 10000)
-
-    const stats = {
-      pending: 0,
-      running: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0,
-    }
-
-    for (const task of tasks) {
-      switch (task.status) {
-        case TaskStatus.PENDING:
-          stats.pending++
-          break
-        case TaskStatus.RUNNING:
-          stats.running++
-          break
-        case TaskStatus.COMPLETED:
-          stats.completed++
-          break
-        case TaskStatus.FAILED:
-          stats.failed++
-          break
-        case TaskStatus.CANCELLED:
-          stats.cancelled++
-          break
-      }
-    }
-
-    return stats
+    const stats = await this.db.getQueueStats(jobId)
+    const { total: _total, ...result } = stats
+    return result
   }
 
   async processBatch(

@@ -45,9 +45,7 @@ router.get('/health', asyncHandler(async (_req, res) => {
     }))
 
     // Get task counts
-    const pendingCount = await db.getPendingTaskCount()
-    const runningCount = await db.getRunningTaskCount()
-    const failedCount = await db.getFailedTaskCount()
+    const taskCounts = await db.getTaskCountsByStatus()
 
     const health = {
       status: 'healthy',
@@ -61,9 +59,9 @@ router.get('/health', asyncHandler(async (_req, res) => {
         connected: await db.isConnected(),
       },
       queue: {
-        pending: pendingCount,
-        running: runningCount,
-        failed: failedCount,
+        pending: taskCounts.pending,
+        running: taskCounts.running,
+        failed: taskCounts.failed,
       },
     }
     res.json({ success: true, data: health })
@@ -87,15 +85,13 @@ router.get('/health', asyncHandler(async (_req, res) => {
 router.get('/jobs', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
-  const jobs: CronJob[] = await db.getAllCronJobs(ownerId)
-  const jobsWithTags = await Promise.all(jobs.map(async (job: CronJob) => ({
+  const jobsWithTags = await db.getCronJobsWithTags(ownerId)
+  const jobs = jobsWithTags.map(job => ({
     ...job,
-    tags: await db.getJobTags(job.id),
     last_run: job.last_run_at,
     next_run: job.next_run_at,
-    total_runs: job.total_runs,
-  })))
-  res.json({ success: true, data: { jobs: jobsWithTags, total: jobs.length } })
+  }))
+  res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
@@ -645,12 +641,13 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
     parsedEdges = edges || []
   }
   if (parsedNodes.length === 0) errors.push('Workflow must have at least one node')
-  const nodeIds = new Set(parsedNodes.map(n => n.id))
+  const nodeIds = new Set<string>()
   for (const node of parsedNodes) {
     if (!node.id) errors.push('Node missing id field')
-    if (nodeIds.has(node.id) && parsedNodes.filter(n => n.id === node.id).length > 1) {
+    if (nodeIds.has(node.id)) {
       errors.push(`Duplicate node id: ${node.id}`)
     }
+    nodeIds.add(node.id)
   }
   for (const edge of parsedEdges) {
     if (!edge.source || !edge.target) errors.push('Edge missing source or target field')

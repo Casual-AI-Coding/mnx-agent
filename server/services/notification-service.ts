@@ -8,13 +8,29 @@ export interface WebhookPayload {
   data: unknown
 }
 
+const WEBHOOK_RATE_LIMIT_PER_MINUTE = 100
+const WEBHOOK_RATE_WINDOW_MS = 60000
+
 export class NotificationService {
   private db: DatabaseService
   private timeout: number
+  private webhookRateLimiter = new Map<string, { count: number; resetAt: number }>()
 
   constructor(db: DatabaseService, options?: { timeout?: number }) {
     this.db = db
     this.timeout = options?.timeout ?? 10000
+  }
+
+  private checkRateLimit(webhookId: string): boolean {
+    const now = Date.now()
+    const limiter = this.webhookRateLimiter.get(webhookId)
+    if (!limiter || now > limiter.resetAt) {
+      this.webhookRateLimiter.set(webhookId, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS })
+      return true
+    }
+    if (limiter.count >= WEBHOOK_RATE_LIMIT_PER_MINUTE) return false
+    limiter.count++
+    return true
   }
 
   async notifyJobEvent(
@@ -42,13 +58,10 @@ export class NotificationService {
     headers: Record<string, string>
     secret: string | null
   }>> {
-    const allConfigs = await this.db.getWebhookConfigs()
-    
-    return allConfigs
-      .filter(config => 
-        (config.job_id === jobId || config.job_id === null) &&
-        config.events.some(e => e === event)
-      )
+    const configs = await this.db.getWebhookConfigsForJob(jobId)
+
+    return configs
+      .filter(config => config.events.some(e => e === event))
       .map(config => ({
         id: config.id,
         url: config.url,
@@ -61,6 +74,12 @@ export class NotificationService {
     config: { id: string; url: string; headers: Record<string, string>; secret: string | null },
     payload: WebhookPayload
   ): Promise<void> {
+    if (!this.checkRateLimit(config.id)) {
+      console.warn(`Webhook ${config.id} rate limited, skipping delivery`)
+      await this.recordDelivery(config.id, payload, null, null, 'Rate limited: exceeded 100 requests per minute')
+      return
+    }
+
     const body = JSON.stringify(payload)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

@@ -12,6 +12,7 @@ class TestableQueueProcessor extends QueueProcessor {
 
 interface MockDatabaseService {
   getPendingTasks: ReturnType<typeof vi.fn>
+  getQueueStats: ReturnType<typeof vi.fn>
   updateTask: ReturnType<typeof vi.fn>
   updateTaskStatus: ReturnType<typeof vi.fn>
   getDatabase: ReturnType<typeof vi.fn>
@@ -38,6 +39,7 @@ describe('QueueProcessor', () => {
     mockDatabaseRun = vi.fn()
     mockDb = {
       getPendingTasks: vi.fn().mockResolvedValue([]),
+      getQueueStats: vi.fn().mockResolvedValue({ pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }),
       updateTask: vi.fn().mockResolvedValue(undefined),
       updateTaskStatus: vi.fn().mockResolvedValue(undefined),
       getDatabase: vi.fn().mockReturnValue({
@@ -476,15 +478,14 @@ describe('QueueProcessor', () => {
 
   describe('Queue Stats', () => {
     it('should return correct queue statistics', async () => {
-      const tasks: TaskQueueRow[] = [
-        { id: '1', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.PENDING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '2', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.RUNNING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.COMPLETED, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '4', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '5', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.CANCELLED, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-      ]
-      
-      mockDb.getPendingTasks.mockResolvedValueOnce(tasks)
+      mockDb.getQueueStats.mockResolvedValueOnce({
+        pending: 1,
+        running: 1,
+        completed: 1,
+        failed: 1,
+        cancelled: 1,
+        total: 5
+      })
 
       const stats = await processor.getQueueStats('job-1')
 
@@ -495,6 +496,7 @@ describe('QueueProcessor', () => {
         failed: 1,
         cancelled: 1
       })
+      expect(mockDb.getQueueStats).toHaveBeenCalledWith('job-1')
     })
   })
 

@@ -21,7 +21,9 @@ const TASK_TYPE_MAP: Record<string, string> = {
 
 const POLLING_CONFIG = {
   maxDurationMs: 10 * 60 * 1000,
-  intervalMs: 10 * 1000,
+  initialIntervalMs: 3 * 1000,
+  maxIntervalMs: 30 * 1000,
+  backoffMultiplier: 1.5,
 }
 
 const DEFAULT_TIMEOUT = 5 * 60 * 1000
@@ -128,9 +130,18 @@ export class TaskExecutor {
 
     const startTime = Date.now()
     const deadline = startTime + POLLING_CONFIG.maxDurationMs
+    let currentInterval = POLLING_CONFIG.initialIntervalMs
 
     while (Date.now() < deadline) {
-      await this.delay(POLLING_CONFIG.intervalMs)
+      // Apply exponential backoff with jitter
+      const jitter = Math.random() * 1000
+      await this.delay(currentInterval + jitter)
+
+      // Exponentially increase interval for next iteration
+      currentInterval = Math.min(
+        currentInterval * POLLING_CONFIG.backoffMultiplier,
+        POLLING_CONFIG.maxIntervalMs
+      )
 
       const statusResult = await checkStatus(taskId)
       const statusData = statusResult as {
