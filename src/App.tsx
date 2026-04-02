@@ -3,9 +3,9 @@ import { useEffect, Suspense, lazy } from 'react'
 import { Toaster } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
-import { useAppStore } from '@/stores/app'
 import AuthGuard from '@/components/AuthGuard'
 import analytics from '@/lib/analytics'
+import { useThemeEffect } from '@/hooks/useThemeEffect'
 
 // Lazy load page components for code splitting
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
@@ -63,7 +63,8 @@ function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactN
 
 function AppContent() {
   const location = useLocation()
-  const theme = useAppStore((state) => state.theme)
+
+  useThemeEffect()
 
   useEffect(() => {
     analytics.init()
@@ -97,45 +98,6 @@ function AppContent() {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)
     }
   }, [])
-
-  useEffect(() => {
-    const root = document.documentElement
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
-    const applyTheme = () => {
-      if (theme === 'dark') {
-        root.classList.add('dark')
-      } else if (theme === 'light') {
-        root.classList.remove('dark')
-      } else {
-        if (mediaQuery.matches) {
-          root.classList.add('dark')
-        } else {
-          root.classList.remove('dark')
-        }
-      }
-    }
-
-    applyTheme()
-
-    const handleSystemChange = (e: MediaQueryListEvent) => {
-      if (theme === 'system') {
-        if (e.matches) {
-          root.classList.add('dark')
-        } else {
-          root.classList.remove('dark')
-        }
-      }
-    }
-
-    if (theme === 'system') {
-      mediaQuery.addEventListener('change', handleSystemChange)
-    }
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleSystemChange)
-    }
-  }, [theme])
 
   return (
     <Routes>
