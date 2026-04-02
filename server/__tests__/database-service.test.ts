@@ -1,18 +1,14 @@
 import { DatabaseService } from '../database/service'
-import { TaskStatus, TriggerType, ExecutionStatus, WebhookEvent } from '../database/types'
+import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types'
 import type {
   CronJob,
   TaskQueueItem,
   ExecutionLog,
   CapacityRecord,
   WorkflowTemplate,
-  WebhookConfig,
-  DeadLetterItem,
   CreateCronJob,
   CreateTaskQueueItem,
   CreateExecutionLog,
-  CreateWebhookConfig,
-  CreateDeadLetterItem,
 } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync } from 'fs'
@@ -74,7 +70,6 @@ describe('DatabaseService', () => {
       description: 'Test job description',
       cron_expression: '0 * * * *',
       is_active: true,
-      workflow_json: JSON.stringify({ nodes: [], edges: [] }),
       timeout_ms: 60000,
     })
 
@@ -88,7 +83,6 @@ describe('DatabaseService', () => {
         expect(job.description).toBe('Test job description')
         expect(job.cron_expression).toBe('0 * * * *')
         expect(job.is_active).toBe(true)
-        expect(job.workflow_json).toBeDefined()
         expect(job.timeout_ms).toBe(60000)
         expect(job.total_runs).toBe(0)
         expect(job.total_failures).toBe(0)
@@ -100,7 +94,6 @@ describe('DatabaseService', () => {
         const data: CreateCronJob = {
           name: 'Minimal Job',
           cron_expression: '*/5 * * * *',
-          workflow_json: '{}',
         }
         const job = db.createCronJob(data)
         
@@ -320,7 +313,6 @@ describe('DatabaseService', () => {
         const job = db.createCronJob({
           name: 'Job for Task',
           cron_expression: '0 * * * *',
-          workflow_json: '{}',
         })
         
         const data = { ...createTaskData('test-action'), job_id: job.id }
@@ -407,8 +399,8 @@ describe('DatabaseService', () => {
       })
 
       it('should get pending tasks by job', () => {
-        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *', workflow_json: '{}' })
-        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *', workflow_json: '{}' })
+        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *' })
+        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *' })
         
         const task1 = db.createTask({ ...createTaskData('j1'), job_id: job1.id, status: TaskStatus.PENDING })
         const task2 = db.createTask({ ...createTaskData('j2'), job_id: job2.id, status: TaskStatus.PENDING })
@@ -444,7 +436,7 @@ describe('DatabaseService', () => {
       })
 
       it('should get tasks by job ID', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
+        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *' })
         
         const task1 = db.createTask({ ...createTaskData('t1'), job_id: job.id })
         const task2 = db.createTask({ ...createTaskData('t2'), job_id: job.id })
@@ -594,7 +586,7 @@ describe('DatabaseService', () => {
 
     describe('Create', () => {
       it('should create an execution log', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
+        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *' })
         
         const log = db.createExecutionLog({
           ...createLogData(),
@@ -634,8 +626,8 @@ describe('DatabaseService', () => {
       })
 
       it('should get logs filtered by job_id', () => {
-        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *', workflow_json: '{}' })
-        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *', workflow_json: '{}' })
+        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *' })
+        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *' })
         
         const log1 = db.createExecutionLog({ ...createLogData(), job_id: job1.id })
         const log2 = db.createExecutionLog({ ...createLogData(), job_id: job2.id })
@@ -857,7 +849,7 @@ describe('DatabaseService', () => {
       description: 'A test template',
       nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
       edges_json: JSON.stringify([{ id: 'edge-1', source: 'node-1', target: 'node-2' }]),
-      is_template: true,
+      is_public: true,
     })
 
     describe('Create', () => {
@@ -866,17 +858,17 @@ describe('DatabaseService', () => {
         
         expect(template.id).toBeDefined()
         expect(template.name).toBe('Test Template')
-        expect(template.is_template).toBe(true)
+        expect(template.is_public).toBe(true)
         expect(template.created_at).toBeDefined()
       })
 
-      it('should create template with is_template false', () => {
+      it('should create template with is_public false', () => {
         const template = db.createWorkflowTemplate({
           ...createTemplateData(),
-          is_template: false,
+          is_public: false,
         })
         
-        expect(template.is_template).toBe(false)
+        expect(template.is_public).toBe(false)
       })
     })
 
@@ -898,8 +890,8 @@ describe('DatabaseService', () => {
       })
 
       it('should get only marked templates', () => {
-        const marked = db.createWorkflowTemplate({ ...createTemplateData(), is_template: true })
-        const unmarked = db.createWorkflowTemplate({ ...createTemplateData(), is_template: false })
+        const marked = db.createWorkflowTemplate({ ...createTemplateData(), is_public: true })
+        const unmarked = db.createWorkflowTemplate({ ...createTemplateData(), is_public: false })
         
         const markedTemplates = db.getMarkedWorkflowTemplates()
         
@@ -935,440 +927,16 @@ describe('DatabaseService', () => {
   })
 
   // ============================================================================
-  // Job Tags & Dependencies
+  // Webhooks CRUD (removed - types deleted in SP-1)
   // ============================================================================
 
-  describe('Job Tags', () => {
-    it('should add tag to job', () => {
-      const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      const tag = db.addJobTag(job.id, 'production')
-      
-      expect(tag.id).toBeDefined()
-      expect(tag.job_id).toBe(job.id)
-      expect(tag.tag).toBe('production')
-    })
-
-    it('should get tags for job', () => {
-      const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobTag(job.id, 'tag1')
-      db.addJobTag(job.id, 'tag2')
-      db.addJobTag(job.id, 'tag3')
-      
-      const tags = db.getJobTags(job.id)
-      
-      expect(tags.length).toBe(3)
-      expect(tags).toContain('tag1')
-      expect(tags).toContain('tag2')
-      expect(tags).toContain('tag3')
-    })
-
-    it('should remove tag from job', () => {
-      const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobTag(job.id, 'removable')
-      
-      const result = db.removeJobTag(job.id, 'removable')
-      
-      expect(result).toBe(true)
-      expect(db.getJobTags(job.id)).not.toContain('removable')
-    })
-
-    it('should get jobs by tag', () => {
-      const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const job3 = db.createCronJob({ name: 'Job3', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobTag(job1.id, 'common-tag')
-      db.addJobTag(job2.id, 'common-tag')
-      db.addJobTag(job3.id, 'other-tag')
-      
-      const taggedJobs = db.getJobsByTag('common-tag')
-      
-      expect(taggedJobs.length).toBe(2)
-    })
-
-    it('should get all distinct tags', () => {
-      const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobTag(job.id, 'alpha')
-      db.addJobTag(job.id, 'beta')
-      db.addJobTag(job.id, 'gamma')
-      
-      const allTags = db.getAllTags()
-      
-      expect(allTags.length).toBe(3)
-      expect(allTags).toContain('alpha')
-      expect(allTags).toContain('beta')
-      expect(allTags).toContain('gamma')
-    })
-  })
-
-  describe('Job Dependencies', () => {
-    it('should add job dependency', () => {
-      const parentJob = db.createCronJob({ name: 'Parent', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const childJob = db.createCronJob({ name: 'Child', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      const dependency = db.addJobDependency(childJob.id, parentJob.id)
-      
-      expect(dependency.id).toBeDefined()
-      expect(dependency.job_id).toBe(childJob.id)
-      expect(dependency.depends_on_job_id).toBe(parentJob.id)
-    })
-
-    it('should get dependencies for job', () => {
-      const parent1 = db.createCronJob({ name: 'P1', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const parent2 = db.createCronJob({ name: 'P2', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const child = db.createCronJob({ name: 'Child', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobDependency(child.id, parent1.id)
-      db.addJobDependency(child.id, parent2.id)
-      
-      const deps = db.getJobDependencies(child.id)
-      
-      expect(deps.length).toBe(2)
-      expect(deps).toContain(parent1.id)
-      expect(deps).toContain(parent2.id)
-    })
-
-    it('should get dependents for job', () => {
-      const parent = db.createCronJob({ name: 'Parent', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const child1 = db.createCronJob({ name: 'C1', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const child2 = db.createCronJob({ name: 'C2', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobDependency(child1.id, parent.id)
-      db.addJobDependency(child2.id, parent.id)
-      
-      const dependents = db.getJobDependents(parent.id)
-      
-      expect(dependents.length).toBe(2)
-      expect(dependents).toContain(child1.id)
-      expect(dependents).toContain(child2.id)
-    })
-
-    it('should remove job dependency', () => {
-      const parent = db.createCronJob({ name: 'Parent', cron_expression: '0 * * * *', workflow_json: '{}' })
-      const child = db.createCronJob({ name: 'Child', cron_expression: '0 * * * *', workflow_json: '{}' })
-      
-      db.addJobDependency(child.id, parent.id)
-      
-      const result = db.removeJobDependency(child.id, parent.id)
-      
-      expect(result).toBe(true)
-      expect(db.getJobDependencies(child.id)).not.toContain(parent.id)
-    })
-  })
-
   // ============================================================================
-  // Webhooks CRUD
+  // Webhooks CRUD (removed - types deleted in SP-1)
   // ============================================================================
 
-  describe('Webhook Configs CRUD', () => {
-    const createWebhookData = (): CreateWebhookConfig => ({
-      name: 'Test Webhook',
-      url: 'https://example.com/webhook',
-      events: [WebhookEvent.ON_SUCCESS, WebhookEvent.ON_FAILURE],
-      headers: { 'X-Custom': 'value' },
-      secret: 'my-secret',
-      is_active: true,
-    })
-
-    describe('Create', () => {
-      it('should create webhook config', () => {
-        const webhook = db.createWebhookConfig(createWebhookData())
-        
-        expect(webhook.id).toBeDefined()
-        expect(webhook.name).toBe('Test Webhook')
-        expect(webhook.url).toBe('https://example.com/webhook')
-        expect(webhook.events).toContain(WebhookEvent.ON_SUCCESS)
-        expect(webhook.events).toContain(WebhookEvent.ON_FAILURE)
-        expect(webhook.headers?.['X-Custom']).toBe('value')
-        expect(webhook.secret).toBe('my-secret')
-        expect(webhook.is_active).toBe(true)
-      })
-
-      it('should create webhook with job_id', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-        
-        const webhook = db.createWebhookConfig({
-          ...createWebhookData(),
-          job_id: job.id,
-        })
-        
-        expect(webhook.job_id).toBe(job.id)
-      })
-    })
-
-    describe('Read', () => {
-      it('should get webhook by ID', () => {
-        const created = db.createWebhookConfig(createWebhookData())
-        const fetched = db.getWebhookConfigById(created.id)
-        
-        expect(fetched?.id).toBe(created.id)
-      })
-
-      it('should get all webhook configs', () => {
-        db.createWebhookConfig({ ...createWebhookData(), name: 'W1' })
-        db.createWebhookConfig({ ...createWebhookData(), name: 'W2' })
-        
-        const webhooks = db.getWebhookConfigs()
-        
-        expect(webhooks.length).toBe(2)
-      })
-
-      it('should get only active webhook configs', () => {
-        const active = db.createWebhookConfig({ ...createWebhookData(), is_active: true })
-        const inactive = db.createWebhookConfig({ ...createWebhookData(), is_active: false })
-        
-        const webhooks = db.getWebhookConfigs()
-        
-        expect(webhooks.length).toBe(1)
-        expect(webhooks[0].id).toBe(active.id)
-      })
-
-      it('should get webhooks by job_id', () => {
-        const job1 = db.createCronJob({ name: 'J1', cron_expression: '0 * * * *', workflow_json: '{}' })
-        const job2 = db.createCronJob({ name: 'J2', cron_expression: '0 * * * *', workflow_json: '{}' })
-        
-        const w1 = db.createWebhookConfig({ ...createWebhookData(), job_id: job1.id })
-        const w2 = db.createWebhookConfig({ ...createWebhookData(), job_id: job2.id })
-        
-        const job1Webhooks = db.getWebhookConfigs(job1.id)
-        
-        expect(job1Webhooks.length).toBe(1)
-        expect(job1Webhooks[0].id).toBe(w1.id)
-      })
-    })
-
-    describe('Update', () => {
-      it('should update webhook config', () => {
-        const webhook = db.createWebhookConfig(createWebhookData())
-        
-        const updated = db.updateWebhookConfig(webhook.id, {
-          name: 'Updated Webhook',
-          url: 'https://new-url.com/webhook',
-          events: [WebhookEvent.ON_START],
-        })
-        
-        expect(updated?.name).toBe('Updated Webhook')
-        expect(updated?.url).toBe('https://new-url.com/webhook')
-        expect(updated?.events).toContain(WebhookEvent.ON_START)
-        expect(updated?.events).not.toContain(WebhookEvent.ON_SUCCESS)
-      })
-
-      it('should toggle webhook active status', () => {
-        const webhook = db.createWebhookConfig({ ...createWebhookData(), is_active: true })
-        
-        const updated = db.updateWebhookConfig(webhook.id, { is_active: false })
-        
-        expect(updated?.is_active).toBe(false)
-        
-        // Should not appear in active webhooks
-        const activeWebhooks = db.getWebhookConfigs()
-        expect(activeWebhooks.find(w => w.id === webhook.id)).toBeUndefined()
-      })
-    })
-
-    describe('Delete', () => {
-      it('should delete webhook config', () => {
-        const webhook = db.createWebhookConfig(createWebhookData())
-        
-        const result = db.deleteWebhookConfig(webhook.id)
-        
-        expect(result).toBe(true)
-        expect(db.getWebhookConfigById(webhook.id)).toBeNull()
-      })
-    })
-  })
-
-  describe('Webhook Deliveries', () => {
-    it('should create webhook delivery', () => {
-      const webhook = db.createWebhookConfig(createWebhookData())
-      
-      const delivery = db.createWebhookDelivery({
-        webhook_id: webhook.id,
-        execution_log_id: null,
-        event: 'on_success',
-        payload: '{"status":"ok"}',
-        response_status: 200,
-        response_body: '{"received":true}',
-        error_message: null,
-      })
-      
-      expect(delivery.id).toBeDefined()
-      expect(delivery.webhook_id).toBe(webhook.id)
-      expect(delivery.event).toBe('on_success')
-      expect(delivery.response_status).toBe(200)
-      expect(delivery.delivered_at).toBeDefined()
-    })
-
-    it('should get webhook deliveries', () => {
-      const webhook = db.createWebhookConfig(createWebhookData())
-      
-      db.createWebhookDelivery({
-        webhook_id: webhook.id,
-        execution_log_id: null,
-        event: 'on_success',
-        payload: '{}',
-        response_status: 200,
-        response_body: null,
-        error_message: null,
-      })
-      db.createWebhookDelivery({
-        webhook_id: webhook.id,
-        execution_log_id: null,
-        event: 'on_failure',
-        payload: '{}',
-        response_status: 500,
-        response_body: null,
-        error_message: 'Failed',
-      })
-      
-      const deliveries = db.getWebhookDeliveries(webhook.id)
-      
-      expect(deliveries.length).toBe(2)
-    })
-
-    it('should limit webhook deliveries', () => {
-      const webhook = db.createWebhookConfig(createWebhookData())
-      
-      for (let i = 0; i < 50; i++) {
-        db.createWebhookDelivery({
-          webhook_id: webhook.id,
-          execution_log_id: null,
-          event: 'on_success',
-          payload: '{}',
-          response_status: 200,
-          response_body: null,
-          error_message: null,
-        })
-      }
-      
-      const deliveries = db.getWebhookDeliveries(webhook.id, 10)
-      
-      expect(deliveries.length).toBe(10)
-    })
-  })
-
   // ============================================================================
-  // Dead Letter Queue CRUD
+  // Dead Letter Queue CRUD (removed - types deleted in SP-1)
   // ============================================================================
-
-  describe('Dead Letter Queue CRUD', () => {
-    const createDLQData = (): CreateDeadLetterItem => ({
-      task_type: 'failed-task',
-      payload: '{"data":"test"}',
-      error_message: 'Task execution failed',
-      retry_count: 5,
-    })
-
-    describe('Create', () => {
-      it('should create dead letter item', () => {
-        const item = db.createDeadLetterItem(createDLQData())
-        
-        expect(item.id).toBeDefined()
-        expect(item.task_type).toBe('failed-task')
-        expect(item.error_message).toBe('Task execution failed')
-        expect(item.retry_count).toBe(5)
-        expect(item.failed_at).toBeDefined()
-        expect(item.resolved_at).toBeNull()
-        expect(item.resolution).toBeNull()
-      })
-
-      it('should create item with original task and job references', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *', workflow_json: '{}' })
-        const task = db.createTask({ task_type: 'original', payload: '{}' })
-        
-        const item = db.createDeadLetterItem({
-          ...createDLQData(),
-          original_task_id: task.id,
-          job_id: job.id,
-        })
-        
-        expect(item.original_task_id).toBe(task.id)
-        expect(item.job_id).toBe(job.id)
-      })
-    })
-
-    describe('Read', () => {
-      it('should get dead letter item by ID', () => {
-        const created = db.createDeadLetterItem(createDLQData())
-        const fetched = db.getDeadLetterItemById(created.id)
-        
-        expect(fetched?.id).toBe(created.id)
-      })
-
-      it('should get unresolved dead letter queue items', () => {
-        db.createDeadLetterItem(createDLQData())
-        db.createDeadLetterItem(createDLQData())
-        
-        const resolved = db.createDeadLetterItem(createDLQData())
-        db.updateDeadLetterItem(resolved.id, { resolved_at: new Date().toISOString(), resolution: 'retried' })
-        
-        const queue = db.getDeadLetterQueue()
-        
-        expect(queue.length).toBe(2) // only unresolved
-      })
-
-      it('should limit dead letter queue items', () => {
-        for (let i = 0; i < 50; i++) {
-          db.createDeadLetterItem(createDLQData())
-        }
-        
-        const queue = db.getDeadLetterQueue(10)
-        
-        expect(queue.length).toBe(10)
-      })
-    })
-
-    describe('Update', () => {
-      it('should mark item as resolved', () => {
-        const item = db.createDeadLetterItem(createDLQData())
-        
-        const updated = db.updateDeadLetterItem(item.id, {
-          resolved_at: new Date().toISOString(),
-          resolution: 'retried',
-        })
-        
-        expect(updated?.resolved_at).toBeDefined()
-        expect(updated?.resolution).toBe('retried')
-        
-        // Should not appear in unresolved queue
-        const queue = db.getDeadLetterQueue()
-        expect(queue.find(q => q.id === item.id)).toBeUndefined()
-      })
-
-      it('should support different resolution types', () => {
-        const item1 = db.createDeadLetterItem(createDLQData())
-        const item2 = db.createDeadLetterItem(createDLQData())
-        const item3 = db.createDeadLetterItem(createDLQData())
-        
-        db.updateDeadLetterItem(item1.id, { resolution: 'retried', resolved_at: new Date().toISOString() })
-        db.updateDeadLetterItem(item2.id, { resolution: 'discarded', resolved_at: new Date().toISOString() })
-        db.updateDeadLetterItem(item3.id, { resolution: 'manual', resolved_at: new Date().toISOString() })
-        
-        const resolved1 = db.getDeadLetterItemById(item1.id)
-        const resolved2 = db.getDeadLetterItemById(item2.id)
-        const resolved3 = db.getDeadLetterItemById(item3.id)
-        
-        expect(resolved1?.resolution).toBe('retried')
-        expect(resolved2?.resolution).toBe('discarded')
-        expect(resolved3?.resolution).toBe('manual')
-      })
-    })
-
-    describe('Delete', () => {
-      it('should delete dead letter item', () => {
-        const item = db.createDeadLetterItem(createDLQData())
-        
-        const result = db.deleteDeadLetterItem(item.id)
-        
-        expect(result).toBe(true)
-        expect(db.getDeadLetterItemById(item.id)).toBeNull()
-      })
-    })
-  })
 
   // ============================================================================
   // Edge Cases & Error Handling
@@ -1381,9 +949,6 @@ describe('DatabaseService', () => {
       expect(db.getAllExecutionLogs()).toEqual([])
       expect(db.getAllCapacityRecords()).toEqual([])
       expect(db.getAllWorkflowTemplates()).toEqual([])
-      expect(db.getWebhookConfigs()).toEqual([])
-      expect(db.getDeadLetterQueue()).toEqual([])
-      expect(db.getAllTags()).toEqual([])
     })
 
     it('should handle null descriptions and optional fields', () => {
@@ -1391,30 +956,9 @@ describe('DatabaseService', () => {
         name: 'No Description',
         description: null,
         cron_expression: '0 * * * *',
-        workflow_json: '{}',
       })
       
       expect(job.description).toBeNull()
-    })
-
-    it('should preserve JSON structures in workflow_json', () => {
-      const complexWorkflow = {
-        nodes: [
-          { id: 'n1', type: 'action', config: { messages: [{ role: 'user', content: 'test' }] } },
-          { id: 'n2', type: 'condition', config: { expression: 'a > b' } },
-        ],
-        edges: [{ source: 'n1', target: 'n2' }],
-      }
-      
-      const job = db.createCronJob({
-        name: 'Complex Workflow',
-        cron_expression: '0 * * * *',
-        workflow_json: JSON.stringify(complexWorkflow),
-      })
-      
-      const parsed = JSON.parse(job.workflow_json)
-      expect(parsed.nodes.length).toBe(2)
-      expect(parsed.edges.length).toBe(1)
     })
 
     it('should handle special characters in names and descriptions', () => {
@@ -1422,7 +966,6 @@ describe('DatabaseService', () => {
         name: 'Test "quotes" and \'apostrophes\'',
         description: 'Special chars: <>&"\'`$@#%^*',
         cron_expression: '0 * * * *',
-        workflow_json: '{}',
       })
       
       expect(job.name).toBe('Test "quotes" and \'apostrophes\'')
@@ -1430,22 +973,18 @@ describe('DatabaseService', () => {
     })
 
     it('should handle concurrent creates safely', () => {
-      // Simulate rapid creation
       const jobs = []
       for (let i = 0; i < 100; i++) {
         jobs.push(db.createCronJob({
           name: `Batch Job ${i}`,
           cron_expression: '0 * * * *',
-          workflow_json: '{}',
         }))
       }
       
-      // All should have unique IDs
       const ids = jobs.map(j => j.id)
       const uniqueIds = new Set(ids)
       expect(uniqueIds.size).toBe(100)
       
-      // All should be retrievable
       expect(db.getAllCronJobs().length).toBe(100)
     })
 
@@ -1467,15 +1006,3 @@ describe('DatabaseService', () => {
     })
   })
 })
-
-// Helper function to create webhook test data
-function createWebhookData(): CreateWebhookConfig {
-  return {
-    name: 'Test Webhook',
-    url: 'https://example.com/webhook',
-    events: [WebhookEvent.ON_SUCCESS, WebhookEvent.ON_FAILURE],
-    headers: { 'X-Custom': 'value' },
-    secret: 'my-secret',
-    is_active: true,
-  }
-}

@@ -45,11 +45,10 @@ export enum ServiceType {
 }
 
 export enum WorkflowNodeType {
-  Trigger = 'trigger',
   Action = 'action',
   Condition = 'condition',
-  Delay = 'delay',
-  Parallel = 'parallel',
+  Loop = 'loop',
+  Transform = 'transform',
 }
 
 // ============================================
@@ -186,11 +185,23 @@ export interface UpdateTaskDTO {
   completedAt?: string | null
 }
 
-export interface CreateWorkflowTemplateDTO {
-  name: string
-  description: string
-  nodesJson: string
-  edgesJson: string
+export interface ActionNodeConfig {
+  service: string
+  method: string
+  args?: unknown[]
+}
+
+// API response types for available action nodes
+export interface AvailableActionNode {
+  id: string
+  service: string
+  method: string
+  label: string
+  minRole: string
+}
+
+export interface GroupedActionNodes {
+  [category: string]: AvailableActionNode[]
 }
 
 export interface UpdateWorkflowTemplateDTO {

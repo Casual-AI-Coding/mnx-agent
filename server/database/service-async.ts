@@ -5,41 +5,28 @@ import type {
   CronJob,
   TaskQueueItem,
   ExecutionLog,
+  ExecutionLogDetail,
   CapacityRecord,
   WorkflowTemplate,
-  JobTag,
-  JobDependency,
-  WebhookConfig,
-  WebhookDelivery,
-  DeadLetterItem,
   CreateCronJob,
   CreateTaskQueueItem,
   CreateExecutionLog,
-  CreateWebhookConfig,
-  CreateWebhookDelivery,
-  CreateDeadLetterItem,
+  CreateExecutionLogDetail,
   UpdateCronJob,
   UpdateTaskQueueItem,
   UpdateExecutionLog,
   UpdateCapacityRecord,
   UpdateWorkflowTemplate,
-  UpdateWebhookConfig,
-  UpdateDeadLetterItem,
   RunStats,
   CronJobRow,
   TaskQueueRow,
   ExecutionLogRow,
+  ExecutionLogDetailRow,
   CapacityRecordRow,
   WorkflowTemplateRow,
-  JobTagRow,
-  JobDependencyRow,
-  WebhookConfigRow,
-  WebhookDeliveryRow,
-  DeadLetterItemRow,
   MediaRecord,
   MediaRecordRow,
   CreateMediaRecord,
-  UpdateMediaRecord,
   PromptTemplate,
   PromptTemplateRow,
   CreatePromptTemplate,
@@ -49,6 +36,8 @@ import type {
   CreateAuditLog,
   AuditLogQuery,
   AuditStats,
+  ServiceNodePermission,
+  ServiceNodePermissionRow,
 } from './types.js'
 
 function toISODate(): string {
@@ -71,42 +60,16 @@ function rowToExecutionLog(row: ExecutionLogRow): ExecutionLog {
   return { ...row, trigger_type: row.trigger_type as TriggerType, status: row.status as ExecutionStatus }
 }
 
+function rowToExecutionLogDetail(row: ExecutionLogDetailRow): ExecutionLogDetail {
+  return { ...row }
+}
+
 function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
   return row
 }
 
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
-  return { ...row, is_template: typeof row.is_template === 'boolean' ? row.is_template : row.is_template === 1 }
-}
-
-function rowToJobTag(row: JobTagRow): JobTag {
-  return row
-}
-
-function rowToJobDependency(row: JobDependencyRow): JobDependency {
-  return row
-}
-
-function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
-  const events = typeof row.events === 'string' ? JSON.parse(row.events) : row.events
-  const headers = row.headers ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers) : null
-  return {
-    ...row,
-    events: events as import('./types.js').WebhookEvent[],
-    headers,
-    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
-  }
-}
-
-function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
-  return row
-}
-
-function rowToDeadLetterItem(row: DeadLetterItemRow): DeadLetterItem {
-  return {
-    ...row,
-    resolution: row.resolution as 'retried' | 'discarded' | 'manual' | null,
-  }
+  return { ...row, is_public: typeof row.is_public === 'boolean' ? row.is_public : row.is_public === 1 }
 }
 
 function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
@@ -134,6 +97,12 @@ function rowToAuditLog(row: AuditLogRow): AuditLog {
   return {
     ...row,
     action: row.action as AuditLog['action'],
+  }
+}
+
+function rowToServiceNodePermission(row: ServiceNodePermissionRow): ServiceNodePermission {
+  return {
+    ...row,
   }
 }
 
@@ -187,40 +156,6 @@ export class DatabaseService {
     return rows.map(rowToCronJob)
   }
 
-  async getCronJobsWithTags(ownerId?: string): Promise<(CronJob & { tags: string[] })[]> {
-    const isPostgres = this.conn.isPostgres()
-    const aggFn = isPostgres ? 'string_agg(t.tag, \',\')' : 'GROUP_CONCAT(t.tag, \',\')'
-
-    let query: string
-    let rows: (CronJobRow & { tags: string | null })[]
-
-    if (ownerId) {
-      query = `
-        SELECT j.*, ${aggFn} as tags
-        FROM cron_jobs j
-        LEFT JOIN job_tags t ON j.id = t.job_id
-        WHERE j.owner_id = $1
-        GROUP BY j.id
-        ORDER BY j.created_at DESC
-      `
-      rows = await this.conn.query<CronJobRow & { tags: string | null }>(query, [ownerId])
-    } else {
-      query = `
-        SELECT j.*, ${aggFn} as tags
-        FROM cron_jobs j
-        LEFT JOIN job_tags t ON j.id = t.job_id
-        GROUP BY j.id
-        ORDER BY j.created_at DESC
-      `
-      rows = await this.conn.query<CronJobRow & { tags: string | null }>(query)
-    }
-
-    return rows.map(row => ({
-      ...rowToCronJob(row),
-      tags: row.tags ? row.tags.split(',').filter(tag => tag.length > 0) : [],
-    }))
-  }
-
   async getCronJobById(id: string, ownerId?: string): Promise<CronJob | null> {
     if (ownerId) {
       const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE id = $1 AND owner_id = $2', [id, ownerId])
@@ -235,18 +170,19 @@ export class DatabaseService {
     const now = toISODate()
     const isActive = job.is_active !== false
     const timeoutMs = job.timeout_ms ?? 300000
+    const timezone = job.timezone ?? 'UTC'
     
     if (this.conn.isPostgres()) {
       await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_json, created_at, updated_at, timeout_ms, owner_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive, job.workflow_json, now, now, timeoutMs, ownerId ?? null]
+        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [id, job.name, job.description ?? null, job.cron_expression, isActive, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null]
       )
     } else {
       await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_json, created_at, updated_at, timeout_ms, owner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive ? 1 : 0, job.workflow_json, now, now, timeoutMs, ownerId ?? null]
+        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, job.name, job.description ?? null, job.cron_expression, isActive ? 1 : 0, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null]
       )
     }
     return (await this.getCronJobById(id))!
@@ -274,7 +210,8 @@ export class DatabaseService {
     if (updates.is_active !== undefined) {
       addField('is_active', this.conn.isPostgres() ? updates.is_active : (updates.is_active ? 1 : 0))
     }
-    addField('workflow_json', updates.workflow_json)
+    addField('workflow_id', updates.workflow_id)
+    addField('timezone', updates.timezone)
     addField('last_run_at', updates.last_run_at)
     addField('next_run_at', updates.next_run_at)
     addField('total_runs', updates.total_runs)
@@ -705,9 +642,9 @@ export class DatabaseService {
     const id = uuidv4()
     const now = toISODate()
     await this.conn.execute(
-      `INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, log_detail, owner_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, log.job_id ?? null, log.trigger_type, log.status, now, log.tasks_executed ?? 0, log.tasks_succeeded ?? 0, log.tasks_failed ?? 0, log.error_summary ?? null, log.log_detail ?? null, ownerId ?? null]
+      `INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, owner_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, log.job_id ?? null, log.trigger_type, log.status, now, log.tasks_executed ?? 0, log.tasks_succeeded ?? 0, log.tasks_failed ?? 0, log.error_summary ?? null, ownerId ?? null]
     )
     return (await this.getExecutionLogById(id))!
   }
@@ -727,7 +664,6 @@ export class DatabaseService {
     if (updates.tasks_succeeded !== undefined) { fields.push(`tasks_succeeded = $${paramIndex}`); values.push(updates.tasks_succeeded); paramIndex++ }
     if (updates.tasks_failed !== undefined) { fields.push(`tasks_failed = $${paramIndex}`); values.push(updates.tasks_failed); paramIndex++ }
     if (updates.error_summary !== undefined) { fields.push(`error_summary = $${paramIndex}`); values.push(updates.error_summary); paramIndex++ }
-    if (updates.log_detail !== undefined) { fields.push(`log_detail = $${paramIndex}`); values.push(updates.log_detail); paramIndex++ }
 
     if (fields.length === 0) return existing
     values.push(id)
@@ -760,6 +696,71 @@ export class DatabaseService {
 
   async getRecentExecutionLogs(limit: number = 20, ownerId?: string): Promise<ExecutionLog[]> {
     return this.getAllExecutionLogs(undefined, limit, ownerId)
+  }
+
+  async createExecutionLogDetail(data: CreateExecutionLogDetail): Promise<string> {
+    const id = uuidv4()
+    const now = toISODate()
+    const inputPayload = data.input_payload ?? null
+    const outputResult = data.output_result ?? null
+
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        `INSERT INTO execution_log_details (id, log_id, node_id, node_type, service_name, method_name, input_payload, output_result, error_message, started_at, completed_at, duration_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [id, data.log_id, data.node_id ?? null, data.node_type ?? null, data.service_name ?? null, data.method_name ?? null, inputPayload, outputResult, data.error_message ?? null, data.started_at ?? now, data.completed_at ?? null, data.duration_ms ?? null]
+      )
+    } else {
+      await this.conn.execute(
+        `INSERT INTO execution_log_details (id, log_id, node_id, node_type, service_name, method_name, input_payload, output_result, error_message, started_at, completed_at, duration_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.log_id, data.node_id ?? null, data.node_type ?? null, data.service_name ?? null, data.method_name ?? null, inputPayload, outputResult, data.error_message ?? null, data.started_at ?? now, data.completed_at ?? null, data.duration_ms ?? null]
+      )
+    }
+    return id
+  }
+
+  async updateExecutionLogDetail(
+    id: string,
+    data: {
+      output_result?: string
+      error_message?: string
+      completed_at?: string
+      duration_ms?: number
+    }
+  ): Promise<void> {
+    const updates: string[] = []
+    const values: (string | number | null)[] = []
+    let paramIndex = 1
+
+    if (data.output_result !== undefined) {
+      updates.push(`output_result = $${paramIndex}`)
+      values.push(data.output_result)
+      paramIndex++
+    }
+    if (data.error_message !== undefined) {
+      updates.push(`error_message = $${paramIndex}`)
+      values.push(data.error_message)
+      paramIndex++
+    }
+    if (data.completed_at !== undefined) {
+      updates.push(`completed_at = $${paramIndex}`)
+      values.push(data.completed_at)
+      paramIndex++
+    }
+    if (data.duration_ms !== undefined) {
+      updates.push(`duration_ms = $${paramIndex}`)
+      values.push(data.duration_ms)
+      paramIndex++
+    }
+
+    if (updates.length === 0) return
+
+    values.push(id)
+    await this.conn.execute(
+      `UPDATE execution_log_details SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
   }
 
   async getAllCapacityRecords(): Promise<CapacityRecord[]> {
@@ -823,7 +824,7 @@ export class DatabaseService {
     }
 
     if (isTemplate !== undefined) {
-      conditions.push(`is_template = $${paramIndex}`)
+      conditions.push(`is_public = $${paramIndex}`)
       params.push(isTemplate ? 1 : 0)
       paramIndex++
     }
@@ -857,19 +858,19 @@ export class DatabaseService {
     return rows[0] ? rowToWorkflowTemplate(rows[0]) : null
   }
 
-  async createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_template?: boolean }, ownerId?: string): Promise<WorkflowTemplate> {
+  async createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_public?: boolean }, ownerId?: string): Promise<WorkflowTemplate> {
     const id = uuidv4()
     const now = toISODate()
-    const isTemplate = template.is_template !== false
+    const isTemplate = template.is_public !== false
     
     if (this.conn.isPostgres()) {
       await this.conn.execute(
-        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_template, owner_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
         [id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, isTemplate, ownerId ?? null]
       )
     } else {
       await this.conn.execute(
-        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_template, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, isTemplate ? 1 : 0, ownerId ?? null]
       )
     }
@@ -888,9 +889,9 @@ export class DatabaseService {
     if (updates.description !== undefined) { fields.push(`description = $${paramIndex}`); values.push(updates.description); paramIndex++ }
     if (updates.nodes_json !== undefined) { fields.push(`nodes_json = $${paramIndex}`); values.push(updates.nodes_json); paramIndex++ }
     if (updates.edges_json !== undefined) { fields.push(`edges_json = $${paramIndex}`); values.push(updates.edges_json); paramIndex++ }
-    if (updates.is_template !== undefined) {
-      fields.push(`is_template = $${paramIndex}`)
-      values.push(this.conn.isPostgres() ? updates.is_template : (updates.is_template ? 1 : 0))
+    if (updates.is_public !== undefined) {
+      fields.push(`is_public = $${paramIndex}`)
+      values.push(this.conn.isPostgres() ? updates.is_public : (updates.is_public ? 1 : 0))
       paramIndex++
     }
 
@@ -920,13 +921,13 @@ export class DatabaseService {
     if (ownerId) {
       if (this.conn.isPostgres()) {
         const rows = await this.conn.query<WorkflowTemplateRow>(
-          'SELECT * FROM workflow_templates WHERE is_template = true AND owner_id = $1 ORDER BY created_at DESC',
+          'SELECT * FROM workflow_templates WHERE is_public = true AND owner_id = $1 ORDER BY created_at DESC',
           [ownerId]
         )
         return rows.map(rowToWorkflowTemplate)
       } else {
         const rows = await this.conn.query<WorkflowTemplateRow>(
-          'SELECT * FROM workflow_templates WHERE is_template = 1 AND owner_id = ? ORDER BY created_at DESC',
+          'SELECT * FROM workflow_templates WHERE is_public = 1 AND owner_id = ? ORDER BY created_at DESC',
           [ownerId]
         )
         return rows.map(rowToWorkflowTemplate)
@@ -934,382 +935,15 @@ export class DatabaseService {
     }
     if (this.conn.isPostgres()) {
       const rows = await this.conn.query<WorkflowTemplateRow>(
-        'SELECT * FROM workflow_templates WHERE is_template = true ORDER BY created_at DESC'
+        'SELECT * FROM workflow_templates WHERE is_public = true ORDER BY created_at DESC'
       )
       return rows.map(rowToWorkflowTemplate)
     } else {
       const rows = await this.conn.query<WorkflowTemplateRow>(
-        'SELECT * FROM workflow_templates WHERE is_template = 1 ORDER BY created_at DESC'
+        'SELECT * FROM workflow_templates WHERE is_public = 1 ORDER BY created_at DESC'
       )
       return rows.map(rowToWorkflowTemplate)
     }
-  }
-
-  async getJobTags(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ tag: string }>(
-      'SELECT tag FROM job_tags WHERE job_id = $1 ORDER BY tag',
-      [jobId]
-    )
-    return rows.map(r => r.tag)
-  }
-
-  async addJobTag(jobId: string, tag: string): Promise<JobTag> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
-      [id, jobId, tag, now]
-    )
-    return { id, job_id: jobId, tag, created_at: now }
-  }
-
-  async removeJobTag(jobId: string, tag: string): Promise<boolean> {
-    const result = await this.conn.execute(
-      'DELETE FROM job_tags WHERE job_id = $1 AND tag = $2',
-      [jobId, tag]
-    )
-    return result.changes > 0
-  }
-
-  async getJobsByTag(tag: string, ownerId?: string): Promise<CronJob[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<CronJobRow>(
-        `SELECT j.* FROM cron_jobs j
-         INNER JOIN job_tags t ON j.id = t.job_id
-         WHERE t.tag = $1 AND j.owner_id = $2
-         ORDER BY j.created_at DESC`,
-        [tag, ownerId]
-      )
-      return rows.map(rowToCronJob)
-    }
-    const rows = await this.conn.query<CronJobRow>(
-      `SELECT j.* FROM cron_jobs j
-       INNER JOIN job_tags t ON j.id = t.job_id
-       WHERE t.tag = $1
-       ORDER BY j.created_at DESC`,
-      [tag]
-    )
-    return rows.map(rowToCronJob)
-  }
-
-  async getAllTags(): Promise<string[]> {
-    const rows = await this.conn.query<{ tag: string }>('SELECT DISTINCT tag FROM job_tags ORDER BY tag')
-    return rows.map(r => r.tag)
-  }
-
-  async getJobDependencies(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ depends_on_job_id: string }>(
-      'SELECT depends_on_job_id FROM job_dependencies WHERE job_id = $1',
-      [jobId]
-    )
-    return rows.map(r => r.depends_on_job_id)
-  }
-
-  async getJobDependents(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ job_id: string }>(
-      'SELECT job_id FROM job_dependencies WHERE depends_on_job_id = $1',
-      [jobId]
-    )
-    return rows.map(r => r.job_id)
-  }
-
-  async addJobDependency(jobId: string, dependsOnJobId: string): Promise<JobDependency> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      'INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)',
-      [id, jobId, dependsOnJobId, now]
-    )
-    return { id, job_id: jobId, depends_on_job_id: dependsOnJobId, created_at: now }
-  }
-
-  async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    const result = await this.conn.execute(
-      'DELETE FROM job_dependencies WHERE job_id = $1 AND depends_on_job_id = $2',
-      [jobId, dependsOnJobId]
-    )
-    return result.changes > 0
-  }
-
-  async getWebhookConfigs(jobId?: string, ownerId?: string): Promise<WebhookConfig[]> {
-    let rows: WebhookConfigRow[]
-    if (ownerId) {
-      if (jobId) {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true AND owner_id = $2',
-            [jobId, ownerId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id = ? AND is_active = 1 AND owner_id = ?',
-            [jobId, ownerId]
-          )
-        }
-      } else {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE is_active = true AND owner_id = $1',
-            [ownerId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE is_active = 1 AND owner_id = ?',
-            [ownerId]
-          )
-        }
-      }
-    } else {
-      if (jobId) {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true',
-            [jobId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = 1',
-            [jobId]
-          )
-        }
-      } else {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE is_active = true'
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE is_active = 1'
-          )
-        }
-      }
-    }
-    return rows.map(rowToWebhookConfig)
-  }
-
-  async getWebhookConfigsForJob(
-    jobId: string | null,
-    ownerId?: string
-  ): Promise<WebhookConfig[]> {
-    let rows: WebhookConfigRow[]
-
-    if (ownerId) {
-      if (jobId !== null) {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE (job_id = $1 OR job_id IS NULL) AND is_active = true AND owner_id = $2',
-            [jobId, ownerId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE (job_id = ? OR job_id IS NULL) AND is_active = 1 AND owner_id = ?',
-            [jobId, ownerId]
-          )
-        }
-      } else {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = true AND owner_id = $1',
-            [ownerId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = 1 AND owner_id = ?',
-            [ownerId]
-          )
-        }
-      }
-    } else {
-      if (jobId !== null) {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE (job_id = $1 OR job_id IS NULL) AND is_active = true',
-            [jobId]
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE (job_id = ? OR job_id IS NULL) AND is_active = 1',
-            [jobId]
-          )
-        }
-      } else {
-        if (this.conn.isPostgres()) {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = true'
-          )
-        } else {
-          rows = await this.conn.query<WebhookConfigRow>(
-            'SELECT * FROM webhook_configs WHERE job_id IS NULL AND is_active = 1'
-          )
-        }
-      }
-    }
-
-    return rows.map(rowToWebhookConfig)
-  }
-
-  async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToWebhookConfig(rows[0]) : null
-    }
-    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1', [id])
-    return rows[0] ? rowToWebhookConfig(rows[0]) : null
-  }
-
-  async createWebhookConfig(config: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
-    const id = uuidv4()
-    const now = toISODate()
-    const isActive = config.is_active !== false
-    const events = JSON.stringify(config.events)
-    const headers = config.headers ? JSON.stringify(config.headers) : null
-    
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, created_at, updated_at, owner_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [id, config.job_id ?? null, config.name, config.url, events, headers, config.secret ?? null, isActive, now, now, ownerId ?? null]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, created_at, updated_at, owner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, config.job_id ?? null, config.name, config.url, events, headers, config.secret ?? null, isActive ? 1 : 0, now, now, ownerId ?? null]
-      )
-    }
-    return (await this.getWebhookConfigById(id))!
-  }
-
-  async updateWebhookConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> {
-    const existing = await this.getWebhookConfigById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | boolean | null)[] = []
-    let paramIndex = 1
-
-    if (updates.name !== undefined) { fields.push(`name = $${paramIndex}`); values.push(updates.name); paramIndex++ }
-    if (updates.url !== undefined) { fields.push(`url = $${paramIndex}`); values.push(updates.url); paramIndex++ }
-    if (updates.events !== undefined) { fields.push(`events = $${paramIndex}`); values.push(JSON.stringify(updates.events)); paramIndex++ }
-    if (updates.headers !== undefined) { fields.push(`headers = $${paramIndex}`); values.push(updates.headers ? JSON.stringify(updates.headers) : null); paramIndex++ }
-    if (updates.secret !== undefined) { fields.push(`secret = $${paramIndex}`); values.push(updates.secret); paramIndex++ }
-    if (updates.is_active !== undefined) {
-      fields.push(`is_active = $${paramIndex}`)
-      values.push(this.conn.isPostgres() ? updates.is_active : (updates.is_active ? 1 : 0))
-      paramIndex++
-    }
-
-    if (fields.length === 0) return existing
-    
-    fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
-    paramIndex++
-    values.push(id)
-    if (ownerId) values.push(ownerId)
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE webhook_configs SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
-    return this.getWebhookConfigById(id, ownerId)
-  }
-
-  async deleteWebhookConfig(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1', [id])
-    return result.changes > 0
-  }
-
-  async createWebhookDelivery(delivery: CreateWebhookDelivery): Promise<WebhookDelivery> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, delivered_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, delivery.webhook_id, delivery.execution_log_id ?? null, delivery.event, delivery.payload, delivery.response_status ?? null, delivery.response_body ?? null, delivery.error_message ?? null, now]
-    )
-    return { ...delivery, id, delivered_at: now }
-  }
-
-  async getWebhookDeliveries(webhookId: string, limit: number = 100): Promise<WebhookDelivery[]> {
-    const rows = await this.conn.query<WebhookDeliveryRow>(
-      'SELECT * FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY delivered_at DESC LIMIT $2',
-      [webhookId, limit]
-    )
-    return rows.map(rowToWebhookDelivery)
-  }
-
-  async createDeadLetterItem(item: CreateDeadLetterItem, ownerId?: string): Promise<DeadLetterItem> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO dead_letter_queue (id, original_task_id, job_id, task_type, payload, error_message, failed_at, retry_count, owner_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, item.original_task_id ?? null, item.job_id ?? null, item.task_type, item.payload, item.error_message ?? null, now, item.retry_count ?? 0, ownerId ?? null]
-    )
-    return (await this.getDeadLetterItemById(id))!
-  }
-
-  async getDeadLetterItemById(id: string, ownerId?: string): Promise<DeadLetterItem | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<DeadLetterItemRow>('SELECT * FROM dead_letter_queue WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToDeadLetterItem(rows[0]) : null
-    }
-    const rows = await this.conn.query<DeadLetterItemRow>('SELECT * FROM dead_letter_queue WHERE id = $1', [id])
-    return rows[0] ? rowToDeadLetterItem(rows[0]) : null
-  }
-
-  async getDeadLetterQueue(limit: number = 100, ownerId?: string): Promise<DeadLetterItem[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<DeadLetterItemRow>(
-        'SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL AND owner_id = $1 ORDER BY failed_at DESC LIMIT $2',
-        [ownerId, limit]
-      )
-      return rows.map(rowToDeadLetterItem)
-    }
-    const rows = await this.conn.query<DeadLetterItemRow>(
-      'SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT $1',
-      [limit]
-    )
-    return rows.map(rowToDeadLetterItem)
-  }
-
-  async updateDeadLetterItem(id: string, updates: UpdateDeadLetterItem, ownerId?: string): Promise<DeadLetterItem | null> {
-    const existing = await this.getDeadLetterItemById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | null)[] = []
-    let paramIndex = 1
-
-    if (updates.resolved_at !== undefined) { fields.push(`resolved_at = $${paramIndex}`); values.push(updates.resolved_at); paramIndex++ }
-    if (updates.resolution !== undefined) { fields.push(`resolution = $${paramIndex}`); values.push(updates.resolution); paramIndex++ }
-
-    if (fields.length === 0) return existing
-    values.push(id)
-    if (ownerId) values.push(ownerId)
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE dead_letter_queue SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
-    return this.getDeadLetterItemById(id, ownerId)
-  }
-
-  async deleteDeadLetterItem(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM dead_letter_queue WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM dead_letter_queue WHERE id = $1', [id])
-    return result.changes > 0
   }
 
   async updateTaskStatus(taskId: string, status: TaskStatus, updates?: { started_at?: string | null; completed_at?: string | null; error_message?: string | null; result?: string | null }, ownerId?: string): Promise<void> {
@@ -1551,7 +1185,7 @@ export class DatabaseService {
     return (await this.getMediaRecordById(id))!
   }
 
-  async updateMediaRecord(id: string, data: UpdateMediaRecord, ownerId?: string): Promise<MediaRecord | null> {
+  async updateMediaRecord(id: string, data: { original_name?: string | null; metadata?: Record<string, unknown> | null }, ownerId?: string): Promise<MediaRecord | null> {
     const existing = await this.getMediaRecordById(id, ownerId)
     if (!existing) return null
     
@@ -2048,6 +1682,151 @@ export class DatabaseService {
       by_response_status,
       avg_duration_ms: Math.round(avg_duration),
     }
+  }
+
+  // =====================================================================
+  // Service Node Permissions
+  // =====================================================================
+
+  async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> {
+    const rows = await this.conn.query<ServiceNodePermissionRow>(
+      'SELECT * FROM service_node_permissions ORDER BY category, display_name'
+    )
+    return rows.map(row => ({
+      id: row.id,
+      service_name: row.service_name,
+      method_name: row.method_name,
+      display_name: row.display_name,
+      category: row.category,
+      min_role: row.min_role,
+      is_enabled: typeof row.is_enabled === 'boolean' ? row.is_enabled : row.is_enabled === 1,
+      created_at: row.created_at,
+    }))
+  }
+
+  async getServiceNodePermission(
+    serviceName: string,
+    methodName: string
+  ): Promise<ServiceNodePermission | null> {
+    const rows = await this.conn.query<ServiceNodePermissionRow>(
+      'SELECT * FROM service_node_permissions WHERE service_name = $1 AND method_name = $2',
+      [serviceName, methodName]
+    )
+    if (!rows[0]) return null
+    const row = rows[0]
+    return {
+      id: row.id,
+      service_name: row.service_name,
+      method_name: row.method_name,
+      display_name: row.display_name,
+      category: row.category,
+      min_role: row.min_role,
+      is_enabled: typeof row.is_enabled === 'boolean' ? row.is_enabled : row.is_enabled === 1,
+      created_at: row.created_at,
+    }
+  }
+
+  async updateServiceNodePermission(
+    id: string,
+    data: { min_role?: string; is_enabled?: boolean }
+  ): Promise<void> {
+    const updates: string[] = []
+    const values: (string | number)[] = []
+    let paramIndex = 1
+
+    if (data.min_role !== undefined) {
+      updates.push(`min_role = $${paramIndex}`)
+      values.push(data.min_role)
+      paramIndex++
+    }
+if (data.is_enabled !== undefined) {
+      updates.push(`is_enabled = $${paramIndex}`)
+      const boolValue = data.is_enabled ? 1 : 0
+      values.push(this.conn.isPostgres() ? boolValue : boolValue)
+      paramIndex++
+    }
+
+    if (updates.length === 0) return
+
+    values.push(id)
+    await this.conn.execute(
+      `UPDATE service_node_permissions SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
+  }
+
+  // =====================================================================
+  // Workflow Permissions
+  // =====================================================================
+
+  async createWorkflowPermission(data: {
+    workflow_id: string
+    user_id: string
+    granted_by?: string | null
+  }): Promise<void> {
+    const id = uuidv4()
+    const now = toISODate()
+    await this.conn.execute(
+      `INSERT INTO workflow_permissions (id, workflow_id, user_id, granted_by, created_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, data.workflow_id, data.user_id, data.granted_by || null, now]
+    )
+  }
+
+  async deleteWorkflowPermission(workflowId: string, userId: string): Promise<void> {
+    await this.conn.execute(
+      `DELETE FROM workflow_permissions WHERE workflow_id = $1 AND user_id = $2`,
+      [workflowId, userId]
+    )
+  }
+
+  async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> {
+    const rows = await this.conn.query<{ id: string }>(
+      `SELECT id FROM workflow_permissions WHERE workflow_id = $1 AND user_id = $2`,
+      [workflowId, userId]
+    )
+    return rows.length > 0
+  }
+
+  async getWorkflowPermissions(workflowId: string): Promise<Array<{
+    id: string
+    workflow_id: string
+    user_id: string
+    granted_by: string | null
+    created_at: string
+    username: string
+    email: string | null
+  }>> {
+    const rows = await this.conn.query<{
+      id: string
+      workflow_id: string
+      user_id: string
+      granted_by: string | null
+      created_at: string
+      username: string
+      email: string | null
+    }>(
+      `SELECT wp.*, u.username, u.email
+       FROM workflow_permissions wp
+       JOIN users u ON wp.user_id = u.id
+       WHERE wp.workflow_id = $1`,
+      [workflowId]
+    )
+    return rows
+  }
+
+  async getAvailableWorkflows(userId: string): Promise<WorkflowTemplate[]> {
+    const rows = await this.conn.query<WorkflowTemplateRow>(
+      `SELECT DISTINCT wt.* 
+       FROM workflow_templates wt
+       LEFT JOIN workflow_permissions wp ON wt.id = wp.workflow_id
+       WHERE wt.owner_id = $1
+          OR wp.user_id = $1
+          OR wt.is_public = true
+       ORDER BY wt.created_at DESC`,
+      [userId]
+    )
+    return rows.map(rowToWorkflowTemplate)
   }
 }
 

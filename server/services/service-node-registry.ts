@@ -1,0 +1,98 @@
+/**
+ * Service Node Registry
+ * 
+ * Manages registration and invocation of services used by workflow nodes.
+ */
+
+import type { DatabaseService } from '../database/service-async.js'
+import type { ServiceNodePermission } from '../database/types.js'
+
+export interface ServiceMethodMeta {
+  name: string
+  displayName: string
+  category: string
+  description?: string
+}
+
+export interface ServiceConfig {
+  serviceName: string
+  instance: object
+  methods: ServiceMethodMeta[]
+}
+
+export class ServiceNodeRegistry {
+  private services = new Map<string, object>()
+  private methodMetas = new Map<string, ServiceMethodMeta[]>()
+  private db: DatabaseService
+
+  constructor(db: DatabaseService) {
+    this.db = db
+  }
+
+  register(config: ServiceConfig): void {
+    this.services.set(config.serviceName, config.instance)
+    this.methodMetas.set(config.serviceName, config.methods)
+    console.log(`[ServiceNodeRegistry] Registered service: ${config.serviceName} with ${config.methods.length} methods`)
+  }
+
+  get(serviceName: string): object | undefined {
+    return this.services.get(serviceName)
+  }
+
+  async call(
+    serviceName: string,
+    method: string,
+    args: unknown[]
+  ): Promise<unknown> {
+    const instance = this.services.get(serviceName)
+    if (!instance) {
+      throw new Error(`Service "${serviceName}" not registered`)
+    }
+
+    const fn = (instance as Record<string, unknown>)[method]
+    if (typeof fn !== 'function') {
+      throw new Error(`Method "${method}" not found on service "${serviceName}"`)
+    }
+
+    return (fn as (...args: unknown[]) => Promise<unknown>)(...args)
+  }
+
+  getAllServices(): string[] {
+    return Array.from(this.services.keys())
+  }
+
+  getServiceMethods(serviceName: string): ServiceMethodMeta[] {
+    return this.methodMetas.get(serviceName) || []
+  }
+
+  async getAvailableNodes(userRole: string): Promise<ServiceNodePermission[]> {
+    const roleHierarchy: Record<string, number> = {
+      user: 0,
+      pro: 1,
+      admin: 2,
+      super: 3,
+    }
+
+    const userLevel = roleHierarchy[userRole] ?? 0
+    const allNodes = await this.db.getAllServiceNodePermissions()
+    
+    return allNodes.filter(node => {
+      if (!node.is_enabled) return false
+      const nodeLevel = roleHierarchy[node.min_role] ?? 0
+      return nodeLevel <= userLevel
+    })
+  }
+}
+
+let registryInstance: ServiceNodeRegistry | null = null
+
+export function getServiceNodeRegistry(db: DatabaseService): ServiceNodeRegistry {
+  if (!registryInstance) {
+    registryInstance = new ServiceNodeRegistry(db)
+  }
+  return registryInstance
+}
+
+export function resetServiceNodeRegistry(): void {
+  registryInstance = null
+}

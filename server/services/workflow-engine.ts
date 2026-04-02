@@ -1,5 +1,5 @@
 import type { DatabaseService } from '../database/service-async.js'
-import type { TaskStatus } from '../database/types'
+import type { ServiceNodeRegistry } from './service-node-registry.js'
 
 export interface TaskResult {
   success: boolean
@@ -15,11 +15,15 @@ export interface WorkflowResult {
   error?: string
 }
 
+type WorkflowNodeType = 'action' | 'condition' | 'loop' | 'transform'
+
 export interface WorkflowNode {
   id: string
-  type: 'action' | 'condition' | 'queue' | 'loop' | 'transform' | 'text-generation' | 'voice-sync' | 'voice-async' | 'image-generation' | 'music-generation' | 'video-generation'
-  subtype?: string
-  config: Record<string, unknown>
+  type: WorkflowNodeType
+  data: {
+    label: string
+    config: Record<string, unknown>
+  }
   position?: { x: number; y: number }
 }
 
@@ -36,58 +40,26 @@ export interface WorkflowGraph {
   edges: WorkflowEdge[]
 }
 
-export interface TaskExecutor {
-  executeTask(taskType: string, payload: Record<string, unknown>): Promise<TaskResult>
-}
-
-export interface CapacityChecker {
-  hasCapacity(serviceType: string): Promise<boolean>
-  decrementCapacity(serviceType: string): Promise<void>
-}
-
-export interface QueueProcessor {
-  processQueue(jobId: string, options?: QueueOptions): Promise<QueueResult>
-}
-
-export interface QueueOptions {
-  batchSize?: number
-  maxConcurrent?: number
-  skipFailed?: boolean
-}
-
-export interface QueueResult {
-  success: boolean
-  tasksExecuted: number
-  tasksSucceeded: number
-  tasksFailed: number
-  error?: string
-}
-
 export class WorkflowEngine {
   private db: DatabaseService
-  private taskExecutor: TaskExecutor
-  private capacityChecker: CapacityChecker
-  private queueProcessor: QueueProcessor | null = null
+  private serviceRegistry: ServiceNodeRegistry
+  private executionLogId: string | null = null
   private workflowNodes: WorkflowNode[] = []
 
-  constructor(
-    db: DatabaseService,
-    taskExecutor: TaskExecutor,
-    capacityChecker: CapacityChecker
-  ) {
+  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry) {
     this.db = db
-    this.taskExecutor = taskExecutor
-    this.capacityChecker = capacityChecker
+    this.serviceRegistry = serviceRegistry
   }
 
-  setQueueProcessor(queueProcessor: QueueProcessor): void {
-    this.queueProcessor = queueProcessor
-  }
-
-  async executeWorkflow(workflowJson: string): Promise<WorkflowResult> {
+  async executeWorkflow(
+    workflowJson: string,
+    executionLogId?: string
+  ): Promise<WorkflowResult> {
     const startTime = Date.now()
     const nodeResults = new Map<string, TaskResult>()
     let executionError: string | undefined
+
+    this.executionLogId = executionLogId || null
 
     try {
       const workflow = this.parseWorkflowJson(workflowJson)
@@ -102,7 +74,7 @@ export class WorkflowEngine {
           throw new Error(`Node ${nodeId} not found in workflow`)
         }
 
-        const resolvedConfig = this.resolveNodeConfig(node.config, nodeOutputs)
+        const resolvedConfig = this.resolveNodeConfig(node.data.config, nodeOutputs)
         const result = await this.executeNode(node, resolvedConfig, nodeOutputs)
         nodeResults.set(nodeId, result)
 
@@ -117,8 +89,7 @@ export class WorkflowEngine {
       }
 
     } catch (error) {
-      const err = error as Error
-      executionError = err.message
+      executionError = (error as Error).message
     }
 
     return {
@@ -264,6 +235,11 @@ export class WorkflowEngine {
       const parts = path.trim().split('.')
       const nodeId = parts[0]
       
+      if (nodeId === 'item' && parts.length > 1) {
+        const item = nodeOutputs.get('item')
+        return this.getValueAtPath(item, parts.slice(1).join('.'))
+      }
+
       if (parts[1] === 'output' && parts.length > 2) {
         const outputPath = parts.slice(2)
         let current = nodeOutputs.get(nodeId)
@@ -302,123 +278,132 @@ export class WorkflowEngine {
     })
   }
 
+  private getValueAtPath(data: unknown, path: string): string {
+    const parts = path.split('.')
+    let current = data
+
+    for (const part of parts) {
+      const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/)
+      if (arrayMatch) {
+        const key = arrayMatch[1]
+        const index = parseInt(arrayMatch[2], 10)
+        if (current && typeof current === 'object' && key in current) {
+          const arr = (current as Record<string, unknown>)[key]
+          current = Array.isArray(arr) ? arr[index] : undefined
+        } else {
+          return ''
+        }
+      } else {
+        if (current && typeof current === 'object' && part in current) {
+          current = (current as Record<string, unknown>)[part]
+        } else {
+          return ''
+        }
+      }
+    }
+
+    return current !== undefined ? String(current) : ''
+  }
+
   private async executeNode(
     node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
   ): Promise<TaskResult> {
     const startTime = Date.now()
-    const maxRetries = 3
-    let lastError: string | undefined
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        let result: TaskResult
+    try {
+      let result: unknown
 
-        switch (node.type) {
-          case 'action':
-            result = await this.executeActionNode(node, config)
-            break
-          case 'text-generation':
-            result = await this.executeActionNode({ ...node, subtype: 'text' }, config)
-            break
-          case 'voice-sync':
-            result = await this.executeActionNode({ ...node, subtype: 'voice-sync' }, config)
-            break
-          case 'voice-async':
-            result = await this.executeActionNode({ ...node, subtype: 'voice-async' }, config)
-            break
-          case 'image-generation':
-            result = await this.executeActionNode({ ...node, subtype: 'image' }, config)
-            break
-          case 'music-generation':
-            result = await this.executeActionNode({ ...node, subtype: 'music' }, config)
-            break
-          case 'video-generation':
-            result = await this.executeActionNode({ ...node, subtype: 'video' }, config)
-            break
-          case 'condition':
-            result = await this.executeConditionNode(node, config, nodeOutputs)
-            break
-          case 'queue':
-            result = await this.executeQueueNode(node, config)
-            break
-          case 'loop':
-            result = await this.executeLoopNode(node, config, nodeOutputs)
-            break
-          case 'transform':
-            result = await this.executeTransformNode(node, config, nodeOutputs)
-            break
-          default:
-            throw new Error(`Unknown node type: ${node.type}`)
-        }
-
-        return result
-
-      } catch (error) {
-        lastError = (error as Error).message
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
-        }
+      switch (node.type) {
+        case 'action':
+          result = await this.executeActionNode(node, config)
+          break
+        case 'condition':
+          result = await this.executeConditionNode(config, nodeOutputs)
+          break
+        case 'loop':
+          result = await this.executeLoopNode(config, nodeOutputs)
+          break
+        case 'transform':
+          result = await this.executeTransformNode(config, nodeOutputs)
+          break
+        default:
+          throw new Error(`Unknown node type: ${node.type}`)
       }
-    }
 
-    return {
-      success: false,
-      error: lastError || 'Unknown error after retries',
-      durationMs: Date.now() - startTime,
+      return {
+        success: true,
+        data: result,
+        durationMs: Date.now() - startTime,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: (error as Error).message,
+        durationMs: Date.now() - startTime,
+      }
     }
   }
 
   private async executeActionNode(
     node: WorkflowNode,
     config: Record<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
-    const taskType = node.subtype || 'text'
+  ): Promise<unknown> {
+    const service = config.service as string
+    const method = config.method as string
+    const args = (config.args as unknown[]) ?? []
+    
+    const detailStartTime = Date.now()
+    let detailId: string | null = null
 
-    const hasCapacity = await this.capacityChecker.hasCapacity(taskType)
-    if (!hasCapacity) {
-      return {
-        success: false,
-        error: `No capacity available for task type: ${taskType}`,
-        durationMs: Date.now() - startTime,
+    if (this.executionLogId) {
+      detailId = await this.db.createExecutionLogDetail({
+        log_id: this.executionLogId,
+        node_id: node.id,
+        node_type: 'action',
+        service_name: service,
+        method_name: method,
+        input_payload: JSON.stringify(args),
+        started_at: new Date().toISOString(),
+      })
+    }
+
+    try {
+      const result = await this.serviceRegistry.call(service, method, args)
+
+      if (detailId) {
+        await this.db.updateExecutionLogDetail(detailId, {
+          output_result: JSON.stringify(result),
+          completed_at: new Date().toISOString(),
+          duration_ms: Date.now() - detailStartTime,
+        })
       }
+
+      return result
+    } catch (error) {
+      if (detailId) {
+        await this.db.updateExecutionLogDetail(detailId, {
+          error_message: (error as Error).message,
+          completed_at: new Date().toISOString(),
+          duration_ms: Date.now() - detailStartTime,
+        })
+      }
+      throw error
     }
-
-    const result = await this.taskExecutor.executeTask(taskType, config)
-
-    if (result.success) {
-      await this.capacityChecker.decrementCapacity(taskType)
-    }
-
-    return result
   }
 
   private async executeConditionNode(
-    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
-    
+  ): Promise<boolean> {
     const condition = config.condition as string | undefined
     if (!condition) {
-      return {
-        success: false,
-        error: 'Condition node requires a condition config',
-        durationMs: Date.now() - startTime,
-      }
+      throw new Error('Condition node requires a condition config')
     }
 
     const resolvedCondition = this.resolveTemplateString(condition, nodeOutputs)
-    const evaluated = this.evaluateCondition(resolvedCondition)
-
-    return {
-      success: true,
-      data: evaluated,
-      durationMs: Date.now() - startTime,
-    }
+    return this.evaluateCondition(resolvedCondition)
   }
 
   private evaluateCondition(condition: string): boolean {
@@ -448,129 +433,55 @@ export class WorkflowEngine {
     return condition.trim().length > 0
   }
 
-  private async executeQueueNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
-
-    if (!this.queueProcessor) {
-      return {
-        success: false,
-        error: 'QueueProcessor not configured',
-        durationMs: Date.now() - startTime,
-      }
-    }
-
-    const jobId = config.jobId as string
-    if (!jobId) {
-      return {
-        success: false,
-        error: 'Queue node requires jobId config',
-        durationMs: Date.now() - startTime,
-      }
-    }
-
-    const options = {
-      batchSize: config.batchSize as number | undefined,
-      maxConcurrent: config.maxConcurrent as number | undefined,
-      skipFailed: config.skipFailed as boolean | undefined,
-    }
-
-    const result = await this.queueProcessor.processQueue(jobId, options)
-
-    return {
-      success: result.success,
-      data: {
-        tasksExecuted: result.tasksExecuted,
-        tasksSucceeded: result.tasksSucceeded,
-        tasksFailed: result.tasksFailed,
-      },
-      error: result.error,
-      durationMs: Date.now() - startTime,
-    }
-  }
-
   private async executeLoopNode(
-    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
+  ): Promise<{ iterations: number; results: unknown[] }> {
+    const items = config.items as string | undefined
+    const maxIterations = (config.maxIterations as number) ?? 10
+    const condition = config.condition as string | undefined
     
-    const maxIterations = (config.maxIterations as number) || 10
-    const loopCondition = config.condition as string | undefined
-    const bodyNodeId = config.bodyNode as string | undefined
-    const outputVariable = config.outputVariable as string | undefined
-
-    if (!bodyNodeId) {
-      return {
-        success: false,
-        error: 'Loop node requires bodyNode config',
-        durationMs: Date.now() - startTime,
+    let itemsArray: unknown[] = []
+    if (items) {
+      const resolved = this.resolveTemplateString(items, nodeOutputs)
+      try {
+        itemsArray = JSON.parse(resolved)
+      } catch {
+        itemsArray = [resolved]
       }
     }
-
-    const bodyNode = this.workflowNodes.find(n => n.id === bodyNodeId)
-    const shouldExecuteBody = bodyNode && outputVariable
 
     const results: unknown[] = []
     let iterationCount = 0
 
     while (iterationCount < maxIterations) {
-      if (loopCondition) {
-        const resolvedCondition = this.resolveTemplateString(loopCondition, nodeOutputs)
-        const shouldContinue = this.evaluateCondition(resolvedCondition)
-        if (!shouldContinue) break
+      if (condition) {
+        const resolved = this.resolveTemplateString(condition, nodeOutputs)
+        if (!this.evaluateCondition(resolved)) break
       }
 
-      if (shouldExecuteBody && bodyNode) {
-        const bodyNodeConfig = this.resolveNodeConfig(bodyNode.config, nodeOutputs)
-        const iterationResult = await this.executeNode(bodyNode, bodyNodeConfig, nodeOutputs)
-        
-        if (!iterationResult.success) {
-          return {
-            success: false,
-            error: `Loop iteration ${iterationCount} failed: ${iterationResult.error}`,
-            durationMs: Date.now() - startTime,
-          }
-        }
-        
-        results.push(iterationResult)
-        nodeOutputs.set(`${node.id}.iteration.${iterationCount}`, iterationResult)
-      } else {
-        results.push({ iteration: iterationCount })
-        nodeOutputs.set(`${node.id}.iteration.${iterationCount}`, { iteration: iterationCount })
+      if (itemsArray.length > 0 && iterationCount >= itemsArray.length) break
+
+      if (itemsArray.length > 0) {
+        nodeOutputs.set('item', itemsArray[iterationCount])
       }
+
+      results.push({ iteration: iterationCount })
       iterationCount++
     }
 
-    if (outputVariable) {
-      nodeOutputs.set(outputVariable, results)
-    }
-
-    return {
-      success: true,
-      data: {
-        iterations: results.length,
-        results: results,
-      },
-      durationMs: Date.now() - startTime,
-    }
+    return { iterations: iterationCount, results }
   }
 
   private async executeTransformNode(
-    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
-
-    const transformType = config.transformType as string || 'passthrough'
-    const inputNodeId = config.inputNode as string | undefined
+  ): Promise<unknown> {
+    const transformType = (config.transformType as string) || 'passthrough'
     const inputPath = config.inputPath as string | undefined
     const outputFormat = config.outputFormat as string | undefined
-
+    const inputNodeId = config.inputNode as string | undefined
+    
     let inputData: unknown
 
     if (inputNodeId) {
@@ -591,7 +502,7 @@ export class WorkflowEngine {
           outputData = this.extractData(inputData, outputFormat)
         }
         break
-      case 'map':
+      case 'map': {
         const mapFunction = config.mapFunction as string | undefined
         if (mapFunction && Array.isArray(inputData)) {
           outputData = inputData.map((item, index) => {
@@ -601,7 +512,8 @@ export class WorkflowEngine {
           })
         }
         break
-      case 'filter':
+      }
+      case 'filter': {
         const filterCondition = config.filterCondition as string | undefined
         if (filterCondition && Array.isArray(inputData)) {
           outputData = inputData.filter(item => {
@@ -610,51 +522,17 @@ export class WorkflowEngine {
           })
         }
         break
+      }
       case 'format':
         if (typeof inputData === 'object' && outputFormat) {
           outputData = this.formatOutput(inputData, outputFormat)
         }
         break
       default:
-        return {
-          success: false,
-          error: `Unknown transform type: ${transformType}`,
-          durationMs: Date.now() - startTime,
-        }
+        throw new Error(`Unknown transform type: ${transformType}`)
     }
 
-    return {
-      success: true,
-      data: outputData,
-      durationMs: Date.now() - startTime,
-    }
-  }
-
-  private getValueAtPath(data: unknown, path: string): unknown {
-    const parts = path.split('.')
-    let current = data
-
-    for (const part of parts) {
-      const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/)
-      if (arrayMatch) {
-        const key = arrayMatch[1]
-        const index = parseInt(arrayMatch[2], 10)
-        if (current && typeof current === 'object' && key in current) {
-          const arr = (current as Record<string, unknown>)[key]
-          current = Array.isArray(arr) ? arr[index] : undefined
-        } else {
-          return undefined
-        }
-      } else {
-        if (current && typeof current === 'object' && part in current) {
-          current = (current as Record<string, unknown>)[part]
-        } else {
-          return undefined
-        }
-      }
-    }
-
-    return current
+    return outputData
   }
 
   private extractData(data: unknown, format: string): unknown {

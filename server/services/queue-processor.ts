@@ -206,18 +206,8 @@ export class QueueProcessor {
   }
 
   private async moveToDeadLetterQueue(task: TaskQueueRow, error: string): Promise<void> {
-    try {
-      await this.db.createDeadLetterItem({
-        original_task_id: task.id,
-        job_id: task.job_id,
-        task_type: task.task_type,
-        payload: task.payload,
-        error_message: error,
-        retry_count: task.retry_count,
-      })
-    } catch (dbError) {
-      console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, dbError)
-    }
+    // Dead letter queue table was removed - just log the failure
+    console.error(`[QueueProcessor] Task ${task.id} failed with error: ${error}. Max retries exceeded.`)
   }
 
   async getQueueStats(jobId: string): Promise<{

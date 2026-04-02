@@ -19,17 +19,11 @@ import {
 import '@xyflow/react/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Clock,
   Zap,
   GitBranch,
-  Layers,
   Repeat,
   MessageSquare,
-  Mic,
-  MicOff,
-  Image,
-  Music,
-  Video,
+  Layers,
   Save,
   Upload,
   CheckCircle,
@@ -37,39 +31,24 @@ import {
   X,
   Settings,
   AlertCircle,
-  Play,
-  FileJson,
   Wrench,
 } from 'lucide-react'
 
-import { TriggerNode } from '@/components/cron/nodes/TriggerNode'
+import { ActionNode } from '@/components/workflow/nodes/ActionNode'
 import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
-import { QueueNode } from '@/components/cron/nodes/QueueNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
-import { TextGenNode } from '@/components/cron/nodes/TextGenNode'
-import { VoiceSyncNode } from '@/components/cron/nodes/VoiceSyncNode'
-import { VoiceAsyncNode } from '@/components/cron/nodes/VoiceAsyncNode'
-import { ImageGenNode } from '@/components/cron/nodes/ImageGenNode'
-import { MusicGenNode } from '@/components/cron/nodes/MusicGenNode'
-import { VideoGenNode } from '@/components/cron/nodes/VideoGenNode'
-import { useWorkflowStore, isValidWorkflow, hasTriggerNode, hasActionNode } from '@/stores/workflow'
-import type { WorkflowNode, WorkflowEdge } from '@/types/cron'
+import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
+import { useWorkflowStore, isValidWorkflow, hasActionNode } from '@/stores/workflow'
+import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
 
 // Node Types Registry
 const nodeTypes: NodeTypes = {
-  trigger: TriggerNode,
-  loop: LoopNode,
+  action: ActionNode,
   condition: ConditionNode,
-  queue: QueueNode,
+  loop: LoopNode,
   transform: TransformNode,
-  'text-generation': TextGenNode,
-  'voice-sync': VoiceSyncNode,
-  'voice-async': VoiceAsyncNode,
-  'image-generation': ImageGenNode,
-  'music-generation': MusicGenNode,
-  'video-generation': VideoGenNode,
 }
 
 // Node Palette Configuration
@@ -77,33 +56,23 @@ interface NodePaletteItem {
   type: string
   label: string
   icon: React.ElementType
-  category: 'trigger' | 'logic' | 'action'
+  category: 'logic' | 'action'
   description: string
 }
 
-const nodePalette: NodePaletteItem[] = [
-  // Triggers
-  {
-    type: 'trigger',
-    label: 'Cron Trigger',
-    icon: Clock,
-    category: 'trigger',
-    description: 'Schedule-based workflow trigger',
-  },
-  // Logic
+interface AvailableActionItem {
+  service: string
+  method: string
+  label: string
+}
+
+const logicNodes: NodePaletteItem[] = [
   {
     type: 'condition',
     label: 'Condition',
     icon: GitBranch,
     category: 'logic',
     description: 'Conditional branching logic',
-  },
-  {
-    type: 'queue',
-    label: 'Queue',
-    icon: Layers,
-    category: 'logic',
-    description: 'Batch processing queue',
   },
   {
     type: 'loop',
@@ -119,107 +88,19 @@ const nodePalette: NodePaletteItem[] = [
     category: 'logic',
     description: 'Data transformation',
   },
-  // Actions
-  {
-    type: 'text-generation',
-    label: 'Text Generation',
-    icon: MessageSquare,
-    category: 'action',
-    description: 'Generate text with AI',
-  },
-  {
-    type: 'voice-sync',
-    label: 'Voice Sync',
-    icon: Mic,
-    category: 'action',
-    description: 'Real-time voice synthesis',
-  },
-  {
-    type: 'voice-async',
-    label: 'Voice Async',
-    icon: MicOff,
-    category: 'action',
-    description: 'Batch voice synthesis',
-  },
-  {
-    type: 'image-generation',
-    label: 'Image Generation',
-    icon: Image,
-    category: 'action',
-    description: 'Generate images with AI',
-  },
-  {
-    type: 'music-generation',
-    label: 'Music Generation',
-    icon: Music,
-    category: 'action',
-    description: 'Generate music with AI',
-  },
-  {
-    type: 'video-generation',
-    label: 'Video Generation',
-    icon: Video,
-    category: 'action',
-    description: 'Generate videos with AI',
-  },
 ]
 
 // Default configurations for each node type
-const getDefaultConfig = (type: string): Record<string, unknown> => {
+const getDefaultConfig = (type: string, actionData?: AvailableActionItem): Record<string, unknown> => {
   switch (type) {
-    case 'trigger':
+    case 'action':
       return {
-        cronExpression: '0 0 * * *',
-        timezone: 'UTC',
-        isActive: true,
-        label: 'Cron Trigger',
-      }
-    case 'text-generation':
-      return {
-        model: 'kimi-k2.5',
-        temperature: 0.7,
-        maxTokens: 2048,
-        prompt: '',
-        label: 'Text Generation',
-      }
-    case 'voice-sync':
-      return {
-        model: 'speech-01-turbo',
-        voiceId: '',
-        speed: 1.0,
-        volume: 1.0,
-        pitch: 0,
-        label: 'Voice Sync',
-      }
-    case 'voice-async':
-      return {
-        model: 'speech-01-turbo',
-        voiceId: '',
-        label: 'Voice Async',
-      }
-    case 'image-generation':
-      return {
-        model: 'image-01',
-        prompt: '',
-        size: '1024x1024',
-        count: 1,
-        promptOptimizer: true,
-        style: 'general',
-        label: 'Image Generation',
-      }
-    case 'music-generation':
-      return {
-        model: 'music-01',
-        prompt: '',
-        duration: 30,
-        label: 'Music Generation',
-      }
-    case 'video-generation':
-      return {
-        model: 'video-01',
-        prompt: '',
-        duration: 5,
-        label: 'Video Generation',
+        label: actionData?.label || 'Action',
+        config: {
+          service: actionData?.service || '',
+          method: actionData?.method || '',
+          args: [],
+        },
       }
     case 'condition':
       return {
@@ -227,13 +108,6 @@ const getDefaultConfig = (type: string): Record<string, unknown> => {
         serviceType: 'text',
         threshold: 0,
         label: 'Condition',
-      }
-    case 'queue':
-      return {
-        queueName: 'default',
-        batchSize: 10,
-        pullStrategy: 'fifo',
-        label: 'Queue',
       }
     case 'loop':
       return {
@@ -347,12 +221,31 @@ function Toolbar({
 }
 
 // Node Palette Sidebar
-function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, nodeType: string) => void }) {
-  const categories = [
-    { key: 'trigger', label: 'Triggers', color: 'text-green-400' },
-    { key: 'logic', label: 'Logic', color: 'text-purple-400' },
-    { key: 'action', label: 'Actions', color: 'text-blue-400' },
-  ] as const
+function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => void }) {
+  const [availableActions, setAvailableActions] = React.useState<GroupedActionNodes>({})
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch('/api/workflows/available-actions')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setAvailableActions(data.data)
+        }
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('Failed to load available actions:', err)
+        setLoading(false)
+      })
+  }, [])
+
+  const categoryIcons: Record<string, React.ElementType> = {
+    'MiniMax API': MessageSquare,
+    'Database': Layers,
+    'Logic': GitBranch,
+    'default': Wrench,
+  }
 
   return (
     <div className="w-64 bg-dark-950 border-r border-dark-800 flex flex-col h-full">
@@ -362,36 +255,76 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
-        {categories.map((category) => (
-          <div key={category.key} className="mb-4">
-            <h4 className={cn('text-xs font-medium uppercase tracking-wider mb-2', category.color)}>
-              {category.label}
-            </h4>
-            <div className="space-y-1">
-              {nodePalette
-                .filter((item) => item.category === category.key)
-                .map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div
-                      key={item.type}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, item.type)}
-                      className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
-                    >
-                      <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
-                        <p className="text-xs text-muted-foreground/50 truncate">{item.description}</p>
-                      </div>
-                    </div>
-                  )
-                })}
-            </div>
+        {/* Logic Nodes */}
+        <div className="mb-4">
+          <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-purple-400">
+            Logic
+          </h4>
+          <div className="space-y-1">
+            {logicNodes.map((item) => {
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.type}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, item.type)}
+                  className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
+                >
+                  <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
+                    <Icon className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
+                    <p className="text-xs text-muted-foreground/50 truncate">{item.description}</p>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        ))}
+        </div>
+
+        {/* Action Nodes */}
+        <div className="mb-4">
+          <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-blue-400">
+            Actions
+          </h4>
+          {loading ? (
+            <div className="text-xs text-muted-foreground/50 p-3">Loading actions...</div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(availableActions).map(([category, actions]) => {
+                const Icon = categoryIcons[category] || categoryIcons.default
+                return (
+                  <div key={category}>
+                    <h5 className="text-xs font-medium text-muted-foreground/70 mb-2 px-1">{category}</h5>
+                    <div className="space-y-1">
+                      {actions.map((action) => (
+                        <div
+                          key={`${action.service}.${action.method}`}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, 'action', {
+                            service: action.service,
+                            method: action.method,
+                            label: action.label,
+                          })}
+                          className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
+                        >
+                          <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{action.label}</p>
+                            <p className="text-xs text-muted-foreground/50 truncate">{action.service}.{action.method}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -429,7 +362,7 @@ function ConfigPanel({
   }
 
   const nodeType = node.type as string
-  const Icon = nodePalette.find((n) => n.type === nodeType)?.icon || Settings
+  const Icon = logicNodes.find((n) => n.type === nodeType)?.icon || Settings
 
   return (
     <motion.div
@@ -474,362 +407,13 @@ function ConfigPanel({
           />
         </div>
 
-        {/* Trigger Config */}
-        {nodeType === 'trigger' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Cron Expression</label>
-              <input
-                type="text"
-                value={(config.cronExpression as string) || ''}
-                onChange={(e) => updateConfig('cronExpression', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="0 0 * * *"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Timezone</label>
-              <select
-                value={(config.timezone as string) || 'UTC'}
-                onChange={(e) => updateConfig('timezone', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="UTC">UTC</option>
-                <option value="America/New_York">America/New_York</option>
-                <option value="America/Los_Angeles">America/Los_Angeles</option>
-                <option value="Europe/London">Europe/London</option>
-                <option value="Asia/Tokyo">Asia/Tokyo</option>
-                <option value="Asia/Shanghai">Asia/Shanghai</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Active</label>
-              <button
-                onClick={() => updateConfig('isActive', !config.isActive)}
-                className={cn(
-                  'w-10 h-6 rounded-full transition-colors relative',
-                  config.isActive ? 'bg-green-500' : 'bg-dark-700'
-                )}
-              >
-                <div
-                  className={cn(
-                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                    config.isActive ? 'translate-x-5' : 'translate-x-1'
-                  )}
-                />
-              </button>
-            </div>
-          </>
+        {nodeType === 'action' && (
+          <ActionConfigPanel
+            config={(config.config as { service: string; method: string; args?: unknown[] }) || { service: '', method: '' }}
+            onChange={(newConfig) => updateConfig('config', newConfig)}
+          />
         )}
 
-        {/* Text Generation Config */}
-        {nodeType === 'text-generation' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'kimi-k2.5'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="kimi-k2.5">Kimi K2.5</option>
-                <option value="kimi-k2">Kimi K2</option>
-                <option value="GPT-4">GPT-4</option>
-                <option value="Claude-3">Claude-3</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Temperature: {(config.temperature as number) || 0.7}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={(config.temperature as number) || 0.7}
-                onChange={(e) => updateConfig('temperature', parseFloat(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Max Tokens</label>
-              <input
-                type="number"
-                value={(config.maxTokens as number) || 2048}
-                onChange={(e) => updateConfig('maxTokens', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
-              <textarea
-                value={(config.prompt as string) || ''}
-                onChange={(e) => updateConfig('prompt', e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder="Enter your prompt..."
-              />
-            </div>
-          </>
-        )}
-
-        {/* Voice Sync Config */}
-        {nodeType === 'voice-sync' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'speech-01-turbo'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="speech-01-turbo">Speech-01 Turbo</option>
-                <option value="speech-01">Speech-01</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Voice ID</label>
-              <input
-                type="text"
-                value={(config.voiceId as string) || ''}
-                onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="Enter voice ID"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Speed: {(config.speed as number) || 1.0}
-              </label>
-              <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.1"
-                value={(config.speed as number) || 1.0}
-                onChange={(e) => updateConfig('speed', parseFloat(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Volume: {(config.volume as number) || 1.0}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={(config.volume as number) || 1.0}
-                onChange={(e) => updateConfig('volume', parseFloat(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Pitch: {(config.pitch as number) || 0}
-              </label>
-              <input
-                type="range"
-                min="-12"
-                max="12"
-                step="1"
-                value={(config.pitch as number) || 0}
-                onChange={(e) => updateConfig('pitch', parseFloat(e.target.value))}
-                className="w-full"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Voice Async Config */}
-        {nodeType === 'voice-async' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'speech-01-turbo'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="speech-01-turbo">Speech-01 Turbo</option>
-                <option value="speech-01">Speech-01</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Voice ID</label>
-              <input
-                type="text"
-                value={(config.voiceId as string) || ''}
-                onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="Enter voice ID"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Image Generation Config */}
-        {nodeType === 'image-generation' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'image-01'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="image-01">Image-01</option>
-                <option value="image-01-preview">Image-01 Preview</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
-              <textarea
-                value={(config.prompt as string) || ''}
-                onChange={(e) => updateConfig('prompt', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder="Describe the image you want to generate..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Size</label>
-              <select
-                value={(config.size as string) || '1024x1024'}
-                onChange={(e) => updateConfig('size', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="1024x1024">1024x1024</option>
-                <option value="1024x1792">1024x1792</option>
-                <option value="1792x1024">1792x1024</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Count</label>
-              <input
-                type="number"
-                min="1"
-                max="4"
-                value={(config.count as number) || 1}
-                onChange={(e) => updateConfig('count', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Style</label>
-              <select
-                value={(config.style as string) || 'general'}
-                onChange={(e) => updateConfig('style', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="general">General</option>
-                <option value="vivid">Vivid</option>
-                <option value="natural">Natural</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Prompt Optimizer</label>
-              <button
-                onClick={() => updateConfig('promptOptimizer', !config.promptOptimizer)}
-                className={cn(
-                  'w-10 h-6 rounded-full transition-colors relative',
-                  config.promptOptimizer ? 'bg-green-500' : 'bg-dark-700'
-                )}
-              >
-                <div
-                  className={cn(
-                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                    config.promptOptimizer ? 'translate-x-5' : 'translate-x-1'
-                  )}
-                />
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Music Generation Config */}
-        {nodeType === 'music-generation' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'music-01'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="music-01">Music-01</option>
-                <option value="music-01-preview">Music-01 Preview</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
-              <textarea
-                value={(config.prompt as string) || ''}
-                onChange={(e) => updateConfig('prompt', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder="Describe the music you want to generate..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Duration (seconds)
-              </label>
-              <input
-                type="number"
-                min="5"
-                max="180"
-                value={(config.duration as number) || 30}
-                onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Video Generation Config */}
-        {nodeType === 'video-generation' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
-              <select
-                value={(config.model as string) || 'video-01'}
-                onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="video-01">Video-01</option>
-                <option value="video-01-preview">Video-01 Preview</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
-              <textarea
-                value={(config.prompt as string) || ''}
-                onChange={(e) => updateConfig('prompt', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder="Describe the video you want to generate..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Duration (seconds)
-              </label>
-              <input
-                type="number"
-                min="5"
-                max="60"
-                value={(config.duration as number) || 5}
-                onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Condition Config */}
         {nodeType === 'condition' && (
           <>
             <div>
@@ -873,45 +457,6 @@ function ConfigPanel({
           </>
         )}
 
-        {/* Queue Config */}
-        {nodeType === 'queue' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Queue Name</label>
-              <input
-                type="text"
-                value={(config.queueName as string) || 'default'}
-                onChange={(e) => updateConfig('queueName', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="Queue name"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Batch Size</label>
-              <input
-                type="number"
-                min="1"
-                value={(config.batchSize as number) || 10}
-                onChange={(e) => updateConfig('batchSize', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Pull Strategy</label>
-              <select
-                value={(config.pullStrategy as string) || 'fifo'}
-                onChange={(e) => updateConfig('pullStrategy', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="fifo">FIFO (First In, First Out)</option>
-                <option value="lifo">LIFO (Last In, First Out)</option>
-                <option value="priority">Priority</option>
-              </select>
-            </div>
-          </>
-        )}
-
-        {/* Loop Config */}
         {nodeType === 'loop' && (
           <>
             <div>
@@ -937,7 +482,6 @@ function ConfigPanel({
           </>
         )}
 
-        {/* Transform Config */}
         {nodeType === 'transform' && (
           <>
             <div>
@@ -991,7 +535,6 @@ function ConfigPanel({
         )}
       </div>
 
-      {/* Footer Actions */}
       <div className="p-4 border-t border-dark-800 flex gap-2">
         <button
           onClick={handleSave}
@@ -1007,7 +550,6 @@ function ConfigPanel({
         </button>
       </div>
 
-      {/* Delete Button */}
       <div className="p-4 border-t border-dark-800">
         <button
           onClick={() => {
@@ -1076,8 +618,11 @@ function WorkflowBuilderInner() {
   }, [edges])
 
   // Drag handlers
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData('application/reactflow', nodeType)
+  const onDragStart = (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
+      type: nodeType,
+      actionData,
+    }))
     event.dataTransfer.effectAllowed = 'move'
   }
 
@@ -1089,8 +634,17 @@ function WorkflowBuilderInner() {
   const onDrop = (event: React.DragEvent) => {
     event.preventDefault()
 
-    const nodeType = event.dataTransfer.getData('application/reactflow')
-    if (!nodeType) return
+    const dataStr = event.dataTransfer.getData('application/reactflow')
+    if (!dataStr) return
+
+    let dragData: { type: string; actionData?: AvailableActionItem }
+    try {
+      dragData = JSON.parse(dataStr)
+    } catch {
+      dragData = { type: dataStr }
+    }
+
+    const { type: nodeType, actionData } = dragData
 
     const position = screenToFlowPosition({
       x: event.clientX,
@@ -1101,7 +655,7 @@ function WorkflowBuilderInner() {
       id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: nodeType,
       position,
-      data: getDefaultConfig(nodeType),
+      data: getDefaultConfig(nodeType, actionData),
     }
 
     setNodes((nds) => [...nds, newNode])
@@ -1198,7 +752,6 @@ function WorkflowBuilderInner() {
     }))
 
     const valid = isValidWorkflow(storeNodes as WorkflowNode[], storeEdges as WorkflowEdge[])
-    const hasTrigger = hasTriggerNode(storeNodes as WorkflowNode[])
     const hasAction = hasActionNode(storeNodes as WorkflowNode[])
 
     let message = ''
@@ -1206,8 +759,6 @@ function WorkflowBuilderInner() {
       message = 'Workflow is valid!'
     } else if (storeNodes.length === 0) {
       message = 'Workflow is empty. Add some nodes first.'
-    } else if (!hasTrigger) {
-      message = 'Missing trigger node. Add a trigger to start the workflow.'
     } else if (!hasAction) {
       message = 'Missing action node. Add an action to process the workflow.'
     } else {
@@ -1281,14 +832,12 @@ function WorkflowBuilderInner() {
               className="bg-dark-950 border border-border rounded-md"
               nodeColor={(node) => {
                 switch (node.type) {
-                  case 'trigger':
-                    return '#22c55e'
+                  case 'action':
+                    return '#3b82f6'
                   case 'loop':
                     return '#a855f7'
                   case 'condition':
                     return '#f59e0b'
-                  case 'queue':
-                    return '#3b82f6'
                   case 'transform':
                     return '#6366f1'
                   default:

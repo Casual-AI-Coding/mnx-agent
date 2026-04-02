@@ -11,7 +11,6 @@ import type {
   UpdateCronJobDTO,
   CreateTaskDTO,
   UpdateTaskDTO,
-  CreateWorkflowTemplateDTO,
   UpdateWorkflowTemplateDTO,
   TaskQueueFilter,
 } from '@/types/cron'
@@ -245,7 +244,7 @@ export async function getWorkflowTemplates(): Promise<ApiResponse<{ templates: W
   }
 }
 
-export async function createWorkflowTemplate(template: CreateWorkflowTemplateDTO): Promise<ApiResponse<WorkflowTemplate>> {
+export async function createWorkflowTemplate(template: { name: string; description: string; nodesJson: string; edgesJson: string }): Promise<ApiResponse<WorkflowTemplate>> {
   try {
     const backendTemplate = {
       name: template.name,

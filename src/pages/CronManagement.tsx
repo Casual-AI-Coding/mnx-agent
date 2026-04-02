@@ -58,12 +58,10 @@ import {
 import {
   useCronJobsStore,
 } from '@/stores/cronJobs'
-import {
-  useTaskQueueStore,
-  getFilteredTasks,
-} from '@/stores/taskQueue'
 import { useExecutionLogsStore } from '@/stores/executionLogs'
 import { useCapacityStore } from '@/stores/capacity'
+import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
+import { useTaskQueueStore } from '@/stores/taskQueue'
 import { TaskStatus } from '@/types/cron'
 import type {
   CronJob,
@@ -164,7 +162,9 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
     workflowJson: '{}',
     isActive: true,
   })
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const { templates, fetchTemplates } = useWorkflowTemplatesStore()
 
   useEffect(() => {
     if (isOpen) {
@@ -175,9 +175,26 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         workflowJson: '{}',
         isActive: true,
       })
+      setSelectedWorkflowId('')
       setErrors({})
+      fetchTemplates()
     }
-  }, [isOpen])
+  }, [isOpen, fetchTemplates])
+
+  useEffect(() => {
+    if (selectedWorkflowId) {
+      const workflow = templates.find(t => t.id === selectedWorkflowId)
+      if (workflow) {
+        setFormData(prev => ({
+          ...prev,
+          workflowJson: JSON.stringify({
+            nodes: JSON.parse(workflow.nodes_json),
+            edges: JSON.parse(workflow.edges_json),
+          }),
+        }))
+      }
+    }
+  }, [selectedWorkflowId, templates])
 
   const validateCronExpression = (expr: string): boolean => {
     // Basic cron validation (5 fields: * * * * *)
@@ -197,6 +214,10 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
       newErrors.cronExpression = 'Cron expression is required'
     } else if (!validateCronExpression(formData.cronExpression)) {
       newErrors.cronExpression = 'Invalid cron format. Use: * * * * * (min hour day month weekday)'
+    }
+
+    if (!selectedWorkflowId) {
+      newErrors.workflow = 'Please select a workflow'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -255,6 +276,30 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
               placeholder="Optional description of what this job does..."
               rows={2}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Workflow <span className="text-destructive">*</span>
+            </label>
+            <Select
+              value={selectedWorkflowId}
+              onValueChange={setSelectedWorkflowId}
+            >
+              <SelectTrigger className={errors.workflow ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Select a workflow" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.workflow && (
+              <p className="text-sm text-destructive">{errors.workflow}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -600,7 +645,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {tasks.filter((t) => t.status === 'pending').length}
+                  {tasks.filter((t: TaskQueueItem) => t.status === 'pending').length}
                 </p>
                 <p className="text-xs text-muted-foreground/70">Pending</p>
               </div>
@@ -615,7 +660,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {tasks.filter((t) => t.status === 'running').length}
+                  {tasks.filter((t: TaskQueueItem) => t.status === 'running').length}
                 </p>
                 <p className="text-xs text-muted-foreground/70">Running</p>
               </div>
@@ -630,7 +675,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {tasks.filter((t) => t.status === 'completed').length}
+                  {tasks.filter((t: TaskQueueItem) => t.status === 'completed').length}
                 </p>
                 <p className="text-xs text-muted-foreground/70">Completed</p>
               </div>
@@ -645,7 +690,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {tasks.filter((t) => t.status === 'failed').length}
+                  {tasks.filter((t: TaskQueueItem) => t.status === 'failed').length}
                 </p>
                 <p className="text-xs text-muted-foreground/70">Failed</p>
               </div>

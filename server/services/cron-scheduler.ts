@@ -13,7 +13,7 @@ import { cronEvents } from './websocket-service'
 export type { DatabaseService }
 
 export interface WorkflowEngine {
-  executeWorkflow(workflowJson: string): Promise<WorkflowResult>
+  executeWorkflow(workflowJson: string, executionLogId?: string): Promise<WorkflowResult>
 }
 
 export interface CronSchedulerOptions {
@@ -105,7 +105,7 @@ export class CronScheduler {
     this.runningJobs.delete(jobId)
   }
 
-  private async executeJobTick(job: CronJob): Promise<void> {
+  async executeJobTick(job: CronJob): Promise<void> {
     // Check for shutdown
     if (this.isShuttingDown) {
       return
@@ -135,8 +135,23 @@ export class CronScheduler {
       })
 
       // Execute with timeout
+      // Fetch workflow template if workflow_id is set
+      let workflowJson: string
+      if (job.workflow_id) {
+        const template = await this.db.getWorkflowTemplateById(job.workflow_id)
+        if (!template) {
+          throw new Error(`Workflow template ${job.workflow_id} not found`)
+        }
+        workflowJson = JSON.stringify({
+          nodes: JSON.parse(template.nodes_json),
+          edges: JSON.parse(template.edges_json),
+        })
+      } else {
+        throw new Error(`Job ${job.id} has no workflow_id configured`)
+      }
+      
       const result = await this.executeWithTimeout(
-        () => this.workflowEngine.executeWorkflow(job.workflow_json),
+        () => this.workflowEngine.executeWorkflow(workflowJson, log?.id),
         this.defaultTimeoutMs
       )
       

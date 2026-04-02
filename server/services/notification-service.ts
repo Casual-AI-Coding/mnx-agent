@@ -58,16 +58,8 @@ export class NotificationService {
     headers: Record<string, string>
     secret: string | null
   }>> {
-    const configs = await this.db.getWebhookConfigsForJob(jobId)
-
-    return configs
-      .filter(config => config.events.some(e => e === event))
-      .map(config => ({
-        id: config.id,
-        url: config.url,
-        headers: config.headers ?? {},
-        secret: config.secret
-      }))
+    // Webhook configs table was removed - return empty array
+    return []
   }
 
   private async sendWebhook(
@@ -135,45 +127,12 @@ export class NotificationService {
     responseBody: string | null,
     errorMessage: string | null
   ): Promise<void> {
-    await this.db.createWebhookDelivery({
-      webhook_id: webhookId,
-      execution_log_id: null,
-      event: payload.event,
-      payload: JSON.stringify(payload),
-      response_status: responseStatus,
-      response_body: responseBody?.slice(0, 10000) ?? null,
-      error_message: errorMessage,
-    })
+    // Webhook deliveries table was removed - do nothing
   }
 
   async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
-    const config = await this.db.getWebhookConfigById(webhookId)
-    
-    if (!config || !config.is_active) {
-      return { success: false, error: 'Webhook not found or inactive' }
-    }
-
-    const testPayload: WebhookPayload = {
-      event: 'test',
-      timestamp: new Date().toISOString(),
-      job_id: null,
-      data: { message: 'This is a test webhook delivery' }
-    }
-
-    try {
-      await this.sendWebhook({
-        id: config.id,
-        url: config.url,
-        headers: config.headers ?? {},
-        secret: config.secret
-      }, testPayload)
-      return { success: true }
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }
+    // Webhook configs table was removed - webhooks no longer supported
+    return { success: false, error: 'Webhooks are no longer supported' }
   }
 }
 

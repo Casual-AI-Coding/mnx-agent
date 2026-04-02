@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import { join, extname } from 'path'
 import { randomUUID } from 'crypto'
+import axios from 'axios'
 import type { MediaType } from '../database/types'
 
 const DEFAULT_MEDIA_ROOT = './data/media'
@@ -60,4 +61,15 @@ function getDefaultExtension(type: MediaType): string {
     case 'music': return '.mp3'
     default: return '.bin'
   }
+}
+
+export async function saveFromUrl(
+  url: string,
+  originalName: string,
+  type: MediaType,
+  mediaRoot: string = DEFAULT_MEDIA_ROOT
+): Promise<{ filepath: string; filename: string; size_bytes: number }> {
+  const response = await axios.get(url, { responseType: 'arraybuffer' })
+  const buffer = Buffer.from(response.data)
+  return saveMediaFile(buffer, originalName, type, mediaRoot)
 }

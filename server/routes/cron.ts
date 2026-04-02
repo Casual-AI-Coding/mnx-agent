@@ -4,6 +4,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service-async.js'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
+import { getServiceNodeRegistry } from '../services/service-node-registry'
 import { getNotificationService } from '../services/notification-service'
 import { CronExpressionParser } from 'cron-parser'
 import {
@@ -21,7 +22,7 @@ import {
   createWorkflowTemplateSchema,
   updateWorkflowTemplateSchema,
 } from '../validation/cron-schemas'
-import { TaskStatus, TriggerType, ExecutionStatus, CronJob, TaskQueueItem, ExecutionLog, WorkflowTemplate } from '../database/types'
+import { TaskStatus, TriggerType, ExecutionStatus, TaskQueueItem, ExecutionLog, WorkflowTemplate } from '../database/types'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 
 const router = Router()
@@ -37,12 +38,8 @@ function parsePayload(payload: string | Record<string, unknown>): string {
 router.get('/health', asyncHandler(async (_req, res) => {
   try {
     const db = await getDatabase()
-    const scheduler = getCronScheduler(db, new WorkflowEngine(db, {
-      executeTask: async () => ({ success: true, durationMs: 0 })
-    }, {
-      hasCapacity: async () => true,
-      decrementCapacity: async () => {}
-    }))
+    const serviceRegistry = getServiceNodeRegistry(db)
+    const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
 
     // Get task counts
     const taskCounts = await db.getTaskCountsByStatus()
@@ -85,42 +82,31 @@ router.get('/health', asyncHandler(async (_req, res) => {
 router.get('/jobs', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
-  const jobsWithTags = await db.getCronJobsWithTags(ownerId)
-  const jobs = jobsWithTags.map(job => ({
-    ...job,
-    last_run: job.last_run_at,
-    next_run: job.next_run_at,
-  }))
+  const jobs = await db.getAllCronJobs(ownerId)
   res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const jobData = req.body
-  try {
-    JSON.parse(jobData.workflow_json)
-  } catch {
-    res.status(400).json({ success: false, error: 'workflow_json must be valid JSON' })
-    return
-  }
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const job = await db.createCronJob({
     name: jobData.name,
     description: jobData.description,
     cron_expression: jobData.cron_expression,
     is_active: jobData.is_active,
-    workflow_json: jobData.workflow_json,
+    workflow_id: jobData.workflow_id || '',
+    timezone: jobData.timezone || 'UTC',
     timeout_ms: jobData.timeout_ms,
   }, ownerId)
-  
-  // Add tags if provided
-  if (jobData.tags && Array.isArray(jobData.tags)) {
-    for (const tag of jobData.tags) {
-      await db.addJobTag(job.id, tag)
-    }
+
+  if (job.is_active) {
+    await scheduler.scheduleJob(job)
   }
-  
-  res.json({ success: true, data: { ...job, tags: jobData.tags || [] } })
+
+  res.json({ success: true, data: job })
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -131,9 +117,7 @@ router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(asyn
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const tags = await db.getJobTags(job.id)
-  const dependencies = await db.getJobDependencies(job.id)
-  res.json({ success: true, data: { ...job, tags, dependencies } })
+  res.json({ success: true, data: job })
 }))
 
 router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
@@ -144,30 +128,9 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  if (req.body.workflow_json) {
-    try {
-      JSON.parse(req.body.workflow_json)
-    } catch {
-      res.status(400).json({ success: false, error: 'workflow_json must be valid JSON' })
-      return
-    }
-  }
   const job = await db.updateCronJob(req.params.id, req.body, ownerId)
   
-  // Update tags if provided
-  if (req.body.tags && Array.isArray(req.body.tags)) {
-    // Remove existing tags
-    const existingTags = await db.getJobTags(req.params.id)
-    for (const tag of existingTags) {
-      await db.removeJobTag(req.params.id, tag)
-    }
-    // Add new tags
-    for (const tag of req.body.tags) {
-      await db.addJobTag(req.params.id, tag)
-    }
-  }
-  
-  res.json({ success: true, data: { ...job, tags: req.body.tags || await db.getJobTags(req.params.id) } })
+  res.json({ success: true, data: job })
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -188,25 +151,24 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
 
 router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
     res.status(404).json({ success: false, error: 'Job not found' })
     return
   }
-  const log = await db.createExecutionLog({
-    job_id: job.id,
-    trigger_type: TriggerType.MANUAL,
-    status: ExecutionStatus.RUNNING,
-    tasks_executed: 0,
-    tasks_succeeded: 0,
-    tasks_failed: 0,
-  }, ownerId)
-  res.json({ success: true, data: { message: 'Job triggered', logId: log.id } })
+
+  scheduler.executeJobTick(job)
+
+  res.json({ success: true, data: { message: 'Job triggered' } })
 }))
 
 router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
@@ -214,6 +176,15 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
     return
   }
   const updatedJob = await db.toggleCronJobActive(req.params.id, ownerId)
+
+  if (updatedJob) {
+    if (updatedJob.is_active) {
+      await scheduler.scheduleJob(updatedJob)
+    } else {
+      scheduler.unscheduleJob(updatedJob.id)
+    }
+  }
+
   res.json({ success: true, data: { job: updatedJob, scheduled: updatedJob?.is_active } })
 }))
 
@@ -234,17 +205,12 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
     description: job.description,
     cron_expression: job.cron_expression,
     is_active: false, // Clone as inactive
-    workflow_json: job.workflow_json,
+    workflow_id: job.workflow_id,
+    timezone: job.timezone,
     timeout_ms: job.timeout_ms ?? undefined,
   }, ownerId)
   
-  // Clone tags
-  const tags = await db.getJobTags(req.params.id)
-  for (const tag of tags) {
-    await db.addJobTag(clonedJob.id, tag)
-  }
-  
-  res.json({ success: true, data: { ...clonedJob, tags } })
+  res.json({ success: true, data: clonedJob })
 }))
 
 // ============================================
@@ -259,30 +225,14 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
     return
   }
   
-  // Validate workflow JSON
-  let validation = { valid: true, errors: [] as string[] }
-  try {
-    const workflow = JSON.parse(job.workflow_json)
-    if (!workflow.nodes || workflow.nodes.length === 0) {
-      validation.valid = false
-      validation.errors.push('Workflow has no nodes')
-    }
-  } catch {
-    validation.valid = false
-    validation.errors.push('Invalid workflow JSON')
-  }
-  
   // Calculate next 5 execution times
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, {
-    executeTask: async () => ({ success: true, durationMs: 0 })
-  }, {
-    hasCapacity: async () => true,
-    decrementCapacity: async () => {}
-  }))
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   
   const nextRuns: string[] = []
+  let validation = { valid: true, errors: [] as string[] }
   try {
-    const interval = CronExpressionParser.parse(job.cron_expression, { tz: scheduler.getTimezone() })
+    const interval = CronExpressionParser.parse(job.cron_expression, { tz: job.timezone || scheduler.getTimezone() })
     for (let i = 0; i < 5; i++) {
       nextRuns.push(interval.next().toDate().toISOString())
     }
@@ -370,22 +320,6 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
     }
   }
   res.json({ success: true, data: { deleted } })
-}))
-
-// ============================================
-// Tags API
-// ============================================
-router.get('/tags', asyncHandler(async (_req, res) => {
-  const db = await getDatabase()
-  const tags = await db.getAllTags()
-  res.json({ success: true, data: { tags, total: tags.length } })
-}))
-
-router.get('/jobs/by-tag/:tag', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const jobs = await db.getJobsByTag(req.params.tag, ownerId)
-  res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
 // ============================================
@@ -499,123 +433,6 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 }))
 
 // ============================================
-// Dead Letter Queue API
-// ============================================
-router.get('/dead-letter', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const limit = parseInt(req.query.limit as string) || 100
-  const items = await db.getDeadLetterQueue(limit, ownerId)
-  res.json({ success: true, data: { items, total: items.length } })
-}))
-
-router.post('/dead-letter/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const item = await db.getDeadLetterItemById(req.params.id, ownerId)
-  if (!item) {
-    res.status(404).json({ success: false, error: 'Item not found' })
-    return
-  }
-  
-  // Create a new task from the dead letter item
-  const task = await db.createTask({
-    job_id: item.job_id,
-    task_type: item.task_type,
-    payload: item.payload,
-  }, ownerId)
-  
-  // Mark dead letter item as resolved
-  await db.updateDeadLetterItem(item.id, {
-    resolved_at: new Date().toISOString(),
-    resolution: 'retried',
-  }, ownerId)
-  
-  res.json({ success: true, data: { task } })
-}))
-
-router.delete('/dead-letter/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const item = await db.getDeadLetterItemById(req.params.id, ownerId)
-  if (!item) {
-    res.status(404).json({ success: false, error: 'Item not found' })
-    return
-  }
-  
-  await db.updateDeadLetterItem(item.id, {
-    resolved_at: new Date().toISOString(),
-    resolution: 'discarded',
-  }, ownerId)
-  
-  res.json({ success: true, data: { deleted: true } })
-}))
-
-// ============================================
-// Webhooks API
-// ============================================
-router.get('/webhooks', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const jobId = req.query.job_id as string | undefined
-  const configs = await db.getWebhookConfigs(jobId, ownerId)
-  res.json({ success: true, data: { webhooks: configs, total: configs.length } })
-}))
-
-router.post('/webhooks', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = getOwnerIdForInsert(req) ?? undefined
-  const config = await db.createWebhookConfig(req.body, ownerId)
-  res.json({ success: true, data: config })
-}))
-
-router.get('/webhooks/:id', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const config = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!config) {
-    res.status(404).json({ success: false, error: 'Webhook not found' })
-    return
-  }
-  res.json({ success: true, data: config })
-}))
-
-router.put('/webhooks/:id', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const existing = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!existing) {
-    res.status(404).json({ success: false, error: 'Webhook not found' })
-    return
-  }
-  const config = await db.updateWebhookConfig(req.params.id, req.body, ownerId)
-  res.json({ success: true, data: config })
-}))
-
-router.delete('/webhooks/:id', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const ownerId = buildOwnerFilter(req).params[0]
-  const existing = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!existing) {
-    res.status(404).json({ success: false, error: 'Webhook not found' })
-    return
-  }
-  await db.deleteWebhookConfig(req.params.id, ownerId)
-  res.json({ success: true, data: { deleted: true } })
-}))
-
-router.post('/webhooks/:id/test', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
-  const notificationService = getNotificationService(db)
-  const result = await notificationService.testWebhook(req.params.id)
-  if (result.success) {
-    res.json({ success: true, data: { delivered: true } })
-  } else {
-    res.status(400).json({ success: false, error: result.error })
-  }
-}))
-
-// ============================================
 // Workflow API
 // ============================================
 
@@ -676,7 +493,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
     description: req.body.description,
     nodes_json: req.body.nodes_json,
     edges_json: req.body.edges_json,
-    is_template: req.body.is_template,
+    is_public: req.body.is_template,
   }, ownerId)
   res.json({ success: true, data: template })
 }))

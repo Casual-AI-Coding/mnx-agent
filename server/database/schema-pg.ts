@@ -1,33 +1,16 @@
 /**
  * PostgreSQL Schema Definition
  * 
- * Converted from SQLite schema with the following changes:
- * - INTEGER DEFAULT 1/0 → BOOLEAN DEFAULT true/false
- * - datetime('now') → CURRENT_TIMESTAMP
- * - AUTOINCREMENT → GENERATED ALWAYS AS IDENTITY
- * - TEXT for JSON → JSONB
+ * Redesigned for workflow system with:
+ * - Workflow templates (separate from cron jobs)
+ * - Service node permissions
+ * - Workflow permissions
  */
 
 export const PG_SCHEMA_SQL = `
 -- ============================================
--- Core Tables
+-- Core Tables (Preserved)
 -- ============================================
-
-CREATE TABLE IF NOT EXISTS cron_jobs (
-  id VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  cron_expression VARCHAR(100) NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  workflow_json JSONB NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_run_at TIMESTAMP,
-  next_run_at TIMESTAMP,
-  total_runs INTEGER DEFAULT 0,
-  total_failures INTEGER DEFAULT 0,
-  timeout_ms INTEGER DEFAULT 300000
-);
 
 CREATE TABLE IF NOT EXISTS task_queue (
   id VARCHAR(36) PRIMARY KEY,
@@ -45,34 +28,6 @@ CREATE TABLE IF NOT EXISTS task_queue (
   completed_at TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS execution_logs (
-  id VARCHAR(36) PRIMARY KEY,
-  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE SET NULL,
-  trigger_type VARCHAR(20) NOT NULL,
-  status VARCHAR(20) NOT NULL,
-  started_at TIMESTAMP NOT NULL,
-  completed_at TIMESTAMP,
-  duration_ms INTEGER,
-  tasks_executed INTEGER DEFAULT 0,
-  tasks_succeeded INTEGER DEFAULT 0,
-  tasks_failed INTEGER DEFAULT 0,
-  error_summary TEXT,
-  log_detail TEXT
-);
-
-CREATE TABLE IF NOT EXISTS execution_log_details (
-  id VARCHAR(36) PRIMARY KEY,
-  log_id VARCHAR(36) NOT NULL REFERENCES execution_logs(id) ON DELETE CASCADE,
-  node_id VARCHAR(50),
-  node_type VARCHAR(50),
-  input_payload JSONB,
-  output_result JSONB,
-  error_message TEXT,
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP,
-  duration_ms INTEGER
-);
-
 CREATE TABLE IF NOT EXISTS capacity_tracking (
   id VARCHAR(36) PRIMARY KEY,
   service_type VARCHAR(50) NOT NULL UNIQUE,
@@ -82,84 +37,112 @@ CREATE TABLE IF NOT EXISTS capacity_tracking (
   last_checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============================================
+-- Workflow Templates (NEW)
+-- ============================================
+
 CREATE TABLE IF NOT EXISTS workflow_templates (
   id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   nodes_json JSONB NOT NULL,
   edges_json JSONB NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  is_template BOOLEAN DEFAULT false
-);
-
--- ============================================
--- Job Organization & Dependencies
--- ============================================
-
-CREATE TABLE IF NOT EXISTS job_tags (
-  id VARCHAR(36) PRIMARY KEY,
-  job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
-  tag VARCHAR(100) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(job_id, tag)
-);
-
-CREATE TABLE IF NOT EXISTS job_dependencies (
-  id VARCHAR(36) PRIMARY KEY,
-  job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
-  depends_on_job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(job_id, depends_on_job_id)
-);
-
--- ============================================
--- Notifications & Webhooks
--- ============================================
-
-CREATE TABLE IF NOT EXISTS webhook_configs (
-  id VARCHAR(36) PRIMARY KEY,
-  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  url VARCHAR(500) NOT NULL,
-  events JSONB NOT NULL,
-  headers JSONB,
-  secret VARCHAR(255),
-  is_active BOOLEAN DEFAULT true,
+  owner_id VARCHAR(36) REFERENCES users(id),
+  is_public BOOLEAN DEFAULT false,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS webhook_deliveries (
+-- ============================================
+-- Workflow Permissions (NEW)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS workflow_permissions (
   id VARCHAR(36) PRIMARY KEY,
-  webhook_id VARCHAR(36) NOT NULL REFERENCES webhook_configs(id) ON DELETE CASCADE,
-  execution_log_id VARCHAR(36) REFERENCES execution_logs(id) ON DELETE SET NULL,
-  event VARCHAR(50) NOT NULL,
-  payload JSONB NOT NULL,
-  response_status INTEGER,
-  response_body TEXT,
-  error_message TEXT,
-  delivered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  workflow_id VARCHAR(36) NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  granted_by VARCHAR(36) REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(workflow_id, user_id)
 );
 
 -- ============================================
--- Dead Letter Queue
+-- Service Node Permissions (NEW)
 -- ============================================
 
-CREATE TABLE IF NOT EXISTS dead_letter_queue (
+CREATE TABLE IF NOT EXISTS service_node_permissions (
   id VARCHAR(36) PRIMARY KEY,
-  original_task_id VARCHAR(36),
-  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE SET NULL,
-  task_type VARCHAR(50) NOT NULL,
-  payload JSONB NOT NULL,
-  error_message TEXT,
-  failed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  retry_count INTEGER DEFAULT 0,
-  resolved_at TIMESTAMP,
-  resolution VARCHAR(20)
+  service_name VARCHAR(100) NOT NULL,
+  method_name VARCHAR(100) NOT NULL,
+  display_name VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  min_role VARCHAR(20) NOT NULL DEFAULT 'pro',
+  is_enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(service_name, method_name)
 );
 
 -- ============================================
--- Migrations Tracking
+-- Cron Jobs (NEW Structure)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS cron_jobs (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  cron_expression VARCHAR(100) NOT NULL,
+  timezone VARCHAR(50) DEFAULT 'Asia/Shanghai',
+  workflow_id VARCHAR(36) REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  owner_id VARCHAR(36) REFERENCES users(id),
+  is_active BOOLEAN DEFAULT true,
+  last_run_at TIMESTAMP,
+  next_run_at TIMESTAMP,
+  total_runs INTEGER DEFAULT 0,
+  total_failures INTEGER DEFAULT 0,
+  timeout_ms INTEGER DEFAULT 300000,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- Execution Logs (NEW Structure)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS execution_logs (
+  id VARCHAR(36) PRIMARY KEY,
+  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  trigger_type VARCHAR(20) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  completed_at TIMESTAMP,
+  duration_ms INTEGER,
+  tasks_executed INTEGER DEFAULT 0,
+  tasks_succeeded INTEGER DEFAULT 0,
+  tasks_failed INTEGER DEFAULT 0,
+  error_summary TEXT
+);
+
+-- ============================================
+-- Execution Log Details (NEW Structure)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS execution_log_details (
+  id VARCHAR(36) PRIMARY KEY,
+  log_id VARCHAR(36) NOT NULL REFERENCES execution_logs(id) ON DELETE CASCADE,
+  node_id VARCHAR(50),
+  node_type VARCHAR(50),
+  service_name VARCHAR(100),
+  method_name VARCHAR(100),
+  input_payload JSONB,
+  output_result JSONB,
+  error_message TEXT,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  duration_ms INTEGER
+);
+
+-- ============================================
+-- Migrations Tracking (Preserved)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS _migrations (
@@ -169,7 +152,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
 );
 
 -- ============================================
--- Media Records
+-- Media Records (Preserved)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS media_records (
@@ -190,7 +173,7 @@ CREATE TABLE IF NOT EXISTS media_records (
 );
 
 -- ============================================
--- Prompt Templates
+-- Prompt Templates (Preserved)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS prompt_templates (
@@ -206,7 +189,7 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
 );
 
 -- ============================================
--- Audit Logs
+-- Audit Logs (Preserved)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -227,7 +210,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- ============================================
--- Authentication
+-- Authentication (Preserved)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS users (
@@ -259,27 +242,44 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
 -- Indexes for Performance
 -- ============================================
 
+-- Workflow templates indexes
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_owner ON workflow_templates(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_is_public ON workflow_templates(is_public);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_name ON workflow_templates(name);
+
+-- Workflow permissions indexes
+CREATE INDEX IF NOT EXISTS idx_workflow_permissions_workflow ON workflow_permissions(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_permissions_user ON workflow_permissions(user_id);
+
+-- Service node permissions indexes
+CREATE INDEX IF NOT EXISTS idx_service_node_permissions_service ON service_node_permissions(service_name);
+CREATE INDEX IF NOT EXISTS idx_service_node_permissions_category ON service_node_permissions(category);
+
+-- Cron jobs indexes
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_owner ON cron_jobs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_workflow ON cron_jobs(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_active ON cron_jobs(is_active);
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_next_run ON cron_jobs(next_run_at);
+
+-- Execution logs indexes
+CREATE INDEX IF NOT EXISTS idx_execution_logs_job ON execution_logs(job_id);
+CREATE INDEX IF NOT EXISTS idx_execution_logs_status ON execution_logs(status);
+CREATE INDEX IF NOT EXISTS idx_execution_logs_started_at ON execution_logs(started_at DESC);
+
+-- Execution log details indexes
+CREATE INDEX IF NOT EXISTS idx_execution_log_details_log ON execution_log_details(log_id);
+CREATE INDEX IF NOT EXISTS idx_execution_log_details_node ON execution_log_details(node_id);
+
+-- Task queue indexes
 CREATE INDEX IF NOT EXISTS idx_task_queue_status ON task_queue(status);
 CREATE INDEX IF NOT EXISTS idx_task_queue_job_id ON task_queue(job_id);
 CREATE INDEX IF NOT EXISTS idx_task_queue_priority ON task_queue(priority DESC);
-CREATE INDEX IF NOT EXISTS idx_execution_logs_job_id ON execution_logs(job_id);
-CREATE INDEX IF NOT EXISTS idx_execution_logs_status ON execution_logs(status);
-CREATE INDEX IF NOT EXISTS idx_execution_logs_started_at ON execution_logs(started_at DESC);
-CREATE INDEX IF NOT EXISTS idx_job_tags_tag ON job_tags(tag);
-CREATE INDEX IF NOT EXISTS idx_job_dependencies_job_id ON job_dependencies(job_id);
-CREATE INDEX IF NOT EXISTS idx_dead_letter_failed_at ON dead_letter_queue(failed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_queue_type ON task_queue(task_type);
 
--- Additional indexes
-CREATE INDEX IF NOT EXISTS idx_cron_jobs_active ON cron_jobs(is_active);
-CREATE INDEX IF NOT EXISTS idx_cron_jobs_next_run ON cron_jobs(next_run_at);
+-- Capacity tracking indexes
 CREATE INDEX IF NOT EXISTS idx_capacity_tracking_service_type ON capacity_tracking(service_type);
 
--- Webhook indexes
-CREATE INDEX IF NOT EXISTS idx_webhook_configs_job_id ON webhook_configs(job_id);
-CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id);
-CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_execution_log_id ON webhook_deliveries(execution_log_id);
-
--- Media indexes
+-- Media records indexes
 CREATE INDEX IF NOT EXISTS idx_media_records_type ON media_records(type);
 CREATE INDEX IF NOT EXISTS idx_media_records_source ON media_records(source);
 CREATE INDEX IF NOT EXISTS idx_media_records_created_at ON media_records(created_at DESC);
@@ -299,13 +299,35 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_response_status ON audit_logs(response_status);
 
--- Performance indexes for frequently filtered columns
--- execution_logs.status: filter logs by status (pending/running/success/failure)
-CREATE INDEX IF NOT EXISTS idx_execution_logs_status ON execution_logs(status);
--- task_queue.task_type: filter queue by task type (text/voice/image/music/video)
-CREATE INDEX IF NOT EXISTS idx_task_queue_type ON task_queue(task_type);
--- workflow_templates.name: lookup templates by name
-CREATE INDEX IF NOT EXISTS idx_workflow_templates_name ON workflow_templates(name);
+-- ============================================
+-- Initialization Data
+-- ============================================
+
+-- Initialize service node permissions
+INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled) VALUES
+  -- MiniMax API
+  ('snp-001', 'minimaxClient', 'chatCompletion', 'Text Generation', 'MiniMax API', 'pro', true),
+  ('snp-002', 'minimaxClient', 'imageGeneration', 'Image Generation', 'MiniMax API', 'pro', true),
+  ('snp-003', 'minimaxClient', 'videoGeneration', 'Video Generation', 'MiniMax API', 'pro', true),
+  ('snp-004', 'minimaxClient', 'textToAudioSync', 'Voice Sync', 'MiniMax API', 'pro', true),
+  ('snp-005', 'minimaxClient', 'textToAudioAsync', 'Voice Async', 'MiniMax API', 'pro', true),
+  ('snp-006', 'minimaxClient', 'musicGeneration', 'Music Generation', 'MiniMax API', 'pro', true),
+  
+  -- Database
+  ('snp-010', 'db', 'getPendingTasks', 'Get Pending Tasks', 'Database', 'admin', true),
+  ('snp-011', 'db', 'createMediaRecord', 'Create Media Record', 'Database', 'admin', true),
+  ('snp-012', 'db', 'updateTask', 'Update Task', 'Database', 'admin', true),
+  ('snp-013', 'db', 'getTaskById', 'Get Task By ID', 'Database', 'admin', true),
+  
+  -- Capacity
+  ('snp-020', 'capacityChecker', 'getRemainingCapacity', 'Get Remaining Capacity', 'Capacity', 'pro', true),
+  ('snp-021', 'capacityChecker', 'hasCapacity', 'Check Has Capacity', 'Capacity', 'pro', true),
+  ('snp-022', 'capacityChecker', 'getSafeExecutionLimit', 'Get Safe Execution Limit', 'Capacity', 'pro', true),
+  
+  -- Media Storage
+  ('snp-030', 'mediaStorage', 'saveMediaFile', 'Save Media File', 'Media Storage', 'pro', true),
+  ('snp-031', 'mediaStorage', 'saveFromUrl', 'Save From URL', 'Media Storage', 'pro', true)
+ON CONFLICT (service_name, method_name) DO NOTHING;
 `
 
 export const PG_MIGRATIONS = [

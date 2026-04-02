@@ -20,6 +20,8 @@ import cronRouter from './routes/cron'
 import mediaRouter from './routes/media'
 import templatesRouter from './routes/templates'
 import workflowsRouter from './routes/workflows'
+import adminServiceNodesRouter from './routes/admin/service-nodes'
+import adminWorkflowsRouter from './routes/admin/workflows'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
@@ -35,6 +37,8 @@ import { QueueProcessor } from './services/queue-processor'
 import { WorkflowEngine } from './services/workflow-engine'
 import { CronScheduler } from './services/cron-scheduler'
 import { initCronWebSocket } from './services/websocket-service'
+import { getServiceNodeRegistry } from './services/service-node-registry'
+import { saveMediaFile, saveFromUrl } from './lib/media-storage'
 
 config()
 
@@ -91,6 +95,8 @@ app.use('/api/cron', cronRouter)
 app.use('/api/media', mediaRouter)
 app.use('/api/templates', templatesRouter)
 app.use('/api/workflows', workflowsRouter)
+app.use('/api/admin/service-nodes', adminServiceNodesRouter)
+app.use('/api/admin/workflows', adminWorkflowsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
@@ -102,14 +108,59 @@ app.use(errorHandler)
 async function initializeServices() {
   const dbService = await getDatabase()
   
+  const serviceRegistry = getServiceNodeRegistry(dbService)
+
   const minimaxClient = getMiniMaxClient()
   const taskExecutor = new TaskExecutor(minimaxClient, dbService)
   const capacityChecker = new CapacityChecker(minimaxClient, dbService)
 
-  const queueProcessor = new QueueProcessor(dbService, taskExecutor, capacityChecker)
+  serviceRegistry.register({
+    serviceName: 'minimaxClient',
+    instance: minimaxClient,
+    methods: [
+      { name: 'chatCompletion', displayName: 'Text Generation', category: 'MiniMax API' },
+      { name: 'imageGeneration', displayName: 'Image Generation', category: 'MiniMax API' },
+      { name: 'videoGeneration', displayName: 'Video Generation', category: 'MiniMax API' },
+      { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
+      { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
+      { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
+    ],
+  })
 
-  const workflowEngine = new WorkflowEngine(dbService, taskExecutor, capacityChecker)
-  workflowEngine.setQueueProcessor(queueProcessor)
+  serviceRegistry.register({
+    serviceName: 'db',
+    instance: dbService,
+    methods: [
+      { name: 'getPendingTasks', displayName: 'Get Pending Tasks', category: 'Database' },
+      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database' },
+      { name: 'updateTask', displayName: 'Update Task', category: 'Database' },
+      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database' },
+    ],
+  })
+
+  serviceRegistry.register({
+    serviceName: 'capacityChecker',
+    instance: capacityChecker,
+    methods: [
+      { name: 'getRemainingCapacity', displayName: 'Get Remaining Capacity', category: 'Capacity' },
+      { name: 'hasCapacity', displayName: 'Check Has Capacity', category: 'Capacity' },
+      { name: 'getSafeExecutionLimit', displayName: 'Get Safe Execution Limit', category: 'Capacity' },
+    ],
+  })
+
+  serviceRegistry.register({
+    serviceName: 'mediaStorage',
+    instance: {
+      saveMediaFile,
+      saveFromUrl,
+    },
+    methods: [
+      { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
+      { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
+    ],
+  })
+
+  const workflowEngine = new WorkflowEngine(dbService, serviceRegistry)
 
   const cronScheduler = new CronScheduler(dbService, workflowEngine)
 

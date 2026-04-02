@@ -196,15 +196,11 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
   )
 )
 
-export const hasTriggerNode = (nodes: WorkflowNode[]): boolean =>
-  nodes.some((node) => node.type === 'trigger')
-
 export const hasActionNode = (nodes: WorkflowNode[]): boolean =>
   nodes.some((node) => node.type === 'action')
 
 export const isValidWorkflow = (nodes: WorkflowNode[], edges: WorkflowEdge[]): boolean => {
   if (nodes.length === 0) return false
-  if (!hasTriggerNode(nodes)) return false
   if (!hasActionNode(nodes)) return false
 
   const connectedNodes = new Set<string>()
