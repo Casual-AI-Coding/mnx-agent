@@ -134,21 +134,21 @@ export default function ImageGallery() {
             <ImageIcon className="w-5 h-5 text-primary-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">图片库</h1>
-            <p className="text-dark-400 text-sm">
+            <h1 className="text-2xl font-bold text-foreground">图片库</h1>
+            <p className="text-muted-foreground/70 text-sm">
               共 {filteredItems.length} 张图片
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-dark-900/50 rounded-lg p-1">
+        <div className="flex items-center gap-2 bg-card/secondary/50 rounded-lg p-1">
           <button
             onClick={() => setViewMode('masonry')}
             className={cn(
               'p-2 rounded-md transition-colors',
               viewMode === 'masonry'
-                ? 'bg-primary-600 text-white'
-                : 'text-dark-400 hover:text-white'
+                ? 'bg-primary-600 text-foreground'
+                : 'text-muted-foreground/70 hover:text-foreground'
             )}
             title="瀑布流"
           >
@@ -159,8 +159,8 @@ export default function ImageGallery() {
             className={cn(
               'p-2 rounded-md transition-colors',
               viewMode === 'grid'
-                ? 'bg-primary-600 text-white'
-                : 'text-dark-400 hover:text-white'
+                ? 'bg-primary-600 text-foreground'
+                : 'text-muted-foreground/70 hover:text-foreground'
             )}
             title="网格"
           >
@@ -169,18 +169,18 @@ export default function ImageGallery() {
         </div>
       </div>
 
-      <Card className="bg-dark-900/50 border-dark-800/50">
+      <Card className="bg-card/secondary/50 border-border/50">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-dark-400" />
-              <span className="text-sm text-dark-400">筛选:</span>
+              <Filter className="w-4 h-4 text-muted-foreground/70" />
+              <span className="text-sm text-muted-foreground/70">筛选:</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-dark-400" />
+              <Calendar className="w-4 h-4 text-muted-foreground/70" />
               <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
-                <SelectTrigger className="w-[140px] h-8 bg-dark-800/50 border-dark-700">
+                <SelectTrigger className="w-[140px] h-8 bg-secondary/50 border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -193,9 +193,9 @@ export default function ImageGallery() {
 
             {usedModels.length > 0 && (
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-dark-400" />
+                <Clock className="w-4 h-4 text-muted-foreground/70" />
                 <Select value={modelFilter} onValueChange={setModelFilter}>
-                  <SelectTrigger className="w-[160px] h-8 bg-dark-800/50 border-dark-700">
+                  <SelectTrigger className="w-[160px] h-8 bg-secondary/50 border-border">
                     <SelectValue placeholder="选择模型" />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,7 +218,7 @@ export default function ImageGallery() {
                   setDateFilter('all')
                   setModelFilter('all')
                 }}
-                className="h-8 text-dark-400 hover:text-white"
+                className="h-8 text-muted-foreground/70 hover:text-foreground"
               >
                 <X className="w-4 h-4 mr-1" />
                 清除筛选
@@ -239,7 +239,7 @@ export default function ImageGallery() {
               'mb-4',
               viewMode === 'grid' && 'aspect-square'
             )}>
-              <Card className="overflow-hidden bg-dark-900 border-dark-800">
+              <Card className="overflow-hidden bg-card/secondary border-border">
                 <div className={cn(
                   'relative overflow-hidden',
                   viewMode === 'masonry' ? 'aspect-auto' : 'aspect-square'
@@ -278,7 +278,7 @@ export default function ImageGallery() {
                   viewMode === 'grid' && 'aspect-square'
                 )}
               >
-                <Card className="overflow-hidden bg-dark-900 border-dark-800 hover:border-primary-500/50 transition-colors cursor-pointer">
+                <Card className="overflow-hidden bg-card/secondary border-border hover:border-primary-500/50 transition-colors cursor-pointer">
                   <div
                     className={cn(
                       'relative overflow-hidden',
@@ -320,14 +320,14 @@ export default function ImageGallery() {
                   </div>
 
                   <CardContent className="p-3 space-y-2">
-                    <p className="text-xs text-dark-300 line-clamp-2" title={item.input}>
+                    <p className="text-xs text-muted-foreground line-clamp-2" title={item.input}>
                       {item.input}
                     </p>
                     <div className="flex items-center justify-between">
                       <Badge variant="secondary" className="text-[10px]">
                         {getModelName(item.metadata?.model)}
                       </Badge>
-                      <span className="text-[10px] text-dark-500">
+                      <span className="text-[10px] text-muted-foreground/50">
                         {formatDate(item.timestamp)}
                       </span>
                     </div>
@@ -351,15 +351,15 @@ export default function ImageGallery() {
         )}
       </>
       ) : (
-        <Card className="bg-dark-900/30 border-dark-800/50">
+        <Card className="bg-card/secondary/30 border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-full bg-dark-800/50 flex items-center justify-center mb-4">
-              <ImageIcon className="w-8 h-8 text-dark-500" />
+            <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+              <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
             </div>
-            <h3 className="text-lg font-medium text-dark-300 mb-2">
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">
               暂无图片
             </h3>
-            <p className="text-sm text-dark-500 text-center max-w-sm">
+            <p className="text-sm text-muted-foreground/50 text-center max-w-sm">
               {imageItems.length === 0
                 ? '您还没有生成过任何图片。前往图片生成页面开始创作吧！'
                 : '没有符合当前筛选条件的图片，请尝试调整筛选条件。'}

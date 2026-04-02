@@ -316,7 +316,7 @@ function MediaCard({
         />
       ) : (
         <div className={`absolute inset-0 ${TYPE_GRADIENTS[record.type]} flex items-center justify-center`}>
-          <div className="text-white/30 scale-150">{getTypeIcon(record.type)}</div>
+          <div className="text-foreground/30 scale-150">{getTypeIcon(record.type)}</div>
         </div>
       )}
 
@@ -333,9 +333,9 @@ function MediaCard({
           isSelected ? 'bg-primary' : 'bg-black/50 hover:bg-black/70'
         }`}>
           {isSelected ? (
-            <CheckSquare className="w-4 h-4 text-white" />
+            <CheckSquare className="w-4 h-4 text-foreground" />
           ) : (
-            <Square className="w-4 h-4 text-white/70" />
+            <Square className="w-4 h-4 text-foreground/70" />
           )}
         </div>
       </div>
@@ -346,10 +346,10 @@ function MediaCard({
             <Badge variant="secondary" className="text-xs mb-1.5">
               {TYPE_LABELS[record.type]}
             </Badge>
-            <p className="text-white text-sm font-medium truncate" title={record.original_name || record.filename}>
+            <p className="text-foreground text-sm font-medium truncate" title={record.original_name || record.filename}>
               {record.original_name || record.filename}
             </p>
-            <p className="text-white/60 text-xs mt-0.5">
+            <p className="text-foreground/60 text-xs mt-0.5">
               {formatFileSize(record.size_bytes)}
             </p>
           </div>
@@ -363,7 +363,7 @@ function MediaCard({
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-7 px-2 bg-white/20 hover:bg-white/30 text-white border-0"
+                className="h-7 px-2 bg-white/20 hover:bg-white/30 text-foreground border-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   onPreview()
@@ -375,7 +375,7 @@ function MediaCard({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 px-2 bg-white/20 hover:bg-white/30 text-white border-0"
+              className="h-7 px-2 bg-white/20 hover:bg-white/30 text-foreground border-0"
               onClick={(e) => {
                 e.stopPropagation()
                 onDownload()

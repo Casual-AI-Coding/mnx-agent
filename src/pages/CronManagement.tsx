@@ -216,16 +216,16 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-lg bg-dark-900 border border-dark-800 rounded-xl shadow-2xl"
+        className="w-full max-w-lg bg-card/900 border border-border/800 rounded-xl shadow-2xl"
       >
-        <div className="flex items-center justify-between p-6 border-b border-dark-800">
+        <div className="flex items-center justify-between p-6 border-b border-border/800">
           <div>
-            <h2 className="text-xl font-semibold text-white">Create New Cron Job</h2>
-            <p className="text-sm text-dark-400">Schedule automated workflow executions</p>
+            <h2 className="text-xl font-semibold text-foreground">Create New Cron Job</h2>
+            <p className="text-sm text-muted-foreground/70">Schedule automated workflow executions</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -233,7 +233,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-dark-300">
+            <label className="text-sm font-medium text-muted-foreground">
               Job Name <span className="text-destructive">*</span>
             </label>
             <Input
@@ -248,7 +248,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-dark-300">Description</label>
+            <label className="text-sm font-medium text-muted-foreground">Description</label>
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -258,7 +258,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-dark-300">
+            <label className="text-sm font-medium text-muted-foreground">
               Cron Expression <span className="text-destructive">*</span>
             </label>
             <Input
@@ -270,14 +270,14 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             {errors.cronExpression ? (
               <p className="text-sm text-destructive">{errors.cronExpression}</p>
             ) : (
-              <p className="text-xs text-dark-500">
+              <p className="text-xs text-muted-foreground/50">
                 Format: minute hour day month weekday (e.g., &quot;0 9 * * *&quot; runs daily at 9:00 AM)
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-dark-300">Workflow JSON</label>
+            <label className="text-sm font-medium text-muted-foreground">Workflow JSON</label>
             <Textarea
               value={formData.workflowJson}
               onChange={(e) => setFormData({ ...formData, workflowJson: e.target.value })}
@@ -285,7 +285,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
               rows={4}
               className="font-mono text-sm"
             />
-            <p className="text-xs text-dark-500">
+            <p className="text-xs text-muted-foreground/50">
               Define the workflow configuration as JSON
             </p>
           </div>
@@ -298,11 +298,11 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
                   setFormData({ ...formData, isActive: checked })
                 }
               />
-              <span className="text-sm text-dark-300">Active on create</span>
+              <span className="text-sm text-muted-foreground">Active on create</span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-dark-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border/800">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
@@ -389,8 +389,8 @@ const JobsListTab = memo(function JobsListTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">Cron Jobs</h3>
-          <p className="text-sm text-dark-400">Manage scheduled workflow executions</p>
+          <h3 className="text-lg font-semibold text-foreground">Cron Jobs</h3>
+          <p className="text-sm text-muted-foreground/70">Manage scheduled workflow executions</p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -399,11 +399,11 @@ const JobsListTab = memo(function JobsListTab() {
       </div>
 
       {jobs.length === 0 ? (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">No Cron Jobs Yet</h3>
-            <p className="text-sm text-dark-500 mb-6 max-w-md mx-auto">
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Cron Jobs Yet</h3>
+            <p className="text-sm text-muted-foreground/50 mb-6 max-w-md mx-auto">
               Create your first cron job to automate workflow executions on a schedule.
             </p>
             <Button onClick={() => setIsCreateModalOpen(true)}>
@@ -413,16 +413,16 @@ const JobsListTab = memo(function JobsListTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-dark-800">
-          <div className="bg-dark-900 border-b border-dark-800">
+        <div className="overflow-hidden rounded-lg border border-border/800">
+          <div className="bg-card/900 border-b border-border/800">
             <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3">
-              <div className="text-sm font-medium text-dark-400">Name</div>
-              <div className="text-sm font-medium text-dark-400">Cron Expression</div>
-              <div className="text-sm font-medium text-dark-400">Status</div>
-              <div className="text-sm font-medium text-dark-400">Last Run</div>
-              <div className="text-sm font-medium text-dark-400">Next Run</div>
-              <div className="text-sm font-medium text-dark-400">Total Runs</div>
-              <div className="text-sm font-medium text-dark-400 text-right">Actions</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Name</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Cron Expression</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Status</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Last Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Next Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Total Runs</div>
+              <div className="text-sm font-medium text-muted-foreground/70 text-right">Actions</div>
             </div>
           </div>
           <div
@@ -452,30 +452,30 @@ const JobsListTab = memo(function JobsListTab() {
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
+                    className="border-b border-border/800/50 hover:bg-card/800/30 transition-colors"
                   >
                     <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3 items-center h-full">
                       <div>
-                        <p className="font-medium text-white truncate">{job.name}</p>
+                        <p className="font-medium text-foreground truncate">{job.name}</p>
                         {job.description && (
-                          <p className="text-xs text-dark-500 truncate">{job.description}</p>
+                          <p className="text-xs text-muted-foreground/50 truncate">{job.description}</p>
                         )}
                       </div>
                       <div>
-                        <code className="text-sm text-primary-400 font-mono bg-dark-950 px-2 py-1 rounded">
+                        <code className="text-sm text-primary-400 font-mono bg-card/950 px-2 py-1 rounded">
                           {job.cronExpression}
                         </code>
                       </div>
                       <div>
                         <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
                       </div>
-                      <div className="text-sm text-dark-300">
+                      <div className="text-sm text-muted-foreground">
                         {formatDate(job.lastRunAt)}
                       </div>
-                      <div className="text-sm text-dark-300">
+                      <div className="text-sm text-muted-foreground">
                         {formatDate(job.nextRunAt)}
                       </div>
-                      <div className="text-sm text-dark-300">
+                      <div className="text-sm text-muted-foreground">
                         {job.totalRuns}
                         {job.totalFailures > 0 && (
                           <span className="text-destructive ml-1">({job.totalFailures} failed)</span>
@@ -484,7 +484,7 @@ const JobsListTab = memo(function JobsListTab() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => toggleJob(job.id)}
-                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-white transition-colors"
+                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-foreground transition-colors"
                           title={job.isActive ? 'Pause' : 'Activate'}
                         >
                           {job.isActive ? (
@@ -495,14 +495,14 @@ const JobsListTab = memo(function JobsListTab() {
                         </button>
                         <button
                           onClick={() => runJobManually(job.id)}
-                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
+                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-primary transition-colors"
                           title="Run Now"
                         >
                           <Zap className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(job.id)}
-                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
+                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-destructive transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -562,20 +562,20 @@ const TaskQueueTab = memo(function TaskQueueTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Task Queue</h3>
-          <p className="text-sm text-dark-400">Monitor and manage pending, running, and completed tasks</p>
+          <h3 className="text-lg font-semibold text-foreground">Task Queue</h3>
+          <p className="text-sm text-muted-foreground/70">Monitor and manage pending, running, and completed tasks</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-dark-400" />
+            <Filter className="w-4 h-4 text-muted-foreground/70" />
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}
             >
-              <SelectTrigger className="w-40 bg-dark-950 border-dark-700">
+              <SelectTrigger className="w-40 bg-card/950 border-border/700">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent className="bg-dark-900 border-dark-700">
+              <SelectContent className="bg-card/900 border-border/700">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="running">Running</SelectItem>
@@ -592,62 +592,62 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="bg-dark-900/50">
+        <Card className="bg-card/900/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-yellow-500/10">
                 <Clock className="w-5 h-5 text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {tasks.filter((t) => t.status === 'pending').length}
                 </p>
-                <p className="text-xs text-dark-400">Pending</p>
+                <p className="text-xs text-muted-foreground/70">Pending</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-dark-900/50">
+        <Card className="bg-card/900/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10">
                 <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {tasks.filter((t) => t.status === 'running').length}
                 </p>
-                <p className="text-xs text-dark-400">Running</p>
+                <p className="text-xs text-muted-foreground/70">Running</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-dark-900/50">
+        <Card className="bg-card/900/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-500/10">
                 <CheckCircle2 className="w-5 h-5 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {tasks.filter((t) => t.status === 'completed').length}
                 </p>
-                <p className="text-xs text-dark-400">Completed</p>
+                <p className="text-xs text-muted-foreground/70">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-dark-900/50">
+        <Card className="bg-card/900/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-red-500/10">
                 <XCircle className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {tasks.filter((t) => t.status === 'failed').length}
                 </p>
-                <p className="text-xs text-dark-400">Failed</p>
+                <p className="text-xs text-muted-foreground/70">Failed</p>
               </div>
             </div>
           </CardContent>
@@ -655,24 +655,24 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       </div>
 
       {tasks.length === 0 ? (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
             <ListTodo className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">No Tasks</h3>
-            <p className="text-sm text-dark-500">Tasks will appear here when jobs are executed.</p>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Tasks</h3>
+            <p className="text-sm text-muted-foreground/50">Tasks will appear here when jobs are executed.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-dark-800">
-          <div className="bg-dark-900 border-b border-dark-800">
+        <div className="overflow-hidden rounded-lg border border-border/800">
+          <div className="bg-card/900 border-b border-border/800">
             <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3">
-              <div className="text-sm font-medium text-dark-400">Task Type</div>
-              <div className="text-sm font-medium text-dark-400">Job ID</div>
-              <div className="text-sm font-medium text-dark-400">Status</div>
-              <div className="text-sm font-medium text-dark-400">Priority</div>
-              <div className="text-sm font-medium text-dark-400">Created</div>
-              <div className="text-sm font-medium text-dark-400">Retries</div>
-              <div className="text-sm font-medium text-dark-400 text-right">Actions</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Task Type</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Job ID</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Status</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Priority</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Created</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Retries</div>
+              <div className="text-sm font-medium text-muted-foreground/70 text-right">Actions</div>
             </div>
           </div>
           <div
@@ -702,14 +702,14 @@ const TaskQueueTab = memo(function TaskQueueTab() {
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    className="border-b border-dark-800/50 hover:bg-dark-800/30 transition-colors"
+                    className="border-b border-border/800/50 hover:bg-card/800/30 transition-colors"
                   >
                     <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3 items-center h-full">
                       <div>
-                        <span className="text-sm text-white font-medium">{task.taskType}</span>
+                        <span className="text-sm text-foreground font-medium">{task.taskType}</span>
                       </div>
                       <div>
-                        <code className="text-xs text-dark-400 font-mono truncate block">{task.jobId}</code>
+                        <code className="text-xs text-muted-foreground/70 font-mono truncate block">{task.jobId}</code>
                       </div>
                       <div>
                         <StatusBadge status={task.status} />
@@ -719,17 +719,17 @@ const TaskQueueTab = memo(function TaskQueueTab() {
                           {task.priority}
                         </Badge>
                       </div>
-                      <div className="text-sm text-dark-300">
+                      <div className="text-sm text-muted-foreground">
                         {formatDate(task.createdAt)}
                       </div>
-                      <div className="text-sm text-dark-300">
+                      <div className="text-sm text-muted-foreground">
                         {task.retryCount}/{task.maxRetries}
                       </div>
                       <div className="flex items-center justify-end gap-2">
                         {task.status === 'failed' && task.retryCount < task.maxRetries && (
                           <button
                             onClick={() => handleRetry(task)}
-                            className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-primary transition-colors"
+                            className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-primary transition-colors"
                             title="Retry"
                           >
                             <RotateCcw className="w-4 h-4" />
@@ -737,7 +737,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
                         )}
                         <button
                           onClick={() => handleDelete(task.id)}
-                          className="p-2 rounded-lg hover:bg-dark-800 text-dark-400 hover:text-destructive transition-colors"
+                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-destructive transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -791,20 +791,20 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Execution Logs</h3>
-          <p className="text-sm text-dark-400">View historical execution data and task breakdowns</p>
+          <h3 className="text-lg font-semibold text-foreground">Execution Logs</h3>
+          <p className="text-sm text-muted-foreground/70">View historical execution data and task breakdowns</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-dark-400" />
+            <Filter className="w-4 h-4 text-muted-foreground/70" />
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}
             >
-              <SelectTrigger className="w-40 bg-dark-950 border-dark-700">
+              <SelectTrigger className="w-40 bg-card/950 border-border/700">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent className="bg-dark-900 border-dark-700">
+              <SelectContent className="bg-card/900 border-border/700">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
@@ -819,11 +819,11 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
       </div>
 
       {filteredLogs.length === 0 ? (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
             <ScrollText className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">No Execution Logs</h3>
-            <p className="text-sm text-dark-500">Logs will appear here after jobs are executed.</p>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Execution Logs</h3>
+            <p className="text-sm text-muted-foreground/50">Logs will appear here after jobs are executed.</p>
           </CardContent>
         </Card>
       ) : (
@@ -859,7 +859,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                 >
                   <Card
                     className={`cursor-pointer transition-colors ${
-                      expandedLogId === log.id ? 'bg-dark-800/50' : 'hover:bg-dark-800/30'
+                      expandedLogId === log.id ? 'bg-card/800/50' : 'hover:bg-card/800/30'
                     }`}
                     onClick={() => toggleExpand(log.id)}
                   >
@@ -868,36 +868,36 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                         <StatusBadge status={log.status} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <code className="text-sm text-dark-300 font-mono">{log.jobId}</code>
+                            <code className="text-sm text-muted-foreground font-mono">{log.jobId}</code>
                             <Badge variant="outline" className="text-xs">
                               {log.triggerType}
                             </Badge>
                           </div>
-                          <p className="text-xs text-dark-500 mt-1">
+                          <p className="text-xs text-muted-foreground/50 mt-1">
                             {formatDate(log.startedAt)} • Duration: {formatDuration(log.durationMs)}
                           </p>
                         </div>
                         <div className="flex items-center gap-6 text-sm">
                           <div className="text-center">
-                            <p className="text-white font-medium">{log.tasksExecuted}</p>
-                            <p className="text-xs text-dark-500">Executed</p>
+                            <p className="text-foreground font-medium">{log.tasksExecuted}</p>
+                            <p className="text-xs text-muted-foreground/50">Executed</p>
                           </div>
                           <div className="text-center">
                             <p className="text-green-400 font-medium">{log.tasksSucceeded}</p>
-                            <p className="text-xs text-dark-500">Succeeded</p>
+                            <p className="text-xs text-muted-foreground/50">Succeeded</p>
                           </div>
                           <div className="text-center">
-                            <p className={`font-medium ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
+                            <p className={`font-medium ${log.tasksFailed > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                               {log.tasksFailed}
                             </p>
-                            <p className="text-xs text-dark-500">Failed</p>
+                            <p className="text-xs text-muted-foreground/50">Failed</p>
                           </div>
                         </div>
-                        <button className="p-1 rounded hover:bg-dark-700">
+                        <button className="p-1 rounded hover:bg-card/700">
                           {expandedLogId === log.id ? (
-                            <ChevronUp className="w-5 h-5 text-dark-400" />
+                            <ChevronUp className="w-5 h-5 text-muted-foreground/70" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-dark-400" />
+                            <ChevronDown className="w-5 h-5 text-muted-foreground/70" />
                           )}
                         </button>
                       </div>
@@ -910,22 +910,22 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="pt-4 mt-4 border-t border-dark-800">
-                              <h4 className="text-sm font-medium text-dark-300 mb-3">Task Breakdown</h4>
+                            <div className="pt-4 mt-4 border-t border-border/800">
+                              <h4 className="text-sm font-medium text-muted-foreground mb-3">Task Breakdown</h4>
                               <div className="grid grid-cols-3 gap-4 mb-4">
-                                <div className="bg-dark-950 rounded-lg p-3">
-                                  <p className="text-2xl font-bold text-white">{log.tasksExecuted}</p>
-                                  <p className="text-xs text-dark-500">Total Tasks</p>
+                                <div className="bg-card/950 rounded-lg p-3">
+                                  <p className="text-2xl font-bold text-foreground">{log.tasksExecuted}</p>
+                                  <p className="text-xs text-muted-foreground/50">Total Tasks</p>
                                 </div>
-                                <div className="bg-dark-950 rounded-lg p-3">
+                                <div className="bg-card/950 rounded-lg p-3">
                                   <p className="text-2xl font-bold text-green-400">{log.tasksSucceeded}</p>
-                                  <p className="text-xs text-dark-500">Succeeded</p>
+                                  <p className="text-xs text-muted-foreground/50">Succeeded</p>
                                 </div>
-                                <div className="bg-dark-950 rounded-lg p-3">
-                                  <p className={`text-2xl font-bold ${log.tasksFailed > 0 ? 'text-destructive' : 'text-dark-300'}`}>
+                                <div className="bg-card/950 rounded-lg p-3">
+                                  <p className={`text-2xl font-bold ${log.tasksFailed > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                                     {log.tasksFailed}
                                   </p>
-                                  <p className="text-xs text-dark-500">Failed</p>
+                                  <p className="text-xs text-muted-foreground/50">Failed</p>
                                 </div>
                               </div>
                               {log.errorSummary && (
@@ -939,11 +939,11 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                               )}
                               {log.logDetail && (
                                 <div className="mt-4">
-                                  <h5 className="text-sm font-medium text-dark-300 mb-2 flex items-center gap-2">
+                                  <h5 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                                     <Terminal className="w-4 h-4" />
                                     Log Details
                                   </h5>
-                                  <pre className="bg-dark-950 rounded-lg p-3 text-xs text-dark-400 font-mono overflow-x-auto">
+                                  <pre className="bg-card/950 rounded-lg p-3 text-xs text-muted-foreground/70 font-mono overflow-x-auto">
                                     {log.logDetail}
                                   </pre>
                                 </div>
@@ -1003,11 +1003,11 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Capacity Monitor</h3>
-          <p className="text-sm text-dark-400">Real-time MiniMax API capacity and quota monitoring</p>
+          <h3 className="text-lg font-semibold text-foreground">Capacity Monitor</h3>
+          <p className="text-sm text-muted-foreground/70">Real-time MiniMax API capacity and quota monitoring</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-dark-500">
+          <span className="text-xs text-muted-foreground/50">
             Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}
           </span>
           <Button
@@ -1039,10 +1039,10 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
                     <div className="flex items-center gap-3">
                       <ServiceIcon type={record.serviceType} />
                       <div>
-                        <h4 className="font-semibold text-white">
+                        <h4 className="font-semibold text-foreground">
                           {serviceLabels[record.serviceType]}
                         </h4>
-                        <p className="text-xs text-dark-500">{record.serviceType}</p>
+                        <p className="text-xs text-muted-foreground/50">{record.serviceType}</p>
                       </div>
                     </div>
                     <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
@@ -1052,20 +1052,20 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
 
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-dark-400">Remaining</span>
-                      <span className="text-white font-medium">
+                      <span className="text-muted-foreground/70">Remaining</span>
+                      <span className="text-foreground font-medium">
                         {record.remainingQuota.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-dark-400">Total Quota</span>
-                      <span className="text-white font-medium">
+                      <span className="text-muted-foreground/70">Total Quota</span>
+                      <span className="text-foreground font-medium">
                         {record.totalQuota.toLocaleString()}
                       </span>
                     </div>
 
                     <div className="pt-2">
-                      <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+                      <div className="h-2 bg-card/800 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
@@ -1075,7 +1075,7 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 text-xs text-dark-500">
+                    <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/50">
                       <span>Used: {(record.totalQuota - record.remainingQuota).toLocaleString()}</span>
                       <span>Resets: {formatDate(record.resetAt)}</span>
                     </div>
@@ -1088,11 +1088,11 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
       </div>
 
       {records.length === 0 && (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
             <Gauge className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">No Capacity Data</h3>
-            <p className="text-sm text-dark-500 mb-4">Click refresh to load capacity information.</p>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Capacity Data</h3>
+            <p className="text-sm text-muted-foreground/50 mb-4">Click refresh to load capacity information.</p>
             <Button onClick={handleRefresh} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Load Capacity Data
@@ -1122,8 +1122,8 @@ export default function CronManagement() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Cron Management</h1>
-          <p className="text-dark-400 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Cron Management</h1>
+          <p className="text-muted-foreground/70 mt-2">
             Schedule, monitor, and manage automated workflow executions
           </p>
         </div>
@@ -1131,7 +1131,7 @@ export default function CronManagement() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-dark-900 border border-dark-800">
+        <TabsList className="bg-card/900 border border-border/800">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}

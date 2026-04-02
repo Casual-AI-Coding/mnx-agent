@@ -309,7 +309,7 @@ export default function FileManagement() {
                         variant={page === pageNum ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setPage(pageNum as number)}
-                        className={page === pageNum ? 'bg-primary text-white' : ''}
+                        className={page === pageNum ? 'bg-primary text-foreground' : ''}
                       >
                         {pageNum}
                       </Button>

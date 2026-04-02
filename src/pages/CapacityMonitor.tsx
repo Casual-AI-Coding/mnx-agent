@@ -91,13 +91,13 @@ export default function CapacityMonitor() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Capacity Monitor</h1>
-          <p className="text-dark-400 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Capacity Monitor</h1>
+          <p className="text-muted-foreground/70 mt-2">
             MiniMax Coding Plan usage and quota monitoring
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-dark-500">
+          <span className="text-xs text-muted-foreground/50">
             Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}
           </span>
           <Button
@@ -136,18 +136,18 @@ export default function CapacityMonitor() {
       )}
 
       {loading && modelRemains.length === 0 ? (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <RefreshCw className="w-12 h-12 mx-auto mb-4 text-dark-600 animate-spin" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">Loading Capacity Data...</h3>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">Loading Capacity Data...</h3>
           </CardContent>
         </Card>
       ) : modelRemains.length === 0 && !hasError ? (
-        <Card className="border-dashed border-dark-700">
+        <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <Gauge className="w-12 h-12 mx-auto mb-4 text-dark-600" />
-            <h3 className="text-lg font-medium text-dark-300 mb-2">No Capacity Data</h3>
-            <p className="text-sm text-dark-500 mb-4">
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Capacity Data</h3>
+            <p className="text-sm text-muted-foreground/50 mb-4">
               {error || 'Click refresh to load capacity information.'}
             </p>
             <Button onClick={handleRefresh} disabled={loading}>
@@ -196,10 +196,10 @@ export default function CapacityMonitor() {
                             <FileText className="w-5 h-5 text-purple-400" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-white">
+                            <h4 className="font-semibold text-foreground">
                               {model.model_name}
                             </h4>
-                            <p className="text-xs text-dark-500">{model.model_name}</p>
+                            <p className="text-xs text-muted-foreground/50">{model.model_name}</p>
                           </div>
                         </div>
                         <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
@@ -209,26 +209,26 @@ export default function CapacityMonitor() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
-                          <span className="text-dark-400">Quota</span>
-                          <span className="text-white font-medium">
+                          <span className="text-muted-foreground/70">Quota</span>
+                          <span className="text-foreground font-medium">
                             {used.toLocaleString()} / {total.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-dark-400">Used</span>
+                          <span className="text-muted-foreground/70">Used</span>
                           <span className="text-green-400 font-medium">
                             {used.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-dark-400">Remaining</span>
+                          <span className="text-muted-foreground/70">Remaining</span>
                           <span className="text-blue-400 font-medium">
                             {remaining.toLocaleString()}
                           </span>
                         </div>
 
                         <div className="pt-2">
-                          <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+                          <div className="h-2 bg-card/secondary rounded-full overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${percentage}%` }}
@@ -238,7 +238,7 @@ export default function CapacityMonitor() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 text-xs text-dark-500">
+                        <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/50">
                           <span>Weekly: {model.current_weekly_usage_count.toLocaleString()}</span>
                           <span>Reset: {formatDate(new Date(model.end_time).toISOString())}</span>
                         </div>

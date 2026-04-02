@@ -26,7 +26,7 @@ const CATEGORY_COLORS: Record<TemplateCategory, string> = {
   image: 'bg-purple-500/20 text-purple-400',
   music: 'bg-pink-500/20 text-pink-400',
   video: 'bg-orange-500/20 text-orange-400',
-  general: 'bg-gray-500/20 text-gray-400',
+  general: 'bg-gray-500/20 text-muted-foreground/70',
 }
 
 export default function TemplateLibrary() {
@@ -73,8 +73,8 @@ export default function TemplateLibrary() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('templates.title', '模板库')}</h1>
-          <p className="text-dark-400 mt-1">{t('templates.subtitle', '管理和使用提示词模板')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('templates.title', '模板库')}</h1>
+          <p className="text-muted-foreground/70 mt-1">{t('templates.subtitle', '管理和使用提示词模板')}</p>
         </div>
         <Button className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="w-4 h-4" />
@@ -84,12 +84,12 @@ export default function TemplateLibrary() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input
             placeholder={t('templates.searchPlaceholder', '搜索模板...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-dark-950 border-dark-700"
+            className="pl-10 bg-card/secondary border-border"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -112,11 +112,11 @@ export default function TemplateLibrary() {
           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filteredTemplates.length === 0 ? (
-        <Card className="border-dark-800">
+        <Card className="border-border">
           <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-dark-500" />
-            <p className="text-dark-400">{t('templates.empty', '暂无模板')}</p>
-            <p className="text-dark-500 text-sm mt-1">{t('templates.emptyHint', '创建您的第一个提示词模板')}</p>
+            <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-muted-foreground/70">{t('templates.empty', '暂无模板')}</p>
+            <p className="text-muted-foreground/50 text-sm mt-1">{t('templates.emptyHint', '创建您的第一个提示词模板')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -176,7 +176,7 @@ function TemplateCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="border-dark-800 hover:border-dark-700 transition-colors">
+      <Card className="border-border hover:border-border transition-colors">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ function TemplateCard({
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-dark-400 text-sm line-clamp-2">{template.description || template.content.slice(0, 100)}</p>
+          <p className="text-muted-foreground/70 text-sm line-clamp-2">{template.description || template.content.slice(0, 100)}</p>
           {template.variables && template.variables.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
               {template.variables.map((v) => (

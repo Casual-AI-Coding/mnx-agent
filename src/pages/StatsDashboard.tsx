@@ -54,8 +54,8 @@ export default function StatsDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('stats.title', '执行统计')}</h1>
-          <p className="text-dark-400 mt-1">{t('stats.subtitle', '任务执行数据分析')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('stats.title', '执行统计')}</h1>
+          <p className="text-muted-foreground/70 mt-1">{t('stats.subtitle', '任务执行数据分析')}</p>
         </div>
         <Button variant="outline" onClick={loadStats}>
           刷新数据
@@ -90,7 +90,7 @@ export default function StatsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-dark-800">
+        <Card className="border-border">
           <CardHeader>
             <CardTitle className="text-lg">{t('stats.successTrend', '成功率趋势')}</CardTitle>
           </CardHeader>
@@ -99,26 +99,26 @@ export default function StatsDashboard() {
               <div className="space-y-2">
                 {trend.slice(0, 7).map((item) => (
                   <div key={item.date} className="flex items-center gap-3">
-                    <span className="text-dark-400 text-sm w-24">{item.date}</span>
-                    <div className="flex-1 h-2 bg-dark-800 rounded-full overflow-hidden">
+                    <span className="text-muted-foreground/70 text-sm w-24">{item.date}</span>
+                    <div className="flex-1 h-2 bg-card/secondary rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-500 rounded-full"
                         style={{ width: `${(item.success / item.total) * 100}%` }}
                       />
                     </div>
-                    <span className="text-dark-300 text-sm w-16 text-right">
+                    <span className="text-muted-foreground text-sm w-16 text-right">
                       {((item.success / item.total) * 100).toFixed(0)}%
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-dark-400 text-center py-8">暂无数据</p>
+              <p className="text-muted-foreground/70 text-center py-8">暂无数据</p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-dark-800">
+        <Card className="border-border">
           <CardHeader>
             <CardTitle className="text-lg">{t('stats.taskDistribution', '任务类型分布')}</CardTitle>
           </CardHeader>
@@ -131,14 +131,14 @@ export default function StatsDashboard() {
                   const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-green-500']
                   return (
                     <div key={item.type} className="flex items-center gap-3">
-                      <span className="text-dark-300 text-sm w-20 capitalize">{item.type}</span>
-                      <div className="flex-1 h-6 bg-dark-800 rounded overflow-hidden">
+                      <span className="text-muted-foreground text-sm w-20 capitalize">{item.type}</span>
+                      <div className="flex-1 h-6 bg-card/secondary rounded overflow-hidden">
                         <div
                           className={cn('h-full', colors[idx % colors.length])}
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <span className="text-dark-300 text-sm w-20 text-right">
+                      <span className="text-muted-foreground text-sm w-20 text-right">
                         {item.count} ({percentage.toFixed(0)}%)
                       </span>
                     </div>
@@ -146,31 +146,31 @@ export default function StatsDashboard() {
                 })}
               </div>
             ) : (
-              <p className="text-dark-400 text-center py-8">暂无数据</p>
+              <p className="text-muted-foreground/70 text-center py-8">暂无数据</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-dark-800">
+      <Card className="border-border">
         <CardHeader>
           <CardTitle className="text-lg">{t('stats.errorRanking', '错误排行榜')}</CardTitle>
         </CardHeader>
         <CardContent>
           {errors.length > 0 ? (
-            <div className="divide-y divide-dark-800">
+            <div className="divide-y divide-border">
               {errors.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3">
                     <Badge variant={idx < 3 ? 'destructive' : 'secondary'}>{idx + 1}</Badge>
-                    <span className="text-dark-300">{item.errorSummary}</span>
+                    <span className="text-muted-foreground">{item.errorSummary}</span>
                   </div>
-                  <span className="text-dark-400">{item.count} 次</span>
+                  <span className="text-muted-foreground/70">{item.count} 次</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-dark-400 text-center py-8">暂无错误记录</p>
+            <p className="text-muted-foreground/70 text-center py-8">暂无错误记录</p>
           )}
         </CardContent>
       </Card>
@@ -194,15 +194,15 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Card className="border-dark-800">
+      <Card className="border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg bg-dark-800', color)}>
+            <div className={cn('p-2 rounded-lg bg-card/secondary', color)}>
               <Icon className="w-5 h-5" />
             </div>
             <div>
               <p className="text-2xl font-bold">{value}</p>
-              <p className="text-dark-400 text-sm">{title}</p>
+              <p className="text-muted-foreground/70 text-sm">{title}</p>
             </div>
           </div>
         </CardContent>

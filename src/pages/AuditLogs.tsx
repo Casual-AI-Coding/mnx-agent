@@ -19,14 +19,14 @@ const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
   execute: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: '执行' },
 }
 
-const DEFAULT_ACTION_CONFIG = { color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', label: '未知' }
+const DEFAULT_ACTION_CONFIG = { color: 'bg-gray-500/20 text-muted-foreground/70 border-gray-500/30', label: '未知' }
 
 function getActionConfig(action: string) {
   return (ACTION_CONFIG as Record<string, { color: string; label: string }>)[action] || DEFAULT_ACTION_CONFIG
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  '0': 'text-dark-400',
+  '0': 'text-muted-foreground/70',
   '2': 'text-green-400',
   '3': 'text-yellow-400',
   '4': 'text-orange-400',
@@ -121,8 +121,8 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('audit.title', '审计日志')}</h1>
-          <p className="text-dark-400 mt-1">{t('audit.subtitle', '追踪系统操作记录')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('audit.title', '审计日志')}</h1>
+          <p className="text-muted-foreground/70 mt-1">{t('audit.subtitle', '追踪系统操作记录')}</p>
         </div>
         <Button variant="outline" onClick={loadData}>
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -159,19 +159,19 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
         </div>
       )}
 
-      <Card className="border-dark-800">
+      <Card className="border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{t('audit.logList', '日志列表')}</CardTitle>
             <div className="flex items-center gap-2">
-              <div className="flex gap-1 p-1 bg-dark-900 rounded-lg">
+              <div className="flex gap-1 p-1 bg-secondary rounded-lg">
                 <button
                   onClick={() => setFilters(f => ({ ...f, action: undefined }))}
                   className={cn(
                     'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
                     !filters.action
-                      ? 'bg-primary text-white'
-                      : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+                      ? 'bg-primary text-foreground'
+                      : 'text-muted-foreground/70 hover:text-foreground/80 hover:bg-card/secondary'
                   )}
                 >
                   全部
@@ -184,7 +184,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                       'px-3 py-1.5 rounded-md text-sm font-medium transition-all border',
                       filters.action === action
                         ? cn(ACTION_CONFIG[action].color, 'border-current')
-                        : 'text-dark-400 hover:text-dark-200 border-dark-700'
+                        : 'text-muted-foreground/70 hover:text-foreground/80 border-border/80'
                     )}
                   >
                     {ACTION_CONFIG[action].label}
@@ -193,7 +193,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-8 pt-3 text-xs text-dark-500 border-t border-dark-800 mt-3">
+          <div className="flex items-center gap-8 pt-3 text-xs text-muted-foreground/50 border-t border-border mt-3">
             <span className="w-16">耗时</span>
             <span className="w-20">时间</span>
             <span className="w-8">状态</span>
@@ -217,7 +217,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                   key={log.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-between py-3 hover:bg-dark-800/50 px-2 -mx-2 rounded cursor-pointer"
+                  className="flex items-center justify-between py-3 hover:bg-card/secondary/50 px-2 -mx-2 rounded cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
 <div className="flex items-center gap-4">
@@ -225,14 +225,14 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                 {getActionConfig(log.action).label}
               </Badge>
               <div className="flex-1 min-w-0">
-                <p className="text-dark-200 text-sm font-medium truncate">{log.request_path || '-'}</p>
-                <p className="text-dark-500 text-xs">{log.resource_type || '-'} {log.resource_id && `• ${log.resource_id.slice(0, 8)}`}</p>
+                <p className="text-foreground/80 text-sm font-medium truncate">{log.request_path || '-'}</p>
+                <p className="text-muted-foreground/50 text-xs">{log.resource_type || '-'} {log.resource_id && `• ${log.resource_id.slice(0, 8)}`}</p>
               </div>
             </div>
             <div className="flex items-center gap-6 text-sm">
-              <span className="text-dark-400 w-16">{formatDuration(log.duration_ms)}</span>
-              <span className="text-dark-500 w-20">{formatTime(log.created_at)}</span>
-              <span className={cn('w-8', STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-dark-400')}>
+              <span className="text-muted-foreground/70 w-16">{formatDuration(log.duration_ms)}</span>
+              <span className="text-muted-foreground/50 w-20">{formatTime(log.created_at)}</span>
+              <span className={cn('w-8', STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70')}>
                 {log.response_status || '-'}
               </span>
               <Button variant="ghost" size="icon" className="shrink-0">
@@ -249,7 +249,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-dark-400 text-sm">{page} / {totalPages}</span>
+              <span className="text-muted-foreground/70 text-sm">{page} / {totalPages}</span>
               <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -266,45 +266,45 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-dark-500">{t('audit.action', '操作')}</label>
+                <label className="text-muted-foreground/50">{t('audit.action', '操作')}</label>
                 <Badge className={cn('ml-2', getActionConfig(selectedLog.action).color)}>
                   {getActionConfig(selectedLog.action).label}
                 </Badge>
               </div>
               <div>
-                <label className="text-dark-500">{t('audit.status', '状态')}</label>
-                <span className={cn('ml-2', STATUS_COLORS[Math.floor((selectedLog.response_status || 0) / 100).toString()] || 'text-dark-400')}>
+                <label className="text-muted-foreground/50">{t('audit.status', '状态')}</label>
+                <span className={cn('ml-2', STATUS_COLORS[Math.floor((selectedLog.response_status || 0) / 100).toString()] || 'text-muted-foreground/70')}>
                   {selectedLog.response_status || '-'}
                 </span>
               </div>
             </div>
             <div>
-              <label className="text-dark-500">{t('audit.path', '路径')}</label>
-              <p className="text-dark-200">{selectedLog.request_method || '-'} {selectedLog.request_path || '-'}</p>
+              <label className="text-muted-foreground/50">{t('audit.path', '路径')}</label>
+              <p className="text-foreground/80">{selectedLog.request_method || '-'} {selectedLog.request_path || '-'}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-dark-500">{t('audit.resourceType', '资源类型')}</label>
-                <p className="text-dark-200">{selectedLog.resource_type || '-'}</p>
+                <label className="text-muted-foreground/50">{t('audit.resourceType', '资源类型')}</label>
+                <p className="text-foreground/80">{selectedLog.resource_type || '-'}</p>
               </div>
               <div>
-                <label className="text-dark-500">{t('audit.resourceId', '资源ID')}</label>
-                <p className="text-dark-200 font-mono text-xs">{selectedLog.resource_id || '-'}</p>
+                <label className="text-muted-foreground/50">{t('audit.resourceId', '资源ID')}</label>
+                <p className="text-foreground/80 font-mono text-xs">{selectedLog.resource_id || '-'}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-dark-500">{t('audit.ip', 'IP地址')}</label>
-                <p className="text-dark-200">{selectedLog.ip_address || '-'}</p>
+                <label className="text-muted-foreground/50">{t('audit.ip', 'IP地址')}</label>
+                <p className="text-foreground/80">{selectedLog.ip_address || '-'}</p>
               </div>
               <div>
-                <label className="text-dark-500">{t('audit.duration', '耗时')}</label>
-                <p className="text-dark-200">{formatDuration(selectedLog.duration_ms)}</p>
+                <label className="text-muted-foreground/50">{t('audit.duration', '耗时')}</label>
+                <p className="text-foreground/80">{formatDuration(selectedLog.duration_ms)}</p>
               </div>
             </div>
             <div>
-              <label className="text-dark-500">{t('audit.time', '时间')}</label>
-              <p className="text-dark-200">{new Date(selectedLog.created_at).toLocaleString('zh-CN')}</p>
+              <label className="text-muted-foreground/50">{t('audit.time', '时间')}</label>
+              <p className="text-foreground/80">{new Date(selectedLog.created_at).toLocaleString('zh-CN')}</p>
             </div>
             {selectedLog.error_message && (
               <div>
@@ -316,8 +316,8 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             )}
             {selectedLog.request_body && (
               <div>
-                <label className="text-dark-500">{t('audit.requestBody', '请求体')}</label>
-                <pre className="text-dark-300 bg-dark-800 p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
+                <label className="text-muted-foreground/50">{t('audit.requestBody', '请求体')}</label>
+                <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
                   {(() => {
                     const body = selectedLog.request_body
                     if (typeof body === 'object') {
@@ -376,15 +376,15 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Card className="border-dark-800">
+      <Card className="border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg bg-dark-800', color)}>
+            <div className={cn('p-2 rounded-lg bg-card/secondary', color)}>
               <Icon className="w-5 h-5" />
             </div>
             <div>
               <p className="text-2xl font-bold">{value}</p>
-              <p className="text-dark-400 text-sm">{title}</p>
+              <p className="text-muted-foreground/70 text-sm">{title}</p>
             </div>
           </div>
         </CardContent>

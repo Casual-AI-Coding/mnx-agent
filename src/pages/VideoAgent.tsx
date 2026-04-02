@@ -268,9 +268,9 @@ export default function VideoAgent() {
                       >
                         <div className={`aspect-video bg-gradient-to-br ${template.gradient} rounded-lg mb-3 flex items-center justify-center group-hover:opacity-90 transition-opacity`}>
                           {IconComponent ? (
-                            <IconComponent className="w-16 h-16 text-white drop-shadow-lg" />
+                            <IconComponent className="w-16 h-16 text-foreground drop-shadow-lg" />
                           ) : (
-                            <Film className="w-12 h-12 text-white/80" />
+                            <Film className="w-12 h-12 text-foreground/80" />
                           )}
                         </div>
                         <h3 className="font-medium mb-1">{template.name}</h3>
