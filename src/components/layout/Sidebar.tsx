@@ -68,6 +68,27 @@ export default function Sidebar() {
     setStoredExpanded(expandedSections)
   }, [expandedSections])
 
+  useEffect(() => {
+    if (showSettingsModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showSettingsModal])
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showSettingsModal) {
+        setShowSettingsModal(false)
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [showSettingsModal])
+
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => ({
       ...prev,
