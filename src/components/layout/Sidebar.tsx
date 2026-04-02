@@ -31,6 +31,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
 import { useAuthStore, type UserRole } from '@/stores/auth'
+import { SettingsModal } from '@/components/settings'
 
 const roleHierarchy: Record<UserRole, number> = {
   user: 0,
@@ -59,6 +60,7 @@ export default function Sidebar() {
   const location = useLocation()
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const userRoleLevel = user ? roleHierarchy[user.role] : 0
 
@@ -239,6 +241,13 @@ export default function Sidebar() {
             <span className="text-xs">{t('sidebar.createdBy')}</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="text-dark-400 hover:text-white transition-colors"
+              title="Settings"
+            >
+              <Cog className="w-4 h-4" />
+            </button>
             <ShortcutsHelpButton />
             <a
               href="https://github.com/oGsLP/mnx-agent"
@@ -252,6 +261,8 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+
+      <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </aside>
   )
 }
