@@ -5,8 +5,21 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { SystemOption } from './SystemOption'
 import { ThemeCard } from './ThemeCard'
 import type { ThemeCategory } from '@/themes/registry'
+import { Monitor, Moon, Sun } from 'lucide-react'
 
 type TabValue = 'system' | 'dark' | 'light'
+
+const tabIcons = {
+  system: Monitor,
+  dark: Moon,
+  light: Sun,
+}
+
+const tabLabels = {
+  system: 'System',
+  dark: 'Dark',
+  light: 'Light',
+}
 
 export function ThemePicker() {
   const { theme, setTheme } = useAppStore()
@@ -24,31 +37,57 @@ export function ThemePicker() {
     : getThemesByCategory(activeTab as ThemeCategory)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="system" className="flex-1">System</TabsTrigger>
-          <TabsTrigger value="dark" className="flex-1">Dark</TabsTrigger>
-          <TabsTrigger value="light" className="flex-1">Light</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 bg-dark-800/50 p-1 rounded-xl">
+          {(['system', 'dark', 'light'] as TabValue[]).map((tab) => {
+            const Icon = tabIcons[tab]
+            const isActive = activeTab === tab
+            return (
+              <TabsTrigger 
+                key={tab}
+                value={tab} 
+                className={`
+                  flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
+                  transition-all duration-200
+                  data-[state=active]:bg-primary-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/25
+                  data-[state=inactive]:text-dark-400 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5
+                `}
+              >
+                <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                <span className="font-medium">{tabLabels[tab]}</span>
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
       </Tabs>
 
       {activeTab === 'system' && (
-        <SystemOption
-          selected={theme === 'system'}
-          onSelect={() => setTheme('system')}
-        />
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          <SystemOption
+            selected={theme === 'system'}
+            onSelect={() => setTheme('system')}
+          />
+        </div>
       )}
 
       {activeTab !== 'system' && (
-        <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1">
-          {themes.map((t) => (
-            <ThemeCard
+        <div 
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[420px] overflow-y-auto pr-2 pb-2
+          animate-in fade-in slide-in-from-top-2 duration-300"
+        >
+          {themes.map((t, index) => (
+            <div 
               key={t.id}
-              theme={t}
-              selected={theme === t.id}
-              onSelect={() => setTheme(t.id)}
-            />
+              className="animate-in fade-in zoom-in-95 duration-300"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <ThemeCard
+                theme={t}
+                selected={theme === t.id}
+                onSelect={() => setTheme(t.id)}
+              />
+            </div>
           ))}
         </div>
       )}
