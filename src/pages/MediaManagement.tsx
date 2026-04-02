@@ -1093,11 +1093,14 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">跳转到</span>
                   <Input
-                    type="number"
-                    min={1}
-                    max={pagination.totalPages}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={pageInput}
-                    onChange={(e) => setPageInput(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      setPageInput(value)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const page = parseInt(pageInput)
