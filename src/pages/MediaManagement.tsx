@@ -590,10 +590,10 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
     )
   }, [records, searchQuery])
 
-  const imageRecords = useMemo(() => 
-    filteredRecords.filter(r => r.type === 'image'),
-    [filteredRecords]
-  )
+  const imageRecords = useMemo(() => {
+    const source = viewMode === 'timeline' ? timelineRecords : filteredRecords
+    return source.filter(r => r.type === 'image')
+  }, [viewMode, timelineRecords, filteredRecords])
 
   const lightboxSlides = useMemo(() => 
     imageRecords.map(r => ({
