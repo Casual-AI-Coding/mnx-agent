@@ -2,6 +2,70 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-04-02
+
+### Added
+- **Media Management Views** - Three view modes for media files
+  - Table view: Traditional table layout (default)
+  - Timeline view: Date-grouped list with infinite scroll
+  - Card view: Image-based cards with hover overlays
+  - Image preview navigation (lightbox multi-image support)
+  - Delete success notifications (toast)
+  - Token caching to avoid redundant requests
+  
+- **Audit Logs Enhancement** - Error tracking and usability
+  - `error_message` field to capture failure details
+  - Copy button for formatted log details
+  - Error messages with highlighted styling
+
+- **Developer Tools** - Development workflow improvements
+  - `mnx-dev` CLI tool (start/stop/status/log/restart)
+  - Background server management
+  - Development documentation in AGENTS.md
+
+- **Pagination** - Quick page navigation
+  - Page input field for direct page jump
+  - Enter key to navigate
+
+- **UI Polish** - Sidebar improvements
+  - GitHub link in sidebar footer
+  - Fixed bottom bar layout (no overlap)
+
+### Fixed
+- **Timeline View Preview** - Image preview showing wrong image
+- **JWT Token Verification** - Consistent error handling (throw vs console.error)
+- **Number Input** - Remove ugly spinner arrows
+- **Batch Delete API** - Change method from POST to DELETE
+
+### Performance
+- **Database Optimization** - 90%+ query reduction
+  - Fix N+1 query in cron jobs list with JOIN
+  - Add pagination to unbounded queries
+  - Add missing indexes (execution_logs.status, task_queue.task_type, workflow_templates.name)
+  - Replace full table scan with SQL GROUP BY
+  - Batch SQL operations for task status updates
+  - Combine redundant COUNT queries
+
+- **API Reliability** - 15-20% success rate improvement
+  - Retry with exponential backoff for transient failures
+  - Webhook rate limiting (100/min)
+
+- **Memory & Rendering** - 95% memory reduction
+  - WebSocket heartbeat (30s) and connection limits (1000 max)
+  - Balance caching with 30-second TTL
+  - Fix O(n²) to O(n) duplicate detection
+  - Frontend virtualization with @tanstack/react-virtual
+  - Optimize polling with exponential backoff (3s→30s)
+
+### Changed
+- **Batch Delete API** - Method changed from POST to DELETE `/api/media/batch`
+- **Rate Limiter** - Make auth rate limiter configurable via environment variables
+- **Sidebar Layout** - Use flex-col for proper bottom bar positioning
+
+### Database
+- `migration_010` - Add performance indexes
+- `migration_011` - Add `error_message` TEXT to audit_logs
+
 ## [1.1.4] - 2026-04-01
 
 ### Added
