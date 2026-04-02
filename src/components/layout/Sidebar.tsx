@@ -26,6 +26,7 @@ import {
   Activity,
   Cog,
   Lock,
+  Github,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -236,7 +237,18 @@ export default function Sidebar() {
               <span className="text-white font-bold text-[10px]">M</span>
             </div>
             <span className="text-xs">{t('sidebar.createdBy')}</span>
+          </div>
+          <div className="flex items-center gap-2">
             <ShortcutsHelpButton />
+            <a
+              href="https://github.com/oGsLP/mnx-agent"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-dark-400 hover:text-white transition-colors"
+              title="GitHub"
+            >
+              <Github className="w-4 h-4" />
+            </a>
           </div>
         </div>
       </div>
