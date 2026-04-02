@@ -73,7 +73,7 @@ export function ThemePicker() {
 
       {activeTab !== 'system' && (
         <div 
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[420px] overflow-y-auto pr-2 pb-2
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2 pl-2 max-h-[420px] overflow-y-auto
           animate-in fade-in slide-in-from-top-2 duration-300"
         >
           {themes.map((t, index) => (
