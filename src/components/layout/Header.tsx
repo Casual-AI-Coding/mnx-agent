@@ -35,7 +35,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[60px] bg-dark-950/80 backdrop-blur-xl border-b border-dark-800/50 z-50">
+    <header className="fixed top-0 left-0 right-0 h-[60px] bg-card/80 backdrop-blur-xl border-b border-border/50 z-50">
       <div className="h-full flex items-center justify-between px-6">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
@@ -71,17 +71,17 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 setShowLanguageDropdown(false)
                 setShowModeDropdown(false)
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
             >
               <Globe className="w-4 h-4" />
               <span>{region === 'cn' ? t('header.regionCn') : t('header.regionIntl')}</span>
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
             {showRegionDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-32 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
+              <div className="absolute top-full right-0 mt-2 w-32 bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-xl py-1">
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                    region === 'cn' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    region === 'cn' ? 'text-foreground bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
                   }`}
                   onClick={() => {
                     setRegion('cn')
@@ -94,7 +94,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 </button>
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                    region === 'intl' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    region === 'intl' ? 'text-foreground bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
                   }`}
                   onClick={() => {
                     setRegion('intl')
@@ -116,17 +116,17 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 setShowRegionDropdown(false)
                 setShowLanguageDropdown(false)
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
             >
               {apiMode === 'direct' ? <Cloud className="w-4 h-4" /> : <Server className="w-4 h-4" />}
               <span>{apiMode === 'direct' ? t('header.modeDirect') : t('header.modeProxy')}</span>
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
             {showModeDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-40 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
+              <div className="absolute top-full right-0 mt-2 w-40 bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-xl py-1">
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                    apiMode === 'direct' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    apiMode === 'direct' ? 'text-foreground bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
                   }`}
                   onClick={() => {
                     setApiMode('direct')
@@ -140,7 +140,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 </button>
                 <button
                   className={`w-full px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                    apiMode === 'proxy' ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    apiMode === 'proxy' ? 'text-foreground bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
                   }`}
                   onClick={() => {
                     setApiMode('proxy')
@@ -158,7 +158,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
 
           <button
             onClick={() => setShowKeyModal(true)}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
           >
             <Key className="w-4 h-4" />
             <span>{apiKey ? t('header.configured') : t('header.configKey')}</span>
@@ -167,7 +167,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
           {onHistoryClick && (
             <button
               onClick={onHistoryClick}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
             >
               <History className="w-4 h-4" />
               <span>{t('common.history')}</span>
@@ -182,7 +182,7 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                 setShowLanguageDropdown(false)
                 setShowModeDropdown(false)
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all border border-gray-700 hover:border-gray-500"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-border hover:border-border/70"
             >
               <User className="w-4 h-4" />
               <span>{user?.username || '用户'}</span>
@@ -197,10 +197,10 @@ export default function Header({ onHistoryClick }: HeaderProps) {
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
             {showUserDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-lg shadow-xl py-1">
-                <div className="px-3 py-2 border-b border-gray-700">
-                  <p className="text-sm font-medium text-white">{user?.username}</p>
-                  <p className="text-xs text-gray-400">{user?.email || '无邮箱'}</p>
+              <div className="absolute top-full right-0 mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-xl py-1">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="text-sm font-medium text-foreground">{user?.username}</p>
+                  <p className="text-xs text-muted-foreground/70">{user?.email || '无邮箱'}</p>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -229,31 +229,31 @@ export default function Header({ onHistoryClick }: HeaderProps) {
 
       {showKeyModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
-          <div className="bg-gray-900/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-gray-700 shadow-2xl">
+          <div className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-border shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-white">{t('header.apiKeyTitle')}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t('header.apiKeyTitle')}</h2>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1 hover:bg-primary/10 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                <X className="w-5 h-5 text-muted-foreground/70 hover:text-foreground" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('header.apiKeyLabel')}</label>
+                <label className="block text-sm text-muted-foreground/70 mb-2">{t('header.apiKeyLabel')}</label>
                 <input
                   type="password"
                   value={tempKey}
                   onChange={(e) => setTempKey(e.target.value)}
                   placeholder={t('header.apiKeyPlaceholder')}
-                  className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-white placeholder-muted-foreground/50 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                 />
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button
                   onClick={() => setShowKeyModal(false)}
-                  className="px-4 py-2 text-sm text-gray-300 hover:text-white border border-gray-600 rounded-lg hover:bg-white/5 transition-all"
+                  className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-secondary/50 transition-all"
                 >
                   {t('common.cancel')}
                 </button>

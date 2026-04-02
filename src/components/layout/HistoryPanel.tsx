@@ -40,13 +40,13 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
     <div
       className={cn(
         'fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[360px]',
-        'bg-dark-900 border-l border-dark-700 z-30',
+        'bg-card border-l border-border z-30',
         'transition-transform duration-300 ease-in-out',
         'flex flex-col',
         isOpen ? 'translate-x-0' : 'translate-x-full'
       )}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <History className="w-5 h-5 text-primary" />
           <h2 className="font-semibold text-foreground">生成历史</h2>
@@ -58,7 +58,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-dark-800 text-muted-foreground hover:text-foreground transition-colors"
+          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -67,7 +67,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-dark-800 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
               <History className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <p className="text-muted-foreground text-sm">暂无生成记录</p>
@@ -81,14 +81,14 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
               return (
                 <button
                   key={item.id}
-                  className="w-full p-3 rounded-lg bg-dark-800/50 hover:bg-dark-800 border border-transparent hover:border-dark-600 transition-all text-left group"
+                  className="w-full p-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border transition-all text-left group"
                   onClick={() => console.log('View history item:', item.id)}
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={cn(
                         'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                        'bg-dark-900 group-hover:bg-dark-800 transition-colors'
+                        'bg-card group-hover:bg-secondary transition-colors'
                       )}
                     >
                       <Icon className={cn('w-4 h-4', config.color)} />
