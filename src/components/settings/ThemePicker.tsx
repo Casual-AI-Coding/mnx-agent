@@ -39,7 +39,7 @@ export function ThemePicker() {
   return (
     <div className="space-y-5">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="w-full grid grid-cols-3 bg-secondary/50 p-1 rounded-xl">
+        <TabsList className="w-full grid grid-cols-3 bg-secondary/30 p-1 rounded-xl gap-1">
           {(['system', 'dark', 'light'] as TabValue[]).map((tab) => {
             const Icon = tabIcons[tab]
             const isActive = activeTab === tab
@@ -51,7 +51,7 @@ export function ThemePicker() {
                   flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
                   transition-all duration-200
                   data-[state=active]:bg-primary-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/25
-                  data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-secondary/50
+                  data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-secondary/80
                 `}
               >
                 <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
@@ -62,33 +62,32 @@ export function ThemePicker() {
         </TabsList>
       </Tabs>
 
-      {activeTab === 'system' && (
-        <SystemOption
-          selected={theme === 'system'}
-          onSelect={() => setTheme('system')}
-        />
-      )}
+      <div className="min-h-[200px]">
+        {activeTab === 'system' && (
+          <SystemOption
+            selected={theme === 'system'}
+            onSelect={() => setTheme('system')}
+          />
+        )}
 
-      {activeTab !== 'system' && (
-        <div 
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-2 max-h-[450px] overflow-y-auto
-          animate-in fade-in slide-in-from-top-2 duration-300"
-        >
-          {themes.map((t, index) => (
-            <div 
-              key={t.id}
-              className="animate-in fade-in zoom-in-95 duration-300"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <ThemeCard
-                theme={t}
-                selected={theme === t.id}
-                onSelect={() => setTheme(t.id)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+        {activeTab !== 'system' && (
+          <div 
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-2 max-h-[450px] overflow-y-auto"
+          >
+            {themes.map((t, index) => (
+              <div 
+                key={t.id}
+              >
+                <ThemeCard
+                  theme={t}
+                  selected={theme === t.id}
+                  onSelect={() => setTheme(t.id)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
