@@ -299,7 +299,7 @@ function Toolbar({
           <Wrench className="w-5 h-5 text-primary" />
           Workflow Builder
         </h2>
-        <span className="text-xs text-dark-400">
+        <span className="text-xs text-muted-foreground/70">
           {nodeCount} nodes, {edgeCount} edges
         </span>
       </div>
@@ -380,11 +380,11 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                       className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
                     >
                       <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
-                        <Icon className="w-4 h-4 text-dark-300" />
+                        <Icon className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
-                        <p className="text-xs text-dark-500 truncate">{item.description}</p>
+                        <p className="text-xs text-muted-foreground/50 truncate">{item.description}</p>
                       </div>
                     </div>
                   )
@@ -456,7 +456,7 @@ function ConfigPanel({
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-secondary transition-colors"
         >
-          <X className="w-4 h-4 text-dark-400" />
+          <X className="w-4 h-4 text-muted-foreground/70" />
         </button>
       </div>
 
@@ -464,12 +464,12 @@ function ConfigPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Label Field - Common to all */}
         <div>
-          <label className="block text-xs font-medium text-dark-300 mb-1.5">Label</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1.5">Label</label>
           <input
             type="text"
             value={(config.label as string) || ''}
             onChange={(e) => updateConfig('label', e.target.value)}
-            className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="Node label"
           />
         </div>
@@ -478,21 +478,21 @@ function ConfigPanel({
         {nodeType === 'trigger' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Cron Expression</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Cron Expression</label>
               <input
                 type="text"
                 value={(config.cronExpression as string) || ''}
                 onChange={(e) => updateConfig('cronExpression', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="0 0 * * *"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Timezone</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Timezone</label>
               <select
                 value={(config.timezone as string) || 'UTC'}
                 onChange={(e) => updateConfig('timezone', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="UTC">UTC</option>
                 <option value="America/New_York">America/New_York</option>
@@ -503,7 +503,7 @@ function ConfigPanel({
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-dark-300">Active</label>
+              <label className="text-xs font-medium text-muted-foreground">Active</label>
               <button
                 onClick={() => updateConfig('isActive', !config.isActive)}
                 className={cn(
@@ -526,11 +526,11 @@ function ConfigPanel({
         {nodeType === 'text-generation' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'kimi-k2.5'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="kimi-k2.5">Kimi K2.5</option>
                 <option value="kimi-k2">Kimi K2</option>
@@ -539,7 +539,7 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Temperature: {(config.temperature as number) || 0.7}
               </label>
               <input
@@ -553,21 +553,21 @@ function ConfigPanel({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Max Tokens</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Max Tokens</label>
               <input
                 type="number"
                 value={(config.maxTokens as number) || 2048}
                 onChange={(e) => updateConfig('maxTokens', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Prompt</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
               <textarea
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Enter your prompt..."
               />
             </div>
@@ -578,28 +578,28 @@ function ConfigPanel({
         {nodeType === 'voice-sync' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'speech-01-turbo'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="speech-01-turbo">Speech-01 Turbo</option>
                 <option value="speech-01">Speech-01</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Voice ID</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Voice ID</label>
               <input
                 type="text"
                 value={(config.voiceId as string) || ''}
                 onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Enter voice ID"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Speed: {(config.speed as number) || 1.0}
               </label>
               <input
@@ -613,7 +613,7 @@ function ConfigPanel({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Volume: {(config.volume as number) || 1.0}
               </label>
               <input
@@ -627,7 +627,7 @@ function ConfigPanel({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Pitch: {(config.pitch as number) || 0}
               </label>
               <input
@@ -647,23 +647,23 @@ function ConfigPanel({
         {nodeType === 'voice-async' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'speech-01-turbo'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="speech-01-turbo">Speech-01 Turbo</option>
                 <option value="speech-01">Speech-01</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Voice ID</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Voice ID</label>
               <input
                 type="text"
                 value={(config.voiceId as string) || ''}
                 onChange={(e) => updateConfig('voiceId', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Enter voice ID"
               />
             </div>
@@ -674,32 +674,32 @@ function ConfigPanel({
         {nodeType === 'image-generation' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'image-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="image-01">Image-01</option>
                 <option value="image-01-preview">Image-01 Preview</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Prompt</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
               <textarea
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the image you want to generate..."
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Size</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Size</label>
               <select
                 value={(config.size as string) || '1024x1024'}
                 onChange={(e) => updateConfig('size', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="1024x1024">1024x1024</option>
                 <option value="1024x1792">1024x1792</option>
@@ -707,22 +707,22 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Count</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Count</label>
               <input
                 type="number"
                 min="1"
                 max="4"
                 value={(config.count as number) || 1}
                 onChange={(e) => updateConfig('count', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Style</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Style</label>
               <select
                 value={(config.style as string) || 'general'}
                 onChange={(e) => updateConfig('style', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="general">General</option>
                 <option value="vivid">Vivid</option>
@@ -730,7 +730,7 @@ function ConfigPanel({
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-dark-300">Prompt Optimizer</label>
+              <label className="text-xs font-medium text-muted-foreground">Prompt Optimizer</label>
               <button
                 onClick={() => updateConfig('promptOptimizer', !config.promptOptimizer)}
                 className={cn(
@@ -753,28 +753,28 @@ function ConfigPanel({
         {nodeType === 'music-generation' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'music-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="music-01">Music-01</option>
                 <option value="music-01-preview">Music-01 Preview</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Prompt</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
               <textarea
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the music you want to generate..."
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Duration (seconds)
               </label>
               <input
@@ -783,7 +783,7 @@ function ConfigPanel({
                 max="180"
                 value={(config.duration as number) || 30}
                 onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -793,28 +793,28 @@ function ConfigPanel({
         {nodeType === 'video-generation' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Model</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Model</label>
               <select
                 value={(config.model as string) || 'video-01'}
                 onChange={(e) => updateConfig('model', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="video-01">Video-01</option>
                 <option value="video-01-preview">Video-01 Preview</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Prompt</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prompt</label>
               <textarea
                 value={(config.prompt as string) || ''}
                 onChange={(e) => updateConfig('prompt', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder="Describe the video you want to generate..."
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Duration (seconds)
               </label>
               <input
@@ -823,7 +823,7 @@ function ConfigPanel({
                 max="60"
                 value={(config.duration as number) || 5}
                 onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -833,11 +833,11 @@ function ConfigPanel({
         {nodeType === 'condition' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Condition Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Condition Type</label>
               <select
                 value={(config.conditionType as string) || 'equals'}
                 onChange={(e) => updateConfig('conditionType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="equals">Equals</option>
                 <option value="not_equals">Not Equals</option>
@@ -847,11 +847,11 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Service Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Service Type</label>
               <select
                 value={(config.serviceType as string) || 'text'}
                 onChange={(e) => updateConfig('serviceType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="text">Text</option>
                 <option value="voice_sync">Voice Sync</option>
@@ -862,12 +862,12 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Threshold</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Threshold</label>
               <input
                 type="number"
                 value={(config.threshold as number) || 0}
                 onChange={(e) => updateConfig('threshold', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -877,31 +877,31 @@ function ConfigPanel({
         {nodeType === 'queue' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Queue Name</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Queue Name</label>
               <input
                 type="text"
                 value={(config.queueName as string) || 'default'}
                 onChange={(e) => updateConfig('queueName', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Queue name"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Batch Size</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Batch Size</label>
               <input
                 type="number"
                 min="1"
                 value={(config.batchSize as number) || 10}
                 onChange={(e) => updateConfig('batchSize', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Pull Strategy</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Pull Strategy</label>
               <select
                 value={(config.pullStrategy as string) || 'fifo'}
                 onChange={(e) => updateConfig('pullStrategy', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="fifo">FIFO (First In, First Out)</option>
                 <option value="lifo">LIFO (Last In, First Out)</option>
@@ -915,23 +915,23 @@ function ConfigPanel({
         {nodeType === 'loop' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Condition</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Condition</label>
               <input
                 type="text"
                 value={(config.condition as string) || ''}
                 onChange={(e) => updateConfig('condition', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="While condition is true"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Max Iterations</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Max Iterations</label>
               <input
                 type="number"
                 min="1"
                 value={(config.maxIterations as number) || 100}
                 onChange={(e) => updateConfig('maxIterations', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </>
@@ -941,11 +941,11 @@ function ConfigPanel({
         {nodeType === 'transform' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Transform Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Transform Type</label>
               <select
                 value={(config.transformType as string) || 'map'}
                 onChange={(e) => updateConfig('transformType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="map">Map Fields</option>
                 <option value="filter">Filter</option>
@@ -954,27 +954,27 @@ function ConfigPanel({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Input Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Input Type</label>
               <input
                 type="text"
                 value={(config.inputType as string) || ''}
                 onChange={(e) => updateConfig('inputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="e.g., JSON"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Output Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Output Type</label>
               <input
                 type="text"
                 value={(config.outputType as string) || ''}
                 onChange={(e) => updateConfig('outputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="e.g., JSON"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Mapping (JSON)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Mapping (JSON)</label>
               <textarea
                 value={JSON.stringify((config.mapping as Record<string, string>) || {}, null, 2)}
                 onChange={(e) => {
@@ -983,7 +983,7 @@ function ConfigPanel({
                   } catch {}
                 }}
                 rows={4}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-dark-700 text-sm text-foreground font-mono placeholder:text-dark-500 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 placeholder='{"key": "value"}'
               />
             </div>
@@ -1276,9 +1276,9 @@ function WorkflowBuilderInner() {
             }}
             className="bg-dark-900"
           >
-            <Controls className="bg-secondary border border-dark-700 rounded-md" />
+            <Controls className="bg-secondary border border-border rounded-md" />
             <MiniMap
-              className="bg-dark-950 border border-dark-700 rounded-md"
+              className="bg-dark-950 border border-border rounded-md"
               nodeColor={(node) => {
                 switch (node.type) {
                   case 'trigger':

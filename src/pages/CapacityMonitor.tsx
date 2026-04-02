@@ -138,14 +138,14 @@ export default function CapacityMonitor() {
       {loading && modelRemains.length === 0 ? (
         <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
-            <RefreshCw className="w-12 h-12 mx-auto mb-4 text-dark-600 animate-spin" />
+            <RefreshCw className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50 animate-spin" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">Loading Capacity Data...</h3>
           </CardContent>
         </Card>
       ) : modelRemains.length === 0 && !hasError ? (
         <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
-            <Gauge className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <Gauge className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Capacity Data</h3>
             <p className="text-sm text-muted-foreground/50 mb-4">
               {error || 'Click refresh to load capacity information.'}

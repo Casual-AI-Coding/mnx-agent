@@ -401,7 +401,7 @@ const JobsListTab = memo(function JobsListTab() {
       {jobs.length === 0 ? (
         <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
-            <Clock className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Cron Jobs Yet</h3>
             <p className="text-sm text-muted-foreground/50 mb-6 max-w-md mx-auto">
               Create your first cron job to automate workflow executions on a schedule.
@@ -657,7 +657,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       {tasks.length === 0 ? (
         <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
-            <ListTodo className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <ListTodo className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Tasks</h3>
             <p className="text-sm text-muted-foreground/50">Tasks will appear here when jobs are executed.</p>
           </CardContent>
@@ -821,7 +821,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
       {filteredLogs.length === 0 ? (
         <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
-            <ScrollText className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <ScrollText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Execution Logs</h3>
             <p className="text-sm text-muted-foreground/50">Logs will appear here after jobs are executed.</p>
           </CardContent>
@@ -1090,7 +1090,7 @@ const CapacityMonitorTab = memo(function CapacityMonitorTab() {
       {records.length === 0 && (
         <Card className="border-dashed border-border/700">
           <CardContent className="py-16 text-center">
-            <Gauge className="w-12 h-12 mx-auto mb-4 text-dark-600" />
+            <Gauge className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Capacity Data</h3>
             <p className="text-sm text-muted-foreground/50 mb-4">Click refresh to load capacity information.</p>
             <Button onClick={handleRefresh} disabled={loading}>

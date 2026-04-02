@@ -458,7 +458,7 @@ export default function ImageGeneration() {
               prompt.trim() && !isGenerating ? 'group-hover:scale-105' : ''
             }`} />
             <div className="absolute inset-0 bg-gradient-to-r from-violet-400/20 via-fuchsia-400/20 to-pink-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative flex items-center justify-center gap-2 py-4 text-white font-semibold">
+            <div className="relative flex items-center justify-center gap-2 py-4 text-foreground font-semibold">
               {isGenerating ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
