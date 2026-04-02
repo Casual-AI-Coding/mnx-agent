@@ -64,10 +64,12 @@ export function ThemePicker() {
 
       <div className="min-h-[200px]">
         {activeTab === 'system' && (
-          <SystemOption
-            selected={theme === 'system'}
-            onSelect={() => setTheme('system')}
-          />
+          <div className="p-2">
+            <SystemOption
+              selected={theme === 'system'}
+              onSelect={() => setTheme('system')}
+            />
+          </div>
         )}
 
         {activeTab !== 'system' && (
