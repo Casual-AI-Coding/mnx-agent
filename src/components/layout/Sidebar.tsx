@@ -69,24 +69,21 @@ export default function Sidebar() {
   }, [expandedSections])
 
   useEffect(() => {
-    if (showSettingsModal) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [showSettingsModal])
+    if (!showSettingsModal) return
 
-  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showSettingsModal) {
+      if (e.key === 'Escape') {
         setShowSettingsModal(false)
       }
     }
     window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
+
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleEsc)
+    }
   }, [showSettingsModal])
 
   const toggleSection = (sectionId: string) => {
@@ -168,8 +165,8 @@ export default function Sidebar() {
         className={cn(
           'flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200 border-l-2',
           isActive
-            ? 'text-white bg-primary-600/20 border-l-2 border-primary-500'
-            : 'text-dark-400 hover:text-white hover:bg-white/5 border-transparent'
+            ? 'text-foreground bg-primary-600/20 border-l-2 border-primary-500'
+            : 'text-muted-foreground hover:text-foreground hover:bg-white/5 border-transparent'
         )}
       >
         <item.icon className="w-4 h-4" />
@@ -183,10 +180,10 @@ export default function Sidebar() {
     const SectionIcon = section.icon
 
     return (
-      <div key={section.id} className="py-2 border-t border-dark-800/30">
+      <div key={section.id} className="py-2 border-t border-border/30">
         <button
           onClick={() => toggleSection(section.id)}
-          className="w-full flex items-center gap-3 px-3 py-2 text-dark-300 hover:text-white transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground/70 hover:text-foreground transition-colors"
         >
           <SectionIcon className="w-4 h-4" />
           <span className="text-sm font-medium flex-1 text-left">{section.label}</span>
@@ -213,7 +210,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-[60px] bottom-0 w-[260px] bg-dark-950/50 backdrop-blur-xl border-r border-dark-800/50 flex flex-col"
+      className="fixed left-0 top-[60px] bottom-0 w-[260px] bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col"
     >
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -227,7 +224,7 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto scrollbar-hide px-2 py-2">
         <button
           onClick={() => toggleSection('debug')}
-          className="w-full flex items-center gap-3 px-3 py-2 text-dark-300 hover:text-white transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground/70 hover:text-foreground transition-colors"
         >
           <Terminal className="w-4 h-4" />
           <span className="text-sm font-medium flex-1 text-left">{t('sidebar.debugConsole')}</span>
@@ -253,9 +250,9 @@ export default function Sidebar() {
         {visibleSections.map(renderSection)}
       </nav>
 
-      <div className="flex-shrink-0 p-4 border-t border-dark-800/50 bg-dark-950/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-dark-400">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
               <span className="text-white font-bold text-[10px]">M</span>
             </div>
@@ -264,7 +261,7 @@ export default function Sidebar() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="text-dark-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               title="Settings"
             >
               <Cog className="w-4 h-4" />
@@ -274,7 +271,7 @@ export default function Sidebar() {
               href="https://github.com/oGsLP/mnx-agent"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-dark-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               title="GitHub"
             >
               <Github className="w-4 h-4" />

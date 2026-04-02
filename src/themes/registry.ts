@@ -68,7 +68,14 @@ export function getThemesByCategory(category: ThemeCategory): ThemeMeta[] {
   return THEME_REGISTRY.filter(t => t.category === category)
 }
 
+const DEFAULT_DARK_THEME = 'midnight'
+const DEFAULT_LIGHT_THEME = 'classic-light'
+
 export function getDefaultThemeForCategory(category: ThemeCategory): ThemeMeta {
-  const defaultId = category === 'dark' ? 'midnight' : 'classic-light'
-  return THEME_REGISTRY.find(t => t.id === defaultId)!
+  const defaultId = category === 'dark' ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME
+  const theme = THEME_REGISTRY.find(t => t.id === defaultId)
+  if (!theme) {
+    return THEME_REGISTRY[0]
+  }
+  return theme
 }

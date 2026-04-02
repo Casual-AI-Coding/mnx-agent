@@ -3,19 +3,20 @@ import { useAppStore } from '@/stores/app'
 import { getThemeById, getDefaultThemeForCategory } from '@/themes/registry'
 import type { ThemeCategory } from '@/themes/registry'
 
-/**
- * Gets the system color scheme preference
- */
-export function getSystemPreference(): ThemeCategory {
-  if (typeof window === 'undefined') return 'dark'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+const cachedMediaQuery: { current: MediaQueryList | null } = { current: null }
+
+function getMediaQuery(): MediaQueryList {
+  if (!cachedMediaQuery.current && typeof window !== 'undefined') {
+    cachedMediaQuery.current = window.matchMedia('(prefers-color-scheme: dark)')
+  }
+  return cachedMediaQuery.current!
 }
 
-/**
- * Resolves the active theme ID from the store theme state
- * - If theme is 'system', returns default theme for current system preference
- * - Otherwise, returns the theme ID directly
- */
+export function getSystemPreference(): ThemeCategory {
+  if (typeof window === 'undefined') return 'dark'
+  return getMediaQuery().matches ? 'dark' : 'light'
+}
+
 export function getActiveThemeId(themeState: 'system' | string): string {
   if (themeState === 'system') {
     const category = getSystemPreference()
@@ -24,12 +25,6 @@ export function getActiveThemeId(themeState: 'system' | string): string {
   return themeState
 }
 
-/**
- * React hook that applies the current theme to the document root
- * - Adds .theme-{id} class to <html>
- * - Sets data-theme and data-themeCategory attributes
- * - Removes old theme class before adding new one
- */
 export function useThemeEffect() {
   const { theme } = useAppStore()
 

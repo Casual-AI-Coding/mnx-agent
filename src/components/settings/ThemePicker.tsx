@@ -39,7 +39,7 @@ export function ThemePicker() {
   return (
     <div className="space-y-5">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="w-full grid grid-cols-3 bg-dark-800/50 p-1 rounded-xl">
+        <TabsList className="w-full grid grid-cols-3 bg-secondary/50 p-1 rounded-xl">
           {(['system', 'dark', 'light'] as TabValue[]).map((tab) => {
             const Icon = tabIcons[tab]
             const isActive = activeTab === tab
@@ -51,7 +51,7 @@ export function ThemePicker() {
                   flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
                   transition-all duration-200
                   data-[state=active]:bg-primary-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/25
-                  data-[state=inactive]:text-dark-400 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5
+                  data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-white/5
                 `}
               >
                 <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
