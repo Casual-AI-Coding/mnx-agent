@@ -63,12 +63,10 @@ export function ThemePicker() {
       </Tabs>
 
       {activeTab === 'system' && (
-        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-          <SystemOption
-            selected={theme === 'system'}
-            onSelect={() => setTheme('system')}
-          />
-        </div>
+        <SystemOption
+          selected={theme === 'system'}
+          onSelect={() => setTheme('system')}
+        />
       )}
 
       {activeTab !== 'system' && (

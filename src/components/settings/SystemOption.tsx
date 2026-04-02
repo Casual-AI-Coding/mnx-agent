@@ -15,7 +15,7 @@ export function SystemOption({ selected, onSelect }: SystemOptionProps) {
         'flex items-center gap-4 relative overflow-hidden',
         selected
           ? 'border-primary-500 bg-gradient-to-br from-primary-500/10 to-primary-600/5 shadow-lg shadow-primary-500/10'
-          : 'border-border hover:border-border hover:bg-white/5'
+          : 'border-border hover:border-primary-500/30 hover:bg-secondary/30'
       )}
     >
       <div 
@@ -39,7 +39,7 @@ export function SystemOption({ selected, onSelect }: SystemOptionProps) {
       <div className="flex-1 text-left">
         <span className={cn(
           'text-base font-semibold block transition-colors duration-200',
-          selected ? 'text-white' : 'text-foreground'
+          selected ? 'text-foreground' : 'text-foreground'
         )}>
           Follow System Preference
         </span>
