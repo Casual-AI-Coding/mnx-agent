@@ -276,15 +276,18 @@ export default function Header({ onHistoryClick }: HeaderProps) {
 
         {}
         {showKeyModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]"
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] overflow-y-auto py-10"
             onClick={() => setShowKeyModal(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-border shadow-2xl"
-            >
+            <div className="min-h-full flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-border shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Key className="w-5 h-5 text-primary" />
@@ -326,7 +329,8 @@ export default function Header({ onHistoryClick }: HeaderProps) {
                   </button>
                 </div>
               </div>
-            </motion.div>
+</motion.div>
+            </div>
           </div>
         )}
       </header>
@@ -356,11 +360,11 @@ export default function Header({ onHistoryClick }: HeaderProps) {
           <AnimatePresence>
             {showHistoryDropdown && (
               <motion.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="absolute top-full right-0 mt-3 w-64 bg-card/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl py-3"
+                className="absolute bottom-full right-0 mb-3 w-64 bg-card/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl py-3"
               >
                 <div className="px-4 pb-2 border-b border-border/50 mb-2">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">

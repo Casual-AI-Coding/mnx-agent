@@ -210,7 +210,7 @@ export default function MusicGeneration() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('musicGeneration.modelLabel')}</label>
+                <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
                 <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -229,7 +229,7 @@ export default function MusicGeneration() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('musicGeneration.styleDescription')}</label>
+                <label className="text-sm font-medium text-foreground">{t('musicGeneration.styleDescription')}</label>
                 <Textarea
                   value={stylePrompt}
                   onChange={(e) => setStylePrompt(e.target.value)}
@@ -241,7 +241,7 @@ export default function MusicGeneration() {
               {model === 'music-2.5+' && (
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <label className="text-sm font-medium">{t('musicGeneration.aiOptimizeLabel')}</label>
+                    <label className="text-sm font-medium text-foreground">{t('musicGeneration.aiOptimizeLabel')}</label>
                     <p className="text-xs text-muted-foreground">{t('musicGeneration.autoOptimizeLyrics')}</p>
                   </div>
                   <Switch

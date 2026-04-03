@@ -202,7 +202,7 @@ export default function VideoGeneration() {
               />
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('videoGeneration.modelLabel')}</label>
+                <label className="text-sm font-medium text-foreground">{t('videoGeneration.modelLabel')}</label>
                 <Select value={model} onValueChange={(v) => setModel(v as VideoModel)}>
                   <SelectTrigger>
                     <SelectValue />

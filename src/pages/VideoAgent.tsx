@@ -301,7 +301,7 @@ export default function VideoAgent() {
               <CardContent className="space-y-4">
                 {TEMPLATE_FORMS[selectedTemplate.id]?.map((field) => (
                   <div key={field.label} className="space-y-2">
-                    <label className="text-sm font-medium">{field.label}</label>
+                    <label className="text-sm font-medium text-foreground">{field.label}</label>
                     <Input
                       value={inputs[field.label] || ''}
                       onChange={(e) => handleInputChange(field.label, e.target.value)}
