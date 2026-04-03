@@ -6,7 +6,7 @@ import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 
 // Select variants using CVA
 const selectTriggerVariants = cva(
-  'flex items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+  'flex items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent text-sm text-foreground shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
   {
     variants: {
       size: {
@@ -305,7 +305,7 @@ const SelectValueInner = React.forwardRef<HTMLSpanElement, SelectValueProps>(
     return (
       <span
         ref={ref}
-        className={cn('pointer-events-none block truncate', className)}
+        className={cn('pointer-events-none block truncate text-foreground', className)}
         {...props}
       >
         {value || placeholder}

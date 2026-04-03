@@ -359,12 +359,18 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                         <span className="text-[10px] text-muted-foreground/50">{actions.length}</span>
                       </button>
                       {isExpanded && (
-                        <div className="border-t border-border/30 bg-background/50">
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeInOut' }}
+                          className="border-t border-border/30 bg-background/50 overflow-hidden"
+                        >
                           {actions.map((action) => (
                             <div
                               key={`${action.service}.${action.method}`}
                               draggable
-                              onDragStart={(e) => onDragStart(e, 'action', {
+                              onDragStart={(e: React.DragEvent<HTMLDivElement>) => onDragStart(e, 'action', {
                                 service: action.service,
                                 method: action.method,
                                 label: action.label,
@@ -377,7 +383,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                               </div>
                             </div>
                           ))}
-                        </div>
+                        </motion.div>
                       )}
                     </div>
                   )

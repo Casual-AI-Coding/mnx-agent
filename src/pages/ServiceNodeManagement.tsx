@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
   Shield,
@@ -12,6 +12,8 @@ import {
   Database,
   HardDrive,
   Clock,
+  ChevronRight,
+  Settings,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -33,38 +35,54 @@ interface ServiceNodePermission {
   is_enabled: boolean
 }
 
-const ROLE_CONFIG: Record<UserRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  super: { label: 'Super', variant: 'destructive' },
-  admin: { label: 'Admin', variant: 'default' },
-  pro: { label: 'Pro', variant: 'secondary' },
-  user: { label: 'User', variant: 'outline' },
+const ROLE_CONFIG: Record<UserRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
+  super: { label: 'Super', variant: 'destructive', color: 'text-red-400' },
+  admin: { label: 'Admin', variant: 'default', color: 'text-blue-400' },
+  pro: { label: 'Pro', variant: 'secondary', color: 'text-purple-400' },
+  user: { label: 'User', variant: 'outline', color: 'text-emerald-400' },
 }
 
-const CATEGORY_CONFIG: Record<string, { icon: typeof Shield; color: string; bgClass: string }> = {
+const CATEGORY_CONFIG: Record<string, { 
+  icon: typeof Shield; 
+  gradient: string;
+  bgGradient: string;
+  borderColor: string;
+  glowColor: string;
+}> = {
   'MiniMax API': { 
     icon: Zap, 
-    color: 'text-blue-500',
-    bgClass: 'bg-blue-500/10' 
+    gradient: 'from-blue-500 to-cyan-400',
+    bgGradient: 'from-blue-500/20 to-cyan-400/20',
+    borderColor: 'border-blue-500/30',
+    glowColor: 'shadow-blue-500/20',
   },
   'Database': { 
     icon: Database, 
-    color: 'text-emerald-500',
-    bgClass: 'bg-emerald-500/10' 
+    gradient: 'from-emerald-500 to-teal-400',
+    bgGradient: 'from-emerald-500/20 to-teal-400/20',
+    borderColor: 'border-emerald-500/30',
+    glowColor: 'shadow-emerald-500/20',
   },
   'Capacity': { 
     icon: Shield, 
-    color: 'text-amber-500',
-    bgClass: 'bg-amber-500/10' 
+    gradient: 'from-amber-500 to-orange-400',
+    bgGradient: 'from-amber-500/20 to-orange-400/20',
+    borderColor: 'border-amber-500/30',
+    glowColor: 'shadow-amber-500/20',
   },
   'Media Storage': { 
     icon: HardDrive, 
-    color: 'text-purple-500',
-    bgClass: 'bg-purple-500/10' 
+    gradient: 'from-purple-500 to-pink-400',
+    bgGradient: 'from-purple-500/20 to-pink-400/20',
+    borderColor: 'border-purple-500/30',
+    glowColor: 'shadow-purple-500/20',
   },
   'Queue Processing': { 
     icon: Clock, 
-    color: 'text-orange-500',
-    bgClass: 'bg-orange-500/10' 
+    gradient: 'from-orange-500 to-red-400',
+    bgGradient: 'from-orange-500/20 to-red-400/20',
+    borderColor: 'border-orange-500/30',
+    glowColor: 'shadow-orange-500/20',
   },
 }
 
@@ -127,7 +145,14 @@ export default function ServiceNodeManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative"
+        >
+          <div className="w-12 h-12 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="absolute inset-0 w-12 h-12 border-2 border-primary/10 rounded-full animate-ping" />
+        </motion.div>
       </div>
     )
   }
@@ -135,7 +160,13 @@ export default function ServiceNodeManagement() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <AlertCircle className="w-12 h-12 text-destructive" />
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', damping: 10 }}
+        >
+          <AlertCircle className="w-12 h-12 text-destructive" />
+        </motion.div>
         <p className="text-muted-foreground">{error}</p>
         <Button onClick={fetchNodes}>重试</Button>
       </div>
@@ -143,49 +174,86 @@ export default function ServiceNodeManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('serviceNodes.title', '节点权限管理')}</h1>
-        <p className="text-muted-foreground/70 mt-1">{t('serviceNodes.subtitle', '管理工作流中可用服务节点的访问权限')}</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="总节点数" value={nodes.length} icon={Server} color="text-blue-400" />
-        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color="text-green-400" />
-        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color="text-muted-foreground" />
-      </div>
-
-      {sortedCategories.map(category => (
-        <CategorySection
-          key={category}
-          category={category}
-          nodes={groupedNodes[category]}
-          saving={saving}
-          updateNode={updateNode}
-        />
-      ))}
-
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">角色权限说明</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(ROLE_CONFIG).map(([role, config]) => (
-              <div key={role} className="flex items-center gap-3">
-                <Badge variant={config.variant}>{config.label}</Badge>
-                <span className="text-sm text-muted-foreground/70">
-                  {role === 'super' && '全部权限'}
-                  {role === 'admin' && '管理权限'}
-                  {role === 'pro' && '高级权限'}
-                  {role === 'user' && '基础权限'}
-                </span>
-              </div>
-            ))}
+    <div className="space-y-8">
+      {}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+            <Settings className="w-6 h-6 text-primary" />
           </div>
-          <p className="text-sm text-muted-foreground/60 mt-4">
-            角色权限具有继承关系：Super → Admin → Pro → User。设置最低角色为 Pro 的节点，Admin 和 Super 用户也可以使用。
-          </p>
-        </CardContent>
-      </Card>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{t('serviceNodes.title', '节点权限管理')}</h1>
+            <p className="text-muted-foreground/70 text-sm">{t('serviceNodes.subtitle', '管理工作流中可用服务节点的访问权限')}</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+      >
+        <StatCard title="总节点数" value={nodes.length} icon={Server} color="from-blue-500 to-cyan-400" />
+        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color="from-emerald-500 to-teal-400" />
+        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color="from-slate-500 to-slate-400" />
+      </motion.div>
+
+      {}
+      <AnimatePresence>
+        {sortedCategories.map((category, index) => (
+          <motion.div
+            key={category}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + index * 0.1 }}
+          >
+            <CategorySection
+              category={category}
+              nodes={groupedNodes[category]}
+              saving={saving}
+              updateNode={updateNode}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <Card className="border-border/50 bg-gradient-to-br from-card to-card/50">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              角色权限说明
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(ROLE_CONFIG).map(([role, config]) => (
+                <div key={role} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                  <Badge variant={config.variant}>{config.label}</Badge>
+                  <span className="text-sm text-muted-foreground/70">
+                    {role === 'super' && '全部权限'}
+                    {role === 'admin' && '管理权限'}
+                    {role === 'pro' && '高级权限'}
+                    {role === 'user' && '基础权限'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground/60 mt-4 leading-relaxed">
+              角色权限具有继承关系：Super → Admin → Pro → User。设置最低角色为 Pro 的节点，Admin 和 Super 用户也可以使用。
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   )
 }
@@ -196,26 +264,86 @@ function CategorySection({ category, nodes, saving, updateNode }: {
   saving: string | null
   updateNode: (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => void
 }) {
-  const config = CATEGORY_CONFIG[category] || { icon: Server, color: 'text-muted-foreground', bgClass: 'bg-muted/10' }
+  const config = CATEGORY_CONFIG[category] || { 
+    icon: Server, 
+    gradient: 'from-slate-500 to-slate-400',
+    bgGradient: 'from-slate-500/20 to-slate-400/20',
+    borderColor: 'border-slate-500/30',
+    glowColor: 'shadow-slate-500/20',
+  }
   const Icon = config.icon
   const enabledInCategory = nodes.filter(n => n.is_enabled).length
+  const enabledPercent = Math.round((enabledInCategory / nodes.length) * 100)
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={cn('p-2 rounded-lg', config.bgClass)}>
-            <Icon className={cn('w-5 h-5', config.color)} />
-          </div>
-          <div>
-            <h3 className="font-semibold">{category}</h3>
-            <p className="text-sm text-muted-foreground/70">{enabledInCategory}/{nodes.length} 已启用</p>
+    <Card className={cn(
+      'relative overflow-hidden border-2 transition-all duration-300',
+      'hover:shadow-xl hover:shadow-primary/5',
+      config.borderColor
+    )}>
+      {}
+      <div className={cn(
+        'absolute inset-0 bg-gradient-to-br opacity-30',
+        config.bgGradient
+      )} />
+      
+      {}
+      <div className={cn(
+        'absolute -top-20 -right-20 w-40 h-40 rounded-full blur-3xl opacity-20',
+        'bg-gradient-to-br',
+        config.gradient
+      )} />
+
+      <CardContent className="relative p-6">
+        {}
+        <div className="flex items-center gap-4 mb-6">
+          <motion.div 
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className={cn(
+              'p-3 rounded-xl bg-gradient-to-br shadow-lg',
+              config.gradient,
+              config.glowColor
+            )}
+          >
+            <Icon className="w-6 h-6 text-white" />
+          </motion.div>
+          
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-bold text-foreground">{category}</h3>
+              <Badge variant="secondary" className="font-mono">
+                {enabledInCategory}/{nodes.length}
+              </Badge>
+            </div>
+            
+            {}
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${enabledPercent}%` }}
+                  transition={{ duration: 0.8, delay: 0.3 }}
+                  className={cn('h-full rounded-full bg-gradient-to-r', config.gradient)}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground/70 font-medium">
+                {enabledPercent}% 已启用
+              </span>
+            </div>
           </div>
         </div>
         
+        {}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {nodes.map(node => (
-            <NodeCard key={node.id} node={node} saving={saving} updateNode={updateNode} />
+          {nodes.map((node, index) => (
+            <motion.div
+              key={node.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <NodeCard node={node} saving={saving} updateNode={updateNode} gradient={config.gradient} />
+            </motion.div>
           ))}
         </div>
       </CardContent>
@@ -223,28 +351,53 @@ function CategorySection({ category, nodes, saving, updateNode }: {
   )
 }
 
-function NodeCard({ node, saving, updateNode }: {
+function NodeCard({ node, saving, updateNode, gradient }: {
   node: ServiceNodePermission
   saving: string | null
   updateNode: (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => void
+  gradient: string
 }) {
+  const [isHovered, setIsHovered] = useState(false)
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      whileHover={{ y: -2 }}
       className={cn(
-        'relative rounded-lg border transition-all duration-200 p-3',
-        node.is_enabled ? 'border-border bg-card' : 'border-border/50 bg-muted/30 opacity-70'
+        'relative rounded-xl border p-4 transition-all duration-200',
+        'backdrop-blur-sm',
+        node.is_enabled 
+          ? 'bg-card/80 border-border/50 shadow-lg shadow-black/5' 
+          : 'bg-muted/30 border-border/30 opacity-60'
       )}
     >
-      <div className="flex items-center justify-between mb-2">
+      {}
+      <div className={cn(
+        'absolute top-0 left-4 right-4 h-0.5 rounded-full opacity-50',
+        'bg-gradient-to-r',
+        gradient
+      )} />
+
+      {}
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          {node.is_enabled ? (
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-          ) : (
-            <XCircle className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
-          )}
-          <span className={cn('font-medium text-sm truncate', !node.is_enabled && 'text-muted-foreground/70')}>
+          <motion.div
+            animate={{ 
+              scale: node.is_enabled ? 1 : 0.9,
+              opacity: node.is_enabled ? 1 : 0.5 
+            }}
+          >
+            {node.is_enabled ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            ) : (
+              <XCircle className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+            )}
+          </motion.div>
+          <span className={cn(
+            'font-semibold text-sm truncate',
+            !node.is_enabled && 'text-muted-foreground/70'
+          )}>
             {node.display_name}
           </span>
         </div>
@@ -252,35 +405,70 @@ function NodeCard({ node, saving, updateNode }: {
           checked={node.is_enabled}
           onCheckedChange={(checked) => updateNode(node.id, { is_enabled: checked })}
           disabled={saving === node.id}
+          className="scale-75"
         />
       </div>
 
-      <code className="text-[10px] px-1.5 py-0.5 rounded font-mono block truncate bg-muted/50 text-muted-foreground/70 mb-2">
+      {}
+      <code className="text-[10px] px-2 py-1 rounded-md font-mono block truncate bg-muted/50 text-muted-foreground/70 mb-3">
         {node.service_name}.{node.method_name}
       </code>
 
+      {}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground/50">最低角色</span>
+        <span className="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-wider">
+          最低角色
+        </span>
         <Select
           value={node.min_role}
           onValueChange={(value) => updateNode(node.id, { min_role: value as UserRole })}
         >
-          <SelectTrigger className="w-20 h-6 text-[10px] px-2" disabled={saving === node.id}>
+          <SelectTrigger 
+            className="w-20 h-7 text-[11px] px-2 border-0 bg-muted/50 hover:bg-muted transition-colors" 
+            disabled={saving === node.id}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(ROLE_CONFIG).map(([role, config]) => (
-              <SelectItem key={role} value={role} className="text-xs">{config.label}</SelectItem>
+              <SelectItem key={role} value={role} className="text-xs">
+                <span className={config.color}>{config.label}</span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {saving === node.id && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        </div>
-      )}
+      {}
+      <AnimatePresence>
+        {saving === node.id && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center rounded-xl"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            >
+              <Loader2 className="w-5 h-5 text-primary" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isHovered ? 0.5 : 0 }}
+        className={cn(
+          'absolute inset-0 rounded-xl pointer-events-none',
+          'bg-gradient-to-br',
+          gradient
+        )}
+        style={{ filter: 'blur(20px)' }}
+      />
     </motion.div>
   )
 }
@@ -292,16 +480,26 @@ function StatCard({ title, value, icon: Icon, color }: {
   color: string
 }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg bg-muted/50', color)}>
-              <Icon className="w-4 h-4" />
+    <motion.div 
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+    >
+      <Card className="relative overflow-hidden border-border/50">
+        <div className={cn(
+          'absolute inset-0 bg-gradient-to-br opacity-10',
+          color
+        )} />
+        <CardContent className="relative p-5">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              'p-3 rounded-xl bg-gradient-to-br shadow-lg shadow-black/20',
+              color
+            )}>
+              <Icon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground/70">{title}</p>
-              <p className="text-xl font-bold">{value}</p>
+              <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wider">{title}</p>
+              <p className="text-2xl font-bold text-foreground">{value}</p>
             </div>
           </div>
         </CardContent>
