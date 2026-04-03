@@ -2,6 +2,32 @@
 
 > 本文档为 AI 助手提供项目上下文，帮助理解架构、编码规范和开发流程。
 
+## 设计与计划文档
+
+项目使用 `docs/superpowers/` 存储设计和计划文档：
+
+| 目录 | 用途 | 说明 |
+|------|------|------|
+| `specs/` | 规格文档 | 定义"是什么"，永不归档 |
+| `plans/` | 实现计划 | 定义"怎么做"，完成后归档 |
+| `archive/` | 归档 | 已有版本 plans 的归档 |
+
+**命名规范**：
+- `specs/`: `YYYY-MM-DD-主题-design.md` 或 `主题.md`
+- `plans/`: `YYYY-MM-DD-主题.md`
+- 子计划: `YYYY-MM-DD-NN-主题.md`（NN 为序号）
+
+**何时创建/引用**：
+- 开发新功能前 → 查阅 `specs/` 理解设计
+- 制定实现方案时 → 在 `plans/` 创建计划
+- 实施前 → 引用相关 specs/plans 作为依据
+
+**引用路径格式**：
+```
+@docs/superpowers/specs/workflow-core-concepts.md
+@docs/superpowers/plans/2026-04-03-workflow-system-redesign.md
+```
+
 ## 项目概述
 
 MiniMax AI API 工具集，提供文本、语音、图像、音乐、视频生成能力，并内置 cron 定时任务调度系统。
