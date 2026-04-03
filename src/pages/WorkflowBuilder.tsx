@@ -42,6 +42,7 @@ import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
+import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
 import { useWorkflowStore, isValidWorkflow, hasActionNode } from '@/stores/workflow'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
@@ -774,11 +775,14 @@ function WorkflowBuilderInner() {
 
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveMessage, setSaveMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showSaveModal, setShowSaveModal] = React.useState(false)
 
   const handleSaveToServer = async () => {
-    const name = prompt('Enter workflow name:')
-    if (!name) return
+    setShowSaveModal(true)
+  }
 
+  const handleSaveWorkflow = async (name: string) => {
+    setShowSaveModal(false)
     setIsSaving(true)
     try {
       const response = await fetch('/api/workflows', {
@@ -1012,6 +1016,12 @@ function WorkflowBuilderInner() {
           )}
         </AnimatePresence>
       </div>
+
+      <SaveWorkflowModal
+        isOpen={showSaveModal}
+        onSave={handleSaveWorkflow}
+        onClose={() => setShowSaveModal(false)}
+      />
     </div>
   )
 }
