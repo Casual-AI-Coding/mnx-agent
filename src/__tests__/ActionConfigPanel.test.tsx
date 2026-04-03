@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 
 const mockAvailableActions = {
