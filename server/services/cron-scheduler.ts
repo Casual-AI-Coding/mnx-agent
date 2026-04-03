@@ -142,10 +142,16 @@ export class CronScheduler {
         if (!template) {
           throw new Error(`Workflow template ${job.workflow_id} not found`)
         }
-        workflowJson = JSON.stringify({
-          nodes: JSON.parse(template.nodes_json),
-          edges: JSON.parse(template.edges_json),
-        })
+        
+        // Handle JSONB columns that may already be objects
+        const nodes = typeof template.nodes_json === 'string' 
+          ? JSON.parse(template.nodes_json) 
+          : template.nodes_json
+        const edges = typeof template.edges_json === 'string' 
+          ? JSON.parse(template.edges_json) 
+          : template.edges_json
+        
+        workflowJson = JSON.stringify({ nodes, edges })
       } else {
         throw new Error(`Job ${job.id} has no workflow_id configured`)
       }

@@ -30,10 +30,25 @@ export class ServiceNodeRegistry {
     this.db = db
   }
 
-  register(config: ServiceConfig): void {
+  async register(config: ServiceConfig): Promise<void> {
     this.services.set(config.serviceName, config.instance)
     this.methodMetas.set(config.serviceName, config.methods)
     console.log(`[ServiceNodeRegistry] Registered service: ${config.serviceName} with ${config.methods.length} methods`)
+
+    for (const method of config.methods) {
+      try {
+        await this.db.upsertServiceNodePermission({
+          service_name: config.serviceName,
+          method_name: method.name,
+          display_name: method.displayName,
+          category: method.category,
+          min_role: 'pro',
+          is_enabled: true,
+        })
+      } catch (error) {
+        console.error(`[ServiceNodeRegistry] Failed to sync ${config.serviceName}.${method.name} to database:`, error)
+      }
+    }
   }
 
   get(serviceName: string): object | undefined {
@@ -55,7 +70,7 @@ export class ServiceNodeRegistry {
       throw new Error(`Method "${method}" not found on service "${serviceName}"`)
     }
 
-    return (fn as (...args: unknown[]) => Promise<unknown>)(...args)
+    return (fn as (...args: unknown[]) => Promise<unknown>).bind(instance)(...args)
   }
 
   getAllServices(): string[] {

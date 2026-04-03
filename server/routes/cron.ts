@@ -451,6 +451,18 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
   res.json({ success: true, data: { log, tasks } })
 }))
 
+router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const log = await db.getExecutionLogById(req.params.id, ownerId)
+  if (!log) {
+    res.status(404).json({ success: false, error: 'Log not found' })
+    return
+  }
+  const details = await db.getExecutionLogDetailsByLogId(req.params.id)
+  res.json({ success: true, data: { log, details } })
+}))
+
 // ============================================
 // Workflow API
 // ============================================

@@ -364,6 +364,65 @@ INSERT INTO cron_jobs (id, name, description, cron_expression, timezone, workflo
 ON CONFLICT (id) DO NOTHING;
     `,
   },
+  {
+    id: 14,
+    name: 'migration_014_example_workflows',
+    sql: `
+      INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, owner_id, is_public, created_at, updated_at) VALUES
+        (
+          'wf-example-001',
+          'Simple Text Generation',
+          'Single action node that generates text using MiniMax API',
+          '[{"id":"text-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Generate Text","config":{"service":"minimaxClient","method":"chatCompletion","args":[{"model":"abab6.5s-chat","messages":[{"role":"user","content":"Hello, how are you?"}]}]}}}]',
+          '[]',
+          null,
+          true,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          'wf-example-002',
+          'Text Generation with Transform',
+          'Generates text and extracts the content using transform node',
+          '[{"id":"text-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Generate Text","config":{"service":"minimaxClient","method":"chatCompletion","args":[{"model":"abab6.5s-chat","messages":[{"role":"user","content":"Tell me a joke"}]}]}}},{"id":"extract-node","type":"transform","position":{"x":350,"y":100},"data":{"label":"Extract Content","config":{"transformType":"extract","inputNode":"text-node","inputPath":"choices[0].message.content"}}}]',
+          '[{"id":"e1","source":"text-node","target":"extract-node"}]',
+          null,
+          true,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          'wf-example-003',
+          'Image Generation and Save',
+          'Generates an image and saves the result to database',
+          '[{"id":"image-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Generate Image","config":{"service":"minimaxClient","method":"imageGeneration","args":[{"prompt":"A beautiful sunset over mountains"}]}}},{"id":"save-node","type":"action","position":{"x":350,"y":100},"data":{"label":"Save to Database","config":{"service":"db","method":"createMediaRecord","args":[{"filename":"sunset-image.png","type":"image","source":"image_generation","filepath":"{{image-node.output.data.image_url}}"}]}}}]',
+          '[{"id":"e1","source":"image-node","target":"save-node"}]',
+          null,
+          true,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+      ON CONFLICT (id) DO NOTHING;
+    `,
+  },
+  {
+    id: 15,
+    name: 'migration_015_add_execution_details_columns',
+    sql: `
+      ALTER TABLE execution_log_details 
+      ADD COLUMN IF NOT EXISTS service_name VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS method_name VARCHAR(100);
+    `,
+  },
+  {
+    id: 16,
+    name: 'migration_016_fix_wf_example_003_template',
+    sql: `
+      UPDATE workflow_templates 
+      SET nodes_json = '[{"id":"image-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Generate Image","config":{"service":"minimaxClient","method":"imageGeneration","args":[{"prompt":"A beautiful sunset over mountains"}]}}},{"id":"save-node","type":"action","position":{"x":350,"y":100},"data":{"label":"Save to Database","config":{"service":"db","method":"createMediaRecord","args":[{"filename":"sunset-image.png","type":"image","source":"image_generation","filepath":"{{image-node.output.data.image_url}}","size_bytes":0}]}}}]'
+      WHERE id = 'wf-example-003';
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

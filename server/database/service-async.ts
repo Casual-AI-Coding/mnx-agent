@@ -779,6 +779,14 @@ export class DatabaseService {
     )
   }
 
+  async getExecutionLogDetailsByLogId(logId: string): Promise<ExecutionLogDetail[]> {
+    const rows = await this.conn.query<ExecutionLogDetailRow>(
+      'SELECT * FROM execution_log_details WHERE log_id = $1 ORDER BY started_at',
+      [logId]
+    )
+    return rows.map(rowToExecutionLogDetail)
+  }
+
   async getAllCapacityRecords(): Promise<CapacityRecord[]> {
     const rows = await this.conn.query<CapacityRecordRow>('SELECT * FROM capacity_tracking ORDER BY service_type')
     return rows.map(rowToCapacityRecord)
@@ -1772,6 +1780,52 @@ if (data.is_enabled !== undefined) {
       `UPDATE service_node_permissions SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
       values
     )
+  }
+
+  async upsertServiceNodePermission(data: {
+    service_name: string
+    method_name: string
+    display_name: string
+    category: string
+    min_role?: string
+    is_enabled?: boolean
+  }): Promise<void> {
+    const id = uuidv4()
+    const now = toISODate()
+    const minRole = data.min_role || 'pro'
+    const isEnabled = data.is_enabled !== undefined ? data.is_enabled : true
+
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        `INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (service_name, method_name) 
+         DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, min_role = EXCLUDED.min_role, is_enabled = EXCLUDED.is_enabled`,
+        [id, data.service_name, data.method_name, data.display_name, data.category, minRole, isEnabled, now]
+      )
+    } else {
+      await this.conn.execute(
+        `INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(service_name, method_name) DO UPDATE SET display_name = excluded.display_name, category = excluded.category, min_role = excluded.min_role, is_enabled = excluded.is_enabled`,
+        [id, data.service_name, data.method_name, data.display_name, data.category, minRole, isEnabled ? 1 : 0, now]
+      )
+    }
+  }
+
+  async batchUpsertServiceNodePermissions(
+    nodes: Array<{
+      service_name: string
+      method_name: string
+      display_name: string
+      category: string
+      min_role?: string
+      is_enabled?: boolean
+    }>
+  ): Promise<void> {
+    for (const node of nodes) {
+      await this.upsertServiceNodePermission(node)
+    }
   }
 
   // =====================================================================
