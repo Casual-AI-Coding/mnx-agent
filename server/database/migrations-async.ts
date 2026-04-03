@@ -423,6 +423,37 @@ ON CONFLICT (id) DO NOTHING;
       WHERE id = 'wf-example-003';
     `,
   },
+  {
+    id: 17,
+    name: 'migration_017_add_phase_b_workflows',
+    sql: `
+      INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, owner_id, is_public, created_at, updated_at)
+      VALUES 
+        (
+          'wf-b-001',
+          'Condition Test: Capacity Check',
+          'Checks capacity and only executes if capacity is available',
+          '[{"id":"capacity-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Check Capacity","config":{"service":"capacityChecker","method":"hasCapacity","args":["text"]}}},{"id":"condition-node","type":"condition","position":{"x":300,"y":100},"data":{"label":"Has Capacity?","config":{"condition":"{{capacity-node.output}} == true"}}},{"id":"text-node","type":"action","position":{"x":500,"y":100},"data":{"label":"Generate Text","config":{"service":"minimaxClient","method":"chatCompletion","args":[{"model":"abab6.5s-chat","messages":[{"role":"user","content":"Hello"}]}]}}}]',
+          '[{"id":"e1","source":"capacity-node","target":"condition-node"},{"id":"e2","source":"condition-node","target":"text-node"}]',
+          null,
+          true,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          'wf-b-002',
+          'Loop Test: Multiple Items',
+          'Loops through items and processes each one',
+          '[{"id":"loop-node","type":"loop","position":{"x":100,"y":100},"data":{"label":"Loop Items","config":{"items":"[\\"apple\\",\\"banana\\",\\"cherry\\"]","maxIterations":3}}},{"id":"text-node","type":"action","position":{"x":300,"y":100},"data":{"label":"Process Item","config":{"service":"minimaxClient","method":"chatCompletion","args":[{"model":"abab6.5s-chat","messages":[{"role":"user","content":"Say hello to {{item}}"}]}]}}}]',
+          '[{"id":"e1","source":"loop-node","target":"text-node"}]',
+          null,
+          true,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+      ON CONFLICT (id) DO NOTHING;
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
