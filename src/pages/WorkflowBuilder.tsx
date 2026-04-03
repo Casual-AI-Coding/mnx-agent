@@ -26,12 +26,15 @@ import {
   Layers,
   Save,
   Upload,
+  Download,
   CheckCircle,
   Trash2,
   X,
   Settings,
   AlertCircle,
   Wrench,
+  Server,
+  Loader2,
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
@@ -151,20 +154,26 @@ const rfNodeToStoreNode = (node: Node): WorkflowNode => ({
 // Toolbar Component
 function Toolbar({
   onSave,
+  onSaveToServer,
   onLoad,
+  onLoadFromServer,
   onValidate,
   onClear,
   isValid,
   nodeCount,
   edgeCount,
+  isSaving,
 }: {
   onSave: () => void
+  onSaveToServer: () => void
   onLoad: () => void
+  onLoadFromServer: () => void
   onValidate: () => void
   onClear: () => void
   isValid: boolean
   nodeCount: number
   edgeCount: number
+  isSaving: boolean
 }) {
   return (
     <div className="h-14 bg-dark-950 border-b border-dark-800 flex items-center justify-between px-4">
@@ -193,11 +202,33 @@ function Toolbar({
         </button>
 
         <button
+          onClick={onSaveToServer}
+          disabled={isSaving || !isValid}
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+            isValid
+              ? 'bg-primary text-white hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
+          )}
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
+          Save to Server
+        </button>
+
+        <button
+          onClick={onLoadFromServer}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Load from Server
+        </button>
+
+        <button
           onClick={onSave}
           className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
         >
           <Save className="w-4 h-4" />
-          Save
+          Export
         </button>
 
         <button
@@ -205,7 +236,7 @@ function Toolbar({
           className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-secondary text-foreground/80 hover:bg-secondary/80 transition-colors"
         >
           <Upload className="w-4 h-4" />
-          Load
+          Import
         </button>
 
         <button
@@ -741,6 +772,86 @@ function WorkflowBuilderInner() {
     input.click()
   }
 
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [saveMessage, setSaveMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const handleSaveToServer = async () => {
+    const name = prompt('Enter workflow name:')
+    if (!name) return
+
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          description: '',
+          nodes_json: JSON.stringify(nodes.map(rfNodeToStoreNode)),
+          edges_json: JSON.stringify(edges.map((e) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle,
+            targetHandle: e.targetHandle,
+          }))),
+          is_template: true,
+        }),
+      })
+
+      if (response.ok) {
+        setSaveMessage({ type: 'success', text: 'Workflow saved successfully!' })
+      } else {
+        const data = await response.json()
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to save workflow' })
+      }
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: 'Network error' })
+    }
+    setIsSaving(false)
+    setTimeout(() => setSaveMessage(null), 3000)
+  }
+
+  const handleLoadFromServer = async () => {
+    try {
+      const response = await fetch('/api/workflows?limit=50')
+      if (!response.ok) throw new Error('Failed to fetch workflows')
+
+      const data = await response.json()
+      const workflows = data.data?.workflows || []
+
+      if (workflows.length === 0) {
+        alert('No saved workflows found.')
+        return
+      }
+
+      const choice = prompt(
+        'Select a workflow to load (enter number):\n' +
+        workflows.map((w: { id: string; name: string }, i: number) => `${i + 1}. ${w.name}`).join('\n')
+      )
+
+      if (!choice) return
+
+      const index = parseInt(choice, 10) - 1
+      if (index < 0 || index >= workflows.length) {
+        alert('Invalid selection')
+        return
+      }
+
+      const selected = workflows[index]
+      const nodesData = JSON.parse(selected.nodes_json)
+      const edgesData = JSON.parse(selected.edges_json)
+
+      setNodes(nodesData.map(storeNodeToRFNode))
+      setEdges(edgesData as Edge[])
+      store.reset()
+      nodesData.forEach((n: WorkflowNode) => store.addNode(n))
+      edgesData.forEach((e: WorkflowEdge) => store.addEdge(e))
+    } catch (err) {
+      alert('Failed to load workflows')
+    }
+  }
+
   const handleValidate = () => {
     const storeNodes = nodes.map(rfNodeToStoreNode)
     const storeEdges = edges.map((e) => ({
@@ -794,13 +905,25 @@ function WorkflowBuilderInner() {
     <div className="flex flex-col h-full w-full bg-dark-900">
       <Toolbar
         onSave={handleSave}
+        onSaveToServer={handleSaveToServer}
         onLoad={handleLoad}
+        onLoadFromServer={handleLoadFromServer}
         onValidate={handleValidate}
         onClear={handleClear}
         isValid={workflowIsValid}
         nodeCount={nodes.length}
         edgeCount={edges.length}
+        isSaving={isSaving}
       />
+
+      {saveMessage && (
+        <div className={cn(
+          'absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md text-sm font-medium',
+          saveMessage.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'
+        )}>
+          {saveMessage.text}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <NodePalette onDragStart={onDragStart} />

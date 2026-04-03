@@ -7,8 +7,9 @@ export interface BackendJob {
   name: string
   description: string | null
   cron_expression: string
+  timezone: string
   is_active: number | boolean
-  workflow_json: string
+  workflow_id: string | null
   created_at: string
   updated_at: string
   last_run_at: string | null
@@ -60,8 +61,9 @@ export interface CronJob {
   name: string
   description: string
   cronExpression: string
+  timezone: string
   isActive: boolean
-  workflowJson: string
+  workflowId: string | null
   createdAt: string
   updatedAt: string
   lastRunAt: string | null
@@ -156,7 +158,8 @@ export interface CreateCronJobDTO {
   name: string
   description: string
   cronExpression: string
-  workflowJson: string
+  timezone?: string
+  workflowId: string
   isActive?: boolean
 }
 
@@ -164,7 +167,8 @@ export interface UpdateCronJobDTO {
   name?: string
   description?: string
   cronExpression?: string
-  workflowJson?: string
+  timezone?: string
+  workflowId?: string
   isActive?: boolean
 }
 

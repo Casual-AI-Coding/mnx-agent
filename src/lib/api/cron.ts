@@ -65,12 +65,12 @@ export async function getCronJobs(): Promise<ApiResponse<{ jobs: BackendJob[]; t
 
 export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<BackendJob>> {
   try {
-    // Transform frontend DTO to backend format
     const backendJob = {
       name: job.name,
       description: job.description,
       cron_expression: job.cronExpression,
-      workflow_json: job.workflowJson,
+      timezone: job.timezone ?? 'Asia/Shanghai',
+      workflow_id: job.workflowId,
       is_active: job.isActive ?? true,
     }
     const response = await cronClient.post('/cron/jobs', backendJob)
@@ -91,12 +91,12 @@ export async function getCronJob(id: string): Promise<ApiResponse<BackendJob>> {
 
 export async function updateCronJob(id: string, updates: UpdateCronJobDTO): Promise<ApiResponse<BackendJob>> {
   try {
-    // Transform frontend DTO to backend format
     const backendUpdates: Record<string, unknown> = {}
     if (updates.name !== undefined) backendUpdates.name = updates.name
     if (updates.description !== undefined) backendUpdates.description = updates.description
     if (updates.cronExpression !== undefined) backendUpdates.cron_expression = updates.cronExpression
-    if (updates.workflowJson !== undefined) backendUpdates.workflow_json = updates.workflowJson
+    if (updates.timezone !== undefined) backendUpdates.timezone = updates.timezone
+    if (updates.workflowId !== undefined) backendUpdates.workflow_id = updates.workflowId
     if (updates.isActive !== undefined) backendUpdates.is_active = updates.isActive
     
     const response = await cronClient.put(`/cron/jobs/${id}`, backendUpdates)

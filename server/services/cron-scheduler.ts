@@ -138,7 +138,7 @@ export class CronScheduler {
       // Fetch workflow template if workflow_id is set
       let workflowJson: string
       if (job.workflow_id) {
-        const template = await this.db.getWorkflowTemplateById(job.workflow_id)
+        const template = await this.db.getWorkflowTemplateById(job.workflow_id, job.owner_id ?? undefined)
         if (!template) {
           throw new Error(`Workflow template ${job.workflow_id} not found`)
         }

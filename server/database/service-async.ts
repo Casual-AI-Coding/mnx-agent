@@ -867,7 +867,10 @@ export class DatabaseService {
 
   async getWorkflowTemplateById(id: string, ownerId?: string): Promise<WorkflowTemplate | null> {
     if (ownerId) {
-      const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates WHERE id = $1 AND owner_id = $2', [id, ownerId])
+      const rows = await this.conn.query<WorkflowTemplateRow>(
+        'SELECT * FROM workflow_templates WHERE id = $1 AND (owner_id = $2 OR is_public = true)',
+        [id, ownerId]
+      )
       return rows[0] ? rowToWorkflowTemplate(rows[0]) : null
     }
     const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates WHERE id = $1', [id])

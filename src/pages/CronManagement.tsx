@@ -70,6 +70,7 @@ import type {
   CapacityRecord,
   ServiceType,
   CreateCronJobDTO,
+  UpdateCronJobDTO,
 } from '@/types/cron'
 
 // ============================================
@@ -159,10 +160,10 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
     name: '',
     description: '',
     cronExpression: '',
-    workflowJson: '{}',
+    timezone: 'Asia/Shanghai',
+    workflowId: '',
     isActive: true,
   })
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const { templates, fetchTemplates } = useWorkflowTemplatesStore()
 
@@ -172,32 +173,16 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         name: '',
         description: '',
         cronExpression: '',
-        workflowJson: '{}',
+        timezone: 'Asia/Shanghai',
+        workflowId: '',
         isActive: true,
       })
-      setSelectedWorkflowId('')
       setErrors({})
       fetchTemplates()
     }
   }, [isOpen, fetchTemplates])
 
-  useEffect(() => {
-    if (selectedWorkflowId) {
-      const workflow = templates.find(t => t.id === selectedWorkflowId)
-      if (workflow) {
-        setFormData(prev => ({
-          ...prev,
-          workflowJson: JSON.stringify({
-            nodes: JSON.parse(workflow.nodes_json),
-            edges: JSON.parse(workflow.edges_json),
-          }),
-        }))
-      }
-    }
-  }, [selectedWorkflowId, templates])
-
   const validateCronExpression = (expr: string): boolean => {
-    // Basic cron validation (5 fields: * * * * *)
     const parts = expr.trim().split(/\s+/)
     return parts.length === 5
   }
@@ -216,7 +201,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
       newErrors.cronExpression = 'Invalid cron format. Use: * * * * * (min hour day month weekday)'
     }
 
-    if (!selectedWorkflowId) {
+    if (!formData.workflowId) {
       newErrors.workflow = 'Please select a workflow'
     }
 
@@ -283,8 +268,8 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
               Workflow <span className="text-destructive">*</span>
             </label>
             <Select
-              value={selectedWorkflowId}
-              onValueChange={setSelectedWorkflowId}
+              value={formData.workflowId}
+              onValueChange={(value) => setFormData({ ...formData, workflowId: value })}
             >
               <SelectTrigger className={errors.workflow ? 'border-destructive' : ''}>
                 <SelectValue placeholder="Select a workflow" />
@@ -321,20 +306,6 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Workflow JSON</label>
-            <Textarea
-              value={formData.workflowJson}
-              onChange={(e) => setFormData({ ...formData, workflowJson: e.target.value })}
-              placeholder='{"nodes": [], "edges": []}'
-              rows={4}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground/50">
-              Define the workflow configuration as JSON
-            </p>
-          </div>
-
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-3">
               <Switch
@@ -354,6 +325,168 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             <Button type="submit">
               <Plus className="w-4 h-4 mr-2" />
               Create Job
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
+interface EditJobModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: UpdateCronJobDTO) => void
+  job: CronJob | null
+}
+
+function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
+  const [formData, setFormData] = useState<UpdateCronJobDTO>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const { templates, fetchTemplates } = useWorkflowTemplatesStore()
+
+  useEffect(() => {
+    if (isOpen && job) {
+      setFormData({
+        name: job.name,
+        description: job.description,
+        cronExpression: job.cronExpression,
+        timezone: job.timezone,
+        workflowId: job.workflowId ?? undefined,
+        isActive: job.isActive,
+      })
+      setErrors({})
+      fetchTemplates()
+    }
+  }, [isOpen, job, fetchTemplates])
+
+  const validateCronExpression = (expr: string): boolean => {
+    const parts = expr.trim().split(/\s+/)
+    return parts.length === 5
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Name is required'
+    }
+
+    if (!formData.cronExpression?.trim()) {
+      newErrors.cronExpression = 'Cron expression is required'
+    } else if (!validateCronExpression(formData.cronExpression)) {
+      newErrors.cronExpression = 'Invalid cron format. Use: * * * * * (min hour day month weekday)'
+    }
+
+    if (!formData.workflowId) {
+      newErrors.workflow = 'Please select a workflow'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
+    onSubmit(formData)
+    onClose()
+  }
+
+  if (!isOpen || !job) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-dark-900 border border-dark-700 rounded-xl p-6 w-full max-w-md shadow-xl"
+      >
+        <h3 className="text-lg font-semibold text-foreground mb-4">Edit Cron Job</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Name <span className="text-destructive">*</span>
+            </label>
+            <Input
+              value={formData.name ?? ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Daily report generation"
+              className={errors.name ? 'border-destructive' : ''}
+            />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Description</label>
+            <Textarea
+              value={formData.description ?? ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Optional description..."
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Workflow <span className="text-destructive">*</span>
+            </label>
+            <Select
+              value={formData.workflowId}
+              onValueChange={(value) => setFormData({ ...formData, workflowId: value })}
+            >
+              <SelectTrigger className={errors.workflow ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Select a workflow" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.workflow && (
+              <p className="text-sm text-destructive">{errors.workflow}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Cron Expression <span className="text-destructive">*</span>
+            </label>
+            <Input
+              value={formData.cronExpression ?? ''}
+              onChange={(e) => setFormData({ ...formData, cronExpression: e.target.value })}
+              placeholder="0 9 * * *"
+              className={errors.cronExpression ? 'border-destructive' : ''}
+            />
+            {errors.cronExpression ? (
+              <p className="text-sm text-destructive">{errors.cronExpression}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground/50">
+                Format: minute hour day month weekday
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.isActive ?? true}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
+              <span className="text-sm text-muted-foreground">Active</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-border/800">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              Save Changes
             </Button>
           </div>
         </form>
@@ -394,9 +527,11 @@ const VirtualTableContainer = memo(function VirtualTableContainer({
 // ============================================
 
 const JobsListTab = memo(function JobsListTab() {
-  const { jobs, loading, fetchJobs, createJob, deleteJob, toggleJob, runJobManually } =
+  const { jobs, loading, fetchJobs, createJob, updateJob, deleteJob, toggleJob, runJobManually } =
     useCronJobsStore()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [jobToEdit, setJobToEdit] = useState<CronJob | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -405,6 +540,18 @@ const JobsListTab = memo(function JobsListTab() {
 
   const handleCreateJob = async (data: CreateCronJobDTO) => {
     await createJob(data)
+  }
+
+  const handleEditJob = async (data: UpdateCronJobDTO) => {
+    if (jobToEdit) {
+      await updateJob(jobToEdit.id, data)
+      setJobToEdit(null)
+    }
+  }
+
+  const openEditModal = (job: CronJob) => {
+    setJobToEdit(job)
+    setIsEditModalOpen(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -546,6 +693,13 @@ const JobsListTab = memo(function JobsListTab() {
                           <Zap className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => openEditModal(job)}
+                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-primary transition-colors"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleDelete(job.id)}
                           className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-destructive transition-colors"
                           title="Delete"
@@ -566,6 +720,16 @@ const JobsListTab = memo(function JobsListTab() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateJob}
+      />
+
+      <EditJobModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setJobToEdit(null)
+        }}
+        onSubmit={handleEditJob}
+        job={jobToEdit}
       />
     </div>
   )
@@ -1004,146 +1168,6 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
             })}
           </div>
         </div>
-      )}
-    </div>
-  )
-})
-
-// ============================================
-// Capacity Monitor Tab
-// ============================================
-
-const CapacityMonitorTab = memo(function CapacityMonitorTab() {
-  const { records, loading, fetchCapacity, refreshCapacity, lastRefresh } = useCapacityStore()
-
-  useEffect(() => {
-    fetchCapacity()
-  }, [fetchCapacity])
-
-  const handleRefresh = async () => {
-    await refreshCapacity()
-  }
-
-  const serviceLabels: Record<ServiceType, string> = {
-    text: 'Text Generation',
-    voice_sync: 'Voice Sync',
-    voice_async: 'Voice Async',
-    image: 'Image Generation',
-    music: 'Music Generation',
-    video: 'Video Generation',
-  }
-
-  const getUsagePercentage = (record: CapacityRecord): number => {
-    if (record.totalQuota === 0) return 0
-    return Math.round(((record.totalQuota - record.remainingQuota) / record.totalQuota) * 100)
-  }
-
-  const getStatusColor = (percentage: number): string => {
-    if (percentage < 50) return 'bg-green-500'
-    if (percentage < 80) return 'bg-yellow-500'
-    return 'bg-red-500'
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Capacity Monitor</h3>
-          <p className="text-sm text-muted-foreground/70">Real-time MiniMax API capacity and quota monitoring</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground/50">
-            Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {records.map((record) => {
-          const percentage = getUsagePercentage(record)
-          const statusColor = getStatusColor(percentage)
-
-          return (
-            <motion.div
-              key={record.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="h-full">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <ServiceIcon type={record.serviceType} />
-                      <div>
-                        <h4 className="font-semibold text-foreground">
-                          {serviceLabels[record.serviceType]}
-                        </h4>
-                        <p className="text-xs text-muted-foreground/50">{record.serviceType}</p>
-                      </div>
-                    </div>
-                    <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
-                      {percentage}%
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground/70">Remaining</span>
-                      <span className="text-foreground font-medium">
-                        {record.remainingQuota.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground/70">Total Quota</span>
-                      <span className="text-foreground font-medium">
-                        {record.totalQuota.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="pt-2">
-                      <div className="h-2 bg-card/800 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          transition={{ duration: 0.5, delay: 0.2 }}
-                          className={`h-full ${statusColor} transition-colors`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/50">
-                      <span>Used: {(record.totalQuota - record.remainingQuota).toLocaleString()}</span>
-                      <span>Resets: {formatDate(record.resetAt)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )
-        })}
-      </div>
-
-      {records.length === 0 && (
-        <Card className="border-dashed border-border/700">
-          <CardContent className="py-16 text-center">
-            <Gauge className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Capacity Data</h3>
-            <p className="text-sm text-muted-foreground/50 mb-4">Click refresh to load capacity information.</p>
-            <Button onClick={handleRefresh} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Load Capacity Data
-            </Button>
-          </CardContent>
-        </Card>
       )}
     </div>
   )
