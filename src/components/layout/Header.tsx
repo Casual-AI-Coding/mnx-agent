@@ -276,7 +276,9 @@ export default function Header({ onHistoryClick }: HeaderProps) {
 
         {}
         {showKeyModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]"
+            onClick={() => setShowKeyModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -332,9 +334,9 @@ export default function Header({ onHistoryClick }: HeaderProps) {
       {}
       {onHistoryClick && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="fixed top-[70px] right-6 z-40"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-6 right-6 z-40"
         >
           <motion.button
             whileHover={{ scale: 1.1 }}
