@@ -345,7 +345,7 @@ export default function InvitationCodes() {
           <div className="bg-gradient-to-r from-card via-card to-muted/20">
             <div className="p-5 space-y-4">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[180px] max-w-xs group">
+                <div className="relative w-[280px] group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search className="h-4 w-4 text-muted-foreground/60 group-focus-within:text-amber-500 transition-colors" />
                   </div>
@@ -469,10 +469,7 @@ export default function InvitationCodes() {
 
                 <div className="h-8 w-px bg-border/60 hidden md:block" />
 
-                <div className="flex items-center gap-1.5">
-                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
-                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
-                </div>
+                <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
                 <div className="flex items-center gap-1">
                   <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
                     创建
@@ -533,7 +530,7 @@ export default function InvitationCodes() {
 
           {}
           {!loading && !error && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable' }}>
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
