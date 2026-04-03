@@ -10,6 +10,7 @@ import {
   listWorkflowsQuerySchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
+import { ROLE_HIERARCHY } from '../types/workflow'
 
 const router = Router()
 
@@ -113,8 +114,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
     return
   }
 
-  const roleHierarchy: Record<string, number> = { user: 0, pro: 1, admin: 2, super: 3 }
-  const userLevel = roleHierarchy[userRole] ?? 0
+  const userLevel = ROLE_HIERARCHY[userRole] ?? 0
 
   for (const node of actionNodes) {
     const config = node.data?.config || {}
@@ -140,7 +140,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
       return
     }
 
-    const nodeLevel = roleHierarchy[permission.min_role] ?? 0
+    const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
     if (nodeLevel > userLevel) {
       res.status(403).json({
         success: false,
@@ -190,8 +190,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
       return
     }
 
-    const roleHierarchy: Record<string, number> = { user: 0, pro: 1, admin: 2, super: 3 }
-    const userLevel = roleHierarchy[userRole] ?? 0
+    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
 
     for (const node of actionNodes) {
       const config = node.data?.config || {}
@@ -217,7 +216,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
         return
       }
 
-      const nodeLevel = roleHierarchy[permission.min_role] ?? 0
+      const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
       if (nodeLevel > userLevel) {
         res.status(403).json({
           success: false,
