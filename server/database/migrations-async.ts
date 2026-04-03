@@ -454,6 +454,15 @@ ON CONFLICT (id) DO NOTHING;
       ON CONFLICT (id) DO NOTHING;
     `,
   },
+  {
+    id: 18,
+    name: 'migration_018_fix_wf_example_003_model',
+    sql: `
+      UPDATE workflow_templates 
+      SET nodes_json = '[{"id":"image-node","type":"action","position":{"x":100,"y":100},"data":{"label":"Generate Image","config":{"service":"minimaxClient","method":"imageGeneration","args":[{"model":"image-01","prompt":"A beautiful sunset over mountains"}]}}},{"id":"save-node","type":"action","position":{"x":350,"y":100},"data":{"label":"Save to Database","config":{"service":"db","method":"createMediaRecord","args":[{"filename":"sunset-image.png","type":"image","source":"image_generation","filepath":"{{image-node.output.data.image_urls[0]}}","size_bytes":0}]}}}]'
+      WHERE id = 'wf-example-003';
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
