@@ -336,6 +336,34 @@ INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, o
 ON CONFLICT (id) DO NOTHING;
     `,
   },
+  {
+    id: 13,
+    name: 'migration_013_cron_jobs_workflow_id',
+    sql: `
+-- Change cron_jobs to use workflow_id instead of workflow_json
+-- First make workflow_json nullable (will be deprecated)
+ALTER TABLE cron_jobs ALTER COLUMN workflow_json DROP NOT NULL;
+
+-- Add workflow_id column
+ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(36) REFERENCES workflow_templates(id) ON DELETE CASCADE;
+ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'Asia/Shanghai';
+
+-- Create index on workflow_id
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_workflow ON cron_jobs(workflow_id);
+
+-- Create the daily Image Quota Consumer cron job
+INSERT INTO cron_jobs (id, name, description, cron_expression, timezone, workflow_id, is_active, created_at, updated_at) VALUES
+  ('job-001', 'Daily Image Quota Consumer', 'Process pending image generation tasks at 23:30 daily based on remaining API capacity.',
+    '30 23 * * *',
+    'Asia/Shanghai',
+    'wf-001',
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO NOTHING;
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
