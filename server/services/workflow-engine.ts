@@ -517,8 +517,14 @@ export class WorkflowEngine {
       case 'map': {
         const mapFunction = config.mapFunction as string | undefined
         if (mapFunction && Array.isArray(inputData)) {
+          const sanitizedFunction = mapFunction
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;')
           outputData = inputData.map((item, index) => {
-            return mapFunction
+            return sanitizedFunction
               .replace(/\$item/g, JSON.stringify(item))
               .replace(/\$index/g, String(index))
           })
@@ -528,8 +534,11 @@ export class WorkflowEngine {
       case 'filter': {
         const filterCondition = config.filterCondition as string | undefined
         if (filterCondition && Array.isArray(inputData)) {
+          const sanitizedCondition = filterCondition
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
           outputData = inputData.filter(item => {
-            const conditionStr = filterCondition.replace(/\$item/g, JSON.stringify(item))
+            const conditionStr = sanitizedCondition.replace(/\$item/g, JSON.stringify(item))
             return this.evaluateCondition(conditionStr)
           })
         }
