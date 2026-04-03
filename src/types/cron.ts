@@ -193,6 +193,7 @@ export interface ActionNodeConfig {
   service: string
   method: string
   args?: unknown[]
+  label?: string
 }
 
 // API response types for available action nodes

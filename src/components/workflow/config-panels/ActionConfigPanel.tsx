@@ -17,6 +17,7 @@ interface ActionConfigPanelProps {
 
 export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) {
   const [availableNodes, setAvailableNodes] = useState<GroupedActionNodes>({})
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,10 +51,7 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
     return (
       <div className="p-4 space-y-2">
         <div className="text-sm text-destructive">{error}</div>
-        <button
-          onClick={fetchAvailableNodes}
-          className="text-sm text-primary hover:underline"
-        >
+        <button onClick={fetchAvailableNodes} className="text-sm text-primary hover:underline">
           Retry
         </button>
       </div>
@@ -65,13 +63,13 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
   return (
     <div className="space-y-4">
       <div>
-        <Label>Service</Label>
-        <Select
-          value={config.service}
-          onValueChange={(service) => onChange({ service, method: '', args: [] })}
-        >
+        <Label>Category</Label>
+        <Select value={selectedCategory} onValueChange={(category) => {
+          setSelectedCategory(category)
+          onChange({ service: '', method: '', args: [] })
+        }}>
           <SelectTrigger>
-            <SelectValue placeholder="Select service" />
+            <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
             {categories.map(category => (
@@ -83,20 +81,29 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
         </Select>
       </div>
 
-      {config.service && availableNodes[config.service] && (
+      {selectedCategory && availableNodes[selectedCategory] && (
         <div>
-          <Label>Method</Label>
+          <Label>Action</Label>
           <Select
-            value={config.method}
-            onValueChange={(method) => onChange({ ...config, method, args: [] })}
+            value={config.service && config.method ? `${config.service}.${config.method}` : ''}
+            onValueChange={(value) => {
+              const [service, method] = value.split('.')
+              const node = availableNodes[selectedCategory]?.find(n => n.service === service && n.method === method)
+              onChange({
+                service,
+                method,
+                args: [],
+                label: node?.label
+              })
+            }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select method" />
+              <SelectValue placeholder="Select action" />
             </SelectTrigger>
             <SelectContent>
-              {availableNodes[config.service]?.map(node => (
-                <SelectItem key={node.method} value={node.method}>
-                  {node.label}
+              {availableNodes[selectedCategory]?.map(node => (
+                <SelectItem key={`${node.service}.${node.method}`} value={`${node.service}.${node.method}`}>
+                  {node.label} ({node.service}.{node.method})
                 </SelectItem>
               ))}
             </SelectContent>
