@@ -9,7 +9,7 @@ export const createCronJobSchema = z.object({
   name: z.string().min(1, 'name must be at least 1 character').max(100, 'name must be at most 100 characters'),
   description: z.string().optional(),
   cron_expression: z.string().min(1, 'cron_expression is required'),
-  workflow_id: z.string().min(1, 'workflow_id is required'),
+  workflow_id: z.string().optional(),
   timezone: z.string().default('Asia/Shanghai'),
   is_active: z.boolean().default(true),
   timeout_ms: z.number().int().min(1000).max(3600000).optional(),

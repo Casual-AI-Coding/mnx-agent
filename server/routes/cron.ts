@@ -91,13 +91,25 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
   const serviceRegistry = getServiceNodeRegistry(db)
   const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const jobData = req.body
+
+  if (!jobData.workflow_id) {
+    res.status(400).json({ success: false, error: 'workflow_id is required' })
+    return
+  }
+
+  const workflow = await db.getWorkflowTemplateById(jobData.workflow_id)
+  if (!workflow) {
+    res.status(404).json({ success: false, error: 'Workflow not found' })
+    return
+  }
+
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const job = await db.createCronJob({
     name: jobData.name,
     description: jobData.description,
     cron_expression: jobData.cron_expression,
     is_active: jobData.is_active,
-    workflow_id: jobData.workflow_id || '',
+    workflow_id: jobData.workflow_id,
     timezone: jobData.timezone || 'UTC',
     timeout_ms: jobData.timeout_ms,
   }, ownerId)
@@ -106,7 +118,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
     await scheduler.scheduleJob(job)
   }
 
-  res.json({ success: true, data: job })
+  res.status(201).json({ success: true, data: job })
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
