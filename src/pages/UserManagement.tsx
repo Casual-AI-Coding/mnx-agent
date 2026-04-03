@@ -612,7 +612,7 @@ export default function UserManagement() {
           </AnimatePresence>
 
           {!loading && !error && (
-            <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable' }}>
+            <div className="overflow-x-auto" >
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">

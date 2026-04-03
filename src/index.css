@@ -42,6 +42,10 @@
     --primary-500: 217 91% 60%;
     --primary-600: 217 91% 50%;
   }
+  
+  html {
+    scrollbar-gutter: stable;
+  }
 }
 
 /* === Theme Classes === */
