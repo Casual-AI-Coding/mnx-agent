@@ -222,9 +222,9 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-lg bg-card/900 border border-border/800 rounded-xl shadow-2xl"
+        className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl"
       >
-        <div className="flex items-center justify-between p-6 border-b border-border/800">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
             <h2 className="text-xl font-semibold text-foreground">Create New Cron Job</h2>
             <p className="text-sm text-muted-foreground/70">Schedule automated workflow executions</p>
@@ -318,7 +318,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border/800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
@@ -400,7 +400,7 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-dark-900 border border-dark-700 rounded-xl p-6 w-full max-w-md shadow-xl"
+        className="bg-background border border-border rounded-xl p-6 w-full max-w-md shadow-xl"
       >
         <h3 className="text-lg font-semibold text-foreground mb-4">Edit Cron Job</h3>
 
@@ -481,7 +481,7 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border/800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
@@ -591,7 +591,7 @@ const JobsListTab = memo(function JobsListTab() {
       </div>
 
       {jobs.length === 0 ? (
-        <Card className="border-dashed border-border/700">
+        <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Cron Jobs Yet</h3>
@@ -605,15 +605,15 @@ const JobsListTab = memo(function JobsListTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border/800">
-          <div className="bg-card/900 border-b border-border/800">
-            <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3">
-              <div className="text-sm font-medium text-muted-foreground/70">Name</div>
-              <div className="text-sm font-medium text-muted-foreground/70">Cron Expression</div>
-              <div className="text-sm font-medium text-muted-foreground/70">Status</div>
-              <div className="text-sm font-medium text-muted-foreground/70">Last Run</div>
-              <div className="text-sm font-medium text-muted-foreground/70">Next Run</div>
-              <div className="text-sm font-medium text-muted-foreground/70">Total Runs</div>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <div className="bg-muted/30 border-b border-border">
+            <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-4 px-4 py-3">
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Name</div>
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Cron</div>
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Status</div>
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Last Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Next Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70 truncate">Runs</div>
               <div className="text-sm font-medium text-muted-foreground/70 text-right">Actions</div>
             </div>
           </div>
@@ -644,30 +644,30 @@ const JobsListTab = memo(function JobsListTab() {
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    className="border-b border-border/800/50 hover:bg-card/800/30 transition-colors"
+                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
                   >
-                    <div className="grid grid-cols-[1.5fr,1fr,0.8fr,1fr,1fr,0.8fr,1fr] gap-4 px-4 py-3 items-center h-full">
-                      <div>
+                    <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-4 px-4 py-3 items-center h-full">
+                      <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">{job.name}</p>
                         {job.description && (
                           <p className="text-xs text-muted-foreground/50 truncate">{job.description}</p>
                         )}
                       </div>
-                      <div>
-                        <code className="text-sm text-primary-400 font-mono bg-card/950 px-2 py-1 rounded">
+                      <div className="min-w-0">
+                        <code className="text-xs text-primary font-mono bg-muted/50 px-2 py-1 rounded truncate block">
                           {job.cronExpression}
                         </code>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground truncate">
                         {formatDate(job.lastRunAt)}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground truncate">
                         {formatDate(job.nextRunAt)}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground truncate">
                         {job.totalRuns}
                         {job.totalFailures > 0 && (
                           <span className="text-destructive ml-1">({job.totalFailures} failed)</span>
@@ -781,10 +781,10 @@ const TaskQueueTab = memo(function TaskQueueTab() {
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}
             >
-              <SelectTrigger className="w-40 bg-card/950 border-border/700">
+              <SelectTrigger className="w-40 bg-card/950 border-border">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent className="bg-card/900 border-border/700">
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="running">Running</SelectItem>
@@ -801,7 +801,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="bg-card/900/50">
+        <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-yellow-500/10">
@@ -816,7 +816,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/900/50">
+        <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10">
@@ -831,7 +831,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/900/50">
+        <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-500/10">
@@ -846,7 +846,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/900/50">
+        <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-red-500/10">
@@ -864,7 +864,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
       </div>
 
       {tasks.length === 0 ? (
-        <Card className="border-dashed border-border/700">
+        <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <ListTodo className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Tasks</h3>
@@ -872,8 +872,8 @@ const TaskQueueTab = memo(function TaskQueueTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border/800">
-          <div className="bg-card/900 border-b border-border/800">
+        <div className="overflow-hidden rounded-lg border border-border">
+          <div className="bg-card border-b border-border">
             <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3">
               <div className="text-sm font-medium text-muted-foreground/70">Task Type</div>
               <div className="text-sm font-medium text-muted-foreground/70">Job ID</div>
@@ -911,7 +911,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    className="border-b border-border/800/50 hover:bg-card/800/30 transition-colors"
+                    className="border-b border-border/50 hover:bg-card/800/30 transition-colors"
                   >
                     <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3 items-center h-full">
                       <div>
@@ -1010,10 +1010,10 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}
             >
-              <SelectTrigger className="w-40 bg-card/950 border-border/700">
+              <SelectTrigger className="w-40 bg-card/950 border-border">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent className="bg-card/900 border-border/700">
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
@@ -1028,7 +1028,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
       </div>
 
       {filteredLogs.length === 0 ? (
-        <Card className="border-dashed border-border/700">
+        <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <ScrollText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Execution Logs</h3>
@@ -1119,7 +1119,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="pt-4 mt-4 border-t border-border/800">
+                            <div className="pt-4 mt-4 border-t border-border">
                               <h4 className="text-sm font-medium text-muted-foreground mb-3">Task Breakdown</h4>
                               <div className="grid grid-cols-3 gap-4 mb-4">
                                 <div className="bg-card/950 rounded-lg p-3">
@@ -1200,7 +1200,7 @@ export default function CronManagement() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-card/900 border border-border/800">
+        <TabsList className="bg-card border border-border">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}

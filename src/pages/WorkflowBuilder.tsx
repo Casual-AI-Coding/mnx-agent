@@ -921,7 +921,7 @@ function WorkflowBuilderInner() {
   )
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-background">
+    <div className="-m-8 h-[calc(100vh-60px-4rem)] flex flex-col bg-background">
       <Toolbar
         onSave={handleSave}
         onSaveToServer={handleSaveToServer}

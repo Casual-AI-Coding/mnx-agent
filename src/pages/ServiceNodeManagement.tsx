@@ -8,12 +8,12 @@ import {
   CheckCircle2,
   XCircle,
   Server,
-  Layers,
-  List,
-  ToggleLeft,
-  ToggleRight,
+  Zap,
+  Database,
+  HardDrive,
+  Clock,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
@@ -40,27 +40,32 @@ const ROLE_CONFIG: Record<UserRole, { label: string; variant: 'default' | 'secon
   user: { label: 'User', variant: 'outline' },
 }
 
-const ROLE_HIERARCHY: Record<UserRole, number> = {
-  user: 0,
-  pro: 1,
-  admin: 2,
-  super: 3,
-}
-
-const CATEGORY_ICONS: Record<string, typeof Shield> = {
-  'MiniMax API': Server,
-  'Database': Layers,
-  'Capacity': Shield,
-  'Media Storage': Server,
-  'Queue Processing': List,
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  'MiniMax API': 'from-blue-500/20 to-blue-600/20 border-blue-500/30',
-  'Database': 'from-green-500/20 to-green-600/20 border-green-500/30',
-  'Capacity': 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30',
-  'Media Storage': 'from-purple-500/20 to-purple-600/20 border-purple-500/30',
-  'Queue Processing': 'from-orange-500/20 to-orange-600/20 border-orange-500/30',
+const CATEGORY_CONFIG: Record<string, { icon: typeof Shield; color: string; bgClass: string }> = {
+  'MiniMax API': { 
+    icon: Zap, 
+    color: 'text-blue-500',
+    bgClass: 'bg-blue-500/10' 
+  },
+  'Database': { 
+    icon: Database, 
+    color: 'text-emerald-500',
+    bgClass: 'bg-emerald-500/10' 
+  },
+  'Capacity': { 
+    icon: Shield, 
+    color: 'text-amber-500',
+    bgClass: 'bg-amber-500/10' 
+  },
+  'Media Storage': { 
+    icon: HardDrive, 
+    color: 'text-purple-500',
+    bgClass: 'bg-purple-500/10' 
+  },
+  'Queue Processing': { 
+    icon: Clock, 
+    color: 'text-orange-500',
+    bgClass: 'bg-orange-500/10' 
+  },
 }
 
 export default function ServiceNodeManagement() {
@@ -145,24 +150,9 @@ export default function ServiceNodeManagement() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          title="总节点数"
-          value={nodes.length}
-          icon={Server}
-          color="text-blue-400"
-        />
-        <StatCard
-          title="已启用"
-          value={enabledCount}
-          icon={CheckCircle2}
-          color="text-green-400"
-        />
-        <StatCard
-          title="已禁用"
-          value={nodes.length - enabledCount}
-          icon={XCircle}
-          color="text-muted-foreground"
-        />
+        <StatCard title="总节点数" value={nodes.length} icon={Server} color="text-blue-400" />
+        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color="text-green-400" />
+        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color="text-muted-foreground" />
       </div>
 
       {sortedCategories.map(category => (
@@ -176,13 +166,11 @@ export default function ServiceNodeManagement() {
       ))}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">角色权限说明</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4">角色权限说明</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(ROLE_CONFIG).map(([role, config]) => (
-              <div key={role} className="flex items-center gap-2">
+              <div key={role} className="flex items-center gap-3">
                 <Badge variant={config.variant}>{config.label}</Badge>
                 <span className="text-sm text-muted-foreground/70">
                   {role === 'super' && '全部权限'}
@@ -194,8 +182,7 @@ export default function ServiceNodeManagement() {
             ))}
           </div>
           <p className="text-sm text-muted-foreground/60 mt-4">
-            角色权限具有继承关系：Super → Admin → Pro → User。
-            设置最低角色为 Pro 的节点，Admin 和 Super 用户也可以使用。
+            角色权限具有继承关系：Super → Admin → Pro → User。设置最低角色为 Pro 的节点，Admin 和 Super 用户也可以使用。
           </p>
         </CardContent>
       </Card>
@@ -203,132 +190,109 @@ export default function ServiceNodeManagement() {
   )
 }
 
-function CategorySection({
-  category,
-  nodes,
-  saving,
-  updateNode,
-}: {
+function CategorySection({ category, nodes, saving, updateNode }: {
   category: string
   nodes: ServiceNodePermission[]
   saving: string | null
   updateNode: (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => void
 }) {
-  const Icon = CATEGORY_ICONS[category] || Server
-  const gradientClass = CATEGORY_COLORS[category] || 'from-muted/20 to-muted/30 border-border'
+  const config = CATEGORY_CONFIG[category] || { icon: Server, color: 'text-muted-foreground', bgClass: 'bg-muted/10' }
+  const Icon = config.icon
+  const enabledInCategory = nodes.filter(n => n.is_enabled).length
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Icon className="w-5 h-5 text-muted-foreground/70" />
-        <h2 className="text-lg font-semibold">{category}</h2>
-        <Badge variant="outline" className="text-xs">{nodes.length}</Badge>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {nodes.map(node => (
-          <NodeCard
-            key={node.id}
-            node={node}
-            saving={saving}
-            updateNode={updateNode}
-            gradientClass={gradientClass}
-          />
-        ))}
-      </div>
-    </div>
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={cn('p-2 rounded-lg', config.bgClass)}>
+            <Icon className={cn('w-5 h-5', config.color)} />
+          </div>
+          <div>
+            <h3 className="font-semibold">{category}</h3>
+            <p className="text-sm text-muted-foreground/70">{enabledInCategory}/{nodes.length} 已启用</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {nodes.map(node => (
+            <NodeCard key={node.id} node={node} saving={saving} updateNode={updateNode} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
-function NodeCard({
-  node,
-  saving,
-  updateNode,
-  gradientClass,
-}: {
+function NodeCard({ node, saving, updateNode }: {
   node: ServiceNodePermission
   saving: string | null
   updateNode: (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => void
-  gradientClass: string
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={cn(
+        'relative rounded-lg border transition-all duration-200 p-3',
+        node.is_enabled ? 'border-border bg-card' : 'border-border/50 bg-muted/30 opacity-70'
+      )}
     >
-      <Card className={cn(
-        'relative overflow-hidden border bg-gradient-to-br',
-        gradientClass,
-        !node.is_enabled && 'opacity-60'
-      )}>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {node.is_enabled ? (
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
-              ) : (
-                <XCircle className="w-4 h-4 text-muted-foreground/50" />
-              )}
-              <h3 className={cn('font-medium', !node.is_enabled && 'text-muted-foreground/70')}>
-                {node.display_name}
-              </h3>
-            </div>
-            <Switch
-              checked={node.is_enabled}
-              onCheckedChange={(checked) => updateNode(node.id, { is_enabled: checked })}
-              disabled={saving === node.id}
-            />
-          </div>
-
-          <code className="text-xs text-muted-foreground/50 bg-background/50 px-2 py-1 rounded font-mono block mb-3 truncate">
-            {node.service_name}.{node.method_name}
-          </code>
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground/70">最低角色</span>
-            <Select
-              value={node.min_role}
-              onValueChange={(value) => updateNode(node.id, { min_role: value as UserRole })}
-            >
-              <SelectTrigger className="w-24 h-7 text-xs" disabled={saving === node.id}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(ROLE_CONFIG).map(([role, config]) => (
-                  <SelectItem key={role} value={role} className="text-xs">
-                    {config.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {saving === node.id && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            </div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {node.is_enabled ? (
+            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+          ) : (
+            <XCircle className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
           )}
-        </CardContent>
-      </Card>
+          <span className={cn('font-medium text-sm truncate', !node.is_enabled && 'text-muted-foreground/70')}>
+            {node.display_name}
+          </span>
+        </div>
+        <Switch
+          checked={node.is_enabled}
+          onCheckedChange={(checked) => updateNode(node.id, { is_enabled: checked })}
+          disabled={saving === node.id}
+        />
+      </div>
+
+      <code className="text-[10px] px-1.5 py-0.5 rounded font-mono block truncate bg-muted/50 text-muted-foreground/70 mb-2">
+        {node.service_name}.{node.method_name}
+      </code>
+
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground/50">最低角色</span>
+        <Select
+          value={node.min_role}
+          onValueChange={(value) => updateNode(node.id, { min_role: value as UserRole })}
+        >
+          <SelectTrigger className="w-20 h-6 text-[10px] px-2" disabled={saving === node.id}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ROLE_CONFIG).map(([role, config]) => (
+              <SelectItem key={role} value={role} className="text-xs">{config.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {saving === node.id && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        </div>
+      )}
     </motion.div>
   )
 }
 
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-}: {
+function StatCard({ title, value, icon: Icon, color }: {
   title: string
   value: string | number
   icon: typeof Shield
   color: string
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
