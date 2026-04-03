@@ -560,15 +560,6 @@ const JobsListTab = memo(function JobsListTab() {
     }
   }
 
-  const rowVirtualizer = useVirtualizer({
-    count: jobs.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 68,
-    overscan: 10,
-  })
-
-  const virtualItems = rowVirtualizer.getVirtualItems()
-
   if (loading && jobs.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -607,111 +598,84 @@ const JobsListTab = memo(function JobsListTab() {
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
           <div className="bg-muted/30 border-b border-border">
-            <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-4 px-4 py-3">
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Name</div>
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Cron</div>
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Status</div>
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Last Run</div>
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Next Run</div>
-              <div className="text-sm font-medium text-muted-foreground/70 truncate">Runs</div>
+            <div className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3">
+              <div className="text-sm font-medium text-muted-foreground/70">Name</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Cron</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Status</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Last Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70">Next Run</div>
+              <div className="text-sm font-medium text-muted-foreground/70 text-center">Runs</div>
               <div className="text-sm font-medium text-muted-foreground/70 text-right">Actions</div>
             </div>
           </div>
-          <div
-            ref={parentRef}
-            className="overflow-auto"
-            style={{ maxHeight: '60vh' }}
-          >
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualItems.map((virtualRow) => {
-                const job = jobs[virtualRow.index]
-                return (
-                  <motion.div
-                    key={job.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+          <div className="overflow-auto max-h-[60vh]">
+            {jobs.map((job) => (
+              <div
+                key={job.id}
+                className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors items-center"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground truncate">{job.name}</p>
+                  {job.description && (
+                    <p className="text-xs text-muted-foreground/50 truncate">{job.description}</p>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <code className="text-xs text-primary font-mono bg-muted/50 px-2 py-1 rounded truncate block">
+                    {job.cronExpression}
+                  </code>
+                </div>
+                <div className="flex justify-center">
+                  <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
+                </div>
+                <div className="text-sm text-muted-foreground truncate">
+                  {formatDate(job.lastRunAt)}
+                </div>
+                <div className="text-sm text-muted-foreground truncate">
+                  {formatDate(job.nextRunAt)}
+                </div>
+                <div className="text-sm text-muted-foreground text-center">
+                  {job.totalRuns}
+                  {job.totalFailures > 0 && (
+                    <span className="text-destructive ml-1">({job.totalFailures})</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => toggleJob(job.id)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-foreground transition-colors"
+                    title={job.isActive ? 'Pause' : 'Activate'}
                   >
-                    <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-4 px-4 py-3 items-center h-full">
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">{job.name}</p>
-                        {job.description && (
-                          <p className="text-xs text-muted-foreground/50 truncate">{job.description}</p>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <code className="text-xs text-primary font-mono bg-muted/50 px-2 py-1 rounded truncate block">
-                          {job.cronExpression}
-                        </code>
-                      </div>
-                      <div className="min-w-0">
-                        <StatusBadge status={job.isActive ? 'active' : 'inactive'} />
-                      </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {formatDate(job.lastRunAt)}
-                      </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {formatDate(job.nextRunAt)}
-                      </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {job.totalRuns}
-                        {job.totalFailures > 0 && (
-                          <span className="text-destructive ml-1">({job.totalFailures} failed)</span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => toggleJob(job.id)}
-                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-foreground transition-colors"
-                          title={job.isActive ? 'Pause' : 'Activate'}
-                        >
-                          {job.isActive ? (
-                            <Pause className="w-4 h-4" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => runJobManually(job.id)}
-                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-primary transition-colors"
-                          title="Run Now"
-                        >
-                          <Zap className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openEditModal(job)}
-                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-primary transition-colors"
-                          title="Edit"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(job.id)}
-                          className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-destructive transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
+                    {job.isActive ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => runJobManually(job.id)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-primary transition-colors"
+                    title="Run Now"
+                  >
+                    <Zap className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openEditModal(job)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-primary transition-colors"
+                    title="Edit"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(job.id)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-destructive transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
