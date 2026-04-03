@@ -79,6 +79,10 @@ export default function WorkflowTemplateManagement() {
     workflow: WorkflowTemplate | null
     loading: boolean
   }>({ open: false, workflow: null, loading: false })
+  const [viewDialog, setViewDialog] = useState<{
+    open: boolean
+    workflow: WorkflowTemplate | null
+  }>({ open: false, workflow: null })
 
   const fetchWorkflows = async () => {
     setLoading(true)
@@ -307,9 +311,7 @@ export default function WorkflowTemplateManagement() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        window.open(`/workflow-builder?load=${workflow.id}`, '_blank')
-                      }
+                      onClick={() => setViewDialog({ open: true, workflow })}
                       className="h-8"
                     >
                       <Eye className="w-4 h-4" />
@@ -356,6 +358,63 @@ export default function WorkflowTemplateManagement() {
               ))}
             </div>
           )}
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={viewDialog.open}
+        onClose={() => setViewDialog({ open: false, workflow: null })}
+        title={viewDialog.workflow?.name || '流程详情'}
+      >
+        <div className="py-4 space-y-4">
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">描述</h4>
+            <p className="text-sm">{viewDialog.workflow?.description || '暂无描述'}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">节点数量</h4>
+              <p className="text-sm font-medium">{getNodeCount(viewDialog.workflow?.nodes_json || '[]')}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">可见性</h4>
+              <Badge variant={viewDialog.workflow?.is_public ? 'default' : 'secondary'}>
+                {viewDialog.workflow?.is_public ? '公开' : '私有'}
+              </Badge>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground/70 mb-2">节点列表</h4>
+            <div className="bg-muted/30 rounded-lg p-3 max-h-60 overflow-y-auto">
+              {(() => {
+                try {
+                  const nodes = JSON.parse(viewDialog.workflow?.nodes_json || '[]')
+                  if (!Array.isArray(nodes) || nodes.length === 0) {
+                    return <p className="text-sm text-muted-foreground/50">暂无节点</p>
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {nodes.map((node: { id: string; type?: string; data?: { label?: string } }, idx: number) => (
+                        <div key={node.id || idx} className="flex items-center gap-2 text-sm">
+                          <Badge variant="outline" className="text-xs">
+                            {node.type || 'node'}
+                          </Badge>
+                          <span className="truncate">
+                            {node.data?.label || node.id}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                } catch {
+                  return <p className="text-sm text-muted-foreground/50">无法解析节点数据</p>
+                }
+              })()}
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground/50">
+            创建于: {formatDate(viewDialog.workflow?.created_at || null)}
+          </div>
         </div>
       </Dialog>
 

@@ -46,6 +46,7 @@ import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
 import { useWorkflowStore, isValidWorkflow, hasActionNode } from '@/stores/workflow'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
+import { apiClient } from '@/lib/api/client'
 
 // Node Types Registry
 const nodeTypes: NodeTypes = {
@@ -177,7 +178,7 @@ function Toolbar({
   isSaving: boolean
 }) {
   return (
-    <div className="h-14 bg-dark-950 border-b border-dark-800 flex items-center justify-between px-4">
+    <div className="h-14 bg-muted/30 border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Wrench className="w-5 h-5 text-primary" />
@@ -256,18 +257,22 @@ function Toolbar({
 function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => void }) {
   const [availableActions, setAvailableActions] = React.useState<GroupedActionNodes>({})
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    fetch('/api/workflows/available-actions')
-      .then(r => r.json())
+    apiClient.get<{ success: boolean; data: GroupedActionNodes }>('/workflows/available-actions')
       .then(data => {
         if (data.success && data.data) {
           setAvailableActions(data.data)
+        } else {
+          setError('Failed to load actions')
         }
-        setLoading(false)
       })
       .catch(err => {
         console.error('Failed to load available actions:', err)
+        setError('Failed to load actions')
+      })
+      .finally(() => {
         setLoading(false)
       })
   }, [])
@@ -280,17 +285,17 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
   }
 
   return (
-    <div className="w-64 bg-dark-950 border-r border-dark-800 flex flex-col h-full">
-      <div className="p-4 border-b border-dark-800">
-        <h3 className="text-sm font-semibold text-foreground">Node Palette</h3>
-        <p className="text-xs text-muted-foreground/70 mt-1">Drag nodes onto the canvas</p>
+    <div className="w-64 bg-muted/30 border-r border-border flex flex-col h-full">
+      <div className="p-4 border-b border-border">
+        <h3 className="text-sm font-semibold text-foreground">节点面板</h3>
+        <p className="text-xs text-muted-foreground/70 mt-1">拖拽节点到画布</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
         {/* Logic Nodes */}
         <div className="mb-4">
           <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-purple-400">
-            Logic
+            逻辑节点
           </h4>
           <div className="space-y-1">
             {logicNodes.map((item) => {
@@ -300,9 +305,9 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                   key={item.type}
                   draggable
                   onDragStart={(e) => onDragStart(e, item.type)}
-                  className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-muted/50 transition-colors group"
                 >
-                  <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
+                  <div className="p-2 rounded-md bg-muted/50 group-hover:bg-muted">
                     <Icon className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -318,10 +323,20 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
         {/* Action Nodes */}
         <div className="mb-4">
           <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-blue-400">
-            Actions
+            动作节点
           </h4>
           {loading ? (
-            <div className="text-xs text-muted-foreground/50 p-3">Loading actions...</div>
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="text-xs text-destructive/70 p-3">
+              {error}
+            </div>
+          ) : Object.keys(availableActions).length === 0 ? (
+            <div className="text-xs text-muted-foreground/50 p-3">
+              暂无可用动作
+            </div>
           ) : (
             <div className="space-y-4">
               {Object.entries(availableActions).map(([category, actions]) => {
@@ -339,9 +354,9 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                             method: action.method,
                             label: action.label,
                           })}
-                          className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-secondary transition-colors group"
+                          className="flex items-center gap-3 p-3 rounded-lg cursor-grab hover:bg-muted/50 transition-colors group"
                         >
-                          <div className="p-2 rounded-md bg-secondary group-hover:bg-secondary/80">
+                          <div className="p-2 rounded-md bg-muted/50 group-hover:bg-muted">
                             <Icon className="w-4 h-4 text-muted-foreground" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -402,10 +417,10 @@ function ConfigPanel({
       animate={{ x: 0 }}
       exit={{ x: 320 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="w-80 bg-dark-900 border-l border-dark-800 flex flex-col h-full"
+      className="w-80 bg-background border-l border-border flex flex-col h-full"
     >
       {/* Header */}
-      <div className="p-4 border-b border-dark-800 flex items-center justify-between">
+      <div className="p-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-md bg-dark-800">
             <Icon className="w-4 h-4 text-primary" />
@@ -567,7 +582,7 @@ function ConfigPanel({
         )}
       </div>
 
-      <div className="p-4 border-t border-dark-800 flex gap-2">
+      <div className="p-4 border-t border-border flex gap-2">
         <button
           onClick={handleSave}
           className="flex-1 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -582,7 +597,7 @@ function ConfigPanel({
         </button>
       </div>
 
-      <div className="p-4 border-t border-dark-800">
+      <div className="p-4 border-t border-border">
         <button
           onClick={() => {
             onDelete(node.id)
@@ -906,7 +921,7 @@ function WorkflowBuilderInner() {
   )
 
   return (
-    <div className="flex flex-col h-full w-full bg-dark-900">
+    <div className="absolute inset-0 flex flex-col bg-background">
       <Toolbar
         onSave={handleSave}
         onSaveToServer={handleSaveToServer}
@@ -952,11 +967,11 @@ function WorkflowBuilderInner() {
               style: { strokeWidth: 2 },
               type: 'smoothstep',
             }}
-            className="bg-dark-900"
+            className="bg-background"
           >
             <Controls className="bg-secondary border border-border rounded-md" />
             <MiniMap
-              className="bg-dark-950 border border-border rounded-md"
+              className="bg-muted/30 border border-border rounded-md"
               nodeColor={(node) => {
                 switch (node.type) {
                   case 'action':
