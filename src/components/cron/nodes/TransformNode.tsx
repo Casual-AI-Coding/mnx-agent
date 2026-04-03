@@ -52,20 +52,20 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
             {(inputType || outputType) && (
               <div className="flex items-center gap-2 mt-1.5 text-xs">
                 {inputType && (
-                  <span className="px-1.5 py-0.5 rounded bg-dark-800 text-dark-300">
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                     {inputType}
                   </span>
                 )}
-                <span className="text-dark-500">→</span>
+                <span className="text-muted-foreground/50">→</span>
                 {outputType && (
-                  <span className="px-1.5 py-0.5 rounded bg-dark-800 text-dark-300">
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                     {outputType}
                   </span>
                 )}
               </div>
             )}
             {mappingCount > 0 && (
-              <p className="text-xs text-dark-400 mt-1.5">
+              <p className="text-xs text-muted-foreground/70 mt-1.5">
                 {mappingCount} field{mappingCount > 1 ? 's' : ''} mapped
               </p>
             )}

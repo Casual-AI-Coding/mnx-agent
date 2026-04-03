@@ -48,10 +48,10 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
             </p>
             {maxIterations !== undefined && (
               <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-xs text-dark-400">Max:</span>
+                <span className="text-xs text-muted-foreground/70">Max:</span>
                 <span className="text-xs text-purple-400 font-mono">{maxIterations}</span>
                 {currentIteration !== undefined && (
-                  <span className="text-xs text-dark-500">
+                  <span className="text-xs text-muted-foreground/50">
                     ({currentIteration}/{maxIterations})
                   </span>
                 )}

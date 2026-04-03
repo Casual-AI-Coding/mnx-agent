@@ -380,7 +380,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                               className="flex items-center gap-2 p-2 cursor-grab hover:bg-muted/30 transition-colors border-b border-border/20 last:border-0"
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm truncate">{action.label}</p>
+                                <p className="text-sm truncate text-foreground">{action.label}</p>
                                 <p className="text-[10px] text-muted-foreground/50 truncate font-mono">{action.service}.{action.method}</p>
                               </div>
                             </div>
@@ -443,10 +443,10 @@ function ConfigPanel({
     >
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-md bg-dark-800">
-            <Icon className="w-4 h-4 text-primary" />
-          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-muted">
+              <Icon className="w-4 h-4 text-primary" />
+            </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">
               {(config.label as string) || nodeType}

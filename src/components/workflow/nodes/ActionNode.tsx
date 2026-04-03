@@ -35,7 +35,7 @@ export const ActionNode = React.memo(function ActionNode({ data, selected }: { d
         header={
           <div className="flex items-center gap-2">
             <Wrench className="w-3 h-3 text-blue-400" />
-            <span className="text-xs font-medium text-dark-300">Action</span>
+            <span className="text-xs font-medium text-muted-foreground">Action</span>
           </div>
         }
       >
@@ -48,12 +48,12 @@ export const ActionNode = React.memo(function ActionNode({ data, selected }: { d
               {label || 'Action'}
             </p>
             {service && (
-              <p className="text-xs text-blue-400 font-mono mt-1 truncate">
+              <p className="text-xs text-muted-foreground/70 font-mono mt-1 truncate">
                 {service}
               </p>
             )}
             {method && (
-              <p className="text-xs text-dark-400 mt-0.5 truncate">
+              <p className="text-xs text-muted-foreground/50 mt-0.5 truncate">
                 {method}
               </p>
             )}

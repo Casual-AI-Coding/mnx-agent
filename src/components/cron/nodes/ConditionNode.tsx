@@ -50,8 +50,8 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
             <p className="text-xs text-amber-400 mt-1">
               {conditionType || 'Check'}
             </p>
-            <div className="mt-2 text-xs text-dark-400">
-              <span className="text-dark-300">{serviceType}</span>
+            <div className="mt-2 text-xs text-muted-foreground/70">
+              <span className="text-muted-foreground">{serviceType}</span>
               {threshold !== undefined && (
                 <span className="ml-1">&gt; {threshold}</span>
               )}

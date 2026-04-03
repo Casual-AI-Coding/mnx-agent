@@ -15,7 +15,7 @@ export interface BaseNodeWrapperProps {
 }
 
 export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperProps>(
-  ({ children, className, isSelected, borderColor = 'border-dark-700', onDelete, onConfig, header, footer }, ref) => {
+  ({ children, className, isSelected, borderColor = 'border-border', onDelete, onConfig, header, footer }, ref) => {
     return (
       <motion.div
         ref={ref}
@@ -29,13 +29,13 @@ export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperP
         }}
         className={cn(
           'relative min-w-[200px] max-w-[320px]',
-          'bg-dark-900/95 backdrop-blur-sm',
+          'bg-card/95 backdrop-blur-sm',
           'rounded-lg border-2',
           'shadow-lg shadow-black/20',
           'transition-all duration-200 ease-out',
           'cursor-pointer',
           borderColor,
-          isSelected && 'ring-2 ring-primary/50 ring-offset-2 ring-offset-dark-950',
+          isSelected && 'ring-2 ring-primary/50 ring-offset-2 ring-offset-background',
           className
         )}
       >
@@ -50,7 +50,7 @@ export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperP
         )}
 
         {(header || onDelete || onConfig) && (
-          <div className="flex items-center justify-between px-3 py-2 border-b border-dark-700/50">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
             {header && <div className="flex-1">{header}</div>}
             <div className="flex items-center gap-1">
               {onConfig && (
@@ -61,8 +61,8 @@ export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperP
                   }}
                   className={cn(
                     'p-1 rounded-md',
-                    'text-dark-400 hover:text-primary',
-                    'hover:bg-dark-800',
+                    'text-muted-foreground hover:text-primary',
+                    'hover:bg-muted',
                     'transition-colors duration-150'
                   )}
                   title="Configure"
@@ -78,7 +78,7 @@ export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperP
                   }}
                   className={cn(
                     'p-1 rounded-md',
-                    'text-dark-400 hover:text-destructive',
+                    'text-muted-foreground hover:text-destructive',
                     'hover:bg-destructive/10',
                     'transition-colors duration-150'
                   )}
@@ -93,7 +93,7 @@ export const BaseNodeWrapper = React.forwardRef<HTMLDivElement, BaseNodeWrapperP
 
         <div className="px-3 py-3">{children}</div>
 
-        {footer && <div className="px-3 py-2 border-t border-dark-700/50">{footer}</div>}
+        {footer && <div className="px-3 py-2 border-t border-border/50">{footer}</div>}
       </motion.div>
     )
   }
