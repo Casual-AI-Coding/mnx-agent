@@ -42,6 +42,14 @@ const roleHierarchy: Record<UserRole, number> = {
 
 const EXPANDED_KEY = 'sidebar-expanded-sections'
 
+const MENU_ICONS = {
+  shield: Shield,
+  users: Users,
+  key: Key,
+  server: Shield,
+  gitBranch: GitBranch,
+}
+
 function getStoredExpanded(): Record<string, boolean> {
   try {
     const stored = localStorage.getItem(EXPANDED_KEY)
@@ -145,6 +153,8 @@ export default function Sidebar() {
       items: [
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
+        { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Shield },
+        { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: GitBranch },
       ],
     },
   ]
