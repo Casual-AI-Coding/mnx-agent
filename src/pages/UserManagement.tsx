@@ -508,24 +508,6 @@ export default function UserManagement() {
                   </SelectContent>
                 </Select>
 
-                <div className="h-8 w-px bg-border/60 hidden md:block" />
-
-                <div className="flex items-center gap-1.5">
-                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
-                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
-                    创建
-                  </SortButton>
-                  <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
-                    登录
-                  </SortButton>
-                  <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
-                    名称
-                  </SortButton>
-                </div>
-
                 <div className="flex-1" />
 
                 {hasActiveFilters && (
@@ -569,6 +551,26 @@ export default function UserManagement() {
                     </motion.button>
                   </>
                 )}
+
+                <div className="h-8 w-px bg-border/60 hidden md:block" />
+
+                <div className="flex items-center gap-1.5">
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
+                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
+                    创建
+                  </SortButton>
+                  <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
+                    登录
+                  </SortButton>
+                  <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
+                    名称
+                  </SortButton>
+                </div>
+
+                <div className="h-8 w-px bg-border/60 hidden lg:block" />
 
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground/70">结果</span>

@@ -383,7 +383,7 @@ export default function InvitationCodes() {
                         'text-sm font-medium',
                         statusFilter !== 'all' ? 'text-foreground' : 'text-muted-foreground/60'
                       )}>
-                        {statusFilter === 'all' ? '全部' : 
+                        {statusFilter === 'all' ? '全部' :
                          statusFilter === 'active' ? '可用' :
                          statusFilter === 'used' ? '已用完' :
                          statusFilter === 'expired' ? '已过期' : '已禁用'}
@@ -423,24 +423,6 @@ export default function InvitationCodes() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-
-                <div className="h-8 w-px bg-border/60 hidden md:block" />
-
-                <div className="flex items-center gap-1.5">
-                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
-                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
-                    创建时间
-                  </SortButton>
-                  <SortButton field="expires_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('expires_at')}>
-                    过期时间
-                  </SortButton>
-                  <SortButton field="used_count" currentField={sortField} order={sortOrder} onClick={() => toggleSort('used_count')}>
-                    使用次数
-                  </SortButton>
-                </div>
 
                 <div className="flex-1" />
 
@@ -484,6 +466,26 @@ export default function InvitationCodes() {
                     </motion.button>
                   </>
                 )}
+
+                <div className="h-8 w-px bg-border/60 hidden md:block" />
+
+                <div className="flex items-center gap-1.5">
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
+                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
+                    创建
+                  </SortButton>
+                  <SortButton field="expires_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('expires_at')}>
+                    过期
+                  </SortButton>
+                  <SortButton field="used_count" currentField={sortField} order={sortOrder} onClick={() => toggleSort('used_count')}>
+                    次数
+                  </SortButton>
+                </div>
+
+                <div className="h-8 w-px bg-border/60 hidden lg:block" />
 
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground/70">结果</span>
