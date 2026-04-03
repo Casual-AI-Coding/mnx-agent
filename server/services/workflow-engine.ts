@@ -101,24 +101,37 @@ export class WorkflowEngine {
   }
 
   private parseWorkflowJson(workflowJson: string): WorkflowGraph {
+    let parsed: unknown
+
     try {
-      const parsed = JSON.parse(workflowJson)
-      
-      if (parsed.nodes && parsed.edges) {
-        return parsed as WorkflowGraph
-      }
-      
-      if (parsed.nodes_json && parsed.edges_json) {
+      parsed = JSON.parse(workflowJson)
+    } catch (error) {
+      throw new Error(`Failed to parse workflow JSON: invalid JSON syntax - ${(error as Error).message}`)
+    }
+
+    if (parsed && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>
+
+      if ('nodes' in obj && 'edges' in obj) {
         return {
-          nodes: JSON.parse(parsed.nodes_json),
-          edges: JSON.parse(parsed.edges_json),
+          nodes: Array.isArray(obj.nodes) ? obj.nodes : [],
+          edges: Array.isArray(obj.edges) ? obj.edges : []
         }
       }
 
-      throw new Error('Invalid workflow JSON structure')
-    } catch (error) {
-      throw new Error(`Failed to parse workflow JSON: ${(error as Error).message}`)
+      if ('nodes_json' in obj && 'edges_json' in obj) {
+        try {
+          return {
+            nodes: JSON.parse(String(obj.nodes_json)),
+            edges: JSON.parse(String(obj.edges_json)),
+          }
+        } catch (error) {
+          throw new Error('Failed to parse workflow JSON: nodes_json or edges_json contain invalid JSON')
+        }
+      }
     }
+
+    throw new Error('Invalid workflow JSON structure: must contain nodes and edges arrays')
   }
 
   private validateWorkflow(workflow: WorkflowGraph): void {
