@@ -40,6 +40,7 @@ import {
   getMediaDownloadUrl,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
+import { cn } from '@/lib/utils'
 
 // ============================================================================
 // Types
@@ -115,10 +116,10 @@ const SOURCE_LABELS: Record<MediaSource, string> = {
 }
 
 const TYPE_GRADIENTS: Record<MediaType, string> = {
-  image: 'bg-gradient-to-br from-zinc-800 to-zinc-900',
-  audio: 'bg-gradient-to-br from-blue-900 to-blue-950',
-  video: 'bg-gradient-to-br from-red-900 to-red-950',
-  music: 'bg-gradient-to-br from-purple-900 to-purple-950',
+  image: 'bg-muted/50',
+  audio: 'bg-blue-950/50',
+  video: 'bg-red-950/50',
+  music: 'bg-purple-950/50',
 }
 
 // ============================================================================
@@ -443,10 +444,10 @@ function TimelineItem({
         <img
           src={signedUrl}
           alt={record.original_name || record.filename}
-          className="w-14 h-14 object-cover rounded border border-zinc-800 flex-shrink-0"
+          className="w-14 h-14 object-cover rounded border border-border flex-shrink-0"
         />
       ) : (
-        <div className={`w-14 h-14 rounded border border-zinc-800 flex items-center justify-center flex-shrink-0 ${TYPE_GRADIENTS[record.type]}`}>
+        <div className={`w-14 h-14 rounded border border-border flex items-center justify-center flex-shrink-0 ${TYPE_GRADIENTS[record.type]}`}>
           {getTypeIcon(record.type)}
         </div>
       )}
@@ -800,15 +801,15 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">媒体管理</h1>
-          <p className="text-muted-foreground mt-1">管理生成的音频、图片、视频和音乐文件</p>
+          <p className="text-muted-foreground/70 mt-1">管理生成的音频、图片、视频和音乐文件</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center border rounded-lg p-1">
+          <div className="flex items-center bg-muted/50 rounded-lg p-1">
             <Button
               variant={viewMode === 'table' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('table')}
-              className="px-3"
+              className="h-8 px-3"
             >
               <List className="w-4 h-4" />
             </Button>
@@ -816,7 +817,7 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
               variant={viewMode === 'card' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('card')}
-              className="px-3"
+              className="h-8 px-3"
             >
               <LayoutGrid className="w-4 h-4" />
             </Button>
@@ -824,13 +825,13 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
               variant={viewMode === 'timeline' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('timeline')}
-              className="px-3"
+              className="h-8 px-3"
             >
               <Calendar className="w-4 h-4" />
             </Button>
           </div>
           <Button variant="outline" onClick={() => fetchMedia(false)} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
             刷新
           </Button>
         </div>
@@ -1018,10 +1019,10 @@ const [lightboxOpen, setLightboxOpen] = useState(false)
                               <img
                                 src={signedUrls[record.id] || ''}
                                 alt={record.original_name || record.filename}
-                                className="w-10 h-10 object-cover rounded border border-zinc-800"
+                                className="w-10 h-10 object-cover rounded border border-border"
                               />
                             ) : (
-                              <div className="w-10 h-10 flex items-center justify-center rounded border border-zinc-800 bg-zinc-900">
+                              <div className="w-10 h-10 flex items-center justify-center rounded border border-border bg-muted/50">
                                 {getTypeIcon(record.type)}
                               </div>
                             )}

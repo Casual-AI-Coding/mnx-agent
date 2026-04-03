@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import {
   GitBranch,
   Loader2,
@@ -10,6 +12,7 @@ import {
   Eye,
   Trash2,
   Calendar,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -17,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { apiClient } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 
 interface WorkflowTemplate {
   id: string
@@ -59,6 +63,7 @@ function getNodeCount(nodesJson: string): number {
 }
 
 export default function WorkflowTemplateManagement() {
+  const { t } = useTranslation()
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -169,13 +174,13 @@ export default function WorkflowTemplateManagement() {
     (w.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   )
 
+  const publicCount = workflows.filter(w => w.is_public).length
+  const totalNodes = workflows.reduce((sum, w) => sum + getNodeCount(w.nodes_json), 0)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>加载中...</span>
-        </div>
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -194,13 +199,11 @@ export default function WorkflowTemplateManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">流程模板管理</h1>
-          <p className="text-muted-foreground mt-2">
-            管理工作流模板的可见性和权限
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t('workflowTemplates.title', '流程模板管理')}</h1>
+          <p className="text-muted-foreground/70 mt-1">{t('workflowTemplates.subtitle', '管理工作流模板的可见性和权限')}</p>
         </div>
         <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input
             placeholder="搜索流程..."
             value={searchQuery}
@@ -210,48 +213,66 @@ export default function WorkflowTemplateManagement() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          title="流程总数"
+          value={workflows.length}
+          icon={GitBranch}
+          color="text-blue-400"
+        />
+        <StatCard
+          title="公开流程"
+          value={publicCount}
+          icon={Globe}
+          color="text-green-400"
+        />
+        <StatCard
+          title="节点总数"
+          value={totalNodes}
+          icon={Layers}
+          color="text-purple-400"
+        />
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GitBranch className="w-5 h-5" />
-            流程模板列表 ({filteredWorkflows.length})
-          </CardTitle>
+          <CardTitle className="text-lg">流程模板列表</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {filteredWorkflows.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="text-center py-12 text-muted-foreground/70">
                 {searchQuery ? '没有找到匹配的流程' : '暂无流程模板'}
               </div>
             ) : (
               filteredWorkflows.map(workflow => (
                 <div
                   key={workflow.id}
-                  className="flex items-center justify-between py-4 px-6 hover:bg-muted/30 transition-colors"
+                  className="flex items-center justify-between py-4 px-6 hover:bg-muted/20 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
                       <h3 className="font-medium truncate">{workflow.name}</h3>
                       {workflow.is_public ? (
-                        <Badge variant="default" className="flex items-center gap-1">
+                        <Badge variant="default" className="flex items-center gap-1 text-xs">
                           <Globe className="w-3 h-3" />
                           公开
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                           <Lock className="w-3 h-3" />
                           私有
                         </Badge>
                       )}
                     </div>
                     {workflow.description && (
-                      <p className="text-sm text-muted-foreground mt-1 truncate">
+                      <p className="text-sm text-muted-foreground/70 mt-1 truncate">
                         {workflow.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground/50">
                       <span className="flex items-center gap-1">
-                        <GitBranch className="w-3 h-3" />
+                        <Layers className="w-3 h-3" />
                         {getNodeCount(workflow.nodes_json)} 节点
                       </span>
                       <span className="flex items-center gap-1">
@@ -263,45 +284,41 @@ export default function WorkflowTemplateManagement() {
 
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => toggleVisibility(workflow)}
                       title={workflow.is_public ? '设为私有' : '设为公开'}
+                      className="h-8"
                     >
                       {workflow.is_public ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-1" />
-                          设为私有
-                        </>
+                        <Lock className="w-4 h-4" />
                       ) : (
-                        <>
-                          <Globe className="w-4 h-4 mr-1" />
-                          设为公开
-                        </>
+                        <Globe className="w-4 h-4" />
                       )}
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => openPermissionsDialog(workflow)}
+                      className="h-8"
                     >
-                      <Users className="w-4 h-4 mr-1" />
-                      权限
+                      <Users className="w-4 h-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() =>
                         window.open(`/workflow-builder?load=${workflow.id}`, '_blank')
                       }
+                      className="h-8"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
-                      查看
+                      <Eye className="w-4 h-4" />
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setDeleteDialog({ open: true, workflow, loading: false })}
+                      className="h-8 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -324,15 +341,15 @@ export default function WorkflowTemplateManagement() {
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : permissionsDialog.permissions.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
+            <p className="text-center text-muted-foreground/70 py-4">
               该流程暂无授权用户
             </p>
           ) : (
             <div className="space-y-2">
               {permissionsDialog.permissions.map((perm) => (
-                <div key={perm.user_id} className="flex items-center justify-between py-2 px-3 bg-muted rounded">
+                <div key={perm.user_id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded">
                   <span className="text-sm">用户: {perm.user_id}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground/50">
                     {formatDate(perm.granted_at)}
                   </span>
                 </div>
@@ -362,5 +379,38 @@ export default function WorkflowTemplateManagement() {
         </DialogFooter>
       </Dialog>
     </div>
+  )
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
+  title: string
+  value: string | number
+  icon: typeof GitBranch
+  color: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className={cn('p-2 rounded-lg bg-muted/50', color)}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground/70">{title}</p>
+              <p className="text-xl font-bold">{value}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }

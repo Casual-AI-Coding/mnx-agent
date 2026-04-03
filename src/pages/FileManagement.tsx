@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { FolderOpen, Upload, Trash2, FileText, Image, Music, Video, File, RefreshCw, Search, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -7,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useAppStore } from '@/stores/app'
 import { usePagination } from '@/hooks/usePagination'
 import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
+import { cn } from '@/lib/utils'
 
 interface FileItem {
   file_id: string
@@ -16,21 +19,21 @@ interface FileItem {
   purpose?: string
 }
 
-const FILE_TYPE_ICONS: Record<string, React.ReactNode> = {
-  'image': <Image className="w-5 h-5" />,
-  'audio': <Music className="w-5 h-5" />,
-  'video': <Video className="w-5 h-5" />,
-  'text': <FileText className="w-5 h-5" />,
-  'default': <File className="w-5 h-5" />,
+const FILE_TYPE_CONFIG: Record<string, { icon: typeof File; color: string }> = {
+  image: { icon: Image, color: 'text-purple-400' },
+  audio: { icon: Music, color: 'text-blue-400' },
+  video: { icon: Video, color: 'text-red-400' },
+  text: { icon: FileText, color: 'text-green-400' },
+  default: { icon: File, color: 'text-muted-foreground' },
 }
 
-function getFileIcon(fileName: string): React.ReactNode {
+function getFileTypeConfig(fileName: string) {
   const ext = fileName.split('.').pop()?.toLowerCase()
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return FILE_TYPE_ICONS.image
-  if (['mp3', 'wav', 'flac', 'aac', 'ogg'].includes(ext || '')) return FILE_TYPE_ICONS.audio
-  if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext || '')) return FILE_TYPE_ICONS.video
-  if (['txt', 'json', 'xml', 'csv', 'md'].includes(ext || '')) return FILE_TYPE_ICONS.text
-  return FILE_TYPE_ICONS.default
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return FILE_TYPE_CONFIG.image
+  if (['mp3', 'wav', 'flac', 'aac', 'ogg'].includes(ext || '')) return FILE_TYPE_CONFIG.audio
+  if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext || '')) return FILE_TYPE_CONFIG.video
+  if (['txt', 'json', 'xml', 'csv', 'md'].includes(ext || '')) return FILE_TYPE_CONFIG.text
+  return FILE_TYPE_CONFIG.default
 }
 
 function formatFileSize(bytes: number): string {
@@ -77,6 +80,7 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | stri
 }
 
 export default function FileManagement() {
+  const { t } = useTranslation()
   const [files, setFiles] = useState<FileItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -155,18 +159,20 @@ export default function FileManagement() {
 
   const pageNumbers = getPageNumbers(page, totalPages)
 
+  const totalSize = files.reduce((acc, f) => acc + f.file_size, 0)
+  const textCount = files.filter(f => f.file_name.endsWith('.txt')).length
+  const imageCount = files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f.file_name)).length
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">文件管理</h1>
-          <p className="text-muted-foreground text-sm">
-            管理上传的文件，支持 txt、zip、图片等格式
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t('files.title', '文件管理')}</h1>
+          <p className="text-muted-foreground/70 mt-1">{t('files.subtitle', '管理上传的文件，支持 txt、zip、图片等格式')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={fetchFiles} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
             刷新
           </Button>
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
@@ -182,26 +188,53 @@ export default function FileManagement() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatCard
+          title="文件总数"
+          value={files.length}
+          icon={File}
+          color="text-blue-400"
+        />
+        <StatCard
+          title="文本文件"
+          value={textCount}
+          icon={FileText}
+          color="text-green-400"
+        />
+        <StatCard
+          title="图片文件"
+          value={imageCount}
+          icon={Image}
+          color="text-purple-400"
+        />
+        <StatCard
+          title="总大小"
+          value={formatFileSize(totalSize)}
+          icon={FolderOpen}
+          color="text-yellow-400"
+        />
+      </div>
+
       {uploading && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary transition-all duration-300"
+                    className="h-full bg-primary transition-all duration-300 rounded-full"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
               </div>
-              <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+              <span className="text-sm text-muted-foreground/70">{uploadProgress}%</span>
             </div>
           </CardContent>
         </Card>
       )}
 
       {error && (
-        <Card className="border-destructive">
+        <Card className="border-destructive/50">
           <CardContent className="p-4 flex items-center gap-2 text-destructive">
             <AlertCircle className="w-5 h-5" />
             {error}
@@ -220,96 +253,97 @@ export default function FileManagement() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FolderOpen className="w-5 h-5" />
-              文件列表
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索文件..."
-                  className="pl-10 w-64"
-                />
-              </div>
+            <CardTitle className="text-lg">文件列表</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索文件..."
+                className="pl-9 w-64"
+              />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {files.length === 0 && !isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground/70">
               <FolderOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p>暂无文件</p>
               <p className="text-sm mt-2">点击上传文件按钮添加文件</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {pageFiles.map((file) => (
-                <div
-                  key={file.file_id}
-                  className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                    {getFileIcon(file.file_name)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.file_name}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{formatFileSize(file.file_size)}</span>
-                      <span>•</span>
-                      <span>{new Date(file.created_at).toLocaleString()}</span>
-                      {file.purpose && (
-                        <>
-                          <span>•</span>
-                          <Badge variant="outline">{file.purpose}</Badge>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(file.file_id)}
+            <div>
+              <div className="divide-y divide-border">
+                {pageFiles.map((file) => {
+                  const typeConfig = getFileTypeConfig(file.file_name)
+                  const Icon = typeConfig.icon
+                  return (
+                    <div
+                      key={file.file_id}
+                      className="flex items-center gap-4 px-6 py-3 hover:bg-muted/20 transition-colors"
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      <div className={cn('w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center', typeConfig.color)}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate text-sm">{file.file_name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
+                          <span>{formatFileSize(file.file_size)}</span>
+                          <span>•</span>
+                          <span>{new Date(file.created_at).toLocaleString()}</span>
+                          {file.purpose && (
+                            <>
+                              <span>•</span>
+                              <Badge variant="outline" className="text-xs">{file.purpose}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(file.file_id)}
+                        className="h-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
 
               {filteredFiles.length === 0 && files.length > 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground/70">
                   <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>没有找到匹配的文件</p>
                 </div>
               )}
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
+                <div className="flex items-center justify-center gap-2 py-4 border-t border-border">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(p => p - 1)}
                     disabled={!hasPrevPage}
+                    className="h-8"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
 
                   {pageNumbers.map((pageNum, idx) => (
                     pageNum === '...' ? (
-                      <span key={idx} className="px-2 text-muted-foreground">...</span>
+                      <span key={idx} className="px-2 text-muted-foreground/50">...</span>
                     ) : (
                       <Button
                         key={idx}
-                        variant={page === pageNum ? 'default' : 'outline'}
+                        variant={page === pageNum ? 'default' : 'ghost'}
                         size="sm"
                         onClick={() => setPage(pageNum as number)}
-                        className={page === pageNum ? 'bg-primary text-foreground' : ''}
+                        className="h-8 w-8 p-0"
                       >
                         {pageNum}
                       </Button>
@@ -317,10 +351,11 @@ export default function FileManagement() {
                   ))}
 
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(p => p + 1)}
                     disabled={!hasNextPage}
+                    className="h-8"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -330,70 +365,39 @@ export default function FileManagement() {
           )}
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                <File className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{files.length}</p>
-                <p className="text-sm text-muted-foreground">文件总数</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {files.filter(f => f.file_name.endsWith('.txt')).length}
-                </p>
-                <p className="text-sm text-muted-foreground">文本文件</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
-                <Image className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f.file_name)).length}
-                </p>
-                <p className="text-sm text-muted-foreground">图片文件</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
-                <FolderOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {formatFileSize(files.reduce((acc, f) => acc + f.file_size, 0))}
-                </p>
-                <p className="text-sm text-muted-foreground">总大小</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
+  )
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
+  title: string
+  value: string | number
+  icon: typeof File
+  color: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className={cn('p-2 rounded-lg bg-muted/50', color)}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground/70">{title}</p>
+              <p className="text-xl font-bold">{value}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
