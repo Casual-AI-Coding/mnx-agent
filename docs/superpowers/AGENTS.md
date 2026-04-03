@@ -8,13 +8,16 @@
 docs/superpowers/
 ├── specs/                      # 规格文档（定义"是什么"）
 │   ├── workflow-core-concepts.md
-│   ├── 2026-04-03-workflow-service-registration-spec.md
-│   ├── 2026-04-03-workflow-verification-spec.md
-│   └── 2026-04-03-workflow-examples-spec.md
+│   ├── 2026-03-30-database-transactions.md
+│   ├── 2026-04-01-authentication-system-design.md
+│   └── 2026-04-02-theme-system-design.md
 │
 ├── plans/                      # 实现计划（定义"怎么做"）
 │   ├── 2026-04-03-workflow-system-redesign.md         # 总计划
 │   ├── 2026-04-03-workflow-refactoring-fixes.md
+│   ├── 2026-04-03-workflow-examples-spec.md           # 示例配置
+│   ├── 2026-04-03-workflow-service-registration-spec.md  # 服务注册方案
+│   ├── 2026-04-03-workflow-verification-spec.md      # 验证方案
 │   ├── 2026-04-03-01-database-redesign.md             # SP-1 子计划
 │   ├── 2026-04-03-02-service-node-registry.md         # SP-2 子计划
 │   ├── 2026-04-03-03-permission-management.md         # SP-3 子计划
@@ -41,7 +44,7 @@ docs/superpowers/
 
 **用途**: 定义系统的设计规格、核心概念、接口规范
 
-**命名规范**: `YYYY-MM-DD-主题-spec.md` 或 `主题.md`
+**命名规范**: `YYYY-MM-DD-主题-design.md` 或 `主题.md`
 
 **内容特点**:
 - 描述"是什么"（What）
@@ -51,15 +54,13 @@ docs/superpowers/
 
 **示例**:
 - `workflow-core-concepts.md` - 工作流核心概念定义
-- `2026-04-03-workflow-service-registration-spec.md` - 服务注册规格
+- `2026-04-01-authentication-system-design.md` - 认证系统设计规格
 
 ### plans/ - 实现计划
 
 **用途**: 定义具体实现步骤、任务分解、执行方案
 
-**命名规范**:
-- 总计划: `YYYY-MM-DD-主题.md`
-- 子计划: `YYYY-MM-DD-序号-子主题.md`
+**命名规范**: `YYYY-MM-DD-主题.md`
 
 **内容特点**:
 - 描述"怎么做"（How）
@@ -105,9 +106,17 @@ docs/superpowers/
 
 **规格文档**:
 - `workflow-core-concepts.md` - 核心概念
-- `workflow-service-registration-spec.md` - 服务注册规格
-- `workflow-verification-spec.md` - 验证方案
-- `workflow-examples-spec.md` - 配置示例
+- `2026-03-30-database-transactions.md` - 数据库事务需求
+- `2026-04-01-authentication-system-design.md` - 认证系统设计
+- `2026-04-02-theme-system-design.md` - 主题系统设计
+
+**实现计划**:
+- `2026-04-03-workflow-system-redesign.md` - 总计划
+- `2026-04-03-01~06-*.md` - 6 个子计划（SP-1 到 SP-6）
+- `2026-04-03-workflow-refactoring-fixes.md` - 重构修复计划
+- `2026-04-03-workflow-examples-spec.md` - 示例配置
+- `2026-04-03-workflow-service-registration-spec.md` - 服务注册方案
+- `2026-04-03-workflow-verification-spec.md` - 验证方案
 
 **实现计划**:
 - `2026-04-03-workflow-system-redesign.md` - 总计划
