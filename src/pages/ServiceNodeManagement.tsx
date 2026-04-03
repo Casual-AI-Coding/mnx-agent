@@ -461,13 +461,13 @@ function NodeCard({ node, saving, updateNode, gradient }: {
       {}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: isHovered ? 0.5 : 0 }}
+        animate={{ opacity: isHovered ? 0.15 : 0 }}
         className={cn(
           'absolute inset-0 rounded-xl pointer-events-none',
           'bg-gradient-to-br',
           gradient
         )}
-        style={{ filter: 'blur(20px)' }}
+        style={{ filter: 'blur(25px)' }}
       />
     </motion.div>
   )
