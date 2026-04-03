@@ -530,7 +530,7 @@ export default function InvitationCodes() {
 
           {}
           {!loading && !error && (
-            <div className="overflow-x-auto" >
+            <div>
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
