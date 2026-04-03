@@ -6,6 +6,7 @@
 
 import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodePermission } from '../database/types.js'
+import { ROLE_HIERARCHY } from '../types/workflow.js'
 
 export interface ServiceMethodMeta {
   name: string
@@ -66,19 +67,12 @@ export class ServiceNodeRegistry {
   }
 
   async getAvailableNodes(userRole: string): Promise<ServiceNodePermission[]> {
-    const roleHierarchy: Record<string, number> = {
-      user: 0,
-      pro: 1,
-      admin: 2,
-      super: 3,
-    }
-
-    const userLevel = roleHierarchy[userRole] ?? 0
+    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
     const allNodes = await this.db.getAllServiceNodePermissions()
     
     return allNodes.filter(node => {
       if (!node.is_enabled) return false
-      const nodeLevel = roleHierarchy[node.min_role] ?? 0
+      const nodeLevel = ROLE_HIERARCHY[node.min_role] ?? 0
       return nodeLevel <= userLevel
     })
   }

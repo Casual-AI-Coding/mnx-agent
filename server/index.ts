@@ -113,6 +113,7 @@ async function initializeServices() {
   const minimaxClient = getMiniMaxClient()
   const taskExecutor = new TaskExecutor(minimaxClient, dbService)
   const capacityChecker = new CapacityChecker(minimaxClient, dbService)
+  const queueProcessor = new QueueProcessor(dbService, taskExecutor, capacityChecker)
 
   serviceRegistry.register({
     serviceName: 'minimaxClient',
@@ -157,6 +158,14 @@ async function initializeServices() {
     methods: [
       { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
       { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
+    ],
+  })
+
+  serviceRegistry.register({
+    serviceName: 'queueProcessor',
+    instance: queueProcessor,
+    methods: [
+      { name: 'processImageQueueWithCapacity', displayName: 'Process Image Queue', category: 'Queue Processing' },
     ],
   })
 

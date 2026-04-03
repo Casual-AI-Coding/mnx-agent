@@ -18,8 +18,11 @@ interface ActionConfigPanelProps {
 export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) {
   const [availableNodes, setAvailableNodes] = useState<GroupedActionNodes>({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchAvailableNodes = () => {
+    setLoading(true)
+    setError(null)
     fetch('/api/workflows/available-actions')
       .then(r => r.json())
       .then(data => {
@@ -30,12 +33,31 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
       })
       .catch(err => {
         console.error('Failed to load available actions:', err)
+        setError('Failed to load available actions')
         setLoading(false)
       })
+  }
+
+  useEffect(() => {
+    fetchAvailableNodes()
   }, [])
 
   if (loading) {
     return <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 space-y-2">
+        <div className="text-sm text-destructive">{error}</div>
+        <button
+          onClick={fetchAvailableNodes}
+          className="text-sm text-primary hover:underline"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
 
   const categories = Object.keys(availableNodes)

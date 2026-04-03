@@ -16,7 +16,7 @@ export interface ActionNodeData extends Record<string, unknown> {
 
 export type ActionNodeType = Node<ActionNodeData, 'action'>
 
-export function ActionNode({ data, selected }: { data: ActionNodeData; selected?: boolean }) {
+export const ActionNode = React.memo(function ActionNode({ data, selected }: { data: ActionNodeData; selected?: boolean }) {
   const { label, config } = data
   const { service, method } = config || {}
 
@@ -78,4 +78,4 @@ export function ActionNode({ data, selected }: { data: ActionNodeData; selected?
       />
     </>
   )
-}
+})

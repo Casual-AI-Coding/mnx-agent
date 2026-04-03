@@ -1,3 +1,13 @@
+export const ROLE_HIERARCHY: Record<string, number> = {
+  user: 0,
+  pro: 1,
+  admin: 2,
+  super: 3,
+}
+
+export const VALID_ROLES = ['user', 'pro', 'admin', 'super'] as const
+export type UserRole = typeof VALID_ROLES[number]
+
 export enum WorkflowNodeType {
   Action = 'action',
   Condition = 'condition',

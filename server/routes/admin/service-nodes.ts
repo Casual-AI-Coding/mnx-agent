@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
 import { getDatabase } from '../../database/service-async'
+import { VALID_ROLES } from '../../types/workflow'
 
 const router = Router()
 
@@ -15,8 +16,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
   const { min_role, is_enabled } = req.body
 
-  const validRoles = ['user', 'pro', 'admin', 'super']
-  if (min_role && !validRoles.includes(min_role)) {
+  if (min_role && !VALID_ROLES.includes(min_role as typeof VALID_ROLES[number])) {
     res.status(400).json({ success: false, error: 'Invalid min_role' })
     return
   }

@@ -454,6 +454,22 @@ export class DatabaseService {
     return parseInt(rows[0]?.count ?? '0', 10)
   }
 
+  async getPendingTasksByType(taskType: string, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> {
+    let rows: TaskQueueRow[]
+    if (ownerId) {
+      rows = await this.conn.query<TaskQueueRow>(
+        'SELECT * FROM task_queue WHERE task_type = $1 AND status = $2 AND owner_id = $3 ORDER BY priority DESC, created_at ASC LIMIT $4',
+        [taskType, 'pending', ownerId, limit]
+      )
+    } else {
+      rows = await this.conn.query<TaskQueueRow>(
+        'SELECT * FROM task_queue WHERE task_type = $1 AND status = $2 ORDER BY priority DESC, created_at ASC LIMIT $3',
+        [taskType, 'pending', limit]
+      )
+    }
+    return rows.map(rowToTaskQueueItem)
+  }
+
   async getRunningTaskCount(): Promise<number> {
     const rows = await this.conn.query<{ count: string }>('SELECT COUNT(*) as count FROM task_queue WHERE status = $1', ['running'])
     return parseInt(rows[0]?.count ?? '0', 10)

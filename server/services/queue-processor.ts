@@ -26,6 +26,7 @@ export interface TaskExecutor {
 export interface CapacityChecker {
   hasCapacity(serviceType: string): Promise<boolean>
   decrementCapacity(serviceType: string): Promise<void>
+  getSafeExecutionLimit(serviceType: string): Promise<number>
 }
 
 export class QueueProcessor {
@@ -272,6 +273,88 @@ export class QueueProcessor {
       tasksExecuted: stats.tasksExecuted,
       tasksSucceeded: stats.tasksSucceeded,
       tasksFailed: stats.tasksFailed,
+    }
+  }
+
+  /**
+   * Process image generation tasks based on remaining capacity.
+   * This is the main method for the 23:30 scheduled workflow.
+   * 
+   * Flow:
+   * 1. Check image API capacity
+   * 2. Get pending image tasks limited by capacity
+   * 3. Process each task (execute image generation, save media record)
+   * 
+   * @param ownerId Optional owner ID for data isolation
+   * @returns Processing results with stats
+   */
+  async processImageQueueWithCapacity(ownerId?: string): Promise<QueueResult & { capacityUsed: number; capacityRemaining: number }> {
+    const hasCapacity = await this.capacityChecker.hasCapacity('image')
+    if (!hasCapacity) {
+      return {
+        success: true,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        capacityUsed: 0,
+        capacityRemaining: 0,
+      }
+    }
+
+    const safeLimit = await this.capacityChecker.getSafeExecutionLimit('image')
+    const pendingTasks = await this.db.getPendingTasksByType('image_generation', safeLimit, ownerId)
+
+    if (pendingTasks.length === 0) {
+      return {
+        success: true,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        capacityUsed: 0,
+        capacityRemaining: safeLimit,
+      }
+    }
+
+    const stats = {
+      tasksExecuted: 0,
+      tasksSucceeded: 0,
+      tasksFailed: 0,
+    }
+
+    for (const task of pendingTasks) {
+      const stillHasCapacity = await this.capacityChecker.hasCapacity('image')
+      if (!stillHasCapacity) {
+        break
+      }
+
+      const taskResult = await this.executeTaskWithLifecycle(task)
+      stats.tasksExecuted++
+
+      if (taskResult.success) {
+        stats.tasksSucceeded++
+        await this.capacityChecker.decrementCapacity('image')
+      } else {
+        stats.tasksFailed++
+        
+        if (task.retry_count < task.max_retries) {
+          const delayMs = this.calculateRetryDelay(task.retry_count)
+          await this.sleep(delayMs)
+          await this.requeueTask(task)
+        } else {
+          await this.moveToDeadLetterQueue(task, taskResult.error || 'Max retries exceeded')
+        }
+      }
+    }
+
+    const remainingCapacity = await this.capacityChecker.getSafeExecutionLimit('image')
+
+    return {
+      success: stats.tasksFailed === 0,
+      tasksExecuted: stats.tasksExecuted,
+      tasksSucceeded: stats.tasksSucceeded,
+      tasksFailed: stats.tasksFailed,
+      capacityUsed: stats.tasksSucceeded,
+      capacityRemaining: remainingCapacity,
     }
   }
 }

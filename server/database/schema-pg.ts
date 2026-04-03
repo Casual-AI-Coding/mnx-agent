@@ -326,8 +326,36 @@ INSERT INTO service_node_permissions (id, service_name, method_name, display_nam
   
   -- Media Storage
   ('snp-030', 'mediaStorage', 'saveMediaFile', 'Save Media File', 'Media Storage', 'pro', true),
-  ('snp-031', 'mediaStorage', 'saveFromUrl', 'Save From URL', 'Media Storage', 'pro', true)
+  ('snp-031', 'mediaStorage', 'saveFromUrl', 'Save From URL', 'Media Storage', 'pro', true),
+  
+  -- Queue Processing
+  ('snp-040', 'queueProcessor', 'processImageQueueWithCapacity', 'Process Image Queue', 'Queue Processing', 'admin', true)
 ON CONFLICT (service_name, method_name) DO NOTHING;
+
+-- Initialize workflow template for image quota consumption
+INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, owner_id, is_public, created_at, updated_at) VALUES
+  ('wf-001', 'Image Quota Consumer', 'Process pending image generation tasks based on remaining API capacity. Runs at 23:30 daily.',
+    '[{"id":"action-1","type":"action","data":{"label":"Process Image Queue","config":{"service":"queueProcessor","method":"processImageQueueWithCapacity","args":[]}},"position":{"x":100,"y":100}}]',
+    '[]',
+    null,
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Initialize cron job for 23:30 daily execution
+INSERT INTO cron_jobs (id, name, description, cron_expression, timezone, workflow_id, owner_id, is_active, created_at, updated_at) VALUES
+  ('cron-001', 'Daily Image Quota Consumer', 'Process pending image tasks at 23:30 daily, consuming available API quota.',
+    '30 23 * * *',
+    'Asia/Shanghai',
+    'wf-001',
+    null,
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO NOTHING;
 `
 
 export const PG_MIGRATIONS = [
