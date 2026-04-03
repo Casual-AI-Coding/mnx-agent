@@ -414,7 +414,7 @@ export default function UserManagement() {
           <div className="bg-gradient-to-r from-card via-card to-muted/20">
             <div className="p-5 space-y-4">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[240px] max-w-sm group">
+                <div className="relative flex-1 min-w-[180px] max-w-xs group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Search className="h-4 w-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
                   </div>
@@ -437,16 +437,16 @@ export default function UserManagement() {
                   )}
                 </div>
 
-                <div className="h-8 w-px bg-border/60" />
+                <div className="h-8 w-px bg-border/60 hidden sm:block" />
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <SlidersHorizontal className="w-4 h-4 text-muted-foreground/70" />
-                  <span className="text-sm text-muted-foreground/70">筛选</span>
+                  <span className="text-sm text-muted-foreground/70 hidden sm:inline">筛选</span>
                 </div>
 
                 <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as UserRole | 'all')}>
-                  <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2">
+                  <SelectTrigger className="w-[110px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground/70 text-sm">角色</span>
                       <span className={cn(
                         'text-sm font-medium',
@@ -475,8 +475,8 @@ export default function UserManagement() {
                 </Select>
 
                 <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}>
-                  <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2">
+                  <SelectTrigger className="w-[110px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground/70 text-sm">状态</span>
                       <span className={cn(
                         'text-sm font-medium',
@@ -507,6 +507,24 @@ export default function UserManagement() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+
+                <div className="h-8 w-px bg-border/60 hidden md:block" />
+
+                <div className="flex items-center gap-1.5">
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
+                  <span className="text-sm text-muted-foreground/70 hidden md:inline">排序</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
+                    创建
+                  </SortButton>
+                  <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
+                    登录
+                  </SortButton>
+                  <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
+                    名称
+                  </SortButton>
+                </div>
 
                 <div className="flex-1" />
 
@@ -569,26 +587,6 @@ export default function UserManagement() {
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <div className="pt-3 border-t border-border/30">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
-                    <span className="text-sm text-muted-foreground/70">排序</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
-                      创建时间
-                    </SortButton>
-                    <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
-                      最后登录
-                    </SortButton>
-                    <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
-                      用户名
-                    </SortButton>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
