@@ -38,7 +38,9 @@ import { WorkflowEngine } from './services/workflow-engine'
 import { CronScheduler } from './services/cron-scheduler'
 import { initCronWebSocket } from './services/websocket-service'
 import { getServiceNodeRegistry } from './services/service-node-registry'
-import { saveMediaFile, saveFromUrl } from './lib/media-storage'
+import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from './lib/media-storage'
+import { toCSV } from './lib/csv-utils'
+import { generateMediaToken, verifyMediaToken } from './lib/media-token'
 
 config()
 
@@ -119,12 +121,32 @@ async function initializeServices() {
     serviceName: 'minimaxClient',
     instance: minimaxClient,
     methods: [
+      // 原有 6 个
       { name: 'chatCompletion', displayName: 'Text Generation', category: 'MiniMax API' },
       { name: 'imageGeneration', displayName: 'Image Generation', category: 'MiniMax API' },
       { name: 'videoGeneration', displayName: 'Video Generation', category: 'MiniMax API' },
       { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
       { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
       { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
+      // 新增：异步任务状态查询（workflow 轮询必需）
+      { name: 'textToAudioAsyncStatus', displayName: 'Voice Async Status', category: 'MiniMax API' },
+      { name: 'videoGenerationStatus', displayName: 'Video Generation Status', category: 'MiniMax API' },
+      // 新增：视频 Agent 能力
+      { name: 'videoAgentGenerate', displayName: 'Video Agent Generate', category: 'MiniMax Video' },
+      { name: 'videoAgentStatus', displayName: 'Video Agent Status', category: 'MiniMax Video' },
+      // 新增：文件管理
+      { name: 'fileList', displayName: 'File List', category: 'MiniMax File' },
+      { name: 'fileUpload', displayName: 'File Upload', category: 'MiniMax File' },
+      { name: 'fileRetrieve', displayName: 'File Retrieve', category: 'MiniMax File' },
+      { name: 'fileDelete', displayName: 'File Delete', category: 'MiniMax File' },
+      // 新增：音色管理
+      { name: 'voiceList', displayName: 'Voice List', category: 'MiniMax Voice' },
+      { name: 'voiceDelete', displayName: 'Voice Delete', category: 'MiniMax Voice' },
+      { name: 'voiceClone', displayName: 'Voice Clone', category: 'MiniMax Voice' },
+      { name: 'voiceDesign', displayName: 'Voice Design', category: 'MiniMax Voice' },
+      // 新增：账户余额
+      { name: 'getBalance', displayName: 'Get Balance', category: 'MiniMax Account' },
+      { name: 'getCodingPlanRemains', displayName: 'Get Coding Plan Remains', category: 'MiniMax Account' },
     ],
   })
 
@@ -132,10 +154,34 @@ async function initializeServices() {
     serviceName: 'db',
     instance: dbService,
     methods: [
-      { name: 'getPendingTasks', displayName: 'Get Pending Tasks', category: 'Database' },
-      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database' },
-      { name: 'updateTask', displayName: 'Update Task', category: 'Database' },
-      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database' },
+      // 原有 4 个
+      { name: 'getPendingTasks', displayName: 'Get Pending Tasks', category: 'Database Task' },
+      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
+      { name: 'updateTask', displayName: 'Update Task', category: 'Database Task' },
+      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
+      // 新增：Cron Jobs 管理
+      { name: 'getAllCronJobs', displayName: 'Get All Cron Jobs', category: 'Database Cron' },
+      { name: 'getCronJobById', displayName: 'Get Cron Job By ID', category: 'Database Cron' },
+      { name: 'createCronJob', displayName: 'Create Cron Job', category: 'Database Cron' },
+      { name: 'updateCronJob', displayName: 'Update Cron Job', category: 'Database Cron' },
+      { name: 'deleteCronJob', displayName: 'Delete Cron Job', category: 'Database Cron' },
+      { name: 'toggleCronJobActive', displayName: 'Toggle Cron Job Active', category: 'Database Cron' },
+      { name: 'getActiveCronJobs', displayName: 'Get Active Cron Jobs', category: 'Database Cron' },
+      // 新增：Task Queue 管理
+      { name: 'getAllTasks', displayName: 'Get All Tasks', category: 'Database Task' },
+      { name: 'createTask', displayName: 'Create Task', category: 'Database Task' },
+      { name: 'markTaskRunning', displayName: 'Mark Task Running', category: 'Database Task' },
+      { name: 'markTaskCompleted', displayName: 'Mark Task Completed', category: 'Database Task' },
+      { name: 'markTaskFailed', displayName: 'Mark Task Failed', category: 'Database Task' },
+      { name: 'getQueueStats', displayName: 'Get Queue Stats', category: 'Database Task' },
+      // 新增：Execution Logs
+      { name: 'getAllExecutionLogs', displayName: 'Get All Execution Logs', category: 'Database Log' },
+      { name: 'createExecutionLog', displayName: 'Create Execution Log', category: 'Database Log' },
+      { name: 'updateExecutionLog', displayName: 'Update Execution Log', category: 'Database Log' },
+      // 新增：Media Records
+      { name: 'getMediaRecords', displayName: 'Get Media Records', category: 'Database Media' },
+      { name: 'getMediaRecordById', displayName: 'Get Media Record By ID', category: 'Database Media' },
+      { name: 'updateMediaRecord', displayName: 'Update Media Record', category: 'Database Media' },
     ],
   })
 
@@ -143,9 +189,15 @@ async function initializeServices() {
     serviceName: 'capacityChecker',
     instance: capacityChecker,
     methods: [
+      // 原有 3 个
       { name: 'getRemainingCapacity', displayName: 'Get Remaining Capacity', category: 'Capacity' },
       { name: 'hasCapacity', displayName: 'Check Has Capacity', category: 'Capacity' },
       { name: 'getSafeExecutionLimit', displayName: 'Get Safe Execution Limit', category: 'Capacity' },
+      // 新增：容量管理
+      { name: 'checkBalance', displayName: 'Check Balance', category: 'Capacity' },
+      { name: 'refreshAllCapacity', displayName: 'Refresh All Capacity', category: 'Capacity' },
+      { name: 'canExecuteTask', displayName: 'Can Execute Task', category: 'Capacity' },
+      { name: 'waitForCapacity', displayName: 'Wait For Capacity', category: 'Capacity' },
     ],
   })
 
@@ -154,10 +206,14 @@ async function initializeServices() {
     instance: {
       saveMediaFile,
       saveFromUrl,
+      deleteMediaFile,
+      readMediaFile,
     },
     methods: [
       { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
       { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
+      { name: 'deleteMediaFile', displayName: 'Delete Media File', category: 'Media Storage' },
+      { name: 'readMediaFile', displayName: 'Read Media File', category: 'Media Storage' },
     ],
   })
 
@@ -166,6 +222,23 @@ async function initializeServices() {
     instance: queueProcessor,
     methods: [
       { name: 'processImageQueueWithCapacity', displayName: 'Process Image Queue', category: 'Queue Processing' },
+      { name: 'processQueue', displayName: 'Process Queue', category: 'Queue Processing' },
+      { name: 'getQueueStats', displayName: 'Get Queue Stats', category: 'Queue Processing' },
+      { name: 'retryFailedTasks', displayName: 'Retry Failed Tasks', category: 'Queue Processing' },
+    ],
+  })
+
+  serviceRegistry.register({
+    serviceName: 'utils',
+    instance: {
+      toCSV,
+      generateMediaToken,
+      verifyMediaToken,
+    },
+    methods: [
+      { name: 'toCSV', displayName: 'Convert to CSV', category: 'Utils' },
+      { name: 'generateMediaToken', displayName: 'Generate Media Token', category: 'Utils' },
+      { name: 'verifyMediaToken', displayName: 'Verify Media Token', category: 'Utils' },
     ],
   })
 
