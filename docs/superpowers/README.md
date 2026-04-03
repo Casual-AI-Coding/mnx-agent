@@ -13,14 +13,14 @@ docs/superpowers/
 │   └── 2026-04-03-workflow-examples-spec.md
 │
 ├── plans/                      # 实现计划（定义"怎么做"）
-│   ├── workflow-system-redesign.md         # 总计划
+│   ├── 2026-04-03-workflow-system-redesign.md         # 总计划
 │   ├── 2026-04-03-workflow-refactoring-fixes.md
-│   ├── 01-database-redesign.md             # SP-1 子计划
-│   ├── 02-service-node-registry.md         # SP-2 子计划
-│   ├── 03-permission-management.md         # SP-3 子计划
-│   ├── 04-workflow-engine-refactor.md      # SP-4 子计划
-│   ├── 05-frontend-refactor.md             # SP-5 子计划
-│   └── 06-cron-scheduler-adaptation.md     # SP-6 子计划
+│   ├── 2026-04-03-01-database-redesign.md             # SP-1 子计划
+│   ├── 2026-04-03-02-service-node-registry.md         # SP-2 子计划
+│   ├── 2026-04-03-03-permission-management.md         # SP-3 子计划
+│   ├── 2026-04-03-04-workflow-engine-refactor.md      # SP-4 子计划
+│   ├── 2026-04-03-05-frontend-refactor.md             # SP-5 子计划
+│   └── 2026-04-03-06-cron-scheduler-adaptation.md     # SP-6 子计划
 │
 └── archive/                    # 已完成版本归档（仅 plans）
     ├── v1.0/                   # v1.0.0 - v1.0.2 (2026-03-31 ~ 2026-04-01)
@@ -58,8 +58,8 @@ docs/superpowers/
 **用途**: 定义具体实现步骤、任务分解、执行方案
 
 **命名规范**:
-- 总计划: `主题.md` 或 `YYYY-MM-DD-主题.md`
-- 子计划: `序号-子主题.md`
+- 总计划: `YYYY-MM-DD-主题.md`
+- 子计划: `YYYY-MM-DD-序号-子主题.md`
 
 **内容特点**:
 - 描述"怎么做"（How）
@@ -68,8 +68,8 @@ docs/superpowers/
 - 完成后归档到对应版本目录
 
 **示例**:
-- `workflow-system-redesign.md` - 工作流重构总计划
-- `01-database-redesign.md` - 数据库重构子计划（SP-1）
+- `2026-04-03-workflow-system-redesign.md` - 工作流重构总计划
+- `2026-04-03-01-database-redesign.md` - 数据库重构子计划（SP-1）
 
 ### archive/ - 版本归档（仅 plans）
 
@@ -110,8 +110,8 @@ docs/superpowers/
 - `workflow-examples-spec.md` - 配置示例
 
 **实现计划**:
-- `workflow-system-redesign.md` - 总计划
-- `01~06-*.md` - 6 个子计划（SP-1 到 SP-6）
+- `2026-04-03-workflow-system-redesign.md` - 总计划
+- `2026-04-03-01~06-*.md` - 6 个子计划（SP-1 到 SP-6）
 - `2026-04-03-workflow-refactoring-fixes.md` - 重构修复计划
 
 ## 文档维护
@@ -120,7 +120,7 @@ docs/superpowers/
 
 1. **规格文档**: 放在 `specs/`，命名 `YYYY-MM-DD-主题-spec.md`
 2. **实现计划**: 放在 `plans/`，命名 `YYYY-MM-DD-主题.md`
-3. **子计划**: 放在 `plans/`，命名 `序号-子主题.md`
+3. **子计划**: 放在 `plans/`，命名 `YYYY-MM-DD-序号-子主题.md`
 
 ### 版本发布后
 
