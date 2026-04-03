@@ -1,5 +1,6 @@
 import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodeRegistry } from './service-node-registry.js'
+import { WorkflowNodeType } from '../types/workflow.js'
 
 export interface TaskResult {
   success: boolean
@@ -14,8 +15,6 @@ export interface WorkflowResult {
   totalDurationMs: number
   error?: string
 }
-
-type WorkflowNodeType = 'action' | 'condition' | 'loop' | 'transform'
 
 export interface WorkflowNode {
   id: string
