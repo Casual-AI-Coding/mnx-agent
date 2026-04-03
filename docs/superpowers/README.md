@@ -22,21 +22,17 @@ docs/superpowers/
 │   ├── 05-frontend-refactor.md             # SP-5 子计划
 │   └── 06-cron-scheduler-adaptation.md     # SP-6 子计划
 │
-└── archive/                    # 已完成版本归档
+└── archive/                    # 已完成版本归档（仅 plans）
     ├── v1.0/                   # v1.0.0 - v1.0.2 (2026-03-31 ~ 2026-04-01)
     │   ├── 2026-03-31-minimax-comprehensive-fix.md
     │   ├── 2026-04-01-code-review-fixes.md
-    │   ├── 2026-04-01-feature-enhancements.md
-    │   └── specs/
-    │       └── 2026-03-30-database-transactions.md
+    │   └── 2026-04-01-feature-enhancements.md
     │
     ├── v1.1/                   # v1.1.0 - v1.1.5 (2026-04-01 ~ 2026-04-02)
-    │   └── specs/
-    │       └── 2026-04-01-authentication-system-design.md
+    │   └── 2026-04-01-authentication-system-design.md (spec, kept in root)
     │
     └── v1.2/                   # v1.2.0 (2026-04-02)
-        └── specs/
-            └── 2026-04-02-theme-system-design.md
+        └── 2026-04-02-theme-system-design.md (spec, kept in root)
 ```
 
 ## 文档分类
@@ -75,29 +71,27 @@ docs/superpowers/
 - `workflow-system-redesign.md` - 工作流重构总计划
 - `01-database-redesign.md` - 数据库重构子计划（SP-1）
 
-### archive/ - 版本归档
+### archive/ - 版本归档（仅 plans）
 
-**用途**: 存储已完成版本的规格和计划文档
+**用途**: 存储已完成版本的实现计划文档
 
 **命名规范**: `v{MAJOR}.{MINOR}/`
 
 **归档时机**:
 - 版本发布后（如 v1.3.0 发布）
-- 计划全部完成并验证通过
-- 不再需要频繁修改的文档
+- Plans 全部完成并验证通过
+- 不再需要频繁修改的计划文档
 
-**示例**:
-- `archive/v1.0/` - v1.0.x 版本的所有计划和规格
-- `archive/v1.1/specs/` - v1.1.x 版本的规格文档
+**注意**: Specs 不归档，始终保留在 `specs/` 目录
 
 ## 版本历史
 
-| 版本 | 日期 | 主要特性 | 文档位置 |
-|------|------|----------|----------|
-| v1.3.0 | 2026-04-03 | Workflow System Refactoring | 当前版本（specs/, plans/） |
-| v1.2.0 | 2026-04-02 | Theme System | archive/v1.2/ |
-| v1.1.0-v1.1.5 | 2026-04-01~02 | Authentication & RBAC | archive/v1.1/ |
-| v1.0.0-v1.0.2 | 2026-03-31~04-01 | Initial Release | archive/v1.0/ |
+| 版本 | 日期 | 主要特性 | Plans 归档 | Specs 归档 |
+|------|------|----------|------------|------------|
+| v1.3.0 | 2026-04-03 | Workflow System Refactoring | plans/ | specs/ |
+| v1.2.0 | 2026-04-02 | Theme System | archive/v1.2/ | specs/ (不归档) |
+| v1.1.0-v1.1.5 | 2026-04-01~02 | Authentication & RBAC | archive/v1.1/ | specs/ (不归档) |
+| v1.0.0-v1.0.2 | 2026-03-31~04-01 | Initial Release | archive/v1.0/ | specs/ (不归档) |
 
 ## 当前版本 (v1.3.0)
 
@@ -139,3 +133,4 @@ docs/superpowers/
 - 空目录及时删除
 - 重复内容合并或删除
 - 临时文件（如验证报告）可删除或移动到项目根目录
+- Specs 不归档，始终保留在 `specs/` 目录
