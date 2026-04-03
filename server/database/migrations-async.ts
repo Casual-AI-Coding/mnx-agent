@@ -266,6 +266,76 @@ CREATE INDEX IF NOT EXISTS idx_workflow_templates_name ON workflow_templates(nam
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS error_message TEXT;
     `,
   },
+  {
+    id: 12,
+    name: 'migration_012_workflow_system_tables',
+    sql: `
+-- workflow_templates table already exists from migration_001, just add missing columns
+ALTER TABLE workflow_templates ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+ALTER TABLE workflow_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- Create new tables that don't exist yet
+CREATE TABLE IF NOT EXISTS workflow_permissions (
+  id VARCHAR(36) PRIMARY KEY,
+  workflow_id VARCHAR(36) NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  granted_by VARCHAR(36) REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(workflow_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS service_node_permissions (
+  id VARCHAR(36) PRIMARY KEY,
+  service_name VARCHAR(100) NOT NULL,
+  method_name VARCHAR(100) NOT NULL,
+  display_name VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  min_role VARCHAR(20) NOT NULL DEFAULT 'pro',
+  is_enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(service_name, method_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_permissions_workflow ON workflow_permissions(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_permissions_user ON workflow_permissions(user_id);
+CREATE INDEX IF NOT EXISTS idx_service_node_permissions_category ON service_node_permissions(category);
+CREATE INDEX IF NOT EXISTS idx_service_node_permissions_service ON service_node_permissions(service_name);
+
+INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled) VALUES
+  ('snp-001', 'minimaxClient', 'chatCompletion', 'Text Generation', 'MiniMax API', 'pro', true),
+  ('snp-002', 'minimaxClient', 'imageGeneration', 'Image Generation', 'MiniMax API', 'pro', true),
+  ('snp-003', 'minimaxClient', 'videoGeneration', 'Video Generation', 'MiniMax API', 'pro', true),
+  ('snp-004', 'minimaxClient', 'textToAudioSync', 'Voice Sync', 'MiniMax API', 'pro', true),
+  ('snp-005', 'minimaxClient', 'textToAudioAsync', 'Voice Async', 'MiniMax API', 'pro', true),
+  ('snp-006', 'minimaxClient', 'musicGeneration', 'Music Generation', 'MiniMax API', 'pro', true),
+  
+  ('snp-010', 'db', 'getPendingTasks', 'Get Pending Tasks', 'Database', 'admin', true),
+  ('snp-011', 'db', 'createMediaRecord', 'Create Media Record', 'Database', 'admin', true),
+  ('snp-012', 'db', 'updateTask', 'Update Task', 'Database', 'admin', true),
+  ('snp-013', 'db', 'getTaskById', 'Get Task By ID', 'Database', 'admin', true),
+  
+  ('snp-020', 'capacityChecker', 'getRemainingCapacity', 'Get Remaining Capacity', 'Capacity', 'pro', true),
+  ('snp-021', 'capacityChecker', 'hasCapacity', 'Check Has Capacity', 'Capacity', 'pro', true),
+  ('snp-022', 'capacityChecker', 'getSafeExecutionLimit', 'Get Safe Execution Limit', 'Capacity', 'pro', true),
+  
+  ('snp-030', 'mediaStorage', 'saveMediaFile', 'Save Media File', 'Media Storage', 'pro', true),
+  ('snp-031', 'mediaStorage', 'saveFromUrl', 'Save From URL', 'Media Storage', 'pro', true),
+  
+  ('snp-040', 'queueProcessor', 'processImageQueueWithCapacity', 'Process Image Queue', 'Queue Processing', 'admin', true)
+ON CONFLICT (service_name, method_name) DO NOTHING;
+
+INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, owner_id, is_public, created_at, updated_at) VALUES
+  ('wf-001', 'Image Quota Consumer', 'Process pending image generation tasks based on remaining API capacity. Runs at 23:30 daily.',
+    '[{"id":"action-1","type":"action","data":{"label":"Process Image Queue","config":{"service":"queueProcessor","method":"processImageQueueWithCapacity","args":[]}},"position":{"x":100,"y":100}}]',
+    '[]',
+    null,
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO NOTHING;
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
