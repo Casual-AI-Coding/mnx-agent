@@ -172,9 +172,16 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
     return
   }
 
-  scheduler.executeJobTick(job)
-
-  res.json({ success: true, data: { message: 'Job triggered' } })
+  try {
+    await scheduler.executeJobTick(job)
+    res.json({ success: true, data: { message: 'Job triggered successfully' } })
+  } catch (error) {
+    console.error('Manual trigger failed:', error)
+    res.status(500).json({
+      success: false,
+      error: `Failed to execute job: ${(error as Error).message}`
+    })
+  }
 }))
 
 router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
