@@ -99,7 +99,7 @@ function ShortcutsHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   )
 }
 
-export function ShortcutsHelpButton() {
+export function ShortcutsHelpButton({ collapsed }: { collapsed?: boolean }) {
   const [isOpen, setIsOpen] = useState(false)
 
   const openHelp = useCallback(() => setIsOpen(true), [])
@@ -125,7 +125,7 @@ export function ShortcutsHelpButton() {
         className="p-1.5 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors"
         title="快捷键帮助 (Ctrl+/)"
       >
-        <Keyboard className="w-4 h-4" />
+        <Keyboard className={collapsed ? 'w-4 h-4' : 'w-4 h-4'} />
       </button>
       <ShortcutsHelpModal isOpen={isOpen} onClose={closeHelp} />
     </>

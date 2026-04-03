@@ -7,6 +7,7 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import HistoryPanel from './HistoryPanel'
 import { useAppStore } from '@/stores/app'
+import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
   const { t, i18n } = useTranslation()
@@ -14,6 +15,7 @@ export default function AppLayout() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   const handleOpenKeyModal = () => {
     setTempKey(apiKey)
@@ -23,8 +25,11 @@ export default function AppLayout() {
   return (
     <div className="h-screen bg-background overflow-hidden">
       <Header onHistoryClick={() => setIsHistoryOpen(true)} onShowKeyModal={handleOpenKeyModal} />
-      <Sidebar />
-      <main className="ml-[260px] mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar">
+      <Sidebar onCollapseChange={setIsSidebarCollapsed} />
+      <main className={cn(
+        'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200',
+        isSidebarCollapsed ? 'ml-[60px]' : 'ml-[220px]'
+      )}>
         <div className="p-8">
           <Outlet />
         </div>
