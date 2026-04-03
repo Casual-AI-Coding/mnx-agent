@@ -2,6 +2,72 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-04-03
+
+### Added
+- **Workflow System Refactoring** - Unified action node architecture
+  - Replace 9 separate node types (TextGenNode, ImageGenNode, VoiceSyncNode, etc.) with single ActionNode
+  - ActionConfigPanel component with dynamic service/method selection
+  - Service Node Registry singleton for service discovery
+  - SaveWorkflowModal for improved workflow saving UX
+  - Better error messages for invalid JSON in workflows
+
+- **Management Pages** - New admin functionality
+  - ServiceNodeManagement page (super role only) - Manage node permissions
+  - WorkflowTemplateManagement page (pro+ role) - Manage workflow templates
+  - UserManagement page with filter/sort (role filter, status filter, multi-column sorting)
+  - InvitationCodes page with filter/sort (status filter, created/expires/usage sorting)
+
+- **UI/UX Redesign** - Major visual improvements
+  - Header redesign: Icon-only controls with tooltips, floating history button (bottom-right)
+  - Collapsible sidebar: Toggle between expanded (220px) and collapsed (60px icon-only) modes
+  - Premium filter bars with animated filter chips and smooth transitions
+  - API Key modal: Centered in entire page viewport
+  - Custom scrollbar styles applied globally
+
+### Fixed
+- **Layout Stability** - Prevent layout shift from scrollbar behavior
+  - Add `scrollbar-gutter: stable` to html element globally
+  - Add `overflow-y: scroll` to main content area
+  - Remove `overflow-x-auto` from table containers to prevent horizontal scrollbar flickering
+  - Fix search input width changing by using fixed `w-[280px]` instead of `flex-1`
+  - Filter chips now inline in filter bar instead of separate row
+
+- **Theme Compatibility** - Dark theme text color fixes
+  - Add `text-foreground` to Label, Input, Select components
+  - Replace hardcoded dark colors (`text-dark-*`, `bg-dark-*`) with theme tokens
+  - Reduce hover glow intensity on node cards
+
+- **History Panel** - Button now directly opens panel
+  - Remove intermediate dropdown menu
+  - Fix z-index issues (HistoryPanel z-40 > Header dropdown z-30)
+
+- **Workflow Engine** - Validation and error handling
+  - Validate pagination parameters
+  - Add workflow_id validation when creating cron job
+  - Replace blocking prompt() with modal dialog
+
+### Security
+- **XSS Prevention** - Sanitize mapFunction input in workflow engine
+- **Input Validation** - Add validation for workflow pagination and cron workflow_id
+
+### Changed
+- **Sidebar** - Reduced width from 260px to 220px, add collapse/expand toggle
+- **Workflow Nodes** - Consolidate 9 node types into unified ActionNode
+- **Filter Chips** - Moved from separate row to inline in filter bar
+- **Sort Controls** - Moved to rightmost position in filter bar
+- **Planning Docs** - Reorganized into `docs/planning/` directory structure
+
+### Database
+- `migration_012` - Use ALTER TABLE for existing workflow_templates table
+- `migration_013` - Change cron_jobs to use workflow_id foreign key
+
+### Documentation
+- Add `docs/database-transactions.md` - Transaction requirements documentation
+- Add `docs/service-registry.md` - Singleton pattern documentation
+- Add `docs/planning/drafts/` - Refactoring planning documents
+- Add `docs/planning/archive/` - Archived planning documents
+
 ## [1.2.0] - 2026-04-02
 
 ### Added
