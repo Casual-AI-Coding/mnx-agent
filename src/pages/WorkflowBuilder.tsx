@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ReactFlow,
   Controls,
@@ -635,6 +636,7 @@ function ConfigPanel({
 
 // Main Workflow Builder Component
 function WorkflowBuilderInner() {
+  const [searchParams] = useSearchParams()
   const { setViewport, screenToFlowPosition } = useReactFlow()
   const store = useWorkflowStore()
 
@@ -645,10 +647,46 @@ function WorkflowBuilderInner() {
   const [showConfigPanel, setShowConfigPanel] = React.useState(false)
   const [validationResult, setValidationResult] = React.useState<{ valid: boolean; message: string } | null>(null)
 
+  // Load workflow by ID from URL query parameter
+  React.useEffect(() => {
+    const workflowId = searchParams.get('id')
+    if (workflowId) {
+      const loadWorkflow = async () => {
+        try {
+          const response = await fetch(`/api/workflows/${workflowId}`)
+          if (!response.ok) throw new Error('Failed to fetch workflow')
+          
+          const data = await response.json()
+          const workflow = data.data
+          
+          if (workflow) {
+            const nodesData = typeof workflow.nodes_json === 'string' 
+              ? JSON.parse(workflow.nodes_json) 
+              : workflow.nodes_json
+            const edgesData = typeof workflow.edges_json === 'string' 
+              ? JSON.parse(workflow.edges_json) 
+              : workflow.edges_json
+            
+            setNodes(nodesData.map(storeNodeToRFNode))
+            setEdges(edgesData as Edge[])
+            store.reset()
+            nodesData.forEach((n: WorkflowNode) => store.addNode(n))
+            edgesData.forEach((e: WorkflowEdge) => store.addEdge(e))
+          }
+        } catch (err) {
+          console.error('Failed to load workflow:', err)
+        }
+      }
+      loadWorkflow()
+    }
+  }, [searchParams])
+
   // Initialize from store
   React.useEffect(() => {
-    setNodes(store.nodes.map(storeNodeToRFNode))
-    setEdges(store.edges as Edge[])
+    if (!searchParams.get('id')) {
+      setNodes(store.nodes.map(storeNodeToRFNode))
+      setEdges(store.edges as Edge[])
+    }
   }, [])
 
   // Sync nodes to store when they change

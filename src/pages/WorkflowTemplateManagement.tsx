@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,12 +14,14 @@ import {
   Trash2,
   Calendar,
   Layers,
+  Edit,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
+import { WorkflowPreviewWrapper } from '@/components/workflow/WorkflowPreview'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -64,6 +67,7 @@ function getNodeCount(nodesJson: string): number {
 
 export default function WorkflowTemplateManagement() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -365,56 +369,50 @@ export default function WorkflowTemplateManagement() {
         open={viewDialog.open}
         onClose={() => setViewDialog({ open: false, workflow: null })}
         title={viewDialog.workflow?.name || '流程详情'}
+        size="lg"
       >
         <div className="py-4 space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">描述</h4>
-            <p className="text-sm">{viewDialog.workflow?.description || '暂无描述'}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">节点数量</h4>
-              <p className="text-sm font-medium">{getNodeCount(viewDialog.workflow?.nodes_json || '[]')}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">描述</h4>
+              <p className="text-sm">{viewDialog.workflow?.description || '暂无描述'}</p>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground/70 mb-1">可见性</h4>
+            <div className="flex items-center gap-2">
               <Badge variant={viewDialog.workflow?.is_public ? 'default' : 'secondary'}>
                 {viewDialog.workflow?.is_public ? '公开' : '私有'}
               </Badge>
+              <Badge variant="outline">
+                {getNodeCount(viewDialog.workflow?.nodes_json || '[]')} 节点
+              </Badge>
             </div>
           </div>
+          
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground/70 mb-2">节点列表</h4>
-            <div className="bg-muted/30 rounded-lg p-3 max-h-60 overflow-y-auto">
-              {(() => {
-                try {
-                  const nodesRaw = viewDialog.workflow?.nodes_json || '[]'
-                  const nodes = typeof nodesRaw === 'string' ? JSON.parse(nodesRaw) : nodesRaw
-                  if (!Array.isArray(nodes) || nodes.length === 0) {
-                    return <p className="text-sm text-muted-foreground/50">暂无节点</p>
-                  }
-                  return (
-                    <div className="space-y-2">
-                      {nodes.map((node: { id: string; type?: string; data?: { label?: string } }, idx: number) => (
-                        <div key={node.id || idx} className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-xs">
-                            {node.type || 'node'}
-                          </Badge>
-                          <span className="truncate">
-                            {node.data?.label || node.id}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                } catch {
-                  return <p className="text-sm text-muted-foreground/50">无法解析节点数据</p>
-                }
-              })()}
+            <h4 className="text-sm font-medium text-muted-foreground/70 mb-2">流程预览</h4>
+            <div className="border border-border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+              <WorkflowPreviewWrapper
+                nodesJson={viewDialog.workflow?.nodes_json || '[]'}
+                edgesJson={viewDialog.workflow?.edges_json || '[]'}
+              />
             </div>
           </div>
-          <div className="text-xs text-muted-foreground/50">
-            创建于: {formatDate(viewDialog.workflow?.created_at || null)}
+          
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground/50">
+              创建于: {formatDate(viewDialog.workflow?.created_at || null)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (viewDialog.workflow) {
+                  navigate(`/workflow-builder?id=${viewDialog.workflow.id}`)
+                }
+              }}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              在编排器中编辑
+            </Button>
           </div>
         </div>
       </Dialog>
