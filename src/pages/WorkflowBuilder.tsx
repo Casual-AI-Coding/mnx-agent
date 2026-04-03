@@ -259,7 +259,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
   const [availableActions, setAvailableActions] = React.useState<GroupedActionNodes>({})
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set())
+  const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     apiClient.get<{ success: boolean; data: GroupedActionNodes }>('/workflows/available-actions')
@@ -280,15 +280,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
   }, [])
 
   const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev)
-      if (next.has(category)) {
-        next.delete(category)
-      } else {
-        next.add(category)
-      }
-      return next
-    })
+    setExpandedCategory(prev => prev === category ? null : category)
   }
 
   const categoryIcons: Record<string, React.ElementType> = {
@@ -354,7 +346,7 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
               <div className="space-y-1">
                 {Object.entries(availableActions).map(([category, actions]) => {
                   const Icon = categoryIcons[category] || categoryIcons.default
-                  const isExpanded = expandedCategories.has(category)
+                  const isExpanded = expandedCategory === category
                   return (
                     <div key={category} className="border border-border/50 rounded-md overflow-hidden">
                       <button
@@ -362,12 +354,12 @@ function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, no
                         className="w-full flex items-center gap-2 p-2 bg-muted/20 hover:bg-muted/40 transition-colors"
                       >
                         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="flex-1 text-left text-sm font-medium truncate">{category}</span>
+                        <span className="flex-1 text-left text-sm font-medium text-foreground truncate">{category}</span>
                         <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground/50 transition-transform', isExpanded && 'rotate-180')} />
                         <span className="text-[10px] text-muted-foreground/50">{actions.length}</span>
                       </button>
                       {isExpanded && (
-                        <div className="max-h-48 overflow-y-auto border-t border-border/30 bg-background/50">
+                        <div className="border-t border-border/30 bg-background/50">
                           {actions.map((action) => (
                             <div
                               key={`${action.service}.${action.method}`}
