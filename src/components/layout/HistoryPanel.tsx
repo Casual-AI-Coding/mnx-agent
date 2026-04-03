@@ -40,7 +40,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
     <div
       className={cn(
         'fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[360px]',
-        'bg-card border-l border-border z-30',
+        'bg-card border-l border-border z-40',
         'transition-transform duration-300 ease-in-out',
         'flex flex-col',
         isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -76,6 +76,10 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
           <div className="p-2 space-y-1">
             {items.map((item) => {
               const config = typeConfig[item.type]
+              if (!config) {
+                console.warn('[HistoryPanel] Unknown item type:', item.type, item)
+                return null
+              }
               const Icon = config.icon
 
               return (

@@ -1,4 +1,4 @@
-import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check, Sparkles } from 'lucide-react'
+import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +19,6 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
-  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -276,65 +275,22 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
 
       {}
       {onHistoryClick && (
-        <motion.div
+        <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 right-6 z-40"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onHistoryClick}
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-11 h-11 bg-card/90 backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-primary/20 hover:border-primary/30 transition-all group"
         >
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
-            className="relative flex items-center justify-center w-11 h-11 bg-card/90 backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-primary/20 hover:border-primary/30 transition-all group"
-          >
-            <History className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/10"
-              initial={{ scale: 0.8, opacity: 0 }}
-              whileHover={{ scale: 1.2, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-          </motion.button>
-
-          <AnimatePresence>
-            {showHistoryDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="absolute bottom-full right-0 mb-3 w-64 bg-card/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl py-3"
-              >
-                <div className="px-4 pb-2 border-b border-border/50 mb-2">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <History className="w-4 h-4 text-primary" />
-                    {t('common.history')}
-                  </h3>
-                </div>
-                <div className="px-2">
-                  <button
-                    onClick={() => {
-                      onHistoryClick()
-                      setShowHistoryDropdown(false)
-                    }}
-                    className="w-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors flex items-center gap-3"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    查看历史记录
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {}
-          {showHistoryDropdown && (
-            <div
-              className="fixed inset-0 z-30"
-              onClick={() => setShowHistoryDropdown(false)}
-            />
-          )}
-        </motion.div>
+          <History className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+          <motion.div
+            className="absolute inset-0 rounded-full bg-primary/10"
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileHover={{ scale: 1.2, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          />
+        </motion.button>
       )}
     </>
   )
