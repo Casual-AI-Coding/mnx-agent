@@ -84,7 +84,7 @@ export default function WorkflowTemplateManagement() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.get<{ success: boolean; data: { workflows: WorkflowTemplate[] }; error?: string }>('/workflows?limit=100')
+      const data = await apiClient.get<{ success: boolean; data: { workflows: WorkflowTemplate[] }; error?: string }>('/workflows?page=1&limit=100')
       if (data.success) {
         setWorkflows(data.data.workflows)
       } else {

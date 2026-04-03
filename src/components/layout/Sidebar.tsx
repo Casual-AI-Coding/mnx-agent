@@ -27,6 +27,7 @@ import {
   Cog,
   Lock,
   Github,
+  Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -141,8 +142,9 @@ export default function Sidebar() {
       icon: Cog,
       minRole: 'pro' as UserRole,
       items: [
-        { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
         { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+        { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
+        { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
       ],
     },
     {
@@ -154,7 +156,6 @@ export default function Sidebar() {
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
         { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Shield },
-        { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: GitBranch },
       ],
     },
   ]

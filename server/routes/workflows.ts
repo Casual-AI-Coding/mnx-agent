@@ -38,21 +38,8 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
 
 router.get('/', asyncHandler(async (req, res) => {
   const { is_public, page, limit } = req.query
-  const pageNum = Number(page)
-  const limitNum = Number(limit)
-
-  if (pageNum < 1) {
-    res.status(400).json({ success: false, error: 'page must be a positive integer' })
-    return
-  }
-  if (limitNum < 1) {
-    res.status(400).json({ success: false, error: 'limit must be a positive integer' })
-    return
-  }
-  if (limitNum > 100) {
-    res.status(400).json({ success: false, error: 'limit must not exceed 100' })
-    return
-  }
+  const pageNum = Math.max(1, parseInt(String(page)) || 1)
+  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit)) || 20))
 
   const offset = (pageNum - 1) * limitNum
   const ownerId = buildOwnerFilter(req).params[0]
