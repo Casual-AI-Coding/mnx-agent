@@ -444,64 +444,53 @@ export default function InvitationCodes() {
 
                 <div className="flex-1" />
 
+                {hasActiveFilters && (
+                  <>
+                    <div className="h-8 w-px bg-border/60" />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <AnimatePresence mode="popLayout">
+                        {filterChips.map((chip, index) => (
+                          <motion.div
+                            key={chip.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.15, delay: index * 0.03 }}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
+                              chip.type === 'search' && 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+                              chip.type === 'status' && statusFilter === 'active' && 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+                              chip.type === 'status' && statusFilter === 'used' && 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+                              chip.type === 'status' && statusFilter === 'expired' && 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+                              chip.type === 'status' && statusFilter === 'inactive' && 'bg-destructive/10 text-destructive border-destructive/20'
+                            )}
+                            onClick={() => removeFilterChip(chip)}
+                          >
+                            {chip.label}
+                            <X className="w-3 h-3" />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={clearAllFilters}
+                      className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-destructive transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      清除
+                    </motion.button>
+                  </>
+                )}
+
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground/70">结果</span>
                   <span className="font-semibold text-foreground">{filteredAndSortedCodes.length}</span>
                   <span className="text-muted-foreground/50">/ {codes.length}</span>
                 </div>
               </div>
-
-              <AnimatePresence mode="wait">
-                {hasActiveFilters && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                  >
-                    <div className="pt-3 border-t border-border/30">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">活动筛选</span>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <AnimatePresence mode="popLayout">
-                            {filterChips.map((chip, index) => (
-                              <motion.div
-                                key={chip.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                                transition={{ duration: 0.2, delay: index * 0.05 }}
-                                className={cn(
-                                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
-                                  chip.type === 'search' && 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-                                  chip.type === 'status' && statusFilter === 'active' && 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-                                  chip.type === 'status' && statusFilter === 'used' && 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-                                  chip.type === 'status' && statusFilter === 'expired' && 'bg-slate-500/10 text-slate-600 border-slate-500/20',
-                                  chip.type === 'status' && statusFilter === 'inactive' && 'bg-destructive/10 text-destructive border-destructive/20'
-                                )}
-                                onClick={() => removeFilterChip(chip)}
-                              >
-                                {chip.label}
-                                <X className="w-3 h-3" />
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                        </div>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={clearAllFilters}
-                          className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-destructive transition-colors ml-auto"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                          清除全部
-                        </motion.button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </div>
 
