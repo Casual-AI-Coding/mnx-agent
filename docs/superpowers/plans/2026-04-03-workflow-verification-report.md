@@ -161,6 +161,31 @@ Duration    772ms
 | wf-b-001 | condition + action | ⚠️ Blocked | CapacityChecker requires valid API key |
 | wf-b-002 | loop + action | ✅ Completed | tasks_executed: 2, succeeded: 2 |
 
+### 真实 API 验证 (Session 3) ✅
+
+**配置修复**:
+- ✅ 移除重复的 MINIMAX_API_KEY
+- ✅ 设置 MINIMAX_REGION=domestic
+- ✅ 添加 image-01 模型参数
+
+**测试结果**:
+
+| Workflow | API调用 | 状态 | 时长 |
+|----------|---------|------|------|
+| wf-example-003 | MiniMax Image Generation | ✅ 成功 | 16.2秒 |
+| wf-example-003 | Database Save | ✅ 成功 | 9ms |
+
+**生成的图片**:
+```
+https://hailuo-image-algeng-data.oss-cn-wulanchabu.aliyuncs.com/...
+```
+
+**验证通过**:
+- ✅ MiniMax API 认证正常 (domestic endpoint)
+- ✅ 图片生成成功 (image-01 model)
+- ✅ 跨服务调用链路完整 (API → DB)
+- ✅ 模板变量替换正确 `{{image-node.output.data.image_urls[0]}}`
+
 ### 发现并修复的问题
 
 | Issue | Status | Fix |
