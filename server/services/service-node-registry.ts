@@ -78,8 +78,29 @@ export class ServiceNodeRegistry {
   }
 }
 
+/**
+ * Global singleton instance of ServiceNodeRegistry
+ *
+ * WARNING: This singleton pattern has trade-offs:
+ * - Pros: Single source of truth, easy access throughout codebase
+ * - Cons: Harder to test, global state can cause unexpected behavior
+ *
+ * The resetServiceNodeRegistry() function exists for testing purposes only.
+ * DO NOT call it in production code.
+ */
 let registryInstance: ServiceNodeRegistry | null = null
 
+/**
+ * Get the singleton ServiceNodeRegistry instance
+ *
+ * @param db - Database service instance
+ * @returns The ServiceNodeRegistry singleton
+ *
+ * @example
+ * const db = await getDatabase()
+ * const registry = getServiceNodeRegistry(db)
+ * const nodes = await registry.getAvailableNodes('pro')
+ */
 export function getServiceNodeRegistry(db: DatabaseService): ServiceNodeRegistry {
   if (!registryInstance) {
     registryInstance = new ServiceNodeRegistry(db)
@@ -87,6 +108,17 @@ export function getServiceNodeRegistry(db: DatabaseService): ServiceNodeRegistry
   return registryInstance
 }
 
+/**
+ * Reset the singleton instance (FOR TESTING ONLY)
+ *
+ * This function should only be used in test teardown to ensure
+ * a fresh instance for each test.
+ *
+ * @example
+ * afterEach(() => {
+ *   resetServiceNodeRegistry()
+ * })
+ */
 export function resetServiceNodeRegistry(): void {
   registryInstance = null
 }
