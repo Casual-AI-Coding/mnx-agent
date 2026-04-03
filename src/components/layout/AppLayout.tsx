@@ -11,7 +11,7 @@ export default function AppLayout() {
     <div className="h-screen bg-background overflow-hidden">
       <Header onHistoryClick={() => setIsHistoryOpen(true)} />
       <Sidebar />
-      <main className="ml-[260px] mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-auto">
+      <main className="ml-[260px] mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-auto custom-scrollbar">
         <div className="p-8">
           <Outlet />
         </div>
