@@ -16,10 +16,12 @@ import {
   XCircle,
   Mail,
   Clock,
-  Filter,
-  ArrowUpDown,
-  ChevronUp,
   ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  ArrowUpDown,
+  X,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -54,30 +56,35 @@ const ROLE_CONFIG: Record<UserRole, {
   icon: React.ReactNode; 
   gradient: string;
   bgClass: string;
+  color: string;
 }> = {
   super: { 
     label: 'Super', 
     icon: <Crown className="w-3 h-3" />, 
     gradient: 'from-amber-500 to-orange-500',
     bgClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    color: 'text-amber-500',
   },
   admin: { 
     label: 'Admin', 
     icon: <Shield className="w-3 h-3" />, 
     gradient: 'from-blue-500 to-cyan-500',
     bgClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    color: 'text-blue-500',
   },
   pro: { 
     label: 'Pro', 
     icon: <Star className="w-3 h-3" />, 
     gradient: 'from-purple-500 to-pink-500',
     bgClass: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    color: 'text-purple-500',
   },
   user: { 
     label: 'User', 
     icon: <UserIcon className="w-3 h-3" />, 
     gradient: 'from-emerald-500 to-teal-500',
     bgClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    color: 'text-emerald-500',
   },
 }
 
@@ -127,28 +134,11 @@ function RoleBadge({ role }: { role: UserRole }) {
   )
 }
 
-function SortButton({ field, currentField, order, onClick, children }: {
-  field: SortField
-  currentField: SortField
-  order: SortOrder
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  const isActive = currentField === field
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
-        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-      )}
-    >
-      {children}
-      {isActive && (
-        order === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-      )}
-    </button>
-  )
+interface FilterChip {
+  id: string;
+  type: 'search' | 'role' | 'status';
+  label: string;
+  value: string;
 }
 
 export default function UserManagement() {
@@ -231,6 +221,42 @@ export default function UserManagement() {
 
     return result
   }, [users, searchQuery, roleFilter, statusFilter, sortField, sortOrder])
+
+  const filterChips: FilterChip[] = useMemo(() => {
+    const chips: FilterChip[] = []
+    if (searchQuery) {
+      chips.push({ id: 'search', type: 'search', label: `搜索: "${searchQuery}"`, value: searchQuery })
+    }
+    if (roleFilter !== 'all') {
+      chips.push({ id: 'role', type: 'role', label: `角色: ${ROLE_CONFIG[roleFilter].label}`, value: roleFilter })
+    }
+    if (statusFilter !== 'all') {
+      chips.push({ id: 'status', type: 'status', label: `状态: ${statusFilter === 'active' ? '已启用' : '已禁用'}`, value: statusFilter })
+    }
+    return chips
+  }, [searchQuery, roleFilter, statusFilter])
+
+  const hasActiveFilters = filterChips.length > 0
+
+  const removeFilterChip = (chip: FilterChip) => {
+    switch (chip.type) {
+      case 'search':
+        setSearchQuery('')
+        break
+      case 'role':
+        setRoleFilter('all')
+        break
+      case 'status':
+        setStatusFilter('all')
+        break
+    }
+  }
+
+  const clearAllFilters = () => {
+    setSearchQuery('')
+    setRoleFilter('all')
+    setStatusFilter('all')
+  }
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -384,62 +410,183 @@ export default function UserManagement() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="overflow-hidden border-border/50 shadow-xl shadow-black/5">
-          <div className="p-4 border-b border-border/50 bg-muted/20">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="搜索用户名或邮箱..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-card/50 border-border/50 focus:border-primary/50"
-                />
+        <Card className="overflow-hidden border border-border/50 shadow-xl shadow-black/5">
+          <div className="bg-gradient-to-r from-card via-card to-muted/20">
+            <div className="p-5 space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[240px] max-w-sm group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
+                  </div>
+                  <Input
+                    placeholder="搜索用户名或邮箱..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-10 h-10 bg-background/50 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                  {searchQuery && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      onClick={() => setSearchQuery('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground/60 hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </motion.button>
+                  )}
+                </div>
+
+                <div className="h-8 w-px bg-border/60" />
+
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-muted-foreground/70" />
+                  <span className="text-sm text-muted-foreground/70">筛选</span>
+                </div>
+
+                <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as UserRole | 'all')}>
+                  <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground/70 text-sm">角色</span>
+                      <span className={cn(
+                        'text-sm font-medium',
+                        roleFilter !== 'all' ? 'text-foreground' : 'text-muted-foreground/60'
+                      )}>
+                        {roleFilter === 'all' ? '全部' : ROLE_CONFIG[roleFilter].label}
+                      </span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                        全部角色
+                      </div>
+                    </SelectItem>
+                    {(['super', 'admin', 'pro', 'user'] as UserRole[]).map(role => (
+                      <SelectItem key={role} value={role}>
+                        <div className="flex items-center gap-2">
+                          <div className={cn('w-2 h-2 rounded-full', ROLE_CONFIG[role].color.replace('text-', 'bg-'))} />
+                          {ROLE_CONFIG[role].label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}>
+                  <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground/70 text-sm">状态</span>
+                      <span className={cn(
+                        'text-sm font-medium',
+                        statusFilter !== 'all' ? 'text-foreground' : 'text-muted-foreground/60'
+                      )}>
+                        {statusFilter === 'all' ? '全部' : statusFilter === 'active' ? '已启用' : '已禁用'}
+                      </span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                        全部状态
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        已启用
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-slate-400" />
+                        已禁用
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex-1" />
+
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground/70">结果</span>
+                  <span className="font-semibold text-foreground">{filteredAndSortedUsers.length}</span>
+                  <span className="text-muted-foreground/50">/ {users.length}</span>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-2 bg-card/50 rounded-lg border border-border/50">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as UserRole | 'all')}>
-                    <SelectTrigger className="w-28 h-8 border-0 bg-transparent text-sm">
-                      <SelectValue placeholder="角色" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部角色</SelectItem>
-                      <SelectItem value="super">Super</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="flex items-center gap-2 px-3 py-2 bg-card/50 rounded-lg border border-border/50">
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}>
-                    <SelectTrigger className="w-28 h-8 border-0 bg-transparent text-sm">
-                      <SelectValue placeholder="状态" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部状态</SelectItem>
-                      <SelectItem value="active">已启用</SelectItem>
-                      <SelectItem value="inactive">已禁用</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <AnimatePresence mode="wait">
+                {hasActiveFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <div className="pt-3 border-t border-border/30">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">活动筛选</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <AnimatePresence mode="popLayout">
+                            {filterChips.map((chip, index) => (
+                              <motion.div
+                                key={chip.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                                transition={{ duration: 0.2, delay: index * 0.05 }}
+                                className={cn(
+                                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
+                                  chip.type === 'search' && 'bg-primary/10 text-primary border-primary/20',
+                                  chip.type === 'role' && roleFilter !== 'all' && ROLE_CONFIG[roleFilter].bgClass,
+                                  chip.type === 'status' && (statusFilter === 'active' 
+                                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                    : 'bg-slate-500/10 text-slate-600 border-slate-500/20'
+                                  )
+                                )}
+                                onClick={() => removeFilterChip(chip)}
+                              >
+                                {chip.label}
+                                <X className="w-3 h-3" />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={clearAllFilters}
+                          className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-destructive transition-colors ml-auto"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          清除全部
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                <div className="h-8 w-px bg-border/50 mx-1" />
-
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground/70 mr-1">排序:</span>
-                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
-                    创建时间
-                  </SortButton>
-                  <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
-                    最后登录
-                  </SortButton>
-                  <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
-                    用户名
-                  </SortButton>
+              <div className="pt-3 border-t border-border/30">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
+                    <span className="text-sm text-muted-foreground/70">排序</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
+                      创建时间
+                    </SortButton>
+                    <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
+                      最后登录
+                    </SortButton>
+                    <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
+                      用户名
+                    </SortButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -493,14 +640,19 @@ export default function UserManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
-                  <AnimatePresence>
+                  <AnimatePresence mode="popLayout">
                     {filteredAndSortedUsers.map((user, index) => (
                       <motion.tr
                         key={user.id}
-                        initial={{ opacity: 0, y: 10 }}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ delay: index * 0.03 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ 
+                          duration: 0.3, 
+                          delay: index * 0.03,
+                          ease: [0.4, 0, 0.2, 1]
+                        }}
                         className="group hover:bg-muted/30"
                       >
                         <td className="py-3 px-4">
@@ -589,12 +741,26 @@ export default function UserManagement() {
               </table>
 
               {filteredAndSortedUsers.length === 0 && (
-                <div className="py-12 text-center">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="py-12 text-center"
+                >
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
                     <Search className="w-8 h-8 text-muted-foreground/40" />
                   </div>
-                  <p className="text-muted-foreground/60">未找到匹配的用户</p>
-                </div>
+                  <p className="text-muted-foreground/60 mb-2">未找到匹配的用户</p>
+                  {hasActiveFilters && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={clearAllFilters}
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      清除筛选条件
+                    </motion.button>
+                  )}
+                </motion.div>
               )}
             </div>
           )}
@@ -726,6 +892,40 @@ export default function UserManagement() {
   )
 }
 
+function SortButton({ field, currentField, order, onClick, children }: {
+  field: SortField
+  currentField: SortField
+  order: SortOrder
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  const isActive = currentField === field
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+        isActive 
+          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' 
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+      )}
+    >
+      {children}
+      {isActive && (
+        <motion.div
+          initial={{ rotate: 0 }}
+          animate={{ rotate: order === 'asc' ? 0 : 180 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </motion.div>
+      )}
+    </motion.button>
+  )
+}
+
 function StatCard({ title, value, icon: Icon, color }: {
   title: string
   value: number
@@ -734,7 +934,7 @@ function StatCard({ title, value, icon: Icon, color }: {
 }) {
   return (
     <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 400 }}>
-      <Card className="relative overflow-hidden border-border/50">
+      <Card className="relative overflow-hidden border border-border/50">
         <div className={cn('absolute inset-0 opacity-10 bg-gradient-to-br', color)} />
         <CardContent className="relative p-5">
           <div className="flex items-center gap-4">
