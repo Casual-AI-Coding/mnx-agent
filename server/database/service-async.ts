@@ -69,7 +69,20 @@ function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
 }
 
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
-  return { ...row, is_public: typeof row.is_public === 'boolean' ? row.is_public : row.is_public === 1 }
+  // Ensure JSONB fields are always strings for consistency
+  const nodes_json = typeof row.nodes_json === 'string' 
+    ? row.nodes_json 
+    : JSON.stringify(row.nodes_json)
+  const edges_json = typeof row.edges_json === 'string' 
+    ? row.edges_json 
+    : JSON.stringify(row.edges_json)
+  
+  return { 
+    ...row, 
+    nodes_json, 
+    edges_json, 
+    is_public: typeof row.is_public === 'boolean' ? row.is_public : row.is_public === 1 
+  }
 }
 
 function rowToMediaRecord(row: MediaRecordRow): MediaRecord {

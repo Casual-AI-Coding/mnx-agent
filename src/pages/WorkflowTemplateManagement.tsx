@@ -388,7 +388,8 @@ export default function WorkflowTemplateManagement() {
             <div className="bg-muted/30 rounded-lg p-3 max-h-60 overflow-y-auto">
               {(() => {
                 try {
-                  const nodes = JSON.parse(viewDialog.workflow?.nodes_json || '[]')
+                  const nodesRaw = viewDialog.workflow?.nodes_json || '[]'
+                  const nodes = typeof nodesRaw === 'string' ? JSON.parse(nodesRaw) : nodesRaw
                   if (!Array.isArray(nodes) || nodes.length === 0) {
                     return <p className="text-sm text-muted-foreground/50">暂无节点</p>
                   }

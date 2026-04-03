@@ -121,8 +121,12 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
         const template = store.currentTemplate
         if (template) {
           const state: WorkflowState = {
-            nodes: JSON.parse(template.nodes_json),
-            edges: JSON.parse(template.edges_json),
+            nodes: typeof template.nodes_json === 'string' 
+              ? JSON.parse(template.nodes_json) 
+              : template.nodes_json,
+            edges: typeof template.edges_json === 'string' 
+              ? JSON.parse(template.edges_json) 
+              : template.edges_json,
           }
           set({
             nodes: state.nodes ?? [],
@@ -178,8 +182,12 @@ export const useWorkflowStore = create<WorkflowEditorState>()(
 
       loadFromTemplate: (template: WorkflowTemplate) => {
         const state: WorkflowState = {
-          nodes: JSON.parse(template.nodes_json),
-          edges: JSON.parse(template.edges_json),
+          nodes: typeof template.nodes_json === 'string' 
+            ? JSON.parse(template.nodes_json) 
+            : template.nodes_json,
+          edges: typeof template.edges_json === 'string' 
+            ? JSON.parse(template.edges_json) 
+            : template.edges_json,
         }
         set({
           nodes: state.nodes ?? [],

@@ -878,8 +878,12 @@ function WorkflowBuilderInner() {
       }
 
       const selected = workflows[index]
-      const nodesData = JSON.parse(selected.nodes_json)
-      const edgesData = JSON.parse(selected.edges_json)
+      const nodesData = typeof selected.nodes_json === 'string' 
+        ? JSON.parse(selected.nodes_json) 
+        : selected.nodes_json
+      const edgesData = typeof selected.edges_json === 'string' 
+        ? JSON.parse(selected.edges_json) 
+        : selected.edges_json
 
       setNodes(nodesData.map(storeNodeToRFNode))
       setEdges(edgesData as Edge[])
