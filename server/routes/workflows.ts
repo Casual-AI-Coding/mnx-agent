@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { validate, validateQuery, validateParams } from '../middleware/validate'
+import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service-async.js'
 import { getServiceNodeRegistry } from '../services/service-node-registry'
@@ -7,7 +7,6 @@ import {
   workflowIdParamsSchema,
   createWorkflowSchema,
   updateWorkflowSchema,
-  listWorkflowsQuerySchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import { ROLE_HIERARCHY } from '../types/workflow'
@@ -37,10 +36,24 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
   res.json({ success: true, data: grouped })
 }))
 
-router.get('/', validateQuery(listWorkflowsQuerySchema), asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const { is_public, page, limit } = req.query
   const pageNum = Number(page)
   const limitNum = Number(limit)
+
+  if (pageNum < 1) {
+    res.status(400).json({ success: false, error: 'page must be a positive integer' })
+    return
+  }
+  if (limitNum < 1) {
+    res.status(400).json({ success: false, error: 'limit must be a positive integer' })
+    return
+  }
+  if (limitNum > 100) {
+    res.status(400).json({ success: false, error: 'limit must not exceed 100' })
+    return
+  }
+
   const offset = (pageNum - 1) * limitNum
   const ownerId = buildOwnerFilter(req).params[0]
 
