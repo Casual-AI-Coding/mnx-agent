@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
   Plus,
@@ -11,14 +12,24 @@ import {
   User as UserIcon,
   Crown,
   Star,
+  CheckCircle2,
+  XCircle,
+  Mail,
+  Clock,
+  Filter,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
+import { Switch } from '@/components/ui/Switch'
 import { apiClient } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 
 type UserRole = 'super' | 'admin' | 'pro' | 'user'
 
@@ -35,15 +46,64 @@ interface User {
   updated_at: string
 }
 
-const ROLE_CONFIG: Record<UserRole, { label: string; icon: React.ReactNode; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  super: { label: 'Super', icon: <Crown className="w-3 h-3" />, variant: 'destructive' },
-  admin: { label: 'Admin', icon: <Shield className="w-3 h-3" />, variant: 'default' },
-  pro: { label: 'Pro', icon: <Star className="w-3 h-3" />, variant: 'secondary' },
-  user: { label: 'User', icon: <UserIcon className="w-3 h-3" />, variant: 'outline' },
+type SortField = 'username' | 'role' | 'created_at' | 'last_login_at'
+type SortOrder = 'asc' | 'desc'
+
+const ROLE_CONFIG: Record<UserRole, { 
+  label: string; 
+  icon: React.ReactNode; 
+  gradient: string;
+  bgClass: string;
+}> = {
+  super: { 
+    label: 'Super', 
+    icon: <Crown className="w-3 h-3" />, 
+    gradient: 'from-amber-500 to-orange-500',
+    bgClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  },
+  admin: { 
+    label: 'Admin', 
+    icon: <Shield className="w-3 h-3" />, 
+    gradient: 'from-blue-500 to-cyan-500',
+    bgClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  },
+  pro: { 
+    label: 'Pro', 
+    icon: <Star className="w-3 h-3" />, 
+    gradient: 'from-purple-500 to-pink-500',
+    bgClass: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  },
+  user: { 
+    label: 'User', 
+    icon: <UserIcon className="w-3 h-3" />, 
+    gradient: 'from-emerald-500 to-teal-500',
+    bgClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  },
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '从未'
+  if (!dateStr) return '从未登录'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return '刚刚'
+  if (diffMins < 60) return `${diffMins}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 7) return `${diffDays}天前`
+  
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatFullDate(dateStr: string): string {
   const date = new Date(dateStr)
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
@@ -57,18 +117,37 @@ function formatDate(dateStr: string | null): string {
 function RoleBadge({ role }: { role: UserRole }) {
   const config = ROLE_CONFIG[role]
   return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
+    <div className={cn(
+      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border',
+      config.bgClass
+    )}>
       {config.icon}
       {config.label}
-    </Badge>
+    </div>
   )
 }
 
-function StatusBadge({ isActive }: { isActive: boolean }) {
+function SortButton({ field, currentField, order, onClick, children }: {
+  field: SortField
+  currentField: SortField
+  order: SortOrder
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  const isActive = currentField === field
   return (
-    <Badge variant={isActive ? 'default' : 'outline'}>
-      {isActive ? '启用' : '禁用'}
-    </Badge>
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+      )}
+    >
+      {children}
+      {isActive && (
+        order === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+      )}
+    </button>
   )
 }
 
@@ -77,6 +156,10 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [sortField, setSortField] = useState<SortField>('created_at')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -111,10 +194,52 @@ export default function UserManagement() {
     fetchUsers()
   }, [])
 
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  )
+  const activeUsers = users.filter(u => u.is_active).length
+  const inactiveUsers = users.filter(u => !u.is_active).length
+
+  const filteredAndSortedUsers = useMemo(() => {
+    let result = users.filter(user => {
+      const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' ? user.is_active : !user.is_active)
+      return matchesSearch && matchesRole && matchesStatus
+    })
+
+    result.sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'username':
+          comparison = a.username.localeCompare(b.username)
+          break
+        case 'role':
+          const roleOrder = { super: 0, admin: 1, pro: 2, user: 3 }
+          comparison = roleOrder[a.role] - roleOrder[b.role]
+          break
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          break
+        case 'last_login_at':
+          const aTime = a.last_login_at ? new Date(a.last_login_at).getTime() : 0
+          const bTime = b.last_login_at ? new Date(b.last_login_at).getTime() : 0
+          comparison = aTime - bTime
+          break
+      }
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+
+    return result
+  }, [users, searchQuery, roleFilter, statusFilter, sortField, sortOrder])
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('desc')
+    }
+  }
 
   const handleCreate = async () => {
     setActionLoading(true)
@@ -215,115 +340,301 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            用户管理
-          </CardTitle>
-          <Button onClick={() => setCreateDialogOpen(true)}>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between"
+      >
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+              <Users className="w-6 h-6 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              用户管理
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground/70">管理系统用户、角色和访问权限</p>
+        </div>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
+          >
             <Plus className="w-4 h-4 mr-2" />
             新建用户
           </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索用户名或邮箱..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+      >
+        <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" />
+        <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color="from-emerald-500 to-emerald-400" />
+        <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color="from-slate-500 to-slate-400" />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="overflow-hidden border-border/50 shadow-xl shadow-black/5">
+          <div className="p-4 border-b border-border/50 bg-muted/20">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="搜索用户名或邮箱..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-card/50 border-border/50 focus:border-primary/50"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 bg-card/50 rounded-lg border border-border/50">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as UserRole | 'all')}>
+                    <SelectTrigger className="w-28 h-8 border-0 bg-transparent text-sm">
+                      <SelectValue placeholder="角色" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部角色</SelectItem>
+                      <SelectItem value="super">Super</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 bg-card/50 rounded-lg border border-border/50">
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}>
+                    <SelectTrigger className="w-28 h-8 border-0 bg-transparent text-sm">
+                      <SelectValue placeholder="状态" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部状态</SelectItem>
+                      <SelectItem value="active">已启用</SelectItem>
+                      <SelectItem value="inactive">已禁用</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="h-8 w-px bg-border/50 mx-1" />
+
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground/70 mr-1">排序:</span>
+                  <SortButton field="created_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('created_at')}>
+                    创建时间
+                  </SortButton>
+                  <SortButton field="last_login_at" currentField={sortField} order={sortOrder} onClick={() => toggleSort('last_login_at')}>
+                    最后登录
+                  </SortButton>
+                  <SortButton field="username" currentField={sortField} order={sortOrder} onClick={() => toggleSort('username')}>
+                    用户名
+                  </SortButton>
+                </div>
+              </div>
             </div>
           </div>
 
-          {error && (
-            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="p-4 bg-destructive/10 border-b border-destructive/20"
+              >
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {loading && (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
+          <AnimatePresence>
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center py-12"
+              >
+                <div className="relative">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <div className="absolute inset-0 w-8 h-8 border-2 border-primary/20 rounded-full animate-ping" />
+                </div>
+                <p className="text-sm text-muted-foreground/70 mt-3">加载中...</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {!loading && !error && (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="py-3 px-4 text-left font-medium">用户名</th>
-                    <th className="py-3 px-4 text-left font-medium">邮箱</th>
-                    <th className="py-3 px-4 text-left font-medium">角色</th>
-                    <th className="py-3 px-4 text-left font-medium">状态</th>
-                    <th className="py-3 px-4 text-left font-medium">区域</th>
-                    <th className="py-3 px-4 text-left font-medium">最后登录</th>
-                    <th className="py-3 px-4 text-left font-medium">创建时间</th>
-                    <th className="py-3 px-4 text-left font-medium">操作</th>
+                  <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">用户</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">角色</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">状态</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">区域</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">最后登录</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">创建时间</th>
+                    <th className="py-3 px-4 text-center text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">操作</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredUsers.map(user => (
-                    <tr key={user.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">{user.username}</td>
-                      <td className="py-3 px-4">{user.email || '-'}</td>
-                      <td className="py-3 px-4"><RoleBadge role={user.role} /></td>
-                      <td className="py-3 px-4">
-                        <button onClick={() => handleToggleActive(user)} className="cursor-pointer">
-                          <StatusBadge isActive={user.is_active} />
-                        </button>
-                      </td>
-                      <td className="py-3 px-4">{user.minimax_region === 'cn' ? '国内' : '国际'}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(user.last_login_at)}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(user.created_at)}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(user)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-muted-foreground">暂无用户数据</td>
-                    </tr>
-                  )}
+                <tbody className="divide-y divide-border/30">
+                  <AnimatePresence>
+                    {filteredAndSortedUsers.map((user, index) => (
+                      <motion.tr
+                        key={user.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="group hover:bg-muted/30"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold',
+                              user.is_active
+                                ? 'bg-gradient-to-br from-primary/20 to-primary/5 text-primary'
+                                : 'bg-muted text-muted-foreground'
+                            )}>
+                              {user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{user.username}</p>
+                              {user.email && (
+                                <p className="text-xs text-muted-foreground/60 flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {user.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <RoleBadge role={user.role} />
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={user.is_active}
+                              onCheckedChange={() => handleToggleActive(user)}
+                              className="data-[state=checked]:bg-emerald-500"
+                            />
+                            <span className={cn(
+                              'text-xs font-medium',
+                              user.is_active ? 'text-emerald-600' : 'text-muted-foreground/60'
+                            )}>
+                              {user.is_active ? '启用' : '禁用'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {user.minimax_region === 'cn' ? 'CN' : 'INT'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span className={cn(!user.last_login_at && 'text-muted-foreground/40')}>
+                              {formatDate(user.last_login_at)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-muted-foreground/70">
+                            {formatFullDate(user.created_at)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-center gap-1">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => openEditDialog(user)}
+                              className="p-2 rounded-lg text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="编辑"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => openDeleteDialog(user)}
+                              className="p-2 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
                 </tbody>
               </table>
+
+              {filteredAndSortedUsers.length === 0 && (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Search className="w-8 h-8 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-muted-foreground/60">未找到匹配的用户</p>
+                </div>
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      </motion.div>
 
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} title="新建用户">
         <div className="space-y-4 py-4">
           <div>
-            <label className="text-sm font-medium">用户名 *</label>
-            <Input value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} placeholder="输入用户名" />
+            <label className="text-sm font-medium text-foreground">用户名 *</label>
+            <Input
+              value={formData.username}
+              onChange={e => setFormData({ ...formData, username: e.target.value })}
+              placeholder="输入用户名"
+            />
           </div>
           <div>
-            <label className="text-sm font-medium">密码 *</label>
-            <Input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="输入密码（至少6位）" />
+            <label className="text-sm font-medium text-foreground">密码 *</label>
+            <Input
+              type="password"
+              value={formData.password}
+              onChange={e => setFormData({ ...formData, password: e.target.value })}
+              placeholder="输入密码"
+            />
           </div>
           <div>
-            <label className="text-sm font-medium">邮箱</label>
-            <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="输入邮箱（可选）" />
+            <label className="text-sm font-medium text-foreground">邮箱</label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              placeholder="选填"
+            />
           </div>
           <div>
-            <label className="text-sm font-medium">角色</label>
+            <label className="text-sm font-medium text-foreground">角色</label>
             <Select value={formData.role} onValueChange={v => setFormData({ ...formData, role: v as UserRole })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
@@ -333,14 +644,19 @@ export default function UserManagement() {
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium">MiniMax API Key</label>
-            <Input value={formData.minimax_api_key} onChange={e => setFormData({ ...formData, minimax_api_key: e.target.value })} placeholder="输入 API Key（可选）" />
+            <label className="text-sm font-medium text-foreground">MiniMax API Key</label>
+            <Input
+              value={formData.minimax_api_key}
+              onChange={e => setFormData({ ...formData, minimax_api_key: e.target.value })}
+              placeholder="选填"
+            />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>取消</Button>
           <Button onClick={handleCreate} disabled={actionLoading || !formData.username || !formData.password}>
-            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}创建
+            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            创建
           </Button>
         </DialogFooter>
       </Dialog>
@@ -348,17 +664,24 @@ export default function UserManagement() {
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} title="编辑用户">
         <div className="space-y-4 py-4">
           <div>
-            <label className="text-sm font-medium">用户名</label>
-            <Input value={formData.username} disabled />
+            <label className="text-sm font-medium text-foreground">用户名</label>
+            <Input value={formData.username} disabled className="bg-muted" />
           </div>
           <div>
-            <label className="text-sm font-medium">邮箱</label>
-            <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="输入邮箱（可选）" />
+            <label className="text-sm font-medium text-foreground">邮箱</label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              placeholder="选填"
+            />
           </div>
           <div>
-            <label className="text-sm font-medium">角色</label>
+            <label className="text-sm font-medium text-foreground">角色</label>
             <Select value={formData.role} onValueChange={v => setFormData({ ...formData, role: v as UserRole })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
@@ -368,27 +691,63 @@ export default function UserManagement() {
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium">MiniMax API Key</label>
-            <Input value={formData.minimax_api_key} onChange={e => setFormData({ ...formData, minimax_api_key: e.target.value })} placeholder="输入 API Key（可选）" />
+            <label className="text-sm font-medium text-foreground">MiniMax API Key</label>
+            <Input
+              value={formData.minimax_api_key}
+              onChange={e => setFormData({ ...formData, minimax_api_key: e.target.value })}
+              placeholder="选填"
+            />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
           <Button onClick={handleEdit} disabled={actionLoading}>
-            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}保存
+            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            保存
           </Button>
         </DialogFooter>
       </Dialog>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} title="确认删除">
-        <p className="py-4">确定要删除用户 <strong>{selectedUser?.username}</strong> 吗？此操作不可恢复。</p>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} title="删除用户">
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground">
+            确定要删除用户 <span className="font-semibold text-foreground">{selectedUser?.username}</span> 吗？此操作不可恢复。
+          </p>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
           <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}删除
+            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            删除
           </Button>
         </DialogFooter>
       </Dialog>
     </div>
+  )
+}
+
+function StatCard({ title, value, icon: Icon, color }: {
+  title: string
+  value: number
+  icon: React.ElementType
+  color: string
+}) {
+  return (
+    <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 400 }}>
+      <Card className="relative overflow-hidden border-border/50">
+        <div className={cn('absolute inset-0 opacity-10 bg-gradient-to-br', color)} />
+        <CardContent className="relative p-5">
+          <div className="flex items-center gap-4">
+            <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg', color)}>
+              <Icon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wider">{title}</p>
+              <p className="text-2xl font-bold">{value}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
