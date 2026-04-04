@@ -1,12 +1,14 @@
 import { Router } from 'express'
 import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
+import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import { getDatabase } from '../database/service-async.js'
 import { getServiceNodeRegistry } from '../services/service-node-registry'
 import {
   workflowIdParamsSchema,
   createWorkflowSchema,
   updateWorkflowSchema,
+  partialWorkflowSchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import { ROLE_HIERARCHY } from '../types/workflow'
@@ -228,7 +230,61 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
   }
 
   const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
-  res.json({ success: true, data: workflow })
+  successResponse(res, workflow)
+}))
+
+router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWorkflowSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const userId = req.user!.userId
+  const userRole = req.user!.role
+
+  const existing = await db.getWorkflowTemplateById(req.params.id)
+  if (!existing) {
+    errorResponse(res, 'Workflow not found', 404)
+    return
+  }
+
+  const hasAccess = existing.owner_id === userId || userRole === 'super'
+  if (!hasAccess) {
+    errorResponse(res, 'You do not have permission to update this workflow', 403)
+    return
+  }
+
+  if (req.body.nodes_json) {
+    let actionNodes: Array<{ type: string; data: { config?: { service?: string; method?: string } } }> = []
+    try {
+      const parsed = JSON.parse(req.body.nodes_json)
+      actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
+    } catch {
+      errorResponse(res, 'nodes_json must be valid JSON', 400)
+      return
+    }
+
+    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
+    for (const node of actionNodes) {
+      const config = node.data?.config || {}
+      const { service, method } = config
+      if (!service || !method) continue
+
+      const permission = await db.getServiceNodePermission(service, method)
+      if (!permission) {
+        errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
+        return
+      }
+      if (!permission.is_enabled) {
+        errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
+        return
+      }
+      const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
+      if (nodeLevel > userLevel) {
+        errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
+        return
+      }
+    }
+  }
+
+  const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
+  successResponse(res, workflow)
 }))
 
 router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
