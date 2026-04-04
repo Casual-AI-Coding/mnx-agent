@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
+import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import { getDatabase } from '../database/service-async.js'
 import {
   listMediaQuerySchema,
@@ -39,16 +40,13 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
     ownerId,
   })
 
-  res.json({
-    success: true,
-    data: {
-      records: result.records,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: result.total,
-        totalPages: Math.ceil(result.total / Number(limit)),
-      }
+  successResponse(res, {
+    records: result.records,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total: result.total,
+      totalPages: Math.ceil(result.total / Number(limit)),
     }
   })
 }))
@@ -59,17 +57,17 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
   const record = await db.getMediaRecordById(req.params.id, ownerId)
   const includeDeleted = req.query.includeDeleted === 'true'
   if (!record || (!includeDeleted && record.is_deleted)) {
-    res.status(404).json({ success: false, error: 'Media record not found' })
+    errorResponse(res, 'Media record not found', 404)
     return
   }
-  res.json({ success: true, data: record })
+  successResponse(res, record)
 }))
 
 router.post('/', validate(createMediaRecordSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const record = await db.createMediaRecord(req.body, ownerId)
-  res.status(201).json({ success: true, data: record })
+  createdResponse(res, record)
 }))
 
 router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaRecordSchema), asyncHandler(async (req, res) => {
@@ -77,10 +75,10 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.updateMediaRecord(req.params.id, req.body, ownerId)
   if (!record) {
-    res.status(404).json({ success: false, error: 'Media record not found' })
+    errorResponse(res, 'Media record not found', 404)
     return
   }
-  res.json({ success: true, data: record })
+  successResponse(res, record)
 }))
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
@@ -88,7 +86,7 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const result = await db.softDeleteMediaRecords(ids)
-  res.json({ success: true, data: result })
+  successResponse(res, result)
 }))
 
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
@@ -96,15 +94,15 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
   const ownerId = buildOwnerFilter(req).params[0]
   const success = await db.softDeleteMediaRecord(req.params.id, ownerId)
   if (!success) {
-    res.status(404).json({ success: false, error: 'Media record not found' })
+    errorResponse(res, 'Media record not found', 404)
     return
   }
-  res.json({ success: true, data: { deleted: true } })
+  deletedResponse(res)
 }))
 
 router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) {
-    res.status(400).json({ success: false, error: 'No file uploaded' })
+    errorResponse(res, 'No file uploaded', 400)
     return
   }
 
@@ -129,7 +127,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     source: source as any,
   }, ownerId)
 
-  res.status(201).json({ success: true, data: record })
+  createdResponse(res, record)
 }))
 
 router.post('/upload-from-url', asyncHandler(async (req, res) => {
@@ -137,7 +135,7 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
   if (!url || !type) {
-    res.status(400).json({ success: false, error: 'url and type are required' })
+    errorResponse(res, 'url and type are required', 400)
     return
   }
 
@@ -162,12 +160,12 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     source: source as any,
   }, ownerId)
 
-  res.status(201).json({ success: true, data: record })
+  createdResponse(res, record)
 }))
 
 router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   if (!req.user) {
-    res.status(401).json({ success: false, error: 'Unauthorized' })
+    errorResponse(res, 'Unauthorized', 401)
     return
   }
 
@@ -175,38 +173,38 @@ router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
   if (!record || record.is_deleted) {
-    res.status(404).json({ success: false, error: 'Media not found' })
+    errorResponse(res, 'Media not found', 404)
     return
   }
 
   const token = generateMediaToken(req.params.id, req.user.userId)
   const downloadUrl = `/api/media/${req.params.id}/download?token=${token}`
-  res.json({ success: true, data: { downloadUrl, token } })
+  successResponse(res, { downloadUrl, token })
 }))
 
 router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   const { token } = req.query
 
   if (!token || typeof token !== 'string') {
-    res.status(401).json({ success: false, error: 'Missing download token' })
+    errorResponse(res, 'Missing download token', 401)
     return
   }
 
   const verified = verifyMediaToken(token)
   if (!verified.valid) {
-    res.status(401).json({ success: false, error: verified.error || 'Invalid token' })
+    errorResponse(res, verified.error || 'Invalid token', 401)
     return
   }
 
   if (verified.mediaId !== req.params.id) {
-    res.status(403).json({ success: false, error: 'Token does not match media ID' })
+    errorResponse(res, 'Token does not match media ID', 403)
     return
   }
 
   const db = await getDatabase()
   const record = await db.getMediaRecordById(req.params.id)
   if (!record || record.is_deleted) {
-    res.status(404).json({ success: false, error: 'Media not found' })
+    errorResponse(res, 'Media not found', 404)
     return
   }
 
@@ -222,7 +220,7 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
   const records = await db.getMediaRecordsByIds(ids)
 
   if (records.length === 0) {
-    res.status(404).json({ success: false, error: 'No valid media found' })
+    errorResponse(res, 'No valid media found', 404)
     return
   }
 
