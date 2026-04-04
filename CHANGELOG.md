@@ -2,6 +2,79 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.6] - 2026-04-04
+
+### Added
+- **Execution Control System** - Workflow execution pause/resume support
+  - New `ExecutionStateManager` service for execution state persistence
+  - `execution_states` table for tracking execution progress across layers
+  - `workflow_versions` table for workflow template versioning
+  - WorkflowEngine supports `pauseExecution()` and `resumeExecution()` via `AbortController`
+  - Static registry for running executions (`WorkflowEngine.getRunningExecutionEngine()`)
+
+- **Webhook Management Page** - Complete webhook CRUD UI
+  - New `WebhookManagement.tsx` page at `/webhooks`
+  - Webhook creation/edit modal with validation
+  - Delivery history modal with status tracking
+  - Custom headers support (key-value pairs)
+  - HMAC secret for payload signing
+  - Webhook test functionality
+  - Associated job selection (global or specific job)
+
+- **Workflow Validation Utilities** - Node and workflow validation
+  - `validateNode()` for single node validation
+  - `validateWorkflow()` for full workflow checks
+  - `ValidationError` interface with severity levels (error/warning)
+  - Disconnected node warnings
+  - Helper functions: `getNodeErrors`, `getNodeSeverity`, `getValidationSummary`
+
+- **Dead Letter Queue Auto-Retry** - Automatic retry scheduler
+  - `QueueProcessor.startAutoRetry()` and `stopAutoRetry()` methods
+  - Configurable `AutoRetryConfig`: `initialDelayMs`, `maxDelayMs`, `maxAttempts`, `backoffMultiplier`
+  - Default: 1 minute interval, max 5 minutes, 3 attempts
+
+- **CronScheduler Notification Integration** - Automatic webhook notifications
+  - Integrated `NotificationService` into `CronScheduler`
+  - Sends `on_start`, `on_success`, `on_failure` events automatically
+  - Job execution notifications now work without manual setup
+
+- **Workflow Builder Enhancements** - UI improvements
+  - `NodeStatusIndicator` component for visual execution feedback
+  - Workflow selector modal refinements
+  - Better node component styling (ConditionNode, LoopNode, TransformNode, ActionNode)
+  - Sidebar Webhook menu entry
+
+- **Cron Utilities** - Helper functions for cron expressions
+  - New `src/lib/cron-utils.ts` module
+
+### API
+- `POST /api/cron/executions/:id/pause` - Pause running workflow execution
+- `POST /api/cron/executions/:id/resume` - Resume paused workflow execution
+
+### Database
+- `migration_022` - `execution_states` table with indexes
+- `migration_023` - `workflow_versions` table for versioning
+
+### Changed
+- **WorkflowEngine** - Major refactoring for execution control
+  - Added workflow ID tracking (`workflowId` property)
+  - Layer-by-layer execution with abort signal checking
+  - State persistence on each layer completion
+  - Cleanup on execution finish (remove from running registry)
+
+- **QueueProcessor** - Extended with auto-retry capabilities
+  - New `AutoRetryConfig` interface
+  - Timer-based retry scheduler for DLQ items
+
+- **CronScheduler** - Constructor now accepts `NotificationService`
+  - Backward compatible (optional parameter)
+
+### Technical
+- **DatabaseService** - Generic SQL helper methods
+  - `run(sql, params)` for raw execution
+  - `get<T>(sql, params)` for single row query
+  - `all<T>(sql, params)` for multi-row query
+
 ## [1.3.5] - 2026-04-04
 
 ### Added
