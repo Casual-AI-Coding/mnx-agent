@@ -44,6 +44,7 @@ export class WorkflowEngine {
   private serviceRegistry: ServiceNodeRegistry
   private executionLogId: string | null = null
   private workflowNodes: WorkflowNode[] = []
+  private workflowEdges: WorkflowEdge[] = []
 
   constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry) {
     this.db = db
@@ -64,10 +65,20 @@ export class WorkflowEngine {
       const workflow = this.parseWorkflowJson(workflowJson)
       this.validateWorkflow(workflow)
       this.workflowNodes = workflow.nodes
+      this.workflowEdges = workflow.edges || []
       const executionOrder = this.buildExecutionOrder(workflow)
       const nodeOutputs = new Map<string, unknown>()
+      const excludedNodes = new Set<string>()
+      
+      this.addLoopBodyNodesToExcluded(excludedNodes)
+      
+      const conditionResults = new Map<string, boolean>()
 
       for (const nodeId of executionOrder) {
+        if (excludedNodes.has(nodeId)) {
+          continue
+        }
+
         const node = workflow.nodes.find(n => n.id === nodeId)
         if (!node) {
           throw new Error(`Node ${nodeId} not found in workflow`)
@@ -79,6 +90,17 @@ export class WorkflowEngine {
 
         if (result.success && result.data !== undefined) {
           nodeOutputs.set(nodeId, result.data)
+
+          if (node.type === 'condition') {
+            const conditionResult = result.data as boolean
+            conditionResults.set(nodeId, conditionResult)
+            this.updateExcludedNodes(
+              nodeId,
+              conditionResult,
+              workflow.edges,
+              excludedNodes
+            )
+          }
         }
 
         if (!result.success) {
@@ -96,6 +118,55 @@ export class WorkflowEngine {
       nodeResults,
       totalDurationMs: Date.now() - startTime,
       error: executionError,
+    }
+  }
+
+  private updateExcludedNodes(
+    conditionNodeId: string,
+    conditionResult: boolean,
+    edges: WorkflowEdge[],
+    excludedNodes: Set<string>
+  ): void {
+    const targetHandle = conditionResult ? 'false' : 'true'
+    
+    for (const edge of edges) {
+      if (edge.source !== conditionNodeId) continue
+      
+      if (edge.sourceHandle === targetHandle) {
+        this.excludeBranchNodes(edge.target, edges, excludedNodes)
+      }
+    }
+  }
+
+  private excludeBranchNodes(
+    startNodeId: string,
+    edges: WorkflowEdge[],
+    excludedNodes: Set<string>
+  ): void {
+    const toExclude = new Set<string>([startNodeId])
+    const queue = [startNodeId]
+    
+    while (queue.length > 0) {
+      const currentId = queue.shift()!
+      
+      for (const edge of edges) {
+        if (edge.source === currentId && !toExclude.has(edge.target)) {
+          toExclude.add(edge.target)
+          queue.push(edge.target)
+        }
+      }
+    }
+    
+    for (const nodeId of toExclude) {
+      excludedNodes.add(nodeId)
+    }
+  }
+
+  private addLoopBodyNodesToExcluded(excludedNodes: Set<string>): void {
+    for (const edge of this.workflowEdges) {
+      if (edge.sourceHandle === 'body') {
+        this.excludeBranchNodes(edge.target, this.workflowEdges, excludedNodes)
+      }
     }
   }
 
@@ -215,8 +286,13 @@ export class WorkflowEngine {
     nodeOutputs: Map<string, unknown>
   ): Record<string, unknown> {
     const resolved: Record<string, unknown> = {}
+    const skipKeys = ['subNodes', 'subEdges']
     for (const [key, value] of Object.entries(config)) {
-      resolved[key] = this.resolveValue(value, nodeOutputs)
+      if (skipKeys.includes(key)) {
+        resolved[key] = value
+      } else {
+        resolved[key] = this.resolveValue(value, nodeOutputs)
+      }
     }
     return resolved
   }
@@ -247,9 +323,17 @@ export class WorkflowEngine {
       const parts = path.trim().split('.')
       const nodeId = parts[0]
       
-      if (nodeId === 'item' && parts.length > 1) {
+      if (nodeId === 'item') {
         const item = nodeOutputs.get('item')
+        if (parts.length === 1) {
+          return item !== undefined ? String(item) : match
+        }
         return this.getValueAtPath(item, parts.slice(1).join('.'))
+      }
+
+      if (nodeId === 'index') {
+        const index = nodeOutputs.get('index')
+        return index !== undefined ? String(index) : match
       }
 
       if (parts[1] === 'output' && parts.length > 2) {
@@ -323,26 +407,35 @@ export class WorkflowEngine {
     nodeOutputs: Map<string, unknown>
   ): Promise<TaskResult> {
     const startTime = Date.now()
+    const timeoutMs = (config.timeoutMs as number) ?? 300000
 
     try {
       let result: unknown
 
-      switch (node.type) {
-        case 'action':
-          result = await this.executeActionNode(node, config)
-          break
-        case 'condition':
-          result = await this.executeConditionNode(config, nodeOutputs)
-          break
-        case 'loop':
-          result = await this.executeLoopNode(config, nodeOutputs)
-          break
-        case 'transform':
-          result = await this.executeTransformNode(config, nodeOutputs)
-          break
-        default:
-          throw new Error(`Unknown node type: ${node.type}`)
-      }
+      const executionPromise = (async () => {
+        switch (node.type) {
+          case 'action':
+            return await this.executeActionNode(node, config)
+          case 'condition':
+            return await this.executeConditionNode(config, nodeOutputs)
+          case 'loop':
+            return await this.executeLoopNode(node, config, nodeOutputs)
+          case 'transform':
+            return await this.executeTransformNode(config, nodeOutputs)
+          case 'queue':
+            return await this.executeQueueNode(config)
+          default:
+            throw new Error(`Unknown node type: ${node.type}`)
+        }
+      })()
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Execution timed out after ${timeoutMs}ms`))
+        }, timeoutMs)
+      })
+
+      result = await Promise.race([executionPromise, timeoutPromise])
 
       return {
         success: true,
@@ -446,12 +539,15 @@ export class WorkflowEngine {
   }
 
   private async executeLoopNode(
+    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
   ): Promise<{ iterations: number; results: unknown[] }> {
     const items = config.items as string | undefined
     const maxIterations = (config.maxIterations as number) ?? 10
     const condition = config.condition as string | undefined
+    const subNodes = config.subNodes as WorkflowNode[] | undefined
+    const subEdges = config.subEdges as WorkflowEdge[] | undefined
     
     let itemsArray: unknown[] = []
     if (items) {
@@ -463,26 +559,88 @@ export class WorkflowEngine {
       }
     }
 
+    const bodyNodes = this.findLoopBodyNodes(node.id)
+    const bodyEdges = this.findLoopBodyEdges(node.id)
+
     const results: unknown[] = []
     let iterationCount = 0
 
     while (iterationCount < maxIterations) {
-      if (condition) {
-        const resolved = this.resolveTemplateString(condition, nodeOutputs)
-        if (!this.evaluateCondition(resolved)) break
-      }
-
       if (itemsArray.length > 0 && iterationCount >= itemsArray.length) break
 
       if (itemsArray.length > 0) {
         nodeOutputs.set('item', itemsArray[iterationCount])
       }
+      nodeOutputs.set('index', iterationCount)
 
-      results.push({ iteration: iterationCount })
+      if (condition) {
+        const resolved = this.resolveTemplateString(condition, nodeOutputs)
+        if (!this.evaluateCondition(resolved)) break
+      }
+
+      const nodesToExecute = bodyNodes.length > 0 ? bodyNodes : subNodes
+      const edgesToUse = bodyNodes.length > 0 ? bodyEdges : subEdges
+
+      if (nodesToExecute && nodesToExecute.length > 0) {
+        const iterationOutputs = new Map(nodeOutputs)
+        const subGraph: WorkflowGraph = { nodes: nodesToExecute, edges: edgesToUse || [] }
+        const executionOrder = this.buildExecutionOrder(subGraph)
+        
+        let iterationResult: unknown = undefined
+        for (const subNodeId of executionOrder) {
+          const subNode = nodesToExecute.find(n => n.id === subNodeId)
+          if (!subNode) continue
+          
+          const resolvedConfig = this.resolveNodeConfig(subNode.data.config, iterationOutputs)
+          const subResult = await this.executeNode(subNode, resolvedConfig, iterationOutputs)
+          
+          if (!subResult.success) {
+            throw new Error(`Loop iteration ${iterationCount}: subNode ${subNodeId} failed - ${subResult.error}`)
+          }
+          
+          if (subResult.data !== undefined) {
+            iterationOutputs.set(subNodeId, subResult.data)
+            iterationResult = subResult.data
+          }
+        }
+        results.push(iterationResult)
+      } else {
+        results.push({ iteration: iterationCount })
+      }
+
       iterationCount++
     }
 
+    nodeOutputs.delete('item')
+    nodeOutputs.delete('index')
+
     return { iterations: iterationCount, results }
+  }
+
+  private findLoopBodyNodes(loopNodeId: string): WorkflowNode[] {
+    const bodyNodeIds = new Set<string>()
+    
+    for (const edge of this.workflowEdges) {
+      if (edge.source === loopNodeId && edge.sourceHandle === 'body') {
+        bodyNodeIds.add(edge.target)
+      }
+    }
+
+    return this.workflowNodes.filter(n => bodyNodeIds.has(n.id))
+  }
+
+  private findLoopBodyEdges(loopNodeId: string): WorkflowEdge[] {
+    const bodyNodeIds = new Set<string>()
+    
+    for (const edge of this.workflowEdges) {
+      if (edge.source === loopNodeId && edge.sourceHandle === 'body') {
+        bodyNodeIds.add(edge.target)
+      }
+    }
+
+    return this.workflowEdges.filter(edge => 
+      bodyNodeIds.has(edge.source) && bodyNodeIds.has(edge.target)
+    )
   }
 
   private async executeTransformNode(
@@ -605,5 +763,59 @@ export class WorkflowEngine {
     }
 
     return template
+  }
+
+  private async executeQueueNode(
+    config: Record<string, unknown>
+  ): Promise<{ total: number; succeeded: number; failed: number }> {
+    const jobId = config.jobId as string | undefined
+    const taskType = config.taskType as string | undefined
+    const limit = (config.limit as number) ?? 10
+
+    let tasks: { id: string; task_type: string; payload: string; retry_count: number; max_retries: number }[] = []
+
+    if (jobId) {
+      tasks = await this.db.getPendingTasksByJob(jobId, limit)
+    } else if (taskType) {
+      tasks = await this.db.getPendingTasksByType(taskType, limit)
+    }
+
+    const total = tasks.length
+    let succeeded = 0
+    let failed = 0
+
+    for (const task of tasks) {
+      try {
+        await this.db.markTaskRunning(task.id)
+
+        const payload = JSON.parse(task.payload)
+        const result = await this.serviceRegistry.call('task-executor', 'executeTask', [
+          task.task_type,
+          payload,
+        ])
+
+        await this.db.markTaskCompleted(task.id, JSON.stringify(result))
+        succeeded++
+      } catch (error) {
+        const errorMessage = (error as Error).message
+        await this.db.markTaskFailed(task.id, errorMessage)
+        failed++
+
+        const newRetryCount = task.retry_count + 1
+        if (newRetryCount >= task.max_retries) {
+          await this.db.createDeadLetterQueueItem({
+            original_task_id: task.id,
+            job_id: jobId ?? undefined,
+            task_type: task.task_type,
+            payload: JSON.parse(task.payload),
+            error_message: errorMessage,
+            retry_count: newRetryCount,
+            max_retries: task.max_retries,
+          })
+        }
+      }
+    }
+
+    return { total, succeeded, failed }
   }
 }

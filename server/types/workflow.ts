@@ -13,6 +13,7 @@ export enum WorkflowNodeType {
   Condition = 'condition',
   Loop = 'loop',
   Transform = 'transform',
+  Queue = 'queue',
 }
 
 export interface WorkflowNode {
@@ -53,10 +54,18 @@ export interface LoopNodeConfig {
   items?: string
   maxIterations?: number
   condition?: string
+  subNodes?: WorkflowNode[]
+  subEdges?: WorkflowEdge[]
 }
 
 export interface TransformNodeConfig {
   transformType: 'extract' | 'map' | 'filter' | 'format'
   inputPath?: string
   outputFormat?: string
+}
+
+export interface QueueNodeConfig {
+  jobId?: string
+  taskType?: string
+  limit?: number
 }
