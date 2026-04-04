@@ -71,17 +71,9 @@ router.get('/health', asyncHandler(async (_req, res) => {
         failed: taskCounts.failed,
       },
     }
-    res.json({ success: true, data: health })
+    successResponse(res, health)
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: 'Health check failed',
-      data: {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: (error as Error).message,
-      }
-    })
+    errorResponse(res, 'Health check failed', 500)
   }
 }))
 
@@ -93,7 +85,7 @@ router.get('/jobs', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const jobs = await db.getAllCronJobs(ownerId)
-  res.json({ success: true, data: { jobs, total: jobs.length } })
+  successResponse(res, { jobs, total: jobs.length })
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
@@ -103,13 +95,13 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
   const jobData = req.body
 
   if (!jobData.workflow_id) {
-    res.status(400).json({ success: false, error: 'workflow_id is required' })
+    errorResponse(res, 'workflow_id is required', 400)
     return
   }
 
   const workflow = await db.getWorkflowTemplateById(jobData.workflow_id)
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
@@ -128,7 +120,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
     await scheduler.scheduleJob(job)
   }
 
-  res.status(201).json({ success: true, data: job })
+  createdResponse(res, job)
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -136,10 +128,10 @@ router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(asyn
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
-  res.json({ success: true, data: job })
+  successResponse(res, job)
 }))
 
 router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
@@ -147,12 +139,11 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
   const ownerId = buildOwnerFilter(req).params[0]
   const existingJob = await db.getCronJobById(req.params.id, ownerId)
   if (!existingJob) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const job = await db.updateCronJob(req.params.id, req.body, ownerId)
-  
-  res.json({ success: true, data: job })
+  successResponse(res, job)
 }))
 
 router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
@@ -172,7 +163,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const tasks: TaskQueueItem[] = await db.getTasksByJobId(req.params.id, ownerId)
@@ -180,7 +171,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
     await db.deleteTask(task.id, ownerId)
   }
   await db.deleteCronJob(req.params.id, ownerId)
-  res.json({ success: true, data: { deleted: true, tasksDeleted: tasks.length } })
+  deletedResponse(res, { tasksDeleted: tasks.length })
 }))
 
 router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -190,19 +181,16 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
 
   try {
     await scheduler.executeJobTick(job)
-    res.json({ success: true, data: { message: 'Job triggered successfully' } })
+    successResponse(res, { message: 'Job triggered successfully' })
   } catch (error) {
     console.error('Manual trigger failed:', error)
-    res.status(500).json({
-      success: false,
-      error: `Failed to execute job: ${(error as Error).message}`
-    })
+    errorResponse(res, `Failed to execute job: ${(error as Error).message}`, 500)
   }
 }))
 
@@ -213,7 +201,7 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const updatedJob = await db.toggleCronJobActive(req.params.id, ownerId)
@@ -226,7 +214,7 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
     }
   }
 
-  res.json({ success: true, data: { job: updatedJob, scheduled: updatedJob?.is_active } })
+  successResponse(res, { job: updatedJob, scheduled: updatedJob?.is_active })
 }))
 
 // ============================================
@@ -374,7 +362,7 @@ router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (re
   const { status, job_id, page, limit } = query
   const offset = (page - 1) * limit
   const result = await db.getAllTasks({ status, ownerId, jobId: job_id, limit, offset })
-  res.json({ success: true, data: { tasks: result.tasks, total: result.total, page, limit } })
+  successResponse(res, { tasks: result.tasks, total: result.total, page, limit })
 }))
 
 router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) => {
@@ -389,7 +377,7 @@ router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) 
     max_retries: taskData.max_retries,
     status: TaskStatus.PENDING,
   }, ownerId)
-  res.json({ success: true, data: task })
+  successResponse(res, task)
 }))
 
 router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTaskSchema), asyncHandler(async (req, res) => {
@@ -397,7 +385,7 @@ router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTask
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await db.getTaskById(req.params.id, ownerId)
   if (!task) {
-    res.status(404).json({ success: false, error: 'Task not found' })
+    errorResponse(res, 'Task not found', 404)
     return
   }
   const updates: { status?: TaskStatus; error_message?: string | null; result?: string | null } = {}
@@ -405,7 +393,7 @@ router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTask
   if (req.body.error_message) updates.error_message = req.body.error_message
   if (req.body.result) updates.result = req.body.result
   const updatedTask = await db.updateTask(req.params.id, updates, ownerId)
-  res.json({ success: true, data: updatedTask })
+  successResponse(res, updatedTask)
 }))
 
 router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
@@ -413,11 +401,11 @@ router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(asy
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await db.getTaskById(req.params.id, ownerId)
   if (!task) {
-    res.status(404).json({ success: false, error: 'Task not found' })
+    errorResponse(res, 'Task not found', 404)
     return
   }
   await db.deleteTask(req.params.id, ownerId)
-  res.json({ success: true, data: { deleted: true } })
+  deletedResponse(res)
 }))
 
 router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
@@ -425,11 +413,11 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await db.getTaskById(req.params.id, ownerId)
   if (!task) {
-    res.status(404).json({ success: false, error: 'Task not found' })
+    errorResponse(res, 'Task not found', 404)
     return
   }
   if (task.status !== TaskStatus.FAILED) {
-    res.status(400).json({ success: false, error: 'Only failed tasks can be retried' })
+    errorResponse(res, 'Only failed tasks can be retried', 400)
     return
   }
   const updatedTask = await db.updateTask(req.params.id, {
@@ -437,7 +425,7 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
     retry_count: 0,
     error_message: null,
   }, ownerId)
-  res.json({ success: true, data: updatedTask })
+  successResponse(res, updatedTask)
 }))
 
 // ============================================
