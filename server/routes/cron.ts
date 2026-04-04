@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
+import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import { getDatabase } from '../database/service-async.js'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
@@ -152,6 +153,18 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
   const job = await db.updateCronJob(req.params.id, req.body, ownerId)
   
   res.json({ success: true, data: job })
+}))
+
+router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const existingJob = await db.getCronJobById(req.params.id, ownerId)
+  if (!existingJob) {
+    errorResponse(res, 'Job not found', 404)
+    return
+  }
+  const job = await db.updateCronJob(req.params.id, req.body, ownerId)
+  successResponse(res, job)
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -797,6 +810,45 @@ router.get('/webhooks/:id/deliveries', validateParams(webhookIdParamsSchema), va
   const query = req.query as unknown as { limit: number }
   const deliveries = await db.getWebhookDeliveriesByWebhook(req.params.id, query.limit, ownerId)
   res.json({ success: true, data: { deliveries, total: deliveries.length } })
+}))
+
+// ============================================
+// Dead Letter Queue API
+// ============================================
+
+router.get('/dlq', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
+  const items = await db.getDeadLetterQueueItems(ownerId, limit)
+  res.json({ success: true, data: { items, total: items.length } })
+}))
+
+router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
+  if (!item) {
+    res.status(404).json({ success: false, error: 'DLQ item not found' })
+    return
+  }
+  const taskId = await db.retryDeadLetterQueueItem(req.params.id, ownerId)
+  res.json({ success: true, data: { taskId, message: 'Task retried successfully' } })
+}))
+
+router.delete('/dlq/:id', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
+  if (!item) {
+    res.status(404).json({ success: false, error: 'DLQ item not found' })
+    return
+  }
+  await db.updateDeadLetterQueueItem(req.params.id, {
+    resolved_at: new Date().toISOString(),
+    resolution: 'deleted',
+  }, ownerId)
+  res.json({ success: true, data: { deleted: true } })
 }))
 
 export default router
