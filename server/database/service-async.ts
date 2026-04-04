@@ -1878,6 +1878,13 @@ if (data.is_enabled !== undefined) {
     }
   }
 
+  async deleteServiceNodePermission(id: string): Promise<void> {
+    await this.conn.execute(
+      `DELETE FROM service_node_permissions WHERE id = $1`,
+      [id]
+    )
+  }
+
   async batchUpsertServiceNodePermissions(
     nodes: Array<{
       service_name: string

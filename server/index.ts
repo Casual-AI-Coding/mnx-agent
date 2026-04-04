@@ -22,6 +22,7 @@ import templatesRouter from './routes/templates'
 import workflowsRouter from './routes/workflows'
 import adminServiceNodesRouter from './routes/admin/service-nodes'
 import adminWorkflowsRouter from './routes/admin/workflows'
+import adminServicePermissionsRouter from './routes/admin/service-permissions'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
@@ -99,6 +100,7 @@ app.use('/api/templates', templatesRouter)
 app.use('/api/workflows', workflowsRouter)
 app.use('/api/admin/service-nodes', adminServiceNodesRouter)
 app.use('/api/admin/workflows', adminWorkflowsRouter)
+app.use('/api/admin/service-permissions', adminServicePermissionsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
