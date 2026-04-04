@@ -479,6 +479,17 @@ ON CONFLICT (id) DO NOTHING;
       CREATE INDEX IF NOT EXISTS idx_dead_letter_queue_resolved ON dead_letter_queue(resolved_at);
     `,
   },
+  {
+    id: 20,
+    name: 'migration_020_composite_indexes',
+    sql: `
+CREATE INDEX IF NOT EXISTS idx_task_queue_owner_status ON task_queue(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_execution_logs_owner_status ON execution_logs(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_owner_active ON cron_jobs(owner_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_owner_public ON workflow_templates(owner_id, is_public);
+CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_id, type);
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
