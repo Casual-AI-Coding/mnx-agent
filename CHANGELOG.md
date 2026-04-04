@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.3] - UNRELEASED
+## [1.3.3] - 2026-04-04
 
 ### Fixed
 - **Test Environment Configuration** - PostgreSQL connection for tests

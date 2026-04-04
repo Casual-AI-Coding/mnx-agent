@@ -107,6 +107,7 @@ function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
     ...row,
     type: row.type as MediaRecord['type'],
     source: row.source as MediaRecord['source'],
+    size_bytes: typeof row.size_bytes === 'string' ? parseInt(row.size_bytes, 10) : row.size_bytes,
     is_deleted: typeof row.is_deleted === 'boolean' ? row.is_deleted : row.is_deleted === 1,
     metadata,
   }
@@ -1823,7 +1824,7 @@ export class DatabaseService {
     data: { min_role?: string; is_enabled?: boolean }
   ): Promise<void> {
     const updates: string[] = []
-    const values: (string | number)[] = []
+    const values: (string | number | boolean)[] = []
     let paramIndex = 1
 
     if (data.min_role !== undefined) {
@@ -1831,10 +1832,9 @@ export class DatabaseService {
       values.push(data.min_role)
       paramIndex++
     }
-if (data.is_enabled !== undefined) {
+    if (data.is_enabled !== undefined) {
       updates.push(`is_enabled = $${paramIndex}`)
-      const boolValue = data.is_enabled ? 1 : 0
-      values.push(this.conn.isPostgres() ? boolValue : boolValue)
+      values.push(this.conn.isPostgres() ? data.is_enabled : (data.is_enabled ? 1 : 0))
       paramIndex++
     }
 
@@ -2402,4 +2402,8 @@ export async function closeDatabase(): Promise<void> {
     await dbInstance.close()
     dbInstance = null
   }
+}
+
+export function resetDatabase(): void {
+  dbInstance = null
 }
