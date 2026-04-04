@@ -37,6 +37,8 @@ import {
   Server,
   Loader2,
   ChevronDown,
+  Undo,
+  Redo,
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
@@ -46,6 +48,8 @@ import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
 import { TemplateSelectorModal } from '@/components/workflow/TemplateSelectorModal'
+import { WorkflowSelectorModal } from '@/components/workflow/WorkflowSelectorModal'
+import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
 import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
@@ -180,6 +184,10 @@ function Toolbar({
   onLoadFromServer,
   onValidate,
   onClear,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   isValid,
   nodeCount,
   edgeCount,
@@ -191,6 +199,10 @@ function Toolbar({
   onLoadFromServer: () => void
   onValidate: () => void
   onClear: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
   isValid: boolean
   nodeCount: number
   edgeCount: number
@@ -209,6 +221,38 @@ function Toolbar({
       </div>
 
       <div className="flex items-center gap-2">
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Undo (Ctrl+Z)"
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+            canUndo
+              ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+          )}
+        >
+          <Undo className="w-4 h-4" />
+          <span className="hidden sm:inline">Undo</span>
+        </button>
+
+        <button
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Redo (Ctrl+Y)"
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+            canRedo
+              ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+          )}
+        >
+          <Redo className="w-4 h-4" />
+          <span className="hidden sm:inline">Redo</span>
+        </button>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
         <button
           onClick={onValidate}
           className={cn(
@@ -666,6 +710,75 @@ function WorkflowBuilderInner() {
   const [saveMessage, setSaveMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSaveModal, setShowSaveModal] = React.useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = React.useState(false)
+  const [showWorkflowSelector, setShowWorkflowSelector] = React.useState(false)
+  
+  const [history, setHistory] = React.useState<{ past: { nodes: Node[], edges: Edge[] }[], future: { nodes: Node[], edges: Edge[] }[] }>({ past: [], future: [] })
+  
+  const canUndo = history.past.length > 0
+  const canRedo = history.future.length > 0
+  
+  const handleUndo = React.useCallback(() => {
+    if (history.past.length === 0) return
+    const previous = history.past[history.past.length - 1]
+    setHistory(h => ({ past: h.past.slice(0, -1), future: [{ nodes, edges }, ...h.future] }))
+    setNodes(previous.nodes)
+    setEdges(previous.edges)
+  }, [history, nodes, edges, setNodes, setEdges])
+  
+  const handleRedo = React.useCallback(() => {
+    if (history.future.length === 0) return
+    const next = history.future[0]
+    setHistory(h => ({ past: [...h.past, { nodes, edges }], future: h.future.slice(1) }))
+    setNodes(next.nodes)
+    setEdges(next.edges)
+  }, [history, nodes, edges, setNodes, setEdges])
+  
+  const trackHistory = React.useCallback(() => {
+    setHistory(h => ({ past: [...h.past, { nodes, edges }].slice(-50), future: [] }))
+  }, [nodes, edges])
+
+  const generateId = (type: string) => {
+    const timestamp = Date.now().toString(36)
+    const random = Math.random().toString(36).substr(2, 4)
+    return `${type}-${timestamp}-${random}`
+  }
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          handleRedo()
+        } else {
+          handleUndo()
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        e.preventDefault()
+        handleRedo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleUndo, handleRedo])
+
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      setHistory(h => {
+        if (h.past.length > 0) {
+          const last = h.past[h.past.length - 1]
+          const isSame = JSON.stringify(last.nodes) === JSON.stringify(nodes) && 
+                        JSON.stringify(last.edges) === JSON.stringify(edges)
+          if (isSame) return h
+        }
+        return { 
+          past: [...h.past, { nodes, edges }].slice(-50), 
+          future: [] 
+        }
+      })
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [nodes, edges])
 
   // Load workflow by ID from URL query parameter
   React.useEffect(() => {
@@ -741,7 +854,7 @@ function WorkflowBuilderInner() {
     })
 
     const newNode: Node = {
-      id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateId(nodeType),
       type: nodeType,
       position,
       data: getDefaultConfig(nodeType, actionData),
@@ -753,7 +866,7 @@ function WorkflowBuilderInner() {
 
   const onConnect = (connection: Connection) => {
     const newEdge: Edge = {
-      id: `edge-${Date.now()}`,
+      id: generateId('edge'),
       source: connection.source!,
       target: connection.target!,
       sourceHandle: connection.sourceHandle || undefined,
@@ -893,7 +1006,22 @@ function WorkflowBuilderInner() {
   }
 
   const handleLoadFromServer = async () => {
-    setShowTemplateSelector(true)
+    setShowWorkflowSelector(true)
+  }
+
+  const handleSelectWorkflow = (_templateId: string, template: WorkflowTemplate) => {
+    const nodesData = typeof template.nodes_json === 'string'
+      ? JSON.parse(template.nodes_json)
+      : template.nodes_json
+    const edgesData = typeof template.edges_json === 'string'
+      ? JSON.parse(template.edges_json)
+      : template.edges_json
+
+    setNodes(nodesData.map(storeNodeToRFNode))
+    setEdges(edgesData as Edge[])
+    setHistory({ past: [], future: [] })
+    store.setCurrentWorkflow(template.id, template.name)
+    setShowWorkflowSelector(false)
   }
 
   const handleValidate = () => {
@@ -928,6 +1056,7 @@ function WorkflowBuilderInner() {
     if (confirm('Are you sure you want to clear all nodes and edges?')) {
       setNodes([])
       setEdges([])
+      setHistory({ past: [], future: [] })
       setShowConfigPanel(false)
       setSelectedNode(null)
       store.setDirty(true)
@@ -954,6 +1083,10 @@ function WorkflowBuilderInner() {
         onLoadFromServer={handleLoadFromServer}
         onValidate={handleValidate}
         onClear={handleClear}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         isValid={workflowIsValid}
         nodeCount={nodes.length}
         edgeCount={edges.length}
@@ -1067,6 +1200,12 @@ function WorkflowBuilderInner() {
         isOpen={showTemplateSelector}
         onClose={() => setShowTemplateSelector(false)}
         onSelect={handleSelectTemplate}
+      />
+
+      <WorkflowSelectorModal
+        isOpen={showWorkflowSelector}
+        onClose={() => setShowWorkflowSelector(false)}
+        onSelect={handleSelectWorkflow}
       />
     </div>
   )
