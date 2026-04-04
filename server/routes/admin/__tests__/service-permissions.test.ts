@@ -5,6 +5,16 @@ import { createConnection, closeConnection, getConnection } from '../../../datab
 import { getDatabase } from '../../../database/service-async.js'
 import servicePermissionsRouter from '../service-permissions.js'
 
+const mockUser = {
+  userId: 'test-user-001',
+  role: 'super',
+}
+
+const mockAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  req.user = mockUser
+  next()
+}
+
 describe('Service Permissions API Routes', () => {
   let app: express.Application
   let db: Awaited<ReturnType<typeof getDatabase>>
@@ -15,12 +25,13 @@ describe('Service Permissions API Routes', () => {
       pgPort: parseInt(process.env.DB_PORT || '5432', 10),
       pgUser: process.env.DB_USER || 'postgres',
       pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_test',
+      pgDatabase: process.env.DB_NAME || 'minimax_agent',
     })
     db = await getDatabase()
 
     app = express()
     app.use(express.json())
+    app.use(mockAuthMiddleware)
     app.use('/api/admin/service-permissions', servicePermissionsRouter)
   })
 

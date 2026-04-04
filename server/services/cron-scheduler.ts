@@ -48,7 +48,7 @@ export class CronScheduler {
     
     for (const job of activeJobs) {
       try {
-        this.scheduleJob(job)
+        await this.scheduleJob(job)
       } catch (error) {
         console.error(`[CronScheduler] Failed to schedule job "${job.name}" (${job.id}):`, error)
       }

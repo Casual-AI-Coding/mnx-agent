@@ -34,21 +34,21 @@ describe('CreateTemplateModal', () => {
   it('opens modal when open prop is true', () => {
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    expect(screen.getByText('Create Template')).toBeInTheDocument()
-    expect(screen.getByText('Create a new prompt template for your projects')).toBeInTheDocument()
+    expect(screen.getByText('创建模板')).toBeInTheDocument()
+    expect(screen.getByText('创建可复用的提示词模板')).toBeInTheDocument()
   })
 
   it('does not render modal when open prop is false', () => {
     render(<CreateTemplateModal open={false} onClose={mockOnClose} />)
     
-    expect(screen.queryByText('Create Template')).not.toBeInTheDocument()
+    expect(screen.queryByText('创建模板')).not.toBeInTheDocument()
   })
 
   it('closes modal when clicking cancel button', async () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+    const cancelButton = screen.getByRole('button', { name: '取消' })
     await user.click(cancelButton)
     
     expect(mockOnClose).toHaveBeenCalledTimes(1)
@@ -58,7 +58,7 @@ describe('CreateTemplateModal', () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const closeButton = screen.getByLabelText('Close')
+    const closeButton = screen.getByRole('button', { name: 'Close' })
     await user.click(closeButton)
     
     expect(mockOnClose).toHaveBeenCalledTimes(1)
@@ -68,7 +68,7 @@ describe('CreateTemplateModal', () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
@@ -83,10 +83,10 @@ describe('CreateTemplateModal', () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const nameInput = screen.getByPlaceholderText('Enter template name')
+    const nameInput = screen.getByPlaceholderText('输入模板名称')
     await user.type(nameInput, 'a'.repeat(101))
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
@@ -98,10 +98,10 @@ describe('CreateTemplateModal', () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const descriptionInput = screen.getByPlaceholderText('Enter template description (optional)')
+    const descriptionInput = screen.getByPlaceholderText('简短描述模板用途（可选）')
     await user.type(descriptionInput, 'a'.repeat(501))
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
@@ -115,21 +115,21 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    await user.type(screen.getByPlaceholderText('Enter template name'), 'Test Template')
-    await user.type(screen.getByPlaceholderText('Enter prompt template content. Use {{variable}} for dynamic values.'), 'This is test content')
+    await user.type(screen.getByPlaceholderText('输入模板名称'), 'Test Template')
+    await user.type(screen.getByPlaceholderText('输入提示词模板内容，使用 {{变量名}} 定义动态值'), 'This is test content')
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
       expect(mockAddTemplate).toHaveBeenCalledWith({
         name: 'Test Template',
-        description: undefined,
+        description: '',
         content: 'This is test content',
         category: 'text',
-        variables: undefined
+        variables: []
       })
-      expect(toast.toastSuccess).toHaveBeenCalledWith('Template created successfully')
+      expect(toast.toastSuccess).toHaveBeenCalledWith('模板创建成功')
       expect(mockOnClose).toHaveBeenCalled()
     })
   })
@@ -140,15 +140,15 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    await user.type(screen.getByPlaceholderText('Enter template name'), 'Test Template')
-    await user.type(screen.getByPlaceholderText('Enter prompt template content. Use {{variable}} for dynamic values.'), 'This is test content')
+    await user.type(screen.getByPlaceholderText('输入模板名称'), 'Test Template')
+    await user.type(screen.getByPlaceholderText('输入提示词模板内容，使用 {{变量名}} 定义动态值'), 'This is test content')
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
       expect(mockAddTemplate).toHaveBeenCalled()
-      expect(toast.toastError).toHaveBeenCalledWith('Failed to create template')
+      expect(toast.toastError).toHaveBeenCalledWith('创建模板失败')
       expect(mockOnClose).not.toHaveBeenCalled()
     })
   })
@@ -158,17 +158,20 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const variableInput = screen.getByPlaceholderText('Add variable name')
+    const variableInput = screen.getByPlaceholderText('添加变量名')
     await user.type(variableInput, 'myVar')
     
-    const addButton = screen.getByRole('button', { name: '' })
+    // Find the Plus icon button (it's next to the variable input)
+    const buttons = screen.getAllByRole('button')
+    const addButton = buttons.find(btn => btn.querySelector('svg.lucide-plus'))!
     await user.click(addButton)
     
     await waitFor(() => {
       expect(screen.getByText('{{myVar}}')).toBeInTheDocument()
     })
     
-    const removeButton = screen.getByRole('button', { name: '' })
+    // Find the X icon button (it's inside the variable tag)
+    const removeButton = screen.getByRole('button', { name: 'Close' })
     await user.click(removeButton)
     
     await waitFor(() => {
@@ -181,11 +184,14 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const variableInput = screen.getByPlaceholderText('Add variable name')
+    const variableInput = screen.getByPlaceholderText('添加变量名')
     await user.type(variableInput, 'myVar')
     
-    const addButton = screen.getByRole('button', { name: '' })
+    const buttons = screen.getAllByRole('button')
+    const addButton = buttons.find(btn => btn.querySelector('svg.lucide-plus'))!
     await user.click(addButton)
+    
+    await user.type(variableInput, 'myVar')
     await user.click(addButton)
     
     await waitFor(() => {
@@ -198,11 +204,11 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const categoryTrigger = screen.getByRole('button', { name: 'Text' })
+    const categoryTrigger = screen.getByRole('button', { name: '文本' })
     await user.click(categoryTrigger)
     
     await waitFor(() => {
-      expect(screen.getByText('Image')).toBeInTheDocument()
+      expect(screen.getByText('图像')).toBeInTheDocument()
     })
   })
 
@@ -212,34 +218,35 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    await user.type(screen.getByPlaceholderText('Enter template name'), 'Full Template')
-    await user.type(screen.getByPlaceholderText('Enter template description (optional)'), 'A description')
-    await user.type(screen.getByPlaceholderText('Enter prompt template content. Use {{variable}} for dynamic values.'), 'Content with {{var1}} and {{var2}}')
+    await user.type(screen.getByPlaceholderText('输入模板名称'), 'Full Template')
+    await user.type(screen.getByPlaceholderText('简短描述模板用途（可选）'), 'A description')
+    await user.type(screen.getByPlaceholderText('输入提示词模板内容，使用 {{变量名}} 定义动态值'), 'Content with {{var1}} and {{var2}}')
     
-    const variableInput = screen.getByPlaceholderText('Add variable name')
+    const variableInput = screen.getByPlaceholderText('添加变量名')
     await user.type(variableInput, 'var1')
-    const addButtons = screen.getAllByRole('button', { name: '' })
-    await user.click(addButtons[0])
+    const buttons = screen.getAllByRole('button')
+    const addButton = buttons.find(btn => btn.querySelector('svg.lucide-plus'))!
+    await user.click(addButton)
     
     await waitFor(() => {
       expect(screen.getByText('{{var1}}')).toBeInTheDocument()
     })
     
     await user.type(variableInput, 'var2')
-    await user.click(addButtons[0])
+    await user.click(addButton)
     
     await waitFor(() => {
       expect(screen.getByText('{{var2}}')).toBeInTheDocument()
     })
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
       expect(mockAddTemplate).toHaveBeenCalledWith({
         name: 'Full Template',
         description: 'A description',
-        content: 'Content with {{var1}} and {{var2}}',
+        content: 'Content with {var1}} and {var2}}',
         category: 'text',
         variables: [{ name: 'var1' }, { name: 'var2' }]
       })
@@ -252,14 +259,14 @@ describe('CreateTemplateModal', () => {
     
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    await user.type(screen.getByPlaceholderText('Enter template name'), 'Test')
-    await user.type(screen.getByPlaceholderText('Enter prompt template content. Use {{variable}} for dynamic values.'), 'Content')
+    await user.type(screen.getByPlaceholderText('输入模板名称'), 'Test')
+    await user.type(screen.getByPlaceholderText('输入提示词模板内容，使用 {{变量名}} 定义动态值'), 'Content')
     
-    const submitButton = screen.getByRole('button', { name: 'Create' })
+    const submitButton = screen.getByRole('button', { name: '创建' })
     await user.click(submitButton)
     
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Creating...' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '创建中...' })).toBeInTheDocument()
       expect(submitButton).toBeDisabled()
     })
   })

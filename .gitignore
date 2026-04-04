@@ -67,3 +67,6 @@ data/
 .dev.pid
 .dev.log
 .worktrees/
+
+# Dev tools (internal scripts)
+tools/

@@ -186,6 +186,10 @@ class PostgresTransactionConnection implements DatabaseConnection {
 let connectionInstance: DatabaseConnection | null = null
 
 export async function createConnection(config?: DatabaseConfig): Promise<DatabaseConnection> {
+  if (connectionInstance) {
+    return connectionInstance
+  }
+  
   const finalConfig = config || getConfigFromEnv()
   
   logger.info({ msg: 'Creating PostgreSQL connection', host: finalConfig.pgHost, database: finalConfig.pgDatabase })
@@ -207,6 +211,10 @@ export async function closeConnection(): Promise<void> {
     await connectionInstance.close()
     connectionInstance = null
   }
+}
+
+export function resetConnection(): void {
+  connectionInstance = null
 }
 
 export { PostgresConnection }

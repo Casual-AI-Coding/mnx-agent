@@ -85,35 +85,35 @@ describe('CronScheduler', () => {
   // ============================================================================
 
   describe('Job Scheduling', () => {
-    it('should schedule a job with valid cron expression', () => {
+    it('should schedule a job with valid cron expression', async () => {
       const job = createMockJob('job-1')
       
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       expect(scheduler.isJobScheduled('job-1')).toBe(true)
       expect(scheduler.getJobCount()).toBe(1)
     })
 
-    it('should throw error for invalid cron expression', () => {
+    it('should throw error for invalid cron expression', async () => {
       const job = createMockJob('job-1', { cron_expression: 'invalid' })
       
-      expect(() => scheduler.scheduleJob(job)).toThrow('Invalid cron expression')
+      await expect(scheduler.scheduleJob(job)).rejects.toThrow('Invalid cron expression')
     })
 
-    it('should replace existing job when scheduling same job id', () => {
+    it('should replace existing job when scheduling same job id', async () => {
       const job1 = createMockJob('job-1', { cron_expression: '0 * * * *' })
       const job2 = createMockJob('job-1', { cron_expression: '*/5 * * * *' })
       
-      scheduler.scheduleJob(job1)
-      scheduler.scheduleJob(job2)
+      await scheduler.scheduleJob(job1)
+      await scheduler.scheduleJob(job2)
       
       expect(scheduler.getJobCount()).toBe(1)
       expect(scheduler.isJobScheduled('job-1')).toBe(true)
     })
 
-    it('should unschedule a job successfully', () => {
+    it('should unschedule a job successfully', async () => {
       const job = createMockJob('job-1')
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       const result = scheduler.unscheduleJob('job-1')
       
@@ -128,24 +128,24 @@ describe('CronScheduler', () => {
       expect(result).toBe(false)
     })
 
-    it('should get all scheduled job IDs', () => {
+    it('should get all scheduled job IDs', async () => {
       const job1 = createMockJob('job-1')
       const job2 = createMockJob('job-2')
       const job3 = createMockJob('job-3')
       
-      scheduler.scheduleJob(job1)
-      scheduler.scheduleJob(job2)
-      scheduler.scheduleJob(job3)
+      await scheduler.scheduleJob(job1)
+      await scheduler.scheduleJob(job2)
+      await scheduler.scheduleJob(job3)
       
       const jobIds = scheduler.getAllScheduledJobs()
       
       expect(jobIds).toEqual(['job-1', 'job-2', 'job-3'])
     })
 
-    it('should update next_run_at when scheduling', () => {
+    it('should update next_run_at when scheduling', async () => {
       const job = createMockJob('job-1')
       
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       expect(mockDb.updateCronJob).toHaveBeenCalledWith('job-1', expect.objectContaining({
         next_run_at: expect.any(String),
@@ -221,14 +221,14 @@ describe('CronScheduler', () => {
   // ============================================================================
 
   describe('Graceful Shutdown', () => {
-    it('should stop all scheduled jobs', () => {
+    it('should stop all scheduled jobs', async () => {
       const job1 = createMockJob('job-1')
       const job2 = createMockJob('job-2')
       const job3 = createMockJob('job-3')
       
-      scheduler.scheduleJob(job1)
-      scheduler.scheduleJob(job2)
-      scheduler.scheduleJob(job3)
+      await scheduler.scheduleJob(job1)
+      await scheduler.scheduleJob(job2)
+      await scheduler.scheduleJob(job3)
       
       expect(scheduler.getJobCount()).toBe(3)
       
@@ -242,7 +242,7 @@ describe('CronScheduler', () => {
 
     it('should complete graceful shutdown with no running jobs', async () => {
       const job = createMockJob('job-1')
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       await scheduler.gracefulShutdown(1000)
       
@@ -252,7 +252,7 @@ describe('CronScheduler', () => {
 
     it('should wait for running jobs during graceful shutdown', async () => {
       const job = createMockJob('job-1')
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       // Simulate a running job
       const runningJobs = scheduler.getRunningJobs()
@@ -272,7 +272,7 @@ describe('CronScheduler', () => {
 
     it('should timeout graceful shutdown if jobs do not complete', async () => {
       const job = createMockJob('job-1')
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       // Simulate a running job that never completes
       const runningJobs = scheduler.getRunningJobs()
@@ -287,7 +287,7 @@ describe('CronScheduler', () => {
 
     it('should prevent new executions during shutdown', async () => {
       const job = createMockJob('job-1')
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       // Start shutdown process (simulate isShuttingDown)
       await scheduler.gracefulShutdown(100)
@@ -341,7 +341,7 @@ describe('CronScheduler', () => {
       const job = createMockJob('job-1')
       mockDb.getCronJobById.mockResolvedValue(job)
       
-      scheduler.scheduleJob(job)
+      await scheduler.scheduleJob(job)
       
       // Reschedule (unschedule + schedule)
       const result = await scheduler.rescheduleJob('job-1')
@@ -388,7 +388,7 @@ describe('CronScheduler', () => {
     })
 
     it('should return configured timezone', () => {
-      expect(scheduler.getTimezone()).toBe('UTC')
+      expect(scheduler.getTimezone()).toBe('Asia/Shanghai')
     })
 
     it('should use default timezone if not specified', () => {

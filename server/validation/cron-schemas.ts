@@ -133,6 +133,77 @@ export const createWorkflowTemplateSchema = z.object({
 export const updateWorkflowTemplateSchema = createWorkflowTemplateSchema.partial()
 
 // ============================================================================
+// Job Tags Schemas
+// ============================================================================
+
+export const addJobTagSchema = z.object({
+  tag: z.string()
+    .min(1, 'tag must be at least 1 character')
+    .max(50, 'tag must be at most 50 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'tag must contain only letters, numbers, and underscores'),
+})
+
+export const jobTagParamsSchema = z.object({
+  id: z.string().min(1, 'id is required'),
+  tag: z.string()
+    .min(1, 'tag must be at least 1 character')
+    .max(50, 'tag must be at most 50 characters'),
+})
+
+export const jobsByTagParamsSchema = z.object({
+  tag: z.string()
+    .min(1, 'tag must be at least 1 character')
+    .max(50, 'tag must be at most 50 characters'),
+})
+
+// ============================================================================
+// Job Dependencies Schemas
+// ============================================================================
+
+export const addJobDependencySchema = z.object({
+  depends_on_job_id: z.string().min(1, 'depends_on_job_id is required'),
+})
+
+export const jobDependencyParamsSchema = z.object({
+  id: z.string().min(1, 'id is required'),
+  depId: z.string().min(1, 'depId is required'),
+})
+
+// ============================================================================
+// Webhook Schemas
+// ============================================================================
+
+const webhookEventEnum = z.enum(['on_start', 'on_success', 'on_failure'])
+
+export const createWebhookSchema = z.object({
+  job_id: z.string().uuid(),
+  name: z.string().min(1, 'name must be at least 1 character').max(255, 'name must be at most 255 characters'),
+  url: z.string().url().max(500, 'url must be at most 500 characters'),
+  events: z.array(webhookEventEnum).min(1, 'at least one event is required'),
+  headers: z.record(z.string(), z.string()).optional(),
+  secret: z.string().max(255, 'secret must be at most 255 characters').optional(),
+  is_active: z.boolean().default(true),
+})
+
+export const updateWebhookSchema = z.object({
+  job_id: z.string().uuid().optional(),
+  name: z.string().min(1).max(255).optional(),
+  url: z.string().url().max(500).optional(),
+  events: z.array(webhookEventEnum).min(1).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  secret: z.string().max(255).optional().nullable(),
+  is_active: z.boolean().optional(),
+})
+
+export const webhookIdParamsSchema = z.object({
+  id: z.string().min(1, 'id is required'),
+})
+
+export const webhookDeliveriesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+})
+
+// ============================================================================
 // Type exports
 // ============================================================================
 
@@ -144,3 +215,7 @@ export type WorkflowValidateRequest = z.infer<typeof workflowValidateSchema>
 export type CapacityCheckRequest = z.infer<typeof capacityCheckSchema>
 export type CreateWorkflowTemplateRequest = z.infer<typeof createWorkflowTemplateSchema>
 export type UpdateWorkflowTemplateRequest = z.infer<typeof updateWorkflowTemplateSchema>
+export type AddJobTagRequest = z.infer<typeof addJobTagSchema>
+export type AddJobDependencyRequest = z.infer<typeof addJobDependencySchema>
+export type CreateWebhookRequest = z.infer<typeof createWebhookSchema>
+export type UpdateWebhookRequest = z.infer<typeof updateWebhookSchema>

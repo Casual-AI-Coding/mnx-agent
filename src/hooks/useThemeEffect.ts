@@ -25,6 +25,10 @@ export function getActiveThemeId(themeState: 'system' | string): string {
   return themeState
 }
 
+export function resetMediaQueryCache(): void {
+  cachedMediaQuery.current = null
+}
+
 export function useThemeEffect() {
   const { theme } = useAppStore()
 

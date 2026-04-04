@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useThemeEffect } from './useThemeEffect'
+import { useThemeEffect, resetMediaQueryCache } from './useThemeEffect'
 import * as appStore from '@/stores/app'
 
 const mockMatchMedia = vi.fn()
 beforeEach(() => {
-  window.matchMedia = mockMatchMedia
+  resetMediaQueryCache()
+  vi.stubGlobal('matchMedia', mockMatchMedia)
   mockMatchMedia.mockReturnValue({
     matches: false,
     addEventListener: vi.fn(),
@@ -15,6 +16,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
   document.documentElement.className = ''
   delete document.documentElement.dataset.theme
   delete document.documentElement.dataset.themeCategory

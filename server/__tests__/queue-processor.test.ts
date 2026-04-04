@@ -16,6 +16,8 @@ interface MockDatabaseService {
   updateTask: ReturnType<typeof vi.fn>
   updateTaskStatus: ReturnType<typeof vi.fn>
   getDatabase: ReturnType<typeof vi.fn>
+  createDeadLetterQueueItem: ReturnType<typeof vi.fn>
+  updateTasksStatusBatch: ReturnType<typeof vi.fn>
 }
 
 interface MockTaskExecutor {
@@ -46,7 +48,9 @@ describe('QueueProcessor', () => {
         prepare: vi.fn().mockReturnValue({
           run: mockDatabaseRun
         })
-      })
+      }),
+      createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
+      updateTasksStatusBatch: vi.fn().mockResolvedValue(1),
     }
 
     mockTaskExecutor = {
@@ -163,7 +167,8 @@ describe('QueueProcessor', () => {
       created_at: new Date().toISOString(),
       started_at: null,
       completed_at: null,
-      result: null
+      result: null,
+      owner_id: null
     })
 
     it('should requeue task with incremented retry count on failure', async () => {
@@ -215,7 +220,7 @@ describe('QueueProcessor', () => {
       const result = await processor.processQueue('job-1')
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
     })
 
     it('should mark task as RUNNING when execution starts', async () => {
@@ -280,7 +285,8 @@ describe('QueueProcessor', () => {
       created_at: new Date().toISOString(),
       started_at: null,
       completed_at: null,
-      result: null
+      result: null,
+      owner_id: null
     })
 
     it('should move task to dead letter queue after max retries exceeded', async () => {
@@ -294,7 +300,7 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
     })
 
     it('should include error message in dead letter queue entry', async () => {
@@ -308,9 +314,12 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      // Verify dead letter queue insert was called
-      expect(mockDb.getDatabase).toHaveBeenCalled()
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error_message: 'Specific error message'
+        }),
+        undefined
+      )
     })
 
     it('should use default error message when task has no error', async () => {
@@ -323,7 +332,12 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error_message: 'Max retries exceeded'
+        }),
+        undefined
+      )
     })
 
     it('should include retry count in dead letter queue entry', async () => {
@@ -337,7 +351,12 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          retry_count: 5
+        }),
+        undefined
+      )
     })
 
     it('should handle database error when moving to dead letter queue gracefully', async () => {
@@ -348,9 +367,7 @@ describe('QueueProcessor', () => {
         error: 'Failed',
         durationMs: 100
       })
-      mockDatabaseRun.mockImplementationOnce(() => {
-        throw new Error('Database error')
-      })
+      mockDb.createDeadLetterQueueItem.mockRejectedValueOnce(new Error('Database error'))
 
       // Should not throw, should handle gracefully
       const result = await processor.processQueue('job-1')
@@ -372,7 +389,8 @@ describe('QueueProcessor', () => {
       created_at: new Date().toISOString(),
       started_at: null,
       completed_at: null,
-      result: null
+      result: null,
+      owner_id: null
     })
 
     it('should return empty result when no pending tasks', async () => {
@@ -503,28 +521,27 @@ describe('QueueProcessor', () => {
   describe('Cancel Pending Tasks', () => {
     it('should cancel all pending tasks', async () => {
       const tasks: TaskQueueRow[] = [
-        { id: '1', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.PENDING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '2', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.PENDING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.RUNNING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
+        { id: '1', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.PENDING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, owner_id: null },
+        { id: '2', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.PENDING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, owner_id: null },
+        { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.RUNNING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, owner_id: null },
       ]
       
       mockDb.getPendingTasks.mockResolvedValueOnce(tasks)
+      mockDb.updateTasksStatusBatch.mockResolvedValueOnce(2)
 
       const count = await processor.cancelPendingTasks('job-1')
 
       expect(count).toBe(2) // Only pending tasks
-      expect(mockDb.updateTaskStatus).toHaveBeenCalledTimes(2)
-      expect(mockDb.updateTaskStatus).toHaveBeenCalledWith('1', TaskStatus.CANCELLED, {})
-      expect(mockDb.updateTaskStatus).toHaveBeenCalledWith('2', TaskStatus.CANCELLED, {})
+      expect(mockDb.updateTasksStatusBatch).toHaveBeenCalledWith(['1', '2'], TaskStatus.CANCELLED)
     })
   })
 
   describe('Retry Failed Tasks', () => {
     it('should reset failed tasks for retry', async () => {
       const tasks: TaskQueueRow[] = [
-        { id: '1', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 3, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, error_message: 'Error' },
-        { id: '2', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.COMPLETED, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null },
-        { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 2, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, error_message: 'Error' },
+        { id: '1', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 3, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, error_message: 'Error', owner_id: null },
+        { id: '2', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.COMPLETED, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, owner_id: null },
+        { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 2, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, error_message: 'Error', owner_id: null },
       ]
       
       mockDb.getPendingTasks.mockResolvedValueOnce(tasks)
@@ -559,7 +576,8 @@ describe('QueueProcessor', () => {
       created_at: new Date().toISOString(),
       started_at: null,
       completed_at: null,
-      result: null
+      result: null,
+      owner_id: null
     })
 
     it('should process a batch of tasks', async () => {
@@ -601,7 +619,7 @@ describe('QueueProcessor', () => {
       const result = await processor.processBatch('job-1', batch)
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDatabaseRun).toHaveBeenCalled()
+      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
     })
   })
 })

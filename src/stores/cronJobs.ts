@@ -12,6 +12,12 @@ import {
   deleteCronJob as apiDeleteCronJob,
   toggleCronJob as apiToggleCronJob,
   runCronJob as apiRunCronJob,
+  addJobTag as apiAddJobTag,
+  removeJobTag as apiRemoveJobTag,
+  getJobTags as apiGetJobTags,
+  addJobDependency as apiAddJobDependency,
+  removeJobDependency as apiRemoveJobDependency,
+  getJobDependencies as apiGetJobDependencies,
 } from '../lib/api/cron'
 
 function transformJobResponse(job: BackendJob): CronJob {
@@ -42,6 +48,12 @@ interface CronJobsState {
   deleteJob: (id: string) => Promise<void>
   toggleJob: (id: string) => Promise<void>
   runJobManually: (id: string) => Promise<void>
+  addJobTag: (jobId: string, tag: string) => Promise<string[]>
+  removeJobTag: (jobId: string, tag: string) => Promise<string[]>
+  getJobTags: (jobId: string) => Promise<string[]>
+  addJobDependency: (jobId: string, dependsOnJobId: string) => Promise<string[]>
+  removeJobDependency: (jobId: string, dependsOnJobId: string) => Promise<string[]>
+  getJobDependencies: (jobId: string) => Promise<string[]>
 }
 
 export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
@@ -174,6 +186,114 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Failed to run job',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  addJobTag: async (jobId: string, tag: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiAddJobTag(jobId, tag)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to add job tag')
+      }
+      set({ loading: false })
+      return response.data.tags
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to add job tag',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  removeJobTag: async (jobId: string, tag: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiRemoveJobTag(jobId, tag)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to remove job tag')
+      }
+      set({ loading: false })
+      return response.data.tags
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to remove job tag',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  getJobTags: async (jobId: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiGetJobTags(jobId)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get job tags')
+      }
+      set({ loading: false })
+      return response.data.tags
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to get job tags',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  addJobDependency: async (jobId: string, dependsOnJobId: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiAddJobDependency(jobId, dependsOnJobId)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to add job dependency')
+      }
+      set({ loading: false })
+      return response.data.dependencies
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to add job dependency',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  removeJobDependency: async (jobId: string, dependsOnJobId: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiRemoveJobDependency(jobId, dependsOnJobId)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to remove job dependency')
+      }
+      set({ loading: false })
+      return response.data.dependencies
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to remove job dependency',
+        loading: false,
+      })
+      throw err
+    }
+  },
+
+  getJobDependencies: async (jobId: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiGetJobDependencies(jobId)
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get job dependencies')
+      }
+      set({ loading: false })
+      return response.data.dependencies
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to get job dependencies',
         loading: false,
       })
       throw err

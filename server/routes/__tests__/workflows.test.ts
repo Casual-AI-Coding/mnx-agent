@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { createConnection, closeConnection, getConnection } from '../../database/connection.js'
+import { createConnection, getConnection } from '../../database/connection.js'
 import workflowsRouter from '../workflows.js'
 
 const mockUser = {
@@ -23,7 +23,7 @@ describe('Workflows API Routes', () => {
       pgPort: parseInt(process.env.DB_PORT || '5432', 10),
       pgUser: process.env.DB_USER || 'postgres',
       pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_test',
+      pgDatabase: process.env.DB_NAME || 'minimax_agent',
     })
     app = express()
     app.use(express.json())
@@ -37,7 +37,6 @@ describe('Workflows API Routes', () => {
   })
 
   afterAll(async () => {
-    await closeConnection()
   })
 
   describe('GET /api/workflows', () => {
@@ -68,18 +67,24 @@ describe('Workflows API Routes', () => {
     })
 
     it('should filter by is_public', async () => {
-      await request(app).post('/api/workflows').send({
+      const createRes1 = await request(app).post('/api/workflows').send({
         name: 'Public 1',
         nodes_json: '{"nodes":[]}',
         edges_json: '{"edges":[]}',
         is_public: true,
       })
-      await request(app).post('/api/workflows').send({
+      
+      const createRes2 = await request(app).post('/api/workflows').send({
         name: 'Private 1',
         nodes_json: '{"nodes":[]}',
         edges_json: '{"edges":[]}',
         is_public: false,
       })
+
+      expect(createRes1.status).toBe(201)
+      expect(createRes1.body.data.is_public).toBe(true)
+      expect(createRes2.status).toBe(201)
+      expect(createRes2.body.data.is_public).toBe(false)
 
       const res = await request(app).get('/api/workflows?is_public=true')
 

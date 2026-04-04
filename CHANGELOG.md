@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2026-04-04
+
+### Added
+- **TemplateSelectorModal Component** - Workflow template selector UI (v1.3.2 promised feature)
+  - Visual workflow preview with mini node cards
+  - Search and filter functionality
+  - Load templates directly into WorkflowBuilder
+
+### Fixed
+- **Test Infrastructure** - Comprehensive test environment improvements
+  - Database cleanup in `beforeEach` for proper test isolation
+  - Mock authentication middleware for route tests
+  - Expanded test coverage across all modules
+
+- **UI Components** - Select component improvements
+  - Better keyboard navigation
+  - Improved accessibility
+
+### Changed
+- **Database Schema** - Schema refinements for consistency
+  - Connection helper utilities
+  - Type safety improvements
+
+- **Cron Routes** - Enhanced route handling
+  - Better validation schemas
+  - Improved error handling
+
+- **API Layer** - Expanded API client functionality
+  - Additional cron API methods in frontend
+
+### Removed
+- **Archived Plans** - Clean up v1.3 planning documents
+  - Removed 12 completed planning documents from `docs/superpowers/plans/`
+  - Plans archived to `docs/planning/archive/v1.3/` (v1.3.2)
+
+### Documentation
+- Update `docs/superpowers/specs/workflow-core-concepts.md`
+
 ## [1.3.3] - 2026-04-04
 
 ### Fixed

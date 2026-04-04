@@ -285,6 +285,95 @@ export async function deleteWorkflowTemplate(id: string): Promise<ApiResponse<vo
 }
 
 // ============================================
+// Job Tags API
+// ============================================
+
+export async function addJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
+  try {
+    const response = await cronClient.post(`/cron/jobs/${jobId}/tags`, { tag })
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'addJobTag')
+  }
+}
+
+export async function removeJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
+  try {
+    const response = await cronClient.delete(`/cron/jobs/${jobId}/tags/${encodeURIComponent(tag)}`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'removeJobTag')
+  }
+}
+
+export async function getJobTags(jobId: string): Promise<ApiResponse<{ tags: string[] }>> {
+  try {
+    const response = await cronClient.get(`/cron/jobs/${jobId}/tags`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getJobTags')
+  }
+}
+
+export async function getJobsByTag(tag: string): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
+  try {
+    const response = await cronClient.get(`/cron/tags/${encodeURIComponent(tag)}/jobs`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getJobsByTag')
+  }
+}
+
+export async function getAllTags(): Promise<ApiResponse<{ tags: { tag: string; count: number }[] }>> {
+  try {
+    const response = await cronClient.get('/cron/tags')
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getAllTags')
+  }
+}
+
+// ============================================
+// Job Dependencies API
+// ============================================
+
+export async function addJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  try {
+    const response = await cronClient.post(`/cron/jobs/${jobId}/dependencies`, { depends_on_job_id: dependsOnJobId })
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'addJobDependency')
+  }
+}
+
+export async function removeJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  try {
+    const response = await cronClient.delete(`/cron/jobs/${jobId}/dependencies/${dependsOnJobId}`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'removeJobDependency')
+  }
+}
+
+export async function getJobDependencies(jobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  try {
+    const response = await cronClient.get(`/cron/jobs/${jobId}/dependencies`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getJobDependencies')
+  }
+}
+
+export async function getJobDependents(jobId: string): Promise<ApiResponse<{ dependents: string[] }>> {
+  try {
+    const response = await cronClient.get(`/cron/jobs/${jobId}/dependents`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getJobDependents')
+  }
+}
+
+// ============================================
 // Export client for custom use cases
 // ============================================
 

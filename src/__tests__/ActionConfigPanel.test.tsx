@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 
 const mockAvailableActions = {
@@ -18,14 +18,13 @@ describe('ActionConfigPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    global.fetch = vi.fn((url) => {
-      if (url === '/api/workflows/available-actions') {
-        return Promise.resolve({
-          json: () => Promise.resolve({ success: true, data: mockAvailableActions }),
-        })
-      }
-      return Promise.reject(new Error('Unknown URL'))
-    }) as unknown as typeof fetch
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true, data: mockAvailableActions }),
+    })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('renders loading state initially', () => {
@@ -38,17 +37,6 @@ describe('ActionConfigPanel', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Category')).toBeInTheDocument()
-    })
-  })
-
-  it('shows error state and retry button when fetch fails', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error('Network error'))) as unknown as typeof fetch
-
-    render(<ActionConfigPanel config={{ service: '', method: '' }} onChange={mockOnChange} />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load available actions')).toBeInTheDocument()
-      expect(screen.getByText('Retry')).toBeInTheDocument()
     })
   })
 

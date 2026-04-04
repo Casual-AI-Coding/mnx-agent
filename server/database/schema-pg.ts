@@ -239,6 +239,57 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
 );
 
 -- ============================================
+-- Webhook Tables
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS webhook_configs (
+  id VARCHAR(36) PRIMARY KEY,
+  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  events JSONB NOT NULL,
+  headers JSONB,
+  secret VARCHAR(255),
+  is_active BOOLEAN DEFAULT true,
+  owner_id VARCHAR(36) REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id VARCHAR(36) PRIMARY KEY,
+  webhook_id VARCHAR(36) NOT NULL,
+  execution_log_id VARCHAR(36),
+  event VARCHAR(50) NOT NULL,
+  payload JSONB NOT NULL,
+  response_status INTEGER,
+  response_body TEXT,
+  error_message TEXT,
+  delivered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  owner_id VARCHAR(36) REFERENCES users(id)
+);
+
+-- ============================================
+-- Dead Letter Queue
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS dead_letter_queue (
+  id VARCHAR(36) PRIMARY KEY,
+  original_task_id VARCHAR(36),
+  job_id VARCHAR(36),
+  owner_id VARCHAR(36) REFERENCES users(id),
+  task_type VARCHAR(50) NOT NULL,
+  payload JSONB NOT NULL,
+  error_message TEXT,
+  retry_count INTEGER DEFAULT 0,
+  max_retries INTEGER DEFAULT 3,
+  failed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at TIMESTAMP,
+  resolution VARCHAR(20),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- Indexes for Performance
 -- ============================================
 
@@ -298,6 +349,17 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON audit_logs(resource_id)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_response_status ON audit_logs(response_status);
+
+-- Webhook configs indexes
+CREATE INDEX IF NOT EXISTS idx_webhook_configs_job_id ON webhook_configs(job_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_configs_owner ON webhook_configs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_configs_active ON webhook_configs(is_active);
+
+-- Webhook deliveries indexes
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_execution_log_id ON webhook_deliveries(execution_log_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_owner ON webhook_deliveries(owner_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_delivered_at ON webhook_deliveries(delivered_at DESC);
 
 -- ============================================
 -- Initialization Data

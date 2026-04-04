@@ -33,7 +33,7 @@ describe('Select Component', () => {
       </Select>
     )
     
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('combobox'))
     expect(screen.getByText('Option 1')).toBeInTheDocument()
   })
 
@@ -45,7 +45,7 @@ describe('Select Component', () => {
         </SelectTrigger>
       </Select>
     )
-    expect(screen.getByRole('button', { name: 'Default' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
     
     rerender(
       <Select>
@@ -54,7 +54,7 @@ describe('Select Component', () => {
         </SelectTrigger>
       </Select>
     )
-    expect(screen.getByRole('button', { name: 'Small' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
     
     rerender(
       <Select>
@@ -63,7 +63,7 @@ describe('Select Component', () => {
         </SelectTrigger>
       </Select>
     )
-    expect(screen.getByRole('button', { name: 'Large' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
   })
 })
 
@@ -89,7 +89,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
 
@@ -101,7 +101,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{ArrowDown}')
@@ -114,7 +114,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{ArrowDown}')
@@ -132,7 +132,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowUp}')
 
@@ -144,7 +144,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect({ defaultValue: '4' })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{ArrowUp}')
@@ -157,7 +157,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{ArrowUp}')
@@ -174,7 +174,7 @@ describe('Select Keyboard Navigation', () => {
       const handleValueChange = vi.fn()
       renderSelect({ onValueChange: handleValueChange })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{ArrowDown}')
@@ -191,7 +191,7 @@ describe('Select Keyboard Navigation', () => {
       const handleValueChange = vi.fn()
       renderSelect({ onValueChange: handleValueChange })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{Enter}')
 
@@ -205,7 +205,7 @@ describe('Select Keyboard Navigation', () => {
       const handleValueChange = vi.fn()
       renderSelect({ onValueChange: handleValueChange })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{Escape}')
@@ -222,7 +222,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{Tab}')
 
@@ -237,7 +237,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect({ defaultValue: '4' })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{Home}')
@@ -252,7 +252,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
       await user.keyboard('{End}')
@@ -267,7 +267,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
       await user.click(trigger)
@@ -281,7 +281,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
 
       const controlsId = trigger.getAttribute('aria-controls')
@@ -293,7 +293,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
       await user.keyboard('{ArrowDown}')
 
@@ -309,7 +309,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect({ defaultValue: '2' })
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
 
       const options = screen.getAllByRole('option')
@@ -324,7 +324,7 @@ describe('Select Keyboard Navigation', () => {
   describe('Focus management', () => {
     it('focuses trigger on mount', () => {
       renderSelect()
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       expect(trigger).toHaveFocus()
     })
 
@@ -332,7 +332,7 @@ describe('Select Keyboard Navigation', () => {
       const user = userEvent.setup()
       renderSelect()
 
-      const trigger = screen.getByRole('button')
+      const trigger = screen.getByRole('combobox')
       await user.click(trigger)
 
       const listbox = screen.getByRole('listbox')

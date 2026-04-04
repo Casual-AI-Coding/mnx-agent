@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { DatabaseService } from '../database/service-async.js'
-import { createConnection, closeConnection } from '../database/connection.js'
+import { createConnection, getConnection } from '../database/connection.js'
 import type {
   DeadLetterQueueItem,
   CreateDeadLetterQueueItem,
@@ -13,12 +13,21 @@ describe('Dead Letter Queue CRUD Operations', () => {
   let testUser1Id: string
   let testUser2Id: string
 
-  beforeEach(async () => {
-    const conn = await createConnection()
-    db = new DatabaseService(conn)
-    await db.init()
+  beforeAll(async () => {
+    await createConnection({
+      pgHost: process.env.DB_HOST || 'localhost',
+      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
+      pgUser: process.env.DB_USER || 'postgres',
+      pgPassword: process.env.DB_PASSWORD || '',
+      pgDatabase: process.env.DB_NAME || 'minimax_agent',
+    })
+    db = new DatabaseService(getConnection())
+  })
 
+  beforeEach(async () => {
+    const conn = getConnection()
     await conn.execute('DELETE FROM dead_letter_queue')
+    await conn.execute('DELETE FROM task_queue')
 
     testUser1Id = uuidv4()
     testUser2Id = uuidv4()
@@ -38,11 +47,13 @@ describe('Dead Letter Queue CRUD Operations', () => {
   })
 
   afterEach(async () => {
-    const conn = db.getConnection()
+    const conn = getConnection()
     await conn.execute('DELETE FROM task_queue WHERE owner_id IN ($1, $2)', [testUser1Id, testUser2Id])
     await conn.execute('DELETE FROM dead_letter_queue')
     await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testUser1Id, testUser2Id])
-    await db.close()
+  })
+
+  afterAll(async () => {
   })
 
   describe('createDeadLetterQueueItem', () => {

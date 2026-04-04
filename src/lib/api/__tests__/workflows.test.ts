@@ -19,12 +19,14 @@ vi.mock('axios', () => {
       response: { use: vi.fn() },
     },
   }
+  const isAxiosErrorMock = vi.fn((error: unknown) => error && (error as AxiosError).isAxiosError === true)
   return {
     default: {
       ...mockAxiosInstance,
-      isAxiosError: vi.fn((error: unknown) => error && (error as AxiosError).isAxiosError === true),
+      isAxiosError: isAxiosErrorMock,
     },
     ...mockAxiosInstance,
+    isAxiosError: isAxiosErrorMock,
   }
 })
 

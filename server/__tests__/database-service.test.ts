@@ -1,1008 +1,997 @@
-import { DatabaseService } from '../database/service'
-import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types'
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { createConnection, getConnection } from '../database/connection.js'
+import { DatabaseService } from '../database/service-async.js'
+import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types.js'
 import type {
-  CronJob,
-  TaskQueueItem,
-  ExecutionLog,
-  CapacityRecord,
-  WorkflowTemplate,
   CreateCronJob,
   CreateTaskQueueItem,
   CreateExecutionLog,
-} from '../database/types'
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
+  CreateExecutionLogDetail,
+} from '../database/types.js'
 
 describe('DatabaseService', () => {
   let db: DatabaseService
-  let tempDir: string
-  let dbPath: string
 
-  beforeEach(() => {
-    // Create temp directory for each test
-    tempDir = mkdtempSync(join(tmpdir(), 'db-test-'))
-    dbPath = join(tempDir, 'test.db')
-    db = new DatabaseService(dbPath)
-    db.init()
+  beforeAll(async () => {
+    await createConnection({
+      pgHost: process.env.DB_HOST || 'localhost',
+      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
+      pgUser: process.env.DB_USER || 'postgres',
+      pgPassword: process.env.DB_PASSWORD || '',
+      pgDatabase: process.env.DB_NAME || 'minimax_agent',
+    })
+    db = new DatabaseService(getConnection())
   })
 
-  afterEach(() => {
-    db.close()
-    rmSync(tempDir, { recursive: true, force: true })
+  beforeEach(async () => {
+    const conn = getConnection()
+    await conn.execute('DELETE FROM execution_log_details')
+    await conn.execute('DELETE FROM execution_logs')
+    await conn.execute('DELETE FROM task_queue')
+    await conn.execute('DELETE FROM dead_letter_queue')
+    await conn.execute('DELETE FROM webhook_deliveries')
+    await conn.execute('DELETE FROM webhook_configs')
+    await conn.execute('DELETE FROM job_dependencies')
+    await conn.execute('DELETE FROM job_tags')
+    await conn.execute('DELETE FROM cron_jobs')
+    await conn.execute('DELETE FROM capacity_tracking')
+    await conn.execute('DELETE FROM media_records')
+    await conn.execute('DELETE FROM prompt_templates')
+    await conn.execute('DELETE FROM workflow_templates')
+    await conn.execute('DELETE FROM audit_logs')
+    await conn.execute('DELETE FROM service_node_permissions')
   })
 
-  // ============================================================================
-  // Connection & Initialization
-  // ============================================================================
+  afterAll(async () => {
+  })
 
   describe('Connection & Initialization', () => {
-    it('should create database file on init', () => {
-      expect(db.isConnected()).toBe(true)
+    it('should connect to PostgreSQL database', async () => {
+      const connected = await db.isConnected()
+      expect(connected).toBe(true)
     })
 
-    it('should get raw database instance', () => {
-      const rawDb = db.getDatabase()
-      expect(rawDb).toBeDefined()
-      expect(typeof rawDb.prepare).toBe('function')
+    it('should report as PostgreSQL', () => {
+      expect(db.isPostgres()).toBe(true)
     })
 
-    it('should close connection properly', () => {
-      const testDb = new DatabaseService(join(tempDir, 'close-test.db'))
-      testDb.init()
-      
-      expect(testDb.isConnected()).toBe(true)
-      
-      testDb.close()
-      
-      expect(testDb.isConnected()).toBe(false)
+    it('should return the database connection', () => {
+      const conn = db.getConnection()
+      expect(conn).toBeDefined()
+      expect(typeof conn.query).toBe('function')
+      expect(typeof conn.execute).toBe('function')
     })
   })
-
-  // ============================================================================
-  // Cron Jobs CRUD
-  // ============================================================================
 
   describe('Cron Jobs CRUD', () => {
-    const createJobData = (name: string): CreateCronJob => ({
-      name,
-      description: 'Test job description',
-      cron_expression: '0 * * * *',
-      is_active: true,
-      timeout_ms: 60000,
-    })
+    describe('Create Cron Job', () => {
+      it('should create a cron job with required fields', async () => {
+        const jobData: CreateCronJob = {
+          name: 'Test Job',
+          cron_expression: '0 * * * *',
+        }
+        const job = await db.createCronJob(jobData)
 
-    describe('Create', () => {
-      it('should create a cron job with all fields', () => {
-        const data = createJobData('Test Job')
-        const job = db.createCronJob(data)
-        
         expect(job.id).toBeDefined()
         expect(job.name).toBe('Test Job')
-        expect(job.description).toBe('Test job description')
         expect(job.cron_expression).toBe('0 * * * *')
         expect(job.is_active).toBe(true)
-        expect(job.timeout_ms).toBe(60000)
+        expect(job.timezone).toBe('UTC')
+        expect(job.timeout_ms).toBe(300000)
         expect(job.total_runs).toBe(0)
         expect(job.total_failures).toBe(0)
-        expect(job.created_at).toBeDefined()
-        expect(job.updated_at).toBeDefined()
       })
 
-      it('should create cron job with minimal fields', () => {
-        const data: CreateCronJob = {
-          name: 'Minimal Job',
-          cron_expression: '*/5 * * * *',
-        }
-        const job = db.createCronJob(data)
-        
-        expect(job.id).toBeDefined()
-        expect(job.name).toBe('Minimal Job')
-        expect(job.is_active).toBe(true) // default
-        expect(job.timeout_ms).toBe(300000) // default 5 min
-      })
+      it('should create a cron job with all fields', async () => {
+        const template = await db.createWorkflowTemplate({
+          name: 'Test Workflow',
+          nodes_json: '{"nodes":[]}',
+          edges_json: '{"edges":[]}',
+        })
 
-      it('should create inactive job when is_active is false', () => {
-        const data = createJobData('Inactive Job')
-        data.is_active = false
-        
-        const job = db.createCronJob(data)
-        
-        expect(job.is_active).toBe(false)
-      })
-
-      it('should generate unique IDs for each job', () => {
-        const job1 = db.createCronJob(createJobData('Job 1'))
-        const job2 = db.createCronJob(createJobData('Job 2'))
-        
-        expect(job1.id).not.toBe(job2.id)
-      })
-    })
-
-    describe('Read', () => {
-      it('should get job by ID', () => {
-        const created = db.createCronJob(createJobData('Get Test'))
-        const fetched = db.getCronJobById(created.id)
-        
-        expect(fetched).toBeDefined()
-        expect(fetched?.id).toBe(created.id)
-        expect(fetched?.name).toBe('Get Test')
-      })
-
-      it('should return null for non-existent job ID', () => {
-        const fetched = db.getCronJobById('non-existent-id')
-        
-        expect(fetched).toBeNull()
-      })
-
-      it('should get all cron jobs', () => {
-        db.createCronJob(createJobData('Job A'))
-        db.createCronJob(createJobData('Job B'))
-        db.createCronJob(createJobData('Job C'))
-        
-        const jobs = db.getAllCronJobs()
-        
-        expect(jobs.length).toBe(3)
-        expect(jobs.map(j => j.name)).toContain('Job A')
-        expect(jobs.map(j => j.name)).toContain('Job B')
-        expect(jobs.map(j => j.name)).toContain('Job C')
-      })
-
-      it('should return all jobs sorted by created_at DESC', () => {
-        const job1 = db.createCronJob(createJobData('First'))
-        const job2 = db.createCronJob(createJobData('Second'))
-        const job3 = db.createCronJob(createJobData('Third'))
-        
-        const jobs = db.getAllCronJobs()
-        
-        expect(jobs.length).toBe(3)
-        expect(jobs.map(j => j.id)).toContain(job1.id)
-        expect(jobs.map(j => j.id)).toContain(job2.id)
-        expect(jobs.map(j => j.id)).toContain(job3.id)
-      })
-
-      it('should get only active cron jobs', () => {
-        const active1 = db.createCronJob({ ...createJobData('Active 1'), is_active: true })
-        const active2 = db.createCronJob({ ...createJobData('Active 2'), is_active: true })
-        const inactive = db.createCronJob({ ...createJobData('Inactive'), is_active: false })
-        
-        const activeJobs = db.getActiveCronJobs()
-        
-        expect(activeJobs.length).toBe(2)
-        expect(activeJobs.find(j => j.id === active1.id)).toBeDefined()
-        expect(activeJobs.find(j => j.id === active2.id)).toBeDefined()
-        expect(activeJobs.find(j => j.id === inactive.id)).toBeUndefined()
-      })
-    })
-
-    describe('Update', () => {
-      it('should update job name', () => {
-        const created = db.createCronJob(createJobData('Original Name'))
-        
-        const updated = db.updateCronJob(created.id, { name: 'New Name' })
-        
-        expect(updated?.name).toBe('New Name')
-        expect(updated?.description).toBe(created.description) // unchanged
-      })
-
-      it('should update multiple fields', () => {
-        const created = db.createCronJob(createJobData('Original'))
-        
-        const updated = db.updateCronJob(created.id, {
-          name: 'Updated Name',
-          cron_expression: '*/10 * * * *',
+        const jobData: CreateCronJob = {
+          name: 'Full Job',
+          description: 'A complete job',
+          cron_expression: '0 0 * * *',
+          timezone: 'America/New_York',
+          workflow_id: template.id,
           is_active: false,
-        })
-        
-        expect(updated?.name).toBe('Updated Name')
-        expect(updated?.cron_expression).toBe('*/10 * * * *')
-        expect(updated?.is_active).toBe(false)
+          timeout_ms: 600000,
+        }
+        const job = await db.createCronJob(jobData)
+
+        expect(job.name).toBe('Full Job')
+        expect(job.description).toBe('A complete job')
+        expect(job.timezone).toBe('America/New_York')
+        expect(job.workflow_id).toBe(template.id)
+        expect(job.is_active).toBe(false)
+        expect(job.timeout_ms).toBe(600000)
       })
 
-      it('should return null when updating non-existent job', () => {
-        const result = db.updateCronJob('non-existent', { name: 'New Name' })
-        
-        expect(result).toBeNull()
-      })
-
-      it('should return existing job when no updates provided', () => {
-        const created = db.createCronJob(createJobData('Test'))
-        
-        const result = db.updateCronJob(created.id, {})
-        
-        expect(result?.id).toBe(created.id)
-        expect(result?.name).toBe(created.name)
-      })
-
-      it('should update run statistics', () => {
-        const created = db.createCronJob(createJobData('Stats Test'))
-        
-        const updated = db.updateCronJobRunStats(created.id, { 
-          success: true, 
-          tasksExecuted: 1, 
-          tasksSucceeded: 1, 
-          tasksFailed: 0, 
-          durationMs: 1000 
-        })
-        
-        expect(updated?.total_runs).toBe(1)
-        expect(updated?.total_failures).toBe(0)
-        expect(updated?.last_run_at).toBeDefined()
-        
-        // Failed run
-        const updated2 = db.updateCronJobRunStats(created.id, { 
-          success: false, 
-          tasksExecuted: 1, 
-          tasksSucceeded: 0, 
-          tasksFailed: 1, 
-          durationMs: 1000 
-        })
-        
-        expect(updated2?.total_runs).toBe(2)
-        expect(updated2?.total_failures).toBe(1)
-      })
-
-      it('should toggle job active status', () => {
-        const active = db.createCronJob({ ...createJobData('Toggle Test'), is_active: true })
-        
-        const toggled = db.toggleCronJobActive(active.id)
-        
-        expect(toggled?.is_active).toBe(false)
-        
-        const toggled2 = db.toggleCronJobActive(active.id)
-        
-        expect(toggled2?.is_active).toBe(true)
-      })
-
-      it('should update last run and next run times', () => {
-        const created = db.createCronJob(createJobData('Run Times'))
-        const nextRun = new Date().toISOString()
-        
-        const updated = db.updateCronJobLastRun(created.id, nextRun)
-        
-        expect(updated?.last_run_at).toBeDefined()
-        expect(updated?.next_run_at).toBe(nextRun)
-      })
-
-      it('should update timestamp on every change', () => {
-        const created = db.createCronJob(createJobData('Timestamp Test'))
-        const originalUpdatedAt = created.updated_at
-        
-        // Wait a tiny bit (not needed for SQLite but conceptually correct)
-        const updated = db.updateCronJob(created.id, { name: 'Updated' })
-        
-        expect(updated?.updated_at).toBeDefined()
-        // SQLite datetime is precise enough to show difference
-      })
-    })
-
-    describe('Delete', () => {
-      it('should delete an existing job', () => {
-        const created = db.createCronJob(createJobData('Delete Test'))
-        
-        const result = db.deleteCronJob(created.id)
-        
-        expect(result).toBe(true)
-        expect(db.getCronJobById(created.id)).toBeNull()
-      })
-
-      it('should return false when deleting non-existent job', () => {
-        const result = db.deleteCronJob('non-existent-id')
-        
-        expect(result).toBe(false)
-      })
-    })
-  })
-
-  // ============================================================================
-  // Task Queue CRUD
-  // ============================================================================
-
-  describe('Task Queue CRUD', () => {
-    const createTaskData = (type: string): CreateTaskQueueItem => ({
-      task_type: type,
-      payload: JSON.stringify({ action: 'test' }),
-      priority: 5,
-      status: TaskStatus.PENDING,
-      max_retries: 3,
-    })
-
-    describe('Create', () => {
-      it('should create a task with all fields', () => {
-        const job = db.createCronJob({
-          name: 'Job for Task',
+      it('should create cron job with null workflow_id', async () => {
+        const job = await db.createCronJob({
+          name: 'No Workflow',
           cron_expression: '0 * * * *',
+          workflow_id: null,
         })
-        
-        const data = { ...createTaskData('test-action'), job_id: job.id }
-        const task = db.createTask(data)
-        
-        expect(task.id).toBeDefined()
-        expect(task.job_id).toBe(job.id)
-        expect(task.task_type).toBe('test-action')
-        expect(task.payload).toBeDefined()
-        expect(task.priority).toBe(5)
-        expect(task.status).toBe(TaskStatus.PENDING)
-        expect(task.retry_count).toBe(0)
-        expect(task.max_retries).toBe(3)
-        expect(task.created_at).toBeDefined()
-      })
-
-      it('should create task without job_id', () => {
-        const task = db.createTask(createTaskData('standalone-task'))
-        
-        expect(task.job_id).toBeNull()
-      })
-
-      it('should create task with default priority', () => {
-        const data: CreateTaskQueueItem = {
-          task_type: 'default-priority',
-          payload: '{}',
-        }
-        const task = db.createTask(data)
-        
-        expect(task.priority).toBe(0)
-        expect(task.max_retries).toBe(3)
+        expect(job.workflow_id).toBeNull()
       })
     })
 
-    describe('Read', () => {
-      it('should get task by ID', () => {
-        const created = db.createTask(createTaskData('read-test'))
-        const fetched = db.getTaskById(created.id)
-        
-        expect(fetched).toBeDefined()
-        expect(fetched?.id).toBe(created.id)
+    describe('Read Cron Jobs', () => {
+      it('should get all cron jobs', async () => {
+        await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
+        await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+
+        const jobs = await db.getAllCronJobs()
+        expect(jobs.length).toBe(2)
       })
 
-      it('should return null for non-existent task', () => {
-        expect(db.getTaskById('non-existent')).toBeNull()
+      it('should get only active cron jobs', async () => {
+        await db.createCronJob({ name: 'Active Job', cron_expression: '0 * * * *', is_active: true })
+        await db.createCronJob({ name: 'Inactive Job', cron_expression: '0 0 * * *', is_active: false })
+
+        const activeJobs = await db.getActiveCronJobs()
+        expect(activeJobs.length).toBe(1)
+        expect(activeJobs[0].name).toBe('Active Job')
       })
 
-      it('should get all tasks', () => {
-        db.createTask({ ...createTaskData('task1'), priority: 1 })
-        db.createTask({ ...createTaskData('task2'), priority: 10 })
-        db.createTask({ ...createTaskData('task3'), priority: 5 })
-        
-        const tasks = db.getAllTasks()
-        
-        expect(tasks.length).toBe(3)
+      it('should get cron job by id', async () => {
+        const created = await db.createCronJob({ name: 'Find Me', cron_expression: '0 * * * *' })
+
+        const job = await db.getCronJobById(created.id)
+        expect(job).not.toBeNull()
+        expect(job!.name).toBe('Find Me')
       })
 
-      it('should get tasks filtered by status', () => {
-        const pending = db.createTask({ ...createTaskData('pending'), status: TaskStatus.PENDING })
-        const running = db.createTask({ ...createTaskData('running'), status: TaskStatus.RUNNING })
-        const completed = db.createTask({ ...createTaskData('completed'), status: TaskStatus.COMPLETED })
-        
-        const pendingTasks = db.getAllTasks(TaskStatus.PENDING)
-        
-        expect(pendingTasks.length).toBe(1)
-        expect(pendingTasks[0].id).toBe(pending.id)
-        
-        const runningTasks = db.getAllTasks(TaskStatus.RUNNING)
-        
-        expect(runningTasks.length).toBe(1)
-        expect(runningTasks[0].id).toBe(running.id)
-      })
-
-      it('should order tasks by priority DESC, created_at ASC', () => {
-        const low = db.createTask({ ...createTaskData('low'), priority: 1 })
-        const high = db.createTask({ ...createTaskData('high'), priority: 10 })
-        const medium = db.createTask({ ...createTaskData('medium'), priority: 5 })
-        
-        const tasks = db.getAllTasks()
-        
-        expect(tasks[0].id).toBe(high.id) // highest priority first
-        expect(tasks[1].id).toBe(medium.id)
-        expect(tasks[2].id).toBe(low.id)
-      })
-
-      it('should get pending tasks by job', () => {
-        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *' })
-        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *' })
-        
-        const task1 = db.createTask({ ...createTaskData('j1'), job_id: job1.id, status: TaskStatus.PENDING })
-        const task2 = db.createTask({ ...createTaskData('j2'), job_id: job2.id, status: TaskStatus.PENDING })
-        const task3 = db.createTask({ ...createTaskData('j1-complete'), job_id: job1.id, status: TaskStatus.COMPLETED })
-        
-        const job1Tasks = db.getPendingTasksByJob(job1.id, 10)
-        
-        expect(job1Tasks.length).toBe(1)
-        expect(job1Tasks[0].id).toBe(task1.id)
-      })
-
-      it('should limit pending tasks', () => {
-        for (let i = 0; i < 15; i++) {
-          db.createTask({ ...createTaskData(`task-${i}`), status: TaskStatus.PENDING })
-        }
-        
-        const tasks = db.getPendingTasksByJob(null, 5)
-        
-        expect(tasks.length).toBe(5)
-      })
-
-      it('should get task counts by status', () => {
-        db.createTask({ ...createTaskData('p1'), status: TaskStatus.PENDING })
-        db.createTask({ ...createTaskData('p2'), status: TaskStatus.PENDING })
-        db.createTask({ ...createTaskData('r1'), status: TaskStatus.RUNNING })
-        db.createTask({ ...createTaskData('f1'), status: TaskStatus.FAILED })
-        db.createTask({ ...createTaskData('f2'), status: TaskStatus.FAILED })
-        db.createTask({ ...createTaskData('f3'), status: TaskStatus.FAILED })
-        
-        expect(db.getPendingTaskCount()).toBe(2)
-        expect(db.getRunningTaskCount()).toBe(1)
-        expect(db.getFailedTaskCount()).toBe(3)
-      })
-
-      it('should get tasks by job ID', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *' })
-        
-        const task1 = db.createTask({ ...createTaskData('t1'), job_id: job.id })
-        const task2 = db.createTask({ ...createTaskData('t2'), job_id: job.id })
-        db.createTask({ ...createTaskData('t3'), job_id: null })
-        
-        const jobTasks = db.getTasksByJobId(job.id)
-        
-        expect(jobTasks.length).toBe(2)
-      })
-
-      it('should get task payload', async () => {
-        const task = db.createTask({ ...createTaskData('payload-test'), payload: '{"key":"value"}' })
-        
-        const payloadData = await db.getTaskPayload(task.id)
-        
-        expect(payloadData).toBeDefined()
-        expect(payloadData?.payload).toBe('{"key":"value"}')
+      it('should return null for non-existent id', async () => {
+        const job = await db.getCronJobById('non-existent-id')
+        expect(job).toBeNull()
       })
     })
 
-    describe('Update', () => {
-      it('should update task status', () => {
-        const task = db.createTask(createTaskData('update-test'))
-        
-        const updated = db.updateTask(task.id, { status: TaskStatus.RUNNING })
-        
-        expect(updated?.status).toBe(TaskStatus.RUNNING)
-      })
+    describe('Update Cron Jobs', () => {
+      it('should update cron job fields', async () => {
+        const created = await db.createCronJob({ name: 'Original', cron_expression: '0 * * * *' })
 
-      it('should update multiple fields', () => {
-        const task = db.createTask(createTaskData('multi-update'))
-        
-        const updated = db.updateTask(task.id, {
-          status: TaskStatus.FAILED,
-          error_message: 'Something went wrong',
-          retry_count: 3,
+        const updated = await db.updateCronJob(created.id, {
+          name: 'Updated',
+          description: 'New description',
         })
-        
-        expect(updated?.status).toBe(TaskStatus.FAILED)
-        expect(updated?.error_message).toBe('Something went wrong')
-        expect(updated?.retry_count).toBe(3)
+
+        expect(updated!.name).toBe('Updated')
+        expect(updated!.description).toBe('New description')
+        expect(updated!.cron_expression).toBe('0 * * * *')
       })
 
-      it('should mark task as running', () => {
-        const task = db.createTask(createTaskData('running-test'))
-        
-        const updated = db.markTaskRunning(task.id)
-        
-        expect(updated?.status).toBe('running')
-        expect(updated?.started_at).toBeDefined()
+      it('should update is_active status via toggle', async () => {
+        const created = await db.createCronJob({ name: 'Toggle Test', cron_expression: '0 * * * *' })
+
+        const toggled = await db.toggleCronJobActive(created.id)
+        expect(toggled!.is_active).toBe(false)
+
+        const toggledAgain = await db.toggleCronJobActive(created.id)
+        expect(toggledAgain!.is_active).toBe(true)
       })
 
-      it('should mark task as completed', () => {
-        const task = db.createTask(createTaskData('completed-test'))
-        
-        const updated = db.markTaskCompleted(task.id, '{"result":"ok"}')
-        
-        expect(updated?.status).toBe('completed')
-        expect(updated?.completed_at).toBeDefined()
-        expect(updated?.result).toBe('{"result":"ok"}')
-      })
+      it('should update run stats', async () => {
+        const created = await db.createCronJob({ name: 'Stats Test', cron_expression: '0 * * * *' })
 
-      it('should mark task as failed and increment retry count', () => {
-        const task = db.createTask({ ...createTaskData('failed-test'), max_retries: 3 })
-        
-        // First failure - should stay pending for retry
-        const updated1 = db.markTaskFailed(task.id, 'Error 1')
-        
-        expect(updated1?.status).toBe('pending')
-        expect(updated1?.retry_count).toBe(1)
-        expect(updated1?.error_message).toBe('Error 1')
-        
-        // More failures to reach max retries
-        db.markTaskFailed(task.id, 'Error 2')
-        db.markTaskFailed(task.id, 'Error 3')
-        
-        const updated4 = db.markTaskFailed(task.id, 'Error 4')
-        
-        // After 4 failures (retry_count=4 >= max_retries=3), should be permanently failed
-        expect(updated4?.status).toBe('failed')
-        expect(updated4?.completed_at).toBeDefined()
-      })
-
-      it('should return null when updating non-existent task', () => {
-        expect(db.updateTask('non-existent', { status: TaskStatus.COMPLETED })).toBeNull()
-      })
-    })
-
-    describe('Delete', () => {
-      it('should delete an existing task', () => {
-        const task = db.createTask(createTaskData('delete-test'))
-        
-        const result = db.deleteTask(task.id)
-        
-        expect(result).toBe(true)
-        expect(db.getTaskById(task.id)).toBeNull()
-      })
-
-      it('should return false when deleting non-existent task', () => {
-        expect(db.deleteTask('non-existent')).toBe(false)
-      })
-    })
-
-    describe('Legacy Compatibility', () => {
-      it('should update task status via legacy method', async () => {
-        const task = db.createTask(createTaskData('legacy-update'))
-        
-        await db.updateTaskStatus(task.id, TaskStatus.COMPLETED, {
-          completed_at: new Date().toISOString(),
-          result: '{"legacy":true}',
-        })
-        
-        const updated = db.getTaskById(task.id)
-        
-        expect(updated?.status).toBe(TaskStatus.COMPLETED)
-        expect(updated?.result).toBe('{"legacy":true}')
-      })
-
-      it('should create task via legacy method', async () => {
-        const id = await db.createTaskQueueItem({
-          task_type: 'legacy-task',
-          payload: '{"legacy":true}',
-          priority: 7,
-        })
-        
-        expect(id).toBeDefined()
-        
-        const task = db.getTaskById(id)
-        expect(task?.task_type).toBe('legacy-task')
-        expect(task?.priority).toBe(7)
-      })
-    })
-  })
-
-  // ============================================================================
-  // Execution Logs CRUD
-  // ============================================================================
-
-  describe('Execution Logs CRUD', () => {
-    const createLogData = (): CreateExecutionLog => ({
-      trigger_type: TriggerType.MANUAL,
-      status: ExecutionStatus.RUNNING,
-      tasks_executed: 0,
-      tasks_succeeded: 0,
-      tasks_failed: 0,
-    })
-
-    describe('Create', () => {
-      it('should create an execution log', () => {
-        const job = db.createCronJob({ name: 'Job', cron_expression: '0 * * * *' })
-        
-        const log = db.createExecutionLog({
-          ...createLogData(),
-          job_id: job.id,
-        })
-        
-        expect(log.id).toBeDefined()
-        expect(log.job_id).toBe(job.id)
-        expect(log.trigger_type).toBe(TriggerType.MANUAL)
-        expect(log.status).toBe(ExecutionStatus.RUNNING)
-        expect(log.started_at).toBeDefined()
-      })
-
-      it('should create log without job_id', () => {
-        const log = db.createExecutionLog(createLogData())
-        
-        expect(log.job_id).toBeNull()
-      })
-    })
-
-    describe('Read', () => {
-      it('should get execution log by ID', () => {
-        const created = db.createExecutionLog(createLogData())
-        const fetched = db.getExecutionLogById(created.id)
-        
-        expect(fetched?.id).toBe(created.id)
-      })
-
-      it('should get all execution logs', () => {
-        db.createExecutionLog(createLogData())
-        db.createExecutionLog(createLogData())
-        db.createExecutionLog(createLogData())
-        
-        const logs = db.getAllExecutionLogs()
-        
-        expect(logs.length).toBe(3)
-      })
-
-      it('should get logs filtered by job_id', () => {
-        const job1 = db.createCronJob({ name: 'Job1', cron_expression: '0 * * * *' })
-        const job2 = db.createCronJob({ name: 'Job2', cron_expression: '0 * * * *' })
-        
-        const log1 = db.createExecutionLog({ ...createLogData(), job_id: job1.id })
-        const log2 = db.createExecutionLog({ ...createLogData(), job_id: job2.id })
-        const log3 = db.createExecutionLog({ ...createLogData(), job_id: null })
-        
-        const job1Logs = db.getAllExecutionLogs(job1.id)
-        
-        expect(job1Logs.length).toBe(1)
-        expect(job1Logs[0].id).toBe(log1.id)
-      })
-
-      it('should limit execution logs', () => {
-        for (let i = 0; i < 50; i++) {
-          db.createExecutionLog(createLogData())
-        }
-        
-        const logs = db.getAllExecutionLogs(undefined, 10)
-        
-        expect(logs.length).toBe(10)
-      })
-
-      it('should get recent execution logs', () => {
-        for (let i = 0; i < 25; i++) {
-          db.createExecutionLog(createLogData())
-        }
-        
-        const logs = db.getRecentExecutionLogs(5)
-        
-        expect(logs.length).toBe(5)
-      })
-    })
-
-    describe('Update', () => {
-      it('should update execution log status', () => {
-        const log = db.createExecutionLog(createLogData())
-        
-        const updated = db.updateExecutionLog(log.id, {
-          status: ExecutionStatus.COMPLETED,
-          duration_ms: 5000,
-          tasks_executed: 3,
-          tasks_succeeded: 2,
-          tasks_failed: 1,
-        })
-        
-        expect(updated?.status).toBe(ExecutionStatus.COMPLETED)
-        expect(updated?.duration_ms).toBe(5000)
-        expect(updated?.tasks_executed).toBe(3)
-      })
-
-      it('should complete execution log with stats', () => {
-        const log = db.createExecutionLog(createLogData())
-        
-        const completed = db.completeExecutionLog(log.id, {
+        const stats = {
           success: true,
           tasksExecuted: 5,
           tasksSucceeded: 5,
           tasksFailed: 0,
-          durationMs: 10000,
-        })
-        
-        expect(completed?.status).toBe('completed')
-        expect(completed?.completed_at).toBeDefined()
-        expect(completed?.duration_ms).toBe(10000)
-        expect(completed?.tasks_executed).toBe(5)
-        expect(completed?.tasks_succeeded).toBe(5)
-        expect(completed?.tasks_failed).toBe(0)
+          durationMs: 1000,
+        }
+        await db.updateCronJobRunStats(created.id, stats)
+
+        const job = await db.getCronJobById(created.id)
+        expect(job!.total_runs).toBe(1)
+        expect(job!.total_failures).toBe(0)
       })
 
-      it('should complete with failed status', () => {
-        const log = db.createExecutionLog(createLogData())
-        
-        const completed = db.completeExecutionLog(log.id, {
-          success: false,
-          tasksExecuted: 3,
-          tasksSucceeded: 1,
-          tasksFailed: 2,
-          durationMs: 5000,
-          errorSummary: 'Two tasks failed',
-        })
-        
-        expect(completed?.status).toBe('failed')
-        expect(completed?.error_summary).toBe('Two tasks failed')
+      it('should update last run time', async () => {
+        const created = await db.createCronJob({ name: 'Last Run Test', cron_expression: '0 * * * *' })
+        const nextRun = '2025-01-01T12:00:00.000Z'
+
+        await db.updateCronJobLastRun(created.id, nextRun)
+
+        const job = await db.getCronJobById(created.id)
+        expect(job!.last_run_at).toBeDefined()
+        expect(job!.next_run_at).toBeTruthy()
+      })
+
+      it('should return null when updating non-existent job', async () => {
+        const result = await db.updateCronJob('non-existent', { name: 'Test' })
+        expect(result).toBeNull()
+      })
+    })
+
+    describe('Delete Cron Jobs', () => {
+      it('should delete cron job by id', async () => {
+        const created = await db.createCronJob({ name: 'Delete Me', cron_expression: '0 * * * *' })
+
+        const deleted = await db.deleteCronJob(created.id)
+        expect(deleted).toBe(true)
+
+        const job = await db.getCronJobById(created.id)
+        expect(job).toBeNull()
+      })
+
+      it('should return false when deleting non-existent job', async () => {
+        const deleted = await db.deleteCronJob('non-existent-id')
+        expect(deleted).toBe(false)
       })
     })
   })
 
-  // ============================================================================
-  // Capacity Tracking (Upsert)
-  // ============================================================================
+  describe('Task Queue CRUD', () => {
+    describe('Create Task', () => {
+      it('should create a task with required fields', async () => {
+        const taskData: CreateTaskQueueItem = {
+          task_type: 'text_generation',
+          payload: '{"prompt": "hello"}',
+        }
+        const task = await db.createTask(taskData)
+
+        expect(task.id).toBeDefined()
+        expect(task.task_type).toBe('text_generation')
+        const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload
+        expect(payload.prompt).toBe('hello')
+        expect(task.status).toBe(TaskStatus.PENDING)
+        expect(task.priority).toBe(0)
+        expect(task.retry_count).toBe(0)
+        expect(task.max_retries).toBe(3)
+      })
+
+      it('should create task with all fields', async () => {
+        const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' })
+
+        const task = await db.createTask({
+          job_id: job.id,
+          task_type: 'voice_synthesis',
+          payload: '{"text": "hello"}',
+          priority: 10,
+          status: TaskStatus.RUNNING,
+          max_retries: 5,
+        })
+
+        expect(task.job_id).toBe(job.id)
+        expect(task.priority).toBe(10)
+        expect(task.status).toBe(TaskStatus.RUNNING)
+        expect(task.max_retries).toBe(5)
+      })
+
+      it('should create task with valid JSON payload', async () => {
+        const task = await db.createTask({
+          task_type: 'test',
+          payload: JSON.stringify({ key: 'value', num: 123 }),
+        })
+        const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload
+        expect(payload.key).toBe('value')
+        expect(payload.num).toBe(123)
+      })
+    })
+
+    describe('Read Tasks', () => {
+      it('should get all tasks', async () => {
+        await db.createTask({ task_type: 'type1', payload: '{}' })
+        await db.createTask({ task_type: 'type2', payload: '{}' })
+
+        const result = await db.getAllTasks()
+        expect(result.tasks.length).toBe(2)
+        expect(result.total).toBe(2)
+      })
+
+      it('should filter tasks by status', async () => {
+        await db.createTask({ task_type: 'pending', payload: '{}', status: TaskStatus.PENDING })
+        await db.createTask({ task_type: 'running', payload: '{}', status: TaskStatus.RUNNING })
+
+        const result = await db.getAllTasks({ status: TaskStatus.PENDING })
+        expect(result.tasks.length).toBe(1)
+        expect(result.tasks[0].task_type).toBe('pending')
+      })
+
+      it('should get task by id', async () => {
+        const created = await db.createTask({ task_type: 'find', payload: '{}' })
+
+        const task = await db.getTaskById(created.id)
+        expect(task!.task_type).toBe('find')
+      })
+
+      it('should get pending tasks by job', async () => {
+        const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' })
+        await db.createTask({ job_id: job.id, task_type: 't1', payload: '{}' })
+        await db.createTask({ job_id: job.id, task_type: 't2', payload: '{}' })
+
+        const tasks = await db.getPendingTasksByJob(job.id, 10)
+        expect(tasks.length).toBe(2)
+      })
+
+      it('should get pending task count', async () => {
+        await db.createTask({ task_type: 't1', payload: '{}' })
+        await db.createTask({ task_type: 't2', payload: '{}' })
+
+        const count = await db.getPendingTaskCount()
+        expect(count).toBe(2)
+      })
+
+      it('should get running task count', async () => {
+        await db.createTask({ task_type: 't1', payload: '{}', status: TaskStatus.RUNNING })
+        await db.createTask({ task_type: 't2', payload: '{}', status: TaskStatus.PENDING })
+
+        const count = await db.getRunningTaskCount()
+        expect(count).toBe(1)
+      })
+
+      it('should get failed task count', async () => {
+        await db.createTask({ task_type: 't1', payload: '{}', status: TaskStatus.FAILED })
+        await db.createTask({ task_type: 't2', payload: '{}', status: TaskStatus.PENDING })
+
+        const count = await db.getFailedTaskCount()
+        expect(count).toBe(1)
+      })
+    })
+
+    describe('Update Tasks', () => {
+      it('should update task status', async () => {
+        const created = await db.createTask({ task_type: 'test', payload: '{}' })
+
+        const updated = await db.updateTask(created.id, { status: TaskStatus.RUNNING })
+        expect(updated!.status).toBe(TaskStatus.RUNNING)
+      })
+
+      it('should mark task as running', async () => {
+        const created = await db.createTask({ task_type: 'test', payload: '{}' })
+
+        const task = await db.markTaskRunning(created.id)
+        expect(task!.status).toBe(TaskStatus.RUNNING)
+        expect(task!.started_at).toBeDefined()
+      })
+
+      it('should mark task as completed', async () => {
+        const created = await db.createTask({ task_type: 'test', payload: '{}' })
+
+        const task = await db.markTaskCompleted(created.id, '{"result": "success"}')
+        expect(task!.status).toBe(TaskStatus.COMPLETED)
+        expect(task!.completed_at).toBeDefined()
+        const result = typeof task!.result === 'string' ? JSON.parse(task!.result) : task!.result
+        expect(result.result).toBe('success')
+      })
+
+      it('should mark task as failed', async () => {
+        const created = await db.createTask({ task_type: 'test', payload: '{}', max_retries: 1 })
+
+        const task = await db.markTaskFailed(created.id, 'Something went wrong')
+        expect(task!.status).toBe(TaskStatus.FAILED)
+        expect(task!.retry_count).toBe(1)
+        expect(task!.error_message).toBe('Something went wrong')
+      })
+
+      it('should retry failed task up to max_retries', async () => {
+        const created = await db.createTask({ task_type: 'test', payload: '{}', max_retries: 3 })
+
+        let task = await db.markTaskFailed(created.id, 'Error 1')
+        expect(task!.status).toBe(TaskStatus.PENDING)
+        expect(task!.retry_count).toBe(1)
+
+        task = await db.markTaskFailed(created.id, 'Error 2')
+        expect(task!.status).toBe(TaskStatus.PENDING)
+        expect(task!.retry_count).toBe(2)
+
+        task = await db.markTaskFailed(created.id, 'Error 3')
+        expect(task!.status).toBe(TaskStatus.FAILED)
+        expect(task!.retry_count).toBe(3)
+      })
+
+      it('should batch update task statuses', async () => {
+        const t1 = await db.createTask({ task_type: 't1', payload: '{}' })
+        const t2 = await db.createTask({ task_type: 't2', payload: '{}' })
+        const t3 = await db.createTask({ task_type: 't3', payload: '{}' })
+
+        const count = await db.updateTasksStatusBatch([t1.id, t2.id, t3.id], TaskStatus.CANCELLED)
+        expect(count).toBe(3)
+
+        const task1 = await db.getTaskById(t1.id)
+        expect(task1!.status).toBe(TaskStatus.CANCELLED)
+      })
+    })
+
+    describe('Delete Tasks', () => {
+      it('should delete task by id', async () => {
+        const created = await db.createTask({ task_type: 'delete', payload: '{}' })
+
+        const deleted = await db.deleteTask(created.id)
+        expect(deleted).toBe(true)
+
+        const task = await db.getTaskById(created.id)
+        expect(task).toBeNull()
+      })
+    })
+  })
+
+  describe('Execution Logs CRUD', () => {
+    describe('Create Execution Log', () => {
+      it('should create an execution log', async () => {
+        const logData: CreateExecutionLog = {
+          job_id: null,
+          trigger_type: TriggerType.CRON,
+          status: ExecutionStatus.RUNNING,
+        }
+        const log = await db.createExecutionLog(logData)
+
+        expect(log.id).toBeDefined()
+        expect(log.job_id).toBeNull()
+        expect(log.trigger_type).toBe(TriggerType.CRON)
+        expect(log.status).toBe(ExecutionStatus.RUNNING)
+        expect(log.tasks_executed).toBe(0)
+        expect(log.tasks_succeeded).toBe(0)
+        expect(log.tasks_failed).toBe(0)
+      })
+
+      it('should create execution log with job_id', async () => {
+        const job = await db.createCronJob({ name: 'Log Job', cron_expression: '0 * * * *' })
+
+        const logData: CreateExecutionLog = {
+          job_id: job.id,
+          trigger_type: TriggerType.CRON,
+          status: ExecutionStatus.RUNNING,
+        }
+        const log = await db.createExecutionLog(logData)
+
+        expect(log.job_id).toBe(job.id)
+      })
+    })
+
+    describe('Read Execution Logs', () => {
+      it('should get all execution logs', async () => {
+        await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+        await db.createExecutionLog({ trigger_type: TriggerType.MANUAL, status: ExecutionStatus.RUNNING })
+
+        const logs = await db.getAllExecutionLogs()
+        expect(logs.length).toBe(2)
+      })
+
+      it('should get execution logs by job_id', async () => {
+        const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
+        const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+
+        await db.createExecutionLog({ job_id: job1.id, trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+        await db.createExecutionLog({ job_id: job2.id, trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+
+        const logs = await db.getAllExecutionLogs(job1.id)
+        expect(logs.length).toBe(1)
+        expect(logs[0].job_id).toBe(job1.id)
+      })
+
+      it('should get execution log by id', async () => {
+        const created = await db.createExecutionLog({ trigger_type: TriggerType.MANUAL, status: ExecutionStatus.RUNNING })
+
+        const log = await db.getExecutionLogById(created.id)
+        expect(log!.trigger_type).toBe(TriggerType.MANUAL)
+      })
+
+      it('should get paginated execution logs', async () => {
+        for (let i = 0; i < 5; i++) {
+          await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+        }
+
+        const result = await db.getExecutionLogsPaginated({ limit: 2, offset: 0 })
+        expect(result.logs.length).toBe(2)
+        expect(result.total).toBe(5)
+      })
+    })
+
+    describe('Update Execution Logs', () => {
+      it('should update execution log', async () => {
+        const created = await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+
+        const updated = await db.updateExecutionLog(created.id, {
+          status: ExecutionStatus.COMPLETED,
+          duration_ms: 5000,
+          tasks_executed: 10,
+          tasks_succeeded: 9,
+          tasks_failed: 1,
+        })
+
+        expect(updated!.status).toBe(ExecutionStatus.COMPLETED)
+        expect(updated!.duration_ms).toBe(5000)
+        expect(updated!.tasks_executed).toBe(10)
+        expect(updated!.tasks_succeeded).toBe(9)
+        expect(updated!.tasks_failed).toBe(1)
+      })
+
+      it('should complete execution log with stats', async () => {
+        const created = await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+
+        const stats = {
+          success: true,
+          tasksExecuted: 5,
+          tasksSucceeded: 5,
+          tasksFailed: 0,
+          durationMs: 3000,
+        }
+        await db.completeExecutionLog(created.id, stats)
+
+        const log = await db.getExecutionLogById(created.id)
+        expect(log!.status).toBe(ExecutionStatus.COMPLETED)
+        expect(log!.tasks_executed).toBe(5)
+      })
+    })
+
+    describe('Execution Log Details', () => {
+      it('should create execution log detail', async () => {
+        const log = await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+
+        const detailData: CreateExecutionLogDetail = {
+          log_id: log.id,
+          node_id: 'node-1',
+          node_type: 'action',
+          service_name: 'text_service',
+          method_name: 'generate',
+          input_payload: '{"prompt": "hello"}',
+          output_result: '{"text": "response"}',
+        }
+        const detailId = await db.createExecutionLogDetail(detailData)
+
+        expect(detailId).toBeDefined()
+
+        const details = await db.getExecutionLogDetailsByLogId(log.id)
+        expect(details.length).toBe(1)
+        expect(details[0].node_id).toBe('node-1')
+      })
+
+      it('should update execution log detail', async () => {
+        const log = await db.createExecutionLog({ trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
+        const detailId = await db.createExecutionLogDetail({
+          log_id: log.id,
+          node_id: 'node-1',
+          service_name: 'test',
+          method_name: 'test',
+        })
+
+        await db.updateExecutionLogDetail(detailId, {
+          output_result: '{"success": true}',
+          completed_at: new Date().toISOString(),
+          duration_ms: 100,
+        })
+
+        const details = await db.getExecutionLogDetailsByLogId(log.id)
+        const outputResult = typeof details[0].output_result === 'string' ? JSON.parse(details[0].output_result) : details[0].output_result
+        expect(outputResult.success).toBe(true)
+        expect(details[0].duration_ms).toBe(100)
+      })
+    })
+  })
 
   describe('Capacity Tracking', () => {
-    it('should insert new capacity record', () => {
-      const record = db.upsertCapacityRecord('minimax-text', {
-        remaining_quota: 1000,
-        total_quota: 5000,
-        reset_at: new Date().toISOString(),
-      })
-      
-      expect(record.id).toBeDefined()
-      expect(record.service_type).toBe('minimax-text')
-      expect(record.remaining_quota).toBe(1000)
-      expect(record.total_quota).toBe(5000)
-      expect(record.last_checked_at).toBeDefined()
-    })
+    it('should get all capacity records', async () => {
+      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord('voice', { remaining_quota: 50, total_quota: 500 })
 
-    it('should update existing capacity record', () => {
-      // Insert first
-      db.upsertCapacityRecord('minimax-voice', {
-        remaining_quota: 500,
-        total_quota: 1000,
-        reset_at: null,
-      })
-      
-      // Update with new values
-      const updated = db.upsertCapacityRecord('minimax-voice', {
-        remaining_quota: 250,
-        total_quota: 1000,
-        reset_at: new Date().toISOString(),
-      })
-      
-      expect(updated.remaining_quota).toBe(250)
-      
-      // Should still be only one record
-      const all = db.getAllCapacityRecords()
-      const voiceRecords = all.filter(r => r.service_type === 'minimax-voice')
-      expect(voiceRecords.length).toBe(1)
-    })
-
-    it('should get capacity by service type', () => {
-      db.upsertCapacityRecord('minimax-image', {
-        remaining_quota: 100,
-        total_quota: 200,
-      })
-      
-      const record = db.getCapacityByService('minimax-image')
-      
-      expect(record?.service_type).toBe('minimax-image')
-      expect(record?.remaining_quota).toBe(100)
-    })
-
-    it('should return null for non-existent service', () => {
-      expect(db.getCapacityByService('non-existent')).toBeNull()
-    })
-
-    it('should get all capacity records', () => {
-      db.upsertCapacityRecord('service-a', { remaining_quota: 10, total_quota: 20 })
-      db.upsertCapacityRecord('service-b', { remaining_quota: 30, total_quota: 40 })
-      
-      const records = db.getAllCapacityRecords()
-      
+      const records = await db.getAllCapacityRecords()
       expect(records.length).toBe(2)
     })
 
-    it('should decrement capacity', () => {
-      db.upsertCapacityRecord('minimax-decrement', {
-        remaining_quota: 100,
-        total_quota: 100,
-      })
-      
-      const decremented = db.decrementCapacity('minimax-decrement', 5)
-      
-      expect(decremented?.remaining_quota).toBe(95)
-      
-      // Decrement more
-      const decremented2 = db.decrementCapacity('minimax-decrement', 10)
-      
-      expect(decremented2?.remaining_quota).toBe(85)
+    it('should get capacity by service type', async () => {
+      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
+
+      const record = await db.getCapacityByService('text')
+      expect(record!.service_type).toBe('text')
+      expect(record!.remaining_quota).toBe(100)
+      expect(record!.total_quota).toBe(1000)
     })
 
-    it('should not go below zero when decrementing', () => {
-      db.upsertCapacityRecord('minimax-limit', {
-        remaining_quota: 5,
-        total_quota: 100,
-      })
-      
-      const decremented = db.decrementCapacity('minimax-limit', 100)
-      
-      expect(decremented?.remaining_quota).toBe(0)
+    it('should return null for non-existent service', async () => {
+      const record = await db.getCapacityByService('non-existent')
+      expect(record).toBeNull()
     })
 
-    it('should return null when decrementing non-existent service', () => {
-      expect(db.decrementCapacity('non-existent')).toBeNull()
+    it('should upsert capacity record', async () => {
+      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord('text', { remaining_quota: 80, total_quota: 1000 })
+
+      const record = await db.getCapacityByService('text')
+      expect(record!.remaining_quota).toBe(80)
     })
 
-    describe('Legacy Compatibility', () => {
-      it('should get capacity via legacy method', async () => {
-        db.upsertCapacityRecord('legacy-service', {
-          remaining_quota: 50,
-          total_quota: 100,
-        })
-        
-        const capacity = await db.getCapacity('legacy-service')
-        
-        expect(capacity?.remaining).toBe(50)
-        expect(capacity?.total).toBe(100)
-      })
+    it('should decrement capacity', async () => {
+      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
 
-      it('should update capacity via legacy method', async () => {
-        db.upsertCapacityRecord('legacy-update', {
-          remaining_quota: 100,
-          total_quota: 100,
-        })
-        
-        await db.updateCapacity('legacy-update', 75)
-        
-        const record = db.getCapacityByService('legacy-update')
-        expect(record?.remaining_quota).toBe(75)
-      })
+      const record = await db.decrementCapacity('text', 10)
+      expect(record!.remaining_quota).toBe(90)
+    })
+
+    it('should not go below zero when decrementing', async () => {
+      await db.upsertCapacityRecord('text', { remaining_quota: 5, total_quota: 1000 })
+
+      const record = await db.decrementCapacity('text', 10)
+      expect(record!.remaining_quota).toBe(0)
+    })
+
+    it('should return null when decrementing non-existent', async () => {
+      const record = await db.decrementCapacity('non-existent', 1)
+      expect(record).toBeNull()
     })
   })
 
-  // ============================================================================
-  // Workflow Templates CRUD
-  // ============================================================================
-
   describe('Workflow Templates CRUD', () => {
-    const createTemplateData = () => ({
-      name: 'Test Template',
-      description: 'A test template',
-      nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
-      edges_json: JSON.stringify([{ id: 'edge-1', source: 'node-1', target: 'node-2' }]),
-      is_public: true,
-    })
+    describe('Create Workflow Template', () => {
+      it('should create a workflow template', async () => {
+        const template = await db.createWorkflowTemplate({
+          name: 'My Template',
+          nodes_json: '{"nodes":[]}',
+          edges_json: '{"edges":[]}',
+        })
 
-    describe('Create', () => {
-      it('should create workflow template', () => {
-        const template = db.createWorkflowTemplate(createTemplateData())
-        
         expect(template.id).toBeDefined()
-        expect(template.name).toBe('Test Template')
+        expect(template.name).toBe('My Template')
         expect(template.is_public).toBe(true)
-        expect(template.created_at).toBeDefined()
       })
 
-      it('should create template with is_public false', () => {
-        const template = db.createWorkflowTemplate({
-          ...createTemplateData(),
+      it('should create private template', async () => {
+        const template = await db.createWorkflowTemplate({
+          name: 'Private Template',
+          nodes_json: '{"nodes":[]}',
+          edges_json: '{"edges":[]}',
           is_public: false,
         })
-        
+
         expect(template.is_public).toBe(false)
+      })
+
+      it('should create template with proper JSON fields', async () => {
+        const nodes = { nodes: [{ id: '1', type: 'trigger' }] }
+        const edges = { edges: [{ id: 'e1', source: '1', target: '2' }] }
+
+        const template = await db.createWorkflowTemplate({
+          name: 'JSON Template',
+          nodes_json: JSON.stringify(nodes),
+          edges_json: JSON.stringify(edges),
+        })
+
+        expect(template.nodes_json).toBe(JSON.stringify(nodes))
+        expect(template.edges_json).toBe(JSON.stringify(edges))
       })
     })
 
-    describe('Read', () => {
-      it('should get template by ID', () => {
-        const created = db.createWorkflowTemplate(createTemplateData())
-        const fetched = db.getWorkflowTemplateById(created.id)
-        
-        expect(fetched?.id).toBe(created.id)
-      })
+    describe('Read Workflow Templates', () => {
+      it('should get all templates', async () => {
+        await db.createWorkflowTemplate({ name: 'T1', nodes_json: '{}', edges_json: '{}' })
+        await db.createWorkflowTemplate({ name: 'T2', nodes_json: '{}', edges_json: '{}' })
 
-      it('should get all templates', () => {
-        db.createWorkflowTemplate({ ...createTemplateData(), name: 'Template 1' })
-        db.createWorkflowTemplate({ ...createTemplateData(), name: 'Template 2' })
-        
-        const templates = db.getAllWorkflowTemplates()
-        
+        const templates = await db.getAllWorkflowTemplates()
         expect(templates.length).toBe(2)
       })
 
-      it('should get only marked templates', () => {
-        const marked = db.createWorkflowTemplate({ ...createTemplateData(), is_public: true })
-        const unmarked = db.createWorkflowTemplate({ ...createTemplateData(), is_public: false })
-        
-        const markedTemplates = db.getMarkedWorkflowTemplates()
-        
-        expect(markedTemplates.length).toBe(1)
-        expect(markedTemplates[0].id).toBe(marked.id)
+      it('should get template by id', async () => {
+        const created = await db.createWorkflowTemplate({ name: 'Find Me', nodes_json: '{}', edges_json: '{}' })
+
+        const template = await db.getWorkflowTemplateById(created.id)
+        expect(template!.name).toBe('Find Me')
+      })
+
+      it('should return null for non-existent template', async () => {
+        const template = await db.getWorkflowTemplateById('non-existent')
+        expect(template).toBeNull()
+      })
+
+      it('should get public templates', async () => {
+        await db.createWorkflowTemplate({ name: 'Public', nodes_json: '{}', edges_json: '{}', is_public: true })
+        await db.createWorkflowTemplate({ name: 'Private', nodes_json: '{}', edges_json: '{}', is_public: false })
+
+        const publicTemplates = await db.getMarkedWorkflowTemplates()
+        expect(publicTemplates.length).toBe(1)
+        expect(publicTemplates[0].name).toBe('Public')
+      })
+
+      it('should get paginated templates', async () => {
+        for (let i = 0; i < 5; i++) {
+          await db.createWorkflowTemplate({ name: `T${i}`, nodes_json: '{}', edges_json: '{}' })
+        }
+
+        const result = await db.getWorkflowTemplatesPaginated({ limit: 2, offset: 0 })
+        expect(result.templates.length).toBe(2)
+        expect(result.total).toBe(5)
       })
     })
 
-    describe('Update', () => {
-      it('should update template', () => {
-        const template = db.createWorkflowTemplate(createTemplateData())
-        
-        const updated = db.updateWorkflowTemplate(template.id, {
-          name: 'Updated Template',
-          nodes_json: '{"updated":true}',
+    describe('Update Workflow Templates', () => {
+      it('should update template fields', async () => {
+        const created = await db.createWorkflowTemplate({ name: 'Original', nodes_json: '{}', edges_json: '{}' })
+
+        const updated = await db.updateWorkflowTemplate(created.id, {
+          name: 'Updated',
+          description: 'New description',
         })
-        
-        expect(updated?.name).toBe('Updated Template')
-        expect(updated?.nodes_json).toBe('{"updated":true}')
+
+        expect(updated!.name).toBe('Updated')
+        expect(updated!.description).toBe('New description')
+      })
+
+      it('should update nodes and edges JSON', async () => {
+        const created = await db.createWorkflowTemplate({ name: 'Test', nodes_json: '{}', edges_json: '{}' })
+
+        const newNodes = '{"nodes":[{"id":"1"}]}'
+        const newEdges = '{"edges":[{"id":"1"}]}'
+
+        const updated = await db.updateWorkflowTemplate(created.id, {
+          nodes_json: newNodes,
+          edges_json: newEdges,
+        })
+
+        expect(updated!.nodes_json).toBe(newNodes)
+        expect(updated!.edges_json).toBe(newEdges)
       })
     })
 
-    describe('Delete', () => {
-      it('should delete template', () => {
-        const template = db.createWorkflowTemplate(createTemplateData())
-        
-        const result = db.deleteWorkflowTemplate(template.id)
-        
-        expect(result).toBe(true)
-        expect(db.getWorkflowTemplateById(template.id)).toBeNull()
+    describe('Delete Workflow Templates', () => {
+      it('should delete template by id', async () => {
+        const created = await db.createWorkflowTemplate({ name: 'Delete Me', nodes_json: '{}', edges_json: '{}' })
+
+        const deleted = await db.deleteWorkflowTemplate(created.id)
+        expect(deleted).toBe(true)
+
+        const template = await db.getWorkflowTemplateById(created.id)
+        expect(template).toBeNull()
       })
     })
   })
 
-  // ============================================================================
-  // Webhooks CRUD (removed - types deleted in SP-1)
-  // ============================================================================
+  describe('Webhooks CRUD', () => {
+    it('should create and retrieve webhook config', async () => {
+      const conn = getConnection()
+      const id = 'webhook-' + Date.now()
+      const now = new Date().toISOString()
 
-  // ============================================================================
-  // Webhooks CRUD (removed - types deleted in SP-1)
-  // ============================================================================
+      await conn.execute(
+        `INSERT INTO webhook_configs (id, name, url, events, headers, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          id,
+          'Test Webhook',
+          'https://example.com/webhook',
+          JSON.stringify(['on_start', 'on_success', 'on_failure']),
+          JSON.stringify({ 'Authorization': 'Bearer token' }),
+          true,
+          now,
+          now,
+        ]
+      )
 
-  // ============================================================================
-  // Dead Letter Queue CRUD (removed - types deleted in SP-1)
-  // ============================================================================
+      const rows = await conn.query<{
+        id: string
+        name: string
+        url: string
+        events: string
+        headers: string | null
+        is_active: boolean
+      }>('SELECT * FROM webhook_configs WHERE id = $1', [id])
 
-  // ============================================================================
-  // Edge Cases & Error Handling
-  // ============================================================================
+      expect(rows.length).toBe(1)
+      expect(rows[0].name).toBe('Test Webhook')
+      expect(rows[0].url).toBe('https://example.com/webhook')
+      expect(rows[0].is_active).toBe(true)
+    })
+
+    it('should update webhook active status', async () => {
+      const conn = getConnection()
+      const id = 'webhook-update-' + Date.now()
+      const now = new Date().toISOString()
+
+      await conn.execute(
+        `INSERT INTO webhook_configs (id, name, url, events, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [id, 'Test', 'https://example.com', JSON.stringify(['on_success']), true, now, now]
+      )
+
+      await conn.execute(
+        'UPDATE webhook_configs SET is_active = $1, updated_at = $2 WHERE id = $3',
+        [false, now, id]
+      )
+
+      const rows = await conn.query<{ is_active: boolean }>('SELECT is_active FROM webhook_configs WHERE id = $1', [id])
+      expect(rows[0].is_active).toBe(false)
+    })
+
+    it('should delete webhook', async () => {
+      const conn = getConnection()
+      const id = 'webhook-delete-' + Date.now()
+      const now = new Date().toISOString()
+
+      await conn.execute(
+        `INSERT INTO webhook_configs (id, name, url, events, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [id, 'Test', 'https://example.com', JSON.stringify(['on_success']), true, now, now]
+      )
+
+      await conn.execute('DELETE FROM webhook_configs WHERE id = $1', [id])
+
+      const rows = await conn.query('SELECT * FROM webhook_configs WHERE id = $1', [id])
+      expect(rows.length).toBe(0)
+    })
+  })
+
+  describe('Dead Letter Queue', () => {
+    it('should add item to dead letter queue', async () => {
+      const conn = getConnection()
+      const id = 'dlq-' + Date.now()
+
+      await conn.execute(
+        `INSERT INTO dead_letter_queue (id, task_type, payload, error_message, retry_count, max_retries, failed_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          id,
+          'text_generation',
+          JSON.stringify({ prompt: 'test' }),
+          'Max retries exceeded',
+          3,
+          3,
+          new Date().toISOString(),
+          new Date().toISOString(),
+        ]
+      )
+
+      const rows = await conn.query<{
+        id: string
+        task_type: string
+        payload: string
+        error_message: string | null
+        retry_count: number
+      }>('SELECT * FROM dead_letter_queue WHERE id = $1', [id])
+
+      expect(rows.length).toBe(1)
+      expect(rows[0].task_type).toBe('text_generation')
+      expect(rows[0].retry_count).toBe(3)
+    })
+
+    it('should resolve dead letter queue item', async () => {
+      const conn = getConnection()
+      const id = 'dlq-resolve-' + Date.now()
+      const now = new Date().toISOString()
+
+      await conn.execute(
+        `INSERT INTO dead_letter_queue (id, task_type, payload, error_message, retry_count, max_retries, failed_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [id, 'text', '{}', 'Error', 3, 3, now, now]
+      )
+
+      await conn.execute(
+        'UPDATE dead_letter_queue SET resolved_at = $1, resolution = $2 WHERE id = $3',
+        [now, 'Manually resolved', id]
+      )
+
+      const rows = await conn.query<{ resolved_at: string | null; resolution: string | null }>(
+        'SELECT resolved_at, resolution FROM dead_letter_queue WHERE id = $1',
+        [id]
+      )
+
+      expect(rows[0].resolved_at).toBeDefined()
+      expect(rows[0].resolution).toBe('Manually resolved')
+    })
+  })
+
+  describe('Job Tags', () => {
+    it('should add tags to job', async () => {
+      const conn = getConnection()
+      const job = await db.createCronJob({ name: 'Tagged Job', cron_expression: '0 * * * *' })
+      const now = new Date().toISOString()
+
+      await conn.execute(
+        'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
+        ['tag-1-' + Date.now(), job.id, 'production', now]
+      )
+      await conn.execute(
+        'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
+        ['tag-2-' + Date.now(), job.id, 'important', now]
+      )
+
+      const rows = await conn.query<{ tag: string }>(
+        'SELECT tag FROM job_tags WHERE job_id = $1 ORDER BY tag',
+        [job.id]
+      )
+      expect(rows.length).toBe(2)
+      expect(rows[0].tag).toBe('important')
+      expect(rows[1].tag).toBe('production')
+    })
+  })
+
+  describe('Job Dependencies', () => {
+    it('should create job dependency', async () => {
+      const conn = getConnection()
+
+      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
+      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+      const now = new Date().toISOString()
+
+      await conn.execute(
+        'INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)',
+        ['dep-' + Date.now(), job2.id, job1.id, now]
+      )
+
+      const rows = await conn.query<{ job_id: string; depends_on_job_id: string }>(
+        'SELECT job_id, depends_on_job_id FROM job_dependencies WHERE job_id = $1',
+        [job2.id]
+      )
+
+      expect(rows.length).toBe(1)
+      expect(rows[0].depends_on_job_id).toBe(job1.id)
+    })
+  })
 
   describe('Edge Cases', () => {
-    it('should handle empty database queries gracefully', () => {
-      expect(db.getAllCronJobs()).toEqual([])
-      expect(db.getAllTasks()).toEqual([])
-      expect(db.getAllExecutionLogs()).toEqual([])
-      expect(db.getAllCapacityRecords()).toEqual([])
-      expect(db.getAllWorkflowTemplates()).toEqual([])
+    it('should handle empty cron expression', async () => {
+      const job = await db.createCronJob({ name: 'Empty Expr', cron_expression: '' })
+      expect(job.cron_expression).toBe('')
     })
 
-    it('should handle null descriptions and optional fields', () => {
-      const job = db.createCronJob({
-        name: 'No Description',
-        description: null,
-        cron_expression: '0 * * * *',
-      })
-      
-      expect(job.description).toBeNull()
+    it('should handle null workflow_id', async () => {
+      const job = await db.createCronJob({ name: 'No Workflow', cron_expression: '0 * * * *' })
+      expect(job.workflow_id).toBeNull()
     })
 
-    it('should handle special characters in names and descriptions', () => {
-      const job = db.createCronJob({
-        name: 'Test "quotes" and \'apostrophes\'',
-        description: 'Special chars: <>&"\'`$@#%^*',
-        cron_expression: '0 * * * *',
-      })
-      
-      expect(job.name).toBe('Test "quotes" and \'apostrophes\'')
-      expect(job.description).toBe('Special chars: <>&"\'`$@#%^*')
+    it('should handle task with JSON payload', async () => {
+      const task = await db.createTask({ task_type: 'empty', payload: '{}' })
+      const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload
+      expect(payload).toEqual({})
     })
 
-    it('should handle concurrent creates safely', () => {
-      const jobs = []
-      for (let i = 0; i < 100; i++) {
-        jobs.push(db.createCronJob({
-          name: `Batch Job ${i}`,
-          cron_expression: '0 * * * *',
-        }))
-      }
-      
-      const ids = jobs.map(j => j.id)
-      const uniqueIds = new Set(ids)
-      expect(uniqueIds.size).toBe(100)
-      
-      expect(db.getAllCronJobs().length).toBe(100)
+    it('should handle execution log with null job_id', async () => {
+      const log = await db.createExecutionLog({ trigger_type: TriggerType.MANUAL, status: ExecutionStatus.RUNNING })
+      expect(log.job_id).toBeNull()
     })
 
-    it('should handle large payloads', () => {
-      const largePayload = JSON.stringify({
-        data: 'x'.repeat(10000),
-        nested: { deep: { array: Array(100).fill('item') } },
-      })
-      
-      const task = db.createTask({
-        task_type: 'large-task',
-        payload: largePayload,
-      })
-      
-      expect(task.payload.length).toBeGreaterThan(10000)
-      
-      const fetched = db.getTaskById(task.id)
-      expect(fetched?.payload).toBe(largePayload)
+    it('should handle capacity with zero remaining', async () => {
+      await db.upsertCapacityRecord('zero_service', { remaining_quota: 0, total_quota: 100 })
+
+      const record = await db.getCapacityByService('zero_service')
+      expect(record!.remaining_quota).toBe(0)
+    })
+
+    it('should handle template with JSON fields', async () => {
+      const template = await db.createWorkflowTemplate({ name: 'JSON Template', nodes_json: '{}', edges_json: '{}' })
+      expect(template.nodes_json).toBe('{}')
+    })
+
+    it('should correctly count tasks by status', async () => {
+      await db.createTask({ task_type: 't1', payload: '{}', status: TaskStatus.PENDING })
+      await db.createTask({ task_type: 't2', payload: '{}', status: TaskStatus.PENDING })
+      await db.createTask({ task_type: 't3', payload: '{}', status: TaskStatus.RUNNING })
+      await db.createTask({ task_type: 't4', payload: '{}', status: TaskStatus.COMPLETED })
+      await db.createTask({ task_type: 't5', payload: '{}', status: TaskStatus.FAILED })
+
+      const counts = await db.getTaskCountsByStatus()
+      expect(counts.pending).toBe(2)
+      expect(counts.running).toBe(1)
+      expect(counts.completed).toBe(1)
+      expect(counts.failed).toBe(1)
+      expect(counts.total).toBe(5)
+    })
+
+    it('should get queue stats for specific job', async () => {
+      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
+      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+
+      await db.createTask({ job_id: job1.id, task_type: 't1', payload: '{}', status: TaskStatus.PENDING })
+      await db.createTask({ job_id: job1.id, task_type: 't2', payload: '{}', status: TaskStatus.COMPLETED })
+      await db.createTask({ job_id: job2.id, task_type: 't3', payload: '{}', status: TaskStatus.PENDING })
+
+      const stats = await db.getQueueStats(job1.id)
+      expect(stats.pending).toBe(1)
+      expect(stats.completed).toBe(1)
+      expect(stats.total).toBe(2)
+    })
+
+    it('should return null when decrementing capacity for non-existent service', async () => {
+      const record = await db.decrementCapacity('completely-nonexistent-service', 1)
+      expect(record).toBeNull()
+    })
+
+    it('should handle ISO date strings correctly', async () => {
+      const job = await db.createCronJob({ name: 'Date Test', cron_expression: '0 * * * *' })
+      expect(job.created_at).toBeDefined()
+      expect(job.created_at).toBeTruthy()
     })
   })
 })

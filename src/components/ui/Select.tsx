@@ -31,7 +31,8 @@ interface SelectContextValue {
   setHighlightedIndex: (index: number) => void
   selectId: string
   itemIds: string[]
-  registerItem: (id: string) => number
+  itemValues: Map<string, string>
+  registerItem: (id: string, value: string) => number
   unregisterItem: (id: string) => void
   triggerRef: React.RefObject<HTMLButtonElement | null>
   listboxRef: React.RefObject<HTMLDivElement | null>
@@ -60,6 +61,7 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
   const [open, setOpen] = React.useState(false)
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1)
   const [itemIds, setItemIds] = React.useState<string[]>([])
+  const [itemValues, setItemValues] = React.useState<Map<string, string>>(new Map())
   const selectId = React.useId()
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const listboxRef = React.useRef<HTMLDivElement>(null)
@@ -76,16 +78,26 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
     triggerRef.current?.focus()
   }, [value, onValueChange])
 
-  const registerItem = React.useCallback((id: string) => {
+  const registerItem = React.useCallback((id: string, itemValue: string) => {
     setItemIds(prev => {
       if (prev.includes(id)) return prev
       return [...prev, id]
+    })
+    setItemValues(prev => {
+      const next = new Map(prev)
+      next.set(id, itemValue)
+      return next
     })
     return itemIds.length
   }, [itemIds.length])
 
   const unregisterItem = React.useCallback((id: string) => {
     setItemIds(prev => prev.filter(itemId => itemId !== id))
+    setItemValues(prev => {
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
   }, [])
 
   // Reset highlighted index when dropdown closes
@@ -94,6 +106,15 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
       setHighlightedIndex(-1)
     }
   }, [open])
+
+  React.useEffect(() => {
+    if (open && currentValue) {
+      const selectedIndex = itemIds.findIndex(id => itemValues.get(id) === currentValue)
+      if (selectedIndex >= 0) {
+        setHighlightedIndex(selectedIndex)
+      }
+    }
+  }, [open, currentValue, itemIds, itemValues])
 
   React.useEffect(() => {
     if (!open) return
@@ -178,6 +199,7 @@ export function Select({ value, defaultValue, onValueChange, children }: SelectP
         setHighlightedIndex,
         selectId,
         itemIds,
+        itemValues,
         registerItem,
         unregisterItem,
         triggerRef,
@@ -230,6 +252,10 @@ const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProp
       () => innerRef.current as HTMLButtonElement,
       []
     )
+
+    React.useEffect(() => {
+      innerRef.current?.focus()
+    }, [])
     
     return (
       <button
@@ -379,6 +405,12 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
         })
       }
     }, [open, triggerRef])
+
+    React.useEffect(() => {
+      if (open && innerRef.current) {
+        innerRef.current.focus()
+      }
+    }, [open])
     
     if (!open) return null
     
@@ -465,8 +497,8 @@ const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
     const itemId = React.useId()
     
     React.useEffect(() => {
-      registerItem(itemId)
-    }, [registerItem, itemId])
+      registerItem(itemId, value)
+    }, [registerItem, itemId, value])
     
     const isHighlighted = itemIds[highlightedIndex] === itemId
     
@@ -478,6 +510,7 @@ const SelectItemInner = React.forwardRef<HTMLDivElement, SelectItemProps>(
         aria-selected={isHighlighted}
         data-value={value}
         data-disabled={disabled}
+        data-highlighted={isHighlighted}
         className={cn(
           selectItemVariants({ variant }),
           isSelected && 'bg-accent',

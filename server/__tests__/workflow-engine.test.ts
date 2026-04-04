@@ -443,6 +443,243 @@ describe('WorkflowEngine', () => {
       const data = result.nodeResults.get('loop')?.data as { iterations: number }
       expect(data.iterations).toBe(3)
     })
+
+    it('should execute subNodes for each iteration in loop', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'loop', 
+            type: 'loop', 
+            data: { 
+              label: 'loop', 
+              config: { 
+                items: JSON.stringify(['apple', 'banana', 'cherry']),
+                subNodes: [
+                  { 
+                    id: 'sub-action', 
+                    type: 'action', 
+                    data: { 
+                      label: 'process item', 
+                      config: { 
+                        service: 'testService', 
+                        method: 'processItem',
+                        args: ['{{item}}']
+                      } 
+                    } 
+                  }
+                ],
+                subEdges: []
+              } 
+            } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockServiceRegistry.call).toHaveBeenCalledTimes(3)
+      expect(mockServiceRegistry.call).toHaveBeenNthCalledWith(1, 'testService', 'processItem', ['apple'])
+      expect(mockServiceRegistry.call).toHaveBeenNthCalledWith(2, 'testService', 'processItem', ['banana'])
+      expect(mockServiceRegistry.call).toHaveBeenNthCalledWith(3, 'testService', 'processItem', ['cherry'])
+    })
+
+    it('should support {{item.field}} template in subNodes', async () => {
+      const nodeOutputs = new Map<string, unknown>()
+      nodeOutputs.set('item', { name: 'Alice', age: 25 })
+      
+      const result1 = engine.testResolveTemplateString('{{item}}', nodeOutputs)
+      const result2 = engine.testResolveTemplateString('{{item.name}}', nodeOutputs)
+      const result3 = engine.testResolveTemplateString('{{item.age}}', nodeOutputs)
+      
+      expect(result1).toBe('[object Object]')
+      expect(result2).toBe('Alice')
+      expect(result3).toBe('25')
+    })
+
+    it('should execute subNodes with item.field templates', async () => {
+      const items = [
+        { name: 'Alice', age: 25 },
+        { name: 'Bob', age: 30 }
+      ]
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'loop', 
+            type: 'loop', 
+            data: { 
+              label: 'loop', 
+              config: { 
+                items: JSON.stringify(items),
+                subNodes: [
+                  { 
+                    id: 'sub-action', 
+                    type: 'action', 
+                    data: { 
+                      label: 'process person', 
+                      config: { 
+                        service: 'testService', 
+                        method: 'processPerson',
+                        args: ['{{item.name}}', '{{item.age}}']
+                      } 
+                    } 
+                  }
+                ],
+                subEdges: []
+              } 
+            } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      const mockCall = mockServiceRegistry.call as ReturnType<typeof vi.fn>
+      const calls = mockCall.mock.calls
+      
+      expect(result.success).toBe(true)
+      expect(calls.length).toBe(2)
+      
+      const call1 = calls[0]
+      const call2 = calls[1]
+      
+      expect(call1[0]).toBe('testService')
+      expect(call1[1]).toBe('processPerson')
+      expect(call1[2]).toEqual(['Alice', '25'])
+      
+      expect(call2[0]).toBe('testService')
+      expect(call2[1]).toBe('processPerson')
+      expect(call2[2]).toEqual(['Bob', '30'])
+    })
+
+    it('should terminate loop early when condition is false', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'loop', 
+            type: 'loop', 
+            data: { 
+              label: 'loop', 
+              config: { 
+                items: JSON.stringify([1, 2, 3, 4, 5]),
+                condition: '{{item}} < 3',
+                subNodes: [
+                  { 
+                    id: 'sub-action', 
+                    type: 'action', 
+                    data: { 
+                      label: 'process', 
+                      config: { 
+                        service: 'testService', 
+                        method: 'process',
+                        args: ['{{item}}']
+                      } 
+                    } 
+                  }
+                ],
+                subEdges: []
+              } 
+            } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockServiceRegistry.call).toHaveBeenCalledTimes(2)
+    })
+
+    it('should respect maxIterations limit with subNodes', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'loop', 
+            type: 'loop', 
+            data: { 
+              label: 'loop', 
+              config: { 
+                items: JSON.stringify([1, 2, 3, 4, 5, 6, 7]),
+                maxIterations: 3,
+                subNodes: [
+                  { 
+                    id: 'sub-action', 
+                    type: 'action', 
+                    data: { 
+                      label: 'process', 
+                      config: { 
+                        service: 'testService', 
+                        method: 'process',
+                        args: ['{{item}}']
+                      } 
+                    } 
+                  }
+                ],
+                subEdges: []
+              } 
+            } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(mockServiceRegistry.call).toHaveBeenCalledTimes(3)
+    })
+
+    it('should collect results from all subNode iterations', async () => {
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ processed: 'apple' })
+        .mockResolvedValueOnce({ processed: 'banana' })
+        .mockResolvedValueOnce({ processed: 'cherry' })
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'loop', 
+            type: 'loop', 
+            data: { 
+              label: 'loop', 
+              config: { 
+                items: JSON.stringify(['apple', 'banana', 'cherry']),
+                subNodes: [
+                  { 
+                    id: 'sub-action', 
+                    type: 'action', 
+                    data: { 
+                      label: 'process item', 
+                      config: { 
+                        service: 'testService', 
+                        method: 'processItem',
+                        args: ['{{item}}']
+                      } 
+                    } 
+                  }
+                ],
+                subEdges: []
+              } 
+            } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      const loopResult = result.nodeResults.get('loop')?.data as { iterations: number; results: unknown[] }
+      expect(loopResult.iterations).toBe(3)
+      expect(loopResult.results).toHaveLength(3)
+      expect(loopResult.results[0]).toEqual({ processed: 'apple' })
+      expect(loopResult.results[1]).toEqual({ processed: 'banana' })
+      expect(loopResult.results[2]).toEqual({ processed: 'cherry' })
+    })
   })
 
   describe('Error Handling', () => {
@@ -465,6 +702,141 @@ describe('WorkflowEngine', () => {
       
       expect(result.totalDurationMs).toBeGreaterThanOrEqual(0)
       expect(result.nodeResults.get('a')?.durationMs).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('Condition Node Branch Control', () => {
+    it('should execute only true branch when condition evaluates to true', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'cond', type: 'condition', data: { label: 'cond', config: { condition: 'true' } } },
+          { id: 'trueNode', type: 'action', data: { label: 'trueNode', config: { service: 'svc', method: 'mTrue' } } },
+          { id: 'falseNode', type: 'action', data: { label: 'falseNode', config: { service: 'svc', method: 'mFalse' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'cond', target: 'trueNode', sourceHandle: 'true' },
+          { id: 'e2', source: 'cond', target: 'falseNode', sourceHandle: 'false' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('cond')).toBe(true)
+      expect(result.nodeResults.has('trueNode')).toBe(true)
+      expect(result.nodeResults.has('falseNode')).toBe(false) // false branch should NOT execute
+      expect(result.nodeResults.get('cond')?.data).toBe(true)
+    })
+
+    it('should execute only false branch when condition evaluates to false', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'cond', type: 'condition', data: { label: 'cond', config: { condition: 'false' } } },
+          { id: 'trueNode', type: 'action', data: { label: 'trueNode', config: { service: 'svc', method: 'mTrue' } } },
+          { id: 'falseNode', type: 'action', data: { label: 'falseNode', config: { service: 'svc', method: 'mFalse' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'cond', target: 'trueNode', sourceHandle: 'true' },
+          { id: 'e2', source: 'cond', target: 'falseNode', sourceHandle: 'false' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('cond')).toBe(true)
+      expect(result.nodeResults.has('trueNode')).toBe(false) // true branch should NOT execute
+      expect(result.nodeResults.has('falseNode')).toBe(true)
+      expect(result.nodeResults.get('cond')?.data).toBe(false)
+    })
+
+    it('should execute both branches when no sourceHandle specified (backward compatibility)', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'cond', type: 'condition', data: { label: 'cond', config: { condition: 'true' } } },
+          { id: 'nodeA', type: 'action', data: { label: 'nodeA', config: { service: 'svc', method: 'mA' } } },
+          { id: 'nodeB', type: 'action', data: { label: 'nodeB', config: { service: 'svc', method: 'mB' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'cond', target: 'nodeA' }, // no sourceHandle
+          { id: 'e2', source: 'cond', target: 'nodeB' }, // no sourceHandle
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('cond')).toBe(true)
+      expect(result.nodeResults.has('nodeA')).toBe(true) // should execute (backward compat)
+      expect(result.nodeResults.has('nodeB')).toBe(true) // should execute (backward compat)
+    })
+
+    it('should handle chained condition nodes', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'cond1', type: 'condition', data: { label: 'cond1', config: { condition: 'true' } } },
+          { id: 'cond2', type: 'condition', data: { label: 'cond2', config: { condition: 'false' } } },
+          { id: 'nodeA', type: 'action', data: { label: 'nodeA', config: { service: 'svc', method: 'mA' } } },
+          { id: 'nodeB', type: 'action', data: { label: 'nodeB', config: { service: 'svc', method: 'mB' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'cond1', target: 'cond2', sourceHandle: 'true' },
+          { id: 'e2', source: 'cond2', target: 'nodeA', sourceHandle: 'true' },
+          { id: 'e3', source: 'cond2', target: 'nodeB', sourceHandle: 'false' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('cond1')).toBe(true)
+      expect(result.nodeResults.has('cond2')).toBe(true) // cond1 true → cond2 executes
+      expect(result.nodeResults.has('nodeA')).toBe(false) // cond2 false → nodeA skipped
+      expect(result.nodeResults.has('nodeB')).toBe(true) // cond2 false → nodeB executes
+    })
+
+    it('should handle condition with template resolution from previous node', async () => {
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ status: 'success' })
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'action1', type: 'action', data: { label: 'action1', config: { service: 'svc', method: 'm1' } } },
+          { id: 'cond', type: 'condition', data: { label: 'cond', config: { condition: '{{action1.output.status}} == success' } } },
+          { id: 'successNode', type: 'action', data: { label: 'successNode', config: { service: 'svc', method: 'mSuccess' } } },
+          { id: 'failNode', type: 'action', data: { label: 'failNode', config: { service: 'svc', method: 'mFail' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'action1', target: 'cond' },
+          { id: 'e2', source: 'cond', target: 'successNode', sourceHandle: 'true' },
+          { id: 'e3', source: 'cond', target: 'failNode', sourceHandle: 'false' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('action1')).toBe(true)
+      expect(result.nodeResults.has('cond')).toBe(true)
+      expect(result.nodeResults.has('successNode')).toBe(true) // condition true
+      expect(result.nodeResults.has('failNode')).toBe(false) // condition true → failNode skipped
+    })
+
+    it('should handle default handle fallback when specified handle not found', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'cond', type: 'condition', data: { label: 'cond', config: { condition: 'true' } } },
+          { id: 'defaultNode', type: 'action', data: { label: 'defaultNode', config: { service: 'svc', method: 'mDefault' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'cond', target: 'defaultNode', sourceHandle: 'default' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(result.nodeResults.has('cond')).toBe(true)
+      expect(result.nodeResults.has('defaultNode')).toBe(true) // default handle should execute regardless
     })
   })
 })

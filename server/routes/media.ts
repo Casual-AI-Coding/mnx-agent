@@ -57,7 +57,8 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
-  if (!record) {
+  const includeDeleted = req.query.includeDeleted === 'true'
+  if (!record || (!includeDeleted && record.is_deleted)) {
     res.status(404).json({ success: false, error: 'Media record not found' })
     return
   }

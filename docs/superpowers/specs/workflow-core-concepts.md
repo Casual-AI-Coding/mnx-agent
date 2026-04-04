@@ -321,9 +321,19 @@ interface LoopNodeConfig {
   items?: string           // 循环项来源
   maxIterations?: number   // 最大迭代次数
   condition?: string       // 终止条件（可选）
+  subNodes?: WorkflowNode[] // 子节点定义（每次迭代执行）
+  subEdges?: WorkflowEdge[] // 子节点间的边定义
   // 示例: items = "{{fetchTasks.output}}"
+  // 示例: subNodes = [{ id: 'sub-1', type: 'action', data: { label: 'process', config: { service: 'svc', method: 'm', args: ['{{item}}'] } } }]
 }
 ```
+
+**Loop 节点执行行为**：
+- 每次迭代时，`item` 变量被设置为当前循环项
+- 子节点可通过 `{{item}}` 或 `{{item.field}}` 访问当前项
+- 子节点按拓扑顺序执行
+- `condition` 在每次迭代前评估，为 false 时终止循环
+- 返回 `{ iterations: number, results: unknown[] }`
 
 #### Transform Node
 

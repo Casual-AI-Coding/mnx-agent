@@ -21,8 +21,17 @@ import {
   workflowTemplateIdParamsSchema,
   createWorkflowTemplateSchema,
   updateWorkflowTemplateSchema,
+  addJobTagSchema,
+  jobTagParamsSchema,
+  jobsByTagParamsSchema,
+  addJobDependencySchema,
+  jobDependencyParamsSchema,
+  createWebhookSchema,
+  updateWebhookSchema,
+  webhookIdParamsSchema,
+  webhookDeliveriesQuerySchema,
 } from '../validation/cron-schemas'
-import { TaskStatus, TriggerType, ExecutionStatus, TaskQueueItem, ExecutionLog, WorkflowTemplate } from '../database/types'
+import { TaskStatus, TriggerType, ExecutionStatus, TaskQueueItem, ExecutionLog, WorkflowTemplate, WebhookConfig } from '../database/types'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 
 const router = Router()
@@ -563,6 +572,231 @@ router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParams
   }
   await db.deleteWorkflowTemplate(req.params.id, ownerId)
   res.json({ success: true, data: { deleted: true } })
+}))
+
+// ============================================
+// Job Tags API
+// ============================================
+
+router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(addJobTagSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  const { tag } = req.body
+  await db.addJobTag(req.params.id, tag)
+  const tags = await db.getJobTags(req.params.id)
+  res.json({ success: true, data: { tags } })
+}))
+
+router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  await db.removeJobTag(req.params.id, req.params.tag)
+  const tags = await db.getJobTags(req.params.id)
+  res.json({ success: true, data: { tags } })
+}))
+
+router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  const tags = await db.getJobTags(req.params.id)
+  res.json({ success: true, data: { tags } })
+}))
+
+router.get('/tags/:tag/jobs', validateParams(jobsByTagParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const jobs = await db.getJobsByTag(req.params.tag, ownerId)
+  res.json({ success: true, data: { jobs, total: jobs.length } })
+}))
+
+router.get('/tags', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const tags = await db.getAllTags()
+  res.json({ success: true, data: { tags } })
+}))
+
+// ============================================
+// Job Dependencies API
+// ============================================
+
+router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), validate(addJobDependencySchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  const { depends_on_job_id } = req.body
+
+  if (req.params.id === depends_on_job_id) {
+    res.status(400).json({ success: false, error: 'A job cannot depend on itself' })
+    return
+  }
+
+  const dependsOnJob = await db.getCronJobById(depends_on_job_id, ownerId)
+  if (!dependsOnJob) {
+    res.status(404).json({ success: false, error: 'Dependent job not found' })
+    return
+  }
+
+  const hasCircular = await db.hasCircularDependency(req.params.id, depends_on_job_id)
+  if (hasCircular) {
+    res.status(400).json({ success: false, error: 'Adding this dependency would create a circular dependency' })
+    return
+  }
+
+  await db.addJobDependency(req.params.id, depends_on_job_id)
+  const dependencies = await db.getJobDependencies(req.params.id)
+  res.json({ success: true, data: { dependencies } })
+}))
+
+router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  await db.removeJobDependency(req.params.id, req.params.depId)
+  const dependencies = await db.getJobDependencies(req.params.id)
+  res.json({ success: true, data: { dependencies } })
+}))
+
+router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  const dependencies = await db.getJobDependencies(req.params.id)
+  res.json({ success: true, data: { dependencies } })
+}))
+
+router.get('/jobs/:id/dependents', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const job = await db.getCronJobById(req.params.id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+  const dependents = await db.getJobDependents(req.params.id)
+  res.json({ success: true, data: { dependents } })
+}))
+
+// ============================================
+// Webhook API
+// ============================================
+
+router.get('/webhooks', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const webhooks: WebhookConfig[] = await db.getWebhookConfigsByOwner(ownerId)
+  res.json({ success: true, data: { webhooks, total: webhooks.length } })
+}))
+
+router.post('/webhooks', validate(createWebhookSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = getOwnerIdForInsert(req) ?? undefined
+  const webhookData = req.body
+
+  const job = await db.getCronJobById(webhookData.job_id, ownerId)
+  if (!job) {
+    res.status(404).json({ success: false, error: 'Job not found' })
+    return
+  }
+
+  const webhook = await db.createWebhookConfig({
+    job_id: webhookData.job_id,
+    name: webhookData.name,
+    url: webhookData.url,
+    events: webhookData.events,
+    headers: webhookData.headers,
+    secret: webhookData.secret,
+    is_active: webhookData.is_active,
+  }, ownerId)
+
+  res.status(201).json({ success: true, data: webhook })
+}))
+
+router.get('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
+  if (!webhook) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  res.json({ success: true, data: webhook })
+}))
+
+router.patch('/webhooks/:id', validateParams(webhookIdParamsSchema), validate(updateWebhookSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const existing = await db.getWebhookConfigById(req.params.id, ownerId)
+  if (!existing) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  const webhook = await db.updateWebhookConfig(req.params.id, req.body, ownerId)
+  res.json({ success: true, data: webhook })
+}))
+
+router.delete('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const existing = await db.getWebhookConfigById(req.params.id, ownerId)
+  if (!existing) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  await db.deleteWebhookConfig(req.params.id, ownerId)
+  res.json({ success: true, data: { deleted: true } })
+}))
+
+router.post('/webhooks/:id/test', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const notificationService = getNotificationService(db)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
+  if (!webhook) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  const result = await notificationService.testWebhook(req.params.id)
+  res.json({ success: result.success, data: result })
+}))
+
+router.get('/webhooks/:id/deliveries', validateParams(webhookIdParamsSchema), validateQuery(webhookDeliveriesQuerySchema), asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const ownerId = buildOwnerFilter(req).params[0]
+  const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
+  if (!webhook) {
+    res.status(404).json({ success: false, error: 'Webhook not found' })
+    return
+  }
+  const query = req.query as unknown as { limit: number }
+  const deliveries = await db.getWebhookDeliveriesByWebhook(req.params.id, query.limit, ownerId)
+  res.json({ success: true, data: { deliveries, total: deliveries.length } })
 }))
 
 export default router

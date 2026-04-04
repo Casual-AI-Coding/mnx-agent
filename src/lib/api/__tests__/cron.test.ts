@@ -31,12 +31,14 @@ vi.mock('axios', () => {
       response: { use: vi.fn() },
     },
   }
+  const isAxiosErrorMock = vi.fn((error) => error && error.isAxiosError === true)
   return {
     default: {
       ...mockAxiosInstance,
-      isAxiosError: vi.fn((error) => error && error.isAxiosError === true),
+      isAxiosError: isAxiosErrorMock,
     },
     ...mockAxiosInstance,
+    isAxiosError: isAxiosErrorMock,
   }
 })
 
@@ -152,7 +154,7 @@ describe('Cron API Module', () => {
         name: 'New Job',
         description: 'New description',
         cronExpression: '0 0 * * *',
-        workflowJson: '{"nodes":[]}',
+        workflowId: 'wf-1',
         isActive: true,
       }
 
@@ -162,7 +164,7 @@ describe('Cron API Module', () => {
         description: 'New description',
         cronExpression: '0 0 * * *',
         isActive: true,
-        workflowJson: '{"nodes":[]}',
+        workflowId: 'wf-1',
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
         lastRunAt: null,
@@ -181,7 +183,8 @@ describe('Cron API Module', () => {
         name: 'New Job',
         description: 'New description',
         cron_expression: '0 0 * * *',
-        workflow_json: '{"nodes":[]}',
+        workflow_id: 'wf-1',
+        timezone: 'Asia/Shanghai',
         is_active: true,
       })
       expect(result.success).toBe(true)
@@ -194,7 +197,7 @@ describe('Cron API Module', () => {
         name: 'New Job',
         description: 'New description',
         cronExpression: '0 0 * * *',
-        workflowJson: '{}',
+        workflowId: 'wf-1',
       }
 
       mockPost.mockResolvedValueOnce({
@@ -356,10 +359,10 @@ describe('Cron API Module', () => {
       })
     })
 
-    it('should transform workflowJson field', async () => {
+    it('should transform cronExpression field', async () => {
       const { updateCronJob } = await import('../cron')
       const updates: UpdateCronJobDTO = {
-        workflowJson: '{"updated":true}',
+        cronExpression: '*/5 * * * *',
       }
 
       mockPut.mockResolvedValueOnce({
@@ -369,7 +372,7 @@ describe('Cron API Module', () => {
       await updateCronJob('job-1', updates)
 
       expect(mockPut).toHaveBeenCalledWith('/cron/jobs/job-1', {
-        workflow_json: '{"updated":true}',
+        cron_expression: '*/5 * * * *',
       })
     })
   })

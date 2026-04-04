@@ -12,5 +12,7 @@ export default mergeConfig(viteConfig, defineConfig({
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/__tests__/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist', '.next'],
+    singleThread: true,
+    fileParallelism: false,
   },
 }))
