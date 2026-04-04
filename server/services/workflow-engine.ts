@@ -1,6 +1,7 @@
 import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodeRegistry } from './service-node-registry.js'
 import { WorkflowNodeType } from '../types/workflow.js'
+import type { TaskExecutor } from './queue-processor.js'
 
 export interface TaskResult {
   success: boolean
@@ -42,23 +43,27 @@ export interface WorkflowGraph {
 export class WorkflowEngine {
   private db: DatabaseService
   private serviceRegistry: ServiceNodeRegistry
+  private taskExecutor: TaskExecutor | null = null
   private executionLogId: string | null = null
   private workflowNodes: WorkflowNode[] = []
   private workflowEdges: WorkflowEdge[] = []
 
-  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry) {
+  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor?: TaskExecutor) {
     this.db = db
     this.serviceRegistry = serviceRegistry
+    this.taskExecutor = taskExecutor || null
   }
 
   async executeWorkflow(
     workflowJson: string,
-    executionLogId?: string
+    executionLogId?: string,
+    taskExecutor?: TaskExecutor
   ): Promise<WorkflowResult> {
     const startTime = Date.now()
     const nodeResults = new Map<string, TaskResult>()
     let executionError: string | undefined
 
+    this.taskExecutor = taskExecutor || this.taskExecutor
     this.executionLogId = executionLogId || null
 
     try {
@@ -789,10 +794,16 @@ export class WorkflowEngine {
         await this.db.markTaskRunning(task.id)
 
         const payload = JSON.parse(task.payload)
-        const result = await this.serviceRegistry.call('task-executor', 'executeTask', [
-          task.task_type,
-          payload,
-        ])
+        let result: TaskResult
+
+        if (this.taskExecutor) {
+          result = await this.taskExecutor.executeTask(task.task_type, payload)
+        } else {
+          result = await this.serviceRegistry.call('task-executor', 'executeTask', [
+            task.task_type,
+            payload,
+          ]) as TaskResult
+        }
 
         await this.db.markTaskCompleted(task.id, JSON.stringify(result))
         succeeded++

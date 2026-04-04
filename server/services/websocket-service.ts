@@ -5,7 +5,7 @@ import { UserService } from './user-service.js'
 
 export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
-        'task_created' | 'task_updated' | 'task_completed' | 'task_failed' |
+        'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
         'log_created' | 'log_updated'
   payload: unknown
   timestamp: string
@@ -80,6 +80,14 @@ class CronEventEmitter extends EventEmitter {
     this.emit('task_event', {
       type: 'task_failed',
       payload: task,
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitTaskMovedToDLQ(task: unknown, error: string): void {
+    this.emit('task_event', {
+      type: 'task_moved_to_dlq',
+      payload: { task, error },
       timestamp: new Date().toISOString()
     } as CronEvent)
   }

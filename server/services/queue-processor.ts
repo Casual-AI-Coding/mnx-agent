@@ -218,6 +218,8 @@ export class QueueProcessor {
         retry_count: task.retry_count,
         max_retries: task.max_retries,
       }, task.owner_id ?? undefined)
+
+      cronEvents.emitTaskMovedToDLQ(task, error)
     } catch (err) {
       console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, err)
     }

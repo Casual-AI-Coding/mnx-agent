@@ -2,6 +2,7 @@ import cron, { ScheduledTask } from 'node-cron'
 import { CronExpressionParser } from 'cron-parser'
 import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
+import type { TaskExecutor } from './queue-processor.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
@@ -13,7 +14,7 @@ import { cronEvents } from './websocket-service'
 export type { DatabaseService }
 
 export interface WorkflowEngine {
-  executeWorkflow(workflowJson: string, executionLogId?: string): Promise<WorkflowResult>
+  executeWorkflow(workflowJson: string, executionLogId?: string, taskExecutor?: TaskExecutor): Promise<WorkflowResult>
 }
 
 export interface CronSchedulerOptions {
@@ -26,15 +27,17 @@ export class CronScheduler {
   private jobs: Map<string, ScheduledTask> = new Map()
   private db: DatabaseService
   private workflowEngine: WorkflowEngine
+  private taskExecutor: TaskExecutor | null = null
   private timezone: string
   private maxConcurrent: number
   private defaultTimeoutMs: number
   private runningJobs: Set<string> = new Set()
   private isShuttingDown: boolean = false
 
-  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, options?: CronSchedulerOptions) {
+  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: TaskExecutor, options?: CronSchedulerOptions) {
     this.db = db
     this.workflowEngine = workflowEngine
+    this.taskExecutor = taskExecutor || null
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
     this.maxConcurrent = options?.maxConcurrent ?? 5
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? 5 * 60 * 1000 // 5 minutes default
@@ -157,7 +160,7 @@ export class CronScheduler {
       }
       
       const result = await this.executeWithTimeout(
-        () => this.workflowEngine.executeWorkflow(workflowJson, log?.id),
+        () => this.workflowEngine.executeWorkflow(workflowJson, log?.id, this.taskExecutor || undefined),
         this.defaultTimeoutMs
       )
       
@@ -350,9 +353,9 @@ export class CronScheduler {
 
 let schedulerInstance: CronScheduler | null = null
 
-export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, options?: CronSchedulerOptions): CronScheduler {
+export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: TaskExecutor, options?: CronSchedulerOptions): CronScheduler {
   if (!schedulerInstance) {
-    schedulerInstance = new CronScheduler(db, workflowEngine, options)
+    schedulerInstance = new CronScheduler(db, workflowEngine, taskExecutor, options)
   }
   return schedulerInstance
 }
