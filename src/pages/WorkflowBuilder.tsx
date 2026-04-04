@@ -45,7 +45,8 @@ import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
-import { useWorkflowStore, isValidWorkflow, hasActionNode } from '@/stores/workflow'
+import { TemplateSelectorModal } from '@/components/workflow/TemplateSelectorModal'
+import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
@@ -656,12 +657,15 @@ function WorkflowBuilderInner() {
   const { setViewport, screenToFlowPosition } = useReactFlow()
   const store = useWorkflowStore()
 
-  // Local React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [selectedNode, setSelectedNode] = React.useState<Node | null>(null)
   const [showConfigPanel, setShowConfigPanel] = React.useState(false)
   const [validationResult, setValidationResult] = React.useState<{ valid: boolean; message: string } | null>(null)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [saveMessage, setSaveMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showSaveModal, setShowSaveModal] = React.useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = React.useState(false)
 
   // Load workflow by ID from URL query parameter
   React.useEffect(() => {
@@ -690,9 +694,7 @@ function WorkflowBuilderInner() {
             
             setNodes(nodesData.map(storeNodeToRFNode))
             setEdges(edgesData as Edge[])
-            store.reset()
-            nodesData.forEach((n: WorkflowNode) => store.addNode(n))
-            edgesData.forEach((e: WorkflowEdge) => store.addEdge(e))
+            store.setCurrentWorkflow(workflowId, workflow.name)
           }
         } catch (err) {
           console.error('Failed to load workflow:', err)
@@ -702,46 +704,7 @@ function WorkflowBuilderInner() {
     }
   }, [searchParams])
 
-  // Initialize from store
-  React.useEffect(() => {
-    if (!searchParams.get('id')) {
-      setNodes(store.nodes.map(storeNodeToRFNode))
-      setEdges(store.edges as Edge[])
-    }
-  }, [])
 
-  // Sync nodes to store when they change
-  React.useEffect(() => {
-    if (nodes.length > 0) {
-      const storeNodes = nodes.map(rfNodeToStoreNode)
-      storeNodes.forEach((node) => {
-        const existing = store.nodes.find((n) => n.id === node.id)
-        if (existing) {
-          store.updateNode(node.id, node)
-        } else {
-          store.addNode(node)
-        }
-      })
-    }
-  }, [nodes])
-
-  // Sync edges to store
-  React.useEffect(() => {
-    if (edges.length > 0) {
-      edges.forEach((edge) => {
-        const existing = store.edges.find((e) => e.id === edge.id)
-        if (!existing) {
-          store.addEdge({
-            id: edge.id,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle || undefined,
-            targetHandle: edge.targetHandle || undefined,
-          })
-        }
-      })
-    }
-  }, [edges])
 
   // Drag handlers
   const onDragStart = (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => {
@@ -785,7 +748,7 @@ function WorkflowBuilderInner() {
     }
 
     setNodes((nds) => [...nds, newNode])
-    store.addNode(rfNodeToStoreNode(newNode))
+    store.setDirty(true)
   }
 
   const onConnect = (connection: Connection) => {
@@ -797,13 +760,7 @@ function WorkflowBuilderInner() {
       targetHandle: connection.targetHandle || undefined,
     }
     setEdges((eds) => addEdge(newEdge, eds))
-    store.addEdge({
-      id: newEdge.id,
-      source: newEdge.source,
-      target: newEdge.target,
-      sourceHandle: newEdge.sourceHandle ?? undefined,
-      targetHandle: newEdge.targetHandle ?? undefined,
-    })
+    store.setDirty(true)
   }
 
   const onNodeClick = (_event: React.MouseEvent, node: Node) => {
@@ -830,19 +787,28 @@ function WorkflowBuilderInner() {
         return node
       })
     )
-    store.updateNode(id, { data: { label: data.label as string, config: data } })
+    store.setDirty(true)
   }
 
   const handleDeleteNode = (id: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== id))
     setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id))
-    store.deleteNode(id)
     setShowConfigPanel(false)
     setSelectedNode(null)
+    store.setDirty(true)
   }
 
   const handleSave = () => {
-    const json = store.exportToJson()
+    const json = JSON.stringify({ 
+      nodes: nodes.map(rfNodeToStoreNode), 
+      edges: edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+      }))
+    }, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -860,16 +826,21 @@ function WorkflowBuilderInner() {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
       const text = await file.text()
-      store.loadFromJson(text)
-      setNodes(store.nodes.map(storeNodeToRFNode))
-      setEdges(store.edges as Edge[])
+      try {
+        const data = JSON.parse(text)
+        if (data.nodes) {
+          setNodes(data.nodes.map(storeNodeToRFNode))
+        }
+        if (data.edges) {
+          setEdges(data.edges as Edge[])
+        }
+        store.setDirty(true)
+      } catch (err) {
+        console.error('Failed to parse workflow JSON:', err)
+      }
     }
     input.click()
   }
-
-  const [isSaving, setIsSaving] = React.useState(false)
-  const [saveMessage, setSaveMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [showSaveModal, setShowSaveModal] = React.useState(false)
 
   const handleSaveToServer = async () => {
     setShowSaveModal(true)
@@ -891,9 +862,11 @@ function WorkflowBuilderInner() {
           targetHandle: e.targetHandle,
         }))),
         is_template: true,
-      }) as { success: boolean; error?: string }
+      }) as { success: boolean; data?: { id: string; name: string }; error?: string }
 
-      if (result.success) {
+      if (result.success && result.data) {
+        store.setCurrentWorkflow(result.data.id, result.data.name)
+        store.markSaved()
         setSaveMessage({ type: 'success', text: 'Workflow saved successfully!' })
       } else {
         setSaveMessage({ type: 'error', text: result.error || 'Failed to save workflow' })
@@ -905,45 +878,22 @@ function WorkflowBuilderInner() {
     setTimeout(() => setSaveMessage(null), 3000)
   }
 
+  const handleSelectTemplate = (_templateId: string, template: WorkflowTemplate) => {
+    const nodesData = typeof template.nodes_json === 'string'
+      ? JSON.parse(template.nodes_json)
+      : template.nodes_json
+    const edgesData = typeof template.edges_json === 'string'
+      ? JSON.parse(template.edges_json)
+      : template.edges_json
+
+    setNodes(nodesData.map(storeNodeToRFNode))
+    setEdges(edgesData as Edge[])
+    store.setCurrentWorkflow(template.id, template.name)
+    setShowTemplateSelector(false)
+  }
+
   const handleLoadFromServer = async () => {
-    try {
-      const result = await apiClient.get('/workflows?limit=50') as { data: { workflows: WorkflowTemplate[] } }
-      const workflows = result.data?.workflows || []
-
-      if (workflows.length === 0) {
-        alert('No saved workflows found.')
-        return
-      }
-
-      const choice = prompt(
-        'Select a workflow to load (enter number):\n' +
-        workflows.map((w: { id: string; name: string }, i: number) => `${i + 1}. ${w.name}`).join('\n')
-      )
-
-      if (!choice) return
-
-      const index = parseInt(choice, 10) - 1
-      if (index < 0 || index >= workflows.length) {
-        alert('Invalid selection')
-        return
-      }
-
-      const selected = workflows[index]
-      const nodesData = typeof selected.nodes_json === 'string' 
-        ? JSON.parse(selected.nodes_json) 
-        : selected.nodes_json
-      const edgesData = typeof selected.edges_json === 'string' 
-        ? JSON.parse(selected.edges_json) 
-        : selected.edges_json
-
-      setNodes(nodesData.map(storeNodeToRFNode))
-      setEdges(edgesData as Edge[])
-      store.reset()
-      nodesData.forEach((n: WorkflowNode) => store.addNode(n))
-      edgesData.forEach((e: WorkflowEdge) => store.addEdge(e))
-    } catch (err) {
-      alert('Failed to load workflows')
-    }
+    setShowTemplateSelector(true)
   }
 
   const handleValidate = () => {
@@ -978,9 +928,9 @@ function WorkflowBuilderInner() {
     if (confirm('Are you sure you want to clear all nodes and edges?')) {
       setNodes([])
       setEdges([])
-      store.reset()
       setShowConfigPanel(false)
       setSelectedNode(null)
+      store.setDirty(true)
     }
   }
 
@@ -1111,6 +1061,12 @@ function WorkflowBuilderInner() {
         isOpen={showSaveModal}
         onSave={handleSaveWorkflow}
         onClose={() => setShowSaveModal(false)}
+      />
+
+      <TemplateSelectorModal
+        isOpen={showTemplateSelector}
+        onClose={() => setShowTemplateSelector(false)}
+        onSelect={handleSelectTemplate}
       />
     </div>
   )
