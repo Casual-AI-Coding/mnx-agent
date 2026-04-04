@@ -903,7 +903,7 @@ export class DatabaseService {
     const { ownerId, isTemplate, limit = 50, offset = 0 } = options
 
     const conditions: string[] = []
-    const params: (string | number)[] = []
+    const params: (string | number | boolean)[] = []
     let paramIndex = 1
 
     if (ownerId) {
@@ -914,7 +914,7 @@ export class DatabaseService {
 
     if (isTemplate !== undefined) {
       conditions.push(`is_public = $${paramIndex}`)
-      params.push(isTemplate ? 1 : 0)
+      params.push(isTemplate)
       paramIndex++
     }
 

@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - UNRELEASED
+
+### Fixed
+- **Test Environment Configuration** - PostgreSQL connection for tests
+  - Fix `vitest.config.ts` to load both frontend and backend setup files
+  - Backend setup file loads `.env` for database credentials
+  - Add mock authentication middleware for route tests
+  - Add database cleanup in `beforeEach` for test isolation
+- **Database Service Boolean Query** - Fix boolean parameter handling in PostgreSQL queries
+  - Change integer conversion to native boolean for `is_public` filter
+- **Workflow API Parameter Handling** - Support both `is_public` and `is_template` parameters
+
+### Documentation
+- Add `docs/TESTING.md` - Test environment setup guide with PostgreSQL configuration
+
 ## [1.3.2] - 2026-04-04
 
 ### Added

@@ -155,7 +155,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
     description: req.body.description,
     nodes_json: req.body.nodes_json,
     edges_json: req.body.edges_json,
-    is_public: req.body.is_template,
+    is_public: req.body.is_public ?? req.body.is_template,
   }, ownerId)
   res.status(201).json({ success: true, data: workflow })
 }))
