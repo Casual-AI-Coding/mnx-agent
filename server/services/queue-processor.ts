@@ -1,5 +1,5 @@
 import type { DatabaseService } from '../database/service-async.js'
-import { TaskStatus, TaskQueueRow } from '../database/types'
+import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult } from './workflow-engine'
 import { cronEvents } from './websocket-service'
 
@@ -122,7 +122,7 @@ export class QueueProcessor {
     }
   }
 
-  async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueRow[]> {
+  async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> {
     return await this.db.getPendingTasks(jobId, limit)
   }
 
@@ -157,7 +157,7 @@ export class QueueProcessor {
     return retriedCount
   }
 
-  private async executeTaskWithLifecycle(task: TaskQueueRow): Promise<TaskResult> {
+  private async executeTaskWithLifecycle(task: TaskQueueItem): Promise<TaskResult> {
     const startTime = Date.now()
 
     await this.db.updateTask(task.id, {
@@ -198,7 +198,7 @@ export class QueueProcessor {
     }
   }
 
-  private async requeueTask(task: TaskQueueRow): Promise<void> {
+  private async requeueTask(task: TaskQueueItem): Promise<void> {
     await this.db.updateTask(task.id, {
       status: TaskStatus.PENDING,
       retry_count: task.retry_count + 1,
@@ -206,9 +206,21 @@ export class QueueProcessor {
     })
   }
 
-  private async moveToDeadLetterQueue(task: TaskQueueRow, error: string): Promise<void> {
-    // Dead letter queue table was removed - just log the failure
-    console.error(`[QueueProcessor] Task ${task.id} failed with error: ${error}. Max retries exceeded.`)
+  private async moveToDeadLetterQueue(task: TaskQueueItem, error: string): Promise<void> {
+    try {
+      const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload
+      await this.db.createDeadLetterQueueItem({
+        original_task_id: task.id,
+        job_id: task.job_id ?? undefined,
+        task_type: task.task_type,
+        payload: payload,
+        error_message: error,
+        retry_count: task.retry_count,
+        max_retries: task.max_retries,
+      }, task.owner_id ?? undefined)
+    } catch (err) {
+      console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, err)
+    }
   }
 
   async getQueueStats(jobId: string): Promise<{
@@ -225,7 +237,7 @@ export class QueueProcessor {
 
   async processBatch(
     jobId: string,
-    batch: TaskQueueRow[],
+    batch: TaskQueueItem[],
     options?: QueueOptions
   ): Promise<QueueResult> {
     const skipFailed = options?.skipFailed || false
