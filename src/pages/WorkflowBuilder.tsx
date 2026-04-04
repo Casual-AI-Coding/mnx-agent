@@ -50,6 +50,18 @@ import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cro
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
 
+interface WorkflowTemplate {
+  id: string
+  name: string
+  description: string | null
+  nodes_json: string
+  edges_json: string
+  owner_id: string | null
+  is_public: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Node Types Registry
 const nodeTypes: NodeTypes = {
   action: ActionNode,
@@ -140,7 +152,11 @@ const storeNodeToRFNode = (node: WorkflowNode): Node => ({
   id: node.id,
   type: node.type,
   position: node.position,
-  data: node.data.config || {},
+  data: {
+    ...node.data,
+    label: node.data?.label || node.id,
+    config: node.data?.config || {},
+  },
   selected: false,
 })
 
@@ -653,19 +669,24 @@ function WorkflowBuilderInner() {
     if (workflowId) {
       const loadWorkflow = async () => {
         try {
-          const response = await fetch(`/api/workflows/${workflowId}`)
-          if (!response.ok) throw new Error('Failed to fetch workflow')
-          
-          const data = await response.json()
-          const workflow = data.data
+          const result = await apiClient.get(`/workflows/${workflowId}`) as { data: WorkflowTemplate }
+          const workflow = result.data
           
           if (workflow) {
-            const nodesData = typeof workflow.nodes_json === 'string' 
-              ? JSON.parse(workflow.nodes_json) 
-              : workflow.nodes_json
-            const edgesData = typeof workflow.edges_json === 'string' 
-              ? JSON.parse(workflow.edges_json) 
-              : workflow.edges_json
+            const nodesRaw = workflow.nodes_json
+            const edgesRaw = workflow.edges_json
+            
+            if (!nodesRaw) {
+              console.error('No nodes_json in workflow')
+              return
+            }
+            
+            const nodesData = typeof nodesRaw === 'string' 
+              ? JSON.parse(nodesRaw) 
+              : nodesRaw
+            const edgesData = edgesRaw 
+              ? (typeof edgesRaw === 'string' ? JSON.parse(edgesRaw) : edgesRaw)
+              : []
             
             setNodes(nodesData.map(storeNodeToRFNode))
             setEdges(edgesData as Edge[])
@@ -858,29 +879,24 @@ function WorkflowBuilderInner() {
     setShowSaveModal(false)
     setIsSaving(true)
     try {
-      const response = await fetch('/api/workflows', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description: '',
-          nodes_json: JSON.stringify(nodes.map(rfNodeToStoreNode)),
-          edges_json: JSON.stringify(edges.map((e) => ({
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            sourceHandle: e.sourceHandle,
-            targetHandle: e.targetHandle,
-          }))),
-          is_template: true,
-        }),
-      })
+      const result = await apiClient.post('/workflows', {
+        name,
+        description: '',
+        nodes_json: JSON.stringify(nodes.map(rfNodeToStoreNode)),
+        edges_json: JSON.stringify(edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
+        }))),
+        is_template: true,
+      }) as { success: boolean; error?: string }
 
-      if (response.ok) {
+      if (result.success) {
         setSaveMessage({ type: 'success', text: 'Workflow saved successfully!' })
       } else {
-        const data = await response.json()
-        setSaveMessage({ type: 'error', text: data.error || 'Failed to save workflow' })
+        setSaveMessage({ type: 'error', text: result.error || 'Failed to save workflow' })
       }
     } catch (err) {
       setSaveMessage({ type: 'error', text: 'Network error' })
@@ -891,11 +907,8 @@ function WorkflowBuilderInner() {
 
   const handleLoadFromServer = async () => {
     try {
-      const response = await fetch('/api/workflows?limit=50')
-      if (!response.ok) throw new Error('Failed to fetch workflows')
-
-      const data = await response.json()
-      const workflows = data.data?.workflows || []
+      const result = await apiClient.get('/workflows?limit=50') as { data: { workflows: WorkflowTemplate[] } }
+      const workflows = result.data?.workflows || []
 
       if (workflows.length === 0) {
         alert('No saved workflows found.')
