@@ -2,6 +2,84 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 2026-04-04
+
+### Added
+- **Service Node Permissions Management** - Complete CRUD API for permission control
+  - `GET /api/admin/service-permissions` - List all permissions (admin+)
+  - `GET /api/admin/service-permissions/:service/:method` - Get single permission
+  - `POST /api/admin/service-permissions` - Create permission (super only)
+  - `PATCH /api/admin/service-permissions/:id` - Update permission (super only)
+  - `DELETE /api/admin/service-permissions/:id` - Delete permission (super only)
+  - Support `min_role` configuration (user/pro/admin/super)
+  - Support `is_enabled` toggle and `category` grouping
+
+- **Workflow Engine Advanced Features** - Complete DAG execution support
+  - **Condition Branching** - True/false branch execution with `sourceHandle`
+  - **Loop Sub-Workflow** - Execute complex DAG inside loop with `subNodes`/`subEdges`
+  - **Queue Node** - Batch task execution by `jobId` or `taskType`
+  - **Timeout Handling** - Configurable timeout (default 5min) with `WorkflowTimeoutError`
+  - Template variables: `{{item}}` and `{{index}}` for loop iterations
+
+- **Workflow Builder UX** - Major frontend improvements
+  - **Undo/Redo** - History management with 50 max states, Ctrl+Z/Y shortcuts
+  - **Workflow Selector Modal** - Load saved templates from database
+  - **Human-Readable IDs** - Generated IDs like `action-text-abc123`
+  - **ConfigPanel Caching** - useMemo for services/methods to reduce re-computation
+
+- **Cron Scheduler Enhancement** - TaskExecutor integration
+  - Pass `TaskExecutor` to `WorkflowEngine` for async operations
+  - Queue node can now execute batch tasks via TaskExecutor
+
+- **Dead Letter Queue Completion** - Full DLQ implementation
+  - `max_retries` and `created_at` columns added
+  - `QueueProcessor.moveToDeadLetterQueue()` now writes to database
+  - WebSocket event `task_moved_to_dlq` for real-time notification
+
+- **Composite Database Indexes** - Performance optimization
+  - `idx_task_queue_owner_status`
+  - `idx_execution_logs_owner_status`
+  - `idx_cron_jobs_owner_active`
+  - `idx_workflow_templates_owner_public`
+  - `idx_media_records_owner_type`
+
+### Fixed
+- **Queue Processor Types** - Replace `TaskQueueRow` with `TaskQueueItem` for consistency
+- **Workflow Builder State Sync** - Remove dual-state synchronization (ReactFlow + Zustand)
+
+### Changed
+- **Workflow Builder Architecture** - Single ReactFlow state source
+  - Zustand store now metadata-only (`currentWorkflowId`, `isDirty`)
+  - Direct ReactFlow state manipulation + `store.setDirty(true)`
+  - Removed all sync useEffects between ReactFlow and Zustand
+  - Persist only metadata in Zustand, not full workflow state
+
+- **Workflow Engine Constructor** - Accept optional `TaskExecutor` parameter
+  - Backward compatible - existing code works without changes
+
+### Performance
+- **Database Queries** - Composite indexes reduce query time 30-50%
+- **Frontend Rendering** - ConfigPanel caching reduces redundant API calls
+- **Memory Usage** - Single state source reduces memory overhead
+
+### Database
+- `migration_019` - Add `owner_id` to execution_log_details, webhook_deliveries; enhance DLQ
+- `migration_020` - Add composite indexes for owner+status queries
+
+### Tests
+- 1974 lines of new tests added
+  - `dead-letter-queue.test.ts` (399 lines) - DLQ CRUD and retry logic
+  - `service-permissions.test.ts` (242 lines) - Permission management API
+  - `cron-scheduler-integration.test.ts` (353 lines) - Scheduler + TaskExecutor
+  - `workflow-engine-condition.test.ts` (209 lines) - Condition branching
+  - `workflow-engine-loop.test.ts` (261 lines) - Loop sub-workflow
+  - `workflow-engine-queue.test.ts` (310 lines) - Queue node execution
+  - `workflow-engine-timeout.test.ts` (200 lines) - Timeout handling
+
+### Documentation
+- Archive all v1.3 planning documents to `docs/planning/archive/v1.3/`
+  - 12 planning documents (5000+ lines) preserved for reference
+
 ## [1.3.1] - 2026-04-04
 
 ### Added
