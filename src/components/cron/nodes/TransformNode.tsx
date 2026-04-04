@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
@@ -10,12 +10,14 @@ export interface TransformNodeData extends Record<string, unknown> {
   inputType?: string
   outputType?: string
   label?: string
+  hasValidationError?: boolean
+  hasValidationWarning?: boolean
 }
 
 export type TransformNodeType = Node<TransformNodeData, 'transform'>
 
 export function TransformNode({ data, selected }: { data: TransformNodeData; selected?: boolean }) {
-  const { transformType, mapping, inputType, outputType, label } = data
+  const { transformType, mapping, inputType, outputType, label, hasValidationError, hasValidationWarning } = data
 
   const mappingCount = mapping ? Object.keys(mapping).length : 0
 
@@ -30,23 +32,51 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
 
       <BaseNodeWrapper
         isSelected={selected}
-        borderColor="border-indigo-500/60"
+        borderColor={cn(
+          'border-indigo-500/60',
+          hasValidationError && 'border-red-500',
+          hasValidationWarning && !hasValidationError && 'border-yellow-500'
+        )}
         header={
           <div className="flex items-center gap-2">
-            <ArrowRightLeft className="w-3 h-3 text-indigo-400" />
-            <span className="text-xs font-medium text-indigo-400">Transform</span>
+            {hasValidationError ? (
+              <AlertCircle className="w-3 h-3 text-red-400" />
+            ) : hasValidationWarning ? (
+              <AlertTriangle className="w-3 h-3 text-yellow-400" />
+            ) : (
+              <ArrowRightLeft className="w-3 h-3 text-indigo-400" />
+            )}
+            <span className={cn(
+              'text-xs font-medium',
+              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-indigo-400'
+            )}>Transform</span>
           </div>
         }
       >
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-indigo-500/10">
-            <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+          <div className={cn(
+            'p-2 rounded-lg',
+            hasValidationError ? 'bg-red-500/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-indigo-500/10'
+          )}>
+            {hasValidationError ? (
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            ) : hasValidationWarning ? (
+              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            ) : (
+              <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className={cn(
+              'text-sm font-medium truncate',
+              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+            )}>
               {label || 'Transform'}
             </p>
-            <p className="text-xs text-indigo-400 mt-1">
+            <p className={cn(
+              'text-xs mt-1',
+              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-indigo-400'
+            )}>
               {transformType || 'Map Fields'}
             </p>
             {(inputType || outputType) && (

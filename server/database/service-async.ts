@@ -8,6 +8,7 @@ import type {
   ExecutionLogDetail,
   CapacityRecord,
   WorkflowTemplate,
+  WorkflowVersion,
   CreateCronJob,
   CreateTaskQueueItem,
   CreateExecutionLog,
@@ -17,6 +18,8 @@ import type {
   UpdateExecutionLog,
   UpdateCapacityRecord,
   UpdateWorkflowTemplate,
+  CreateWorkflowVersion,
+  UpdateWorkflowVersion,
   RunStats,
   CronJobRow,
   TaskQueueRow,
@@ -24,6 +27,7 @@ import type {
   ExecutionLogDetailRow,
   CapacityRecordRow,
   WorkflowTemplateRow,
+  WorkflowVersionRow,
   MediaRecord,
   MediaRecordRow,
   CreateMediaRecord,
@@ -98,6 +102,13 @@ function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
     nodes_json, 
     edges_json, 
     is_public: typeof row.is_public === 'boolean' ? row.is_public : row.is_public === 1 
+  }
+}
+
+function rowToWorkflowVersion(row: WorkflowVersionRow): WorkflowVersion {
+  return {
+    ...row,
+    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
   }
 }
 
@@ -1975,6 +1986,150 @@ export class DatabaseService {
   }
 
   // =====================================================================
+  // Workflow Versions
+  // =====================================================================
+
+  async createWorkflowVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> {
+    const id = `ver_${uuidv4().replace(/-/g, '')}`
+    const now = toISODate()
+    
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        `INSERT INTO workflow_versions (
+          id, template_id, version_number, name, description,
+          nodes_json, edges_json, change_summary, created_by, created_at, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          id,
+          data.template_id,
+          data.version_number,
+          data.name,
+          data.description ?? null,
+          data.nodes_json,
+          data.edges_json,
+          data.change_summary ?? null,
+          data.created_by ?? null,
+          now,
+          data.is_active ?? true,
+        ]
+      )
+    } else {
+      await this.conn.execute(
+        `INSERT INTO workflow_versions (
+          id, template_id, version_number, name, description,
+          nodes_json, edges_json, change_summary, created_by, created_at, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          data.template_id,
+          data.version_number,
+          data.name,
+          data.description ?? null,
+          data.nodes_json,
+          data.edges_json,
+          data.change_summary ?? null,
+          data.created_by ?? null,
+          now,
+          data.is_active ?? true ? 1 : 0,
+        ]
+      )
+    }
+    
+    return (await this.getWorkflowVersionById(id))!
+  }
+
+  async getWorkflowVersionById(id: string): Promise<WorkflowVersion | undefined> {
+    const rows = await this.conn.query<WorkflowVersionRow>(
+      'SELECT * FROM workflow_versions WHERE id = ?',
+      [id]
+    )
+    return rows[0] ? rowToWorkflowVersion(rows[0]) : undefined
+  }
+
+  async getWorkflowVersionsByTemplate(templateId: string): Promise<WorkflowVersion[]> {
+    const rows = await this.conn.query<WorkflowVersionRow>(
+      'SELECT * FROM workflow_versions WHERE template_id = ? ORDER BY version_number DESC',
+      [templateId]
+    )
+    return rows.map(rowToWorkflowVersion)
+  }
+
+  async getActiveWorkflowVersion(templateId: string): Promise<WorkflowVersion | undefined> {
+    let rows: WorkflowVersionRow[]
+    if (this.conn.isPostgres()) {
+      rows = await this.conn.query<WorkflowVersionRow>(
+        'SELECT * FROM workflow_versions WHERE template_id = $1 AND is_active = true ORDER BY version_number DESC LIMIT 1',
+        [templateId]
+      )
+    } else {
+      rows = await this.conn.query<WorkflowVersionRow>(
+        'SELECT * FROM workflow_versions WHERE template_id = ? AND is_active = 1 ORDER BY version_number DESC LIMIT 1',
+        [templateId]
+      )
+    }
+    return rows[0] ? rowToWorkflowVersion(rows[0]) : undefined
+  }
+
+  async getLatestVersionNumber(templateId: string): Promise<number> {
+    const rows = await this.conn.query<{ max: number | null }>(
+      'SELECT MAX(version_number) as max FROM workflow_versions WHERE template_id = ?',
+      [templateId]
+    )
+    return rows[0]?.max ?? 0
+  }
+
+  async activateWorkflowVersion(versionId: string, templateId: string): Promise<void> {
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        'UPDATE workflow_versions SET is_active = false WHERE template_id = $1',
+        [templateId]
+      )
+      await this.conn.execute(
+        'UPDATE workflow_versions SET is_active = true WHERE id = $1',
+        [versionId]
+      )
+    } else {
+      await this.conn.execute(
+        'UPDATE workflow_versions SET is_active = 0 WHERE template_id = ?',
+        [templateId]
+      )
+      await this.conn.execute(
+        'UPDATE workflow_versions SET is_active = 1 WHERE id = ?',
+        [versionId]
+      )
+    }
+  }
+
+  async deleteWorkflowVersion(id: string): Promise<void> {
+    await this.conn.execute('DELETE FROM workflow_versions WHERE id = ?', [id])
+  }
+
+  async saveTemplateVersion(
+    templateId: string,
+    nodesJson: string,
+    edgesJson: string,
+    changeSummary: string | null,
+    userId: string | null
+  ): Promise<WorkflowVersion> {
+    const template = await this.getWorkflowTemplateById(templateId)
+    if (!template) throw new Error(`Template ${templateId} not found`)
+    
+    const nextVersion = await this.getLatestVersionNumber(templateId) + 1
+    
+    return this.createWorkflowVersion({
+      template_id: templateId,
+      version_number: nextVersion,
+      name: template.name,
+      description: template.description,
+      nodes_json: nodesJson,
+      edges_json: edgesJson,
+      change_summary: changeSummary,
+      created_by: userId,
+      is_active: true,
+    })
+  }
+
+  // =====================================================================
   // Dead Letter Queue
   // =====================================================================
 
@@ -2383,6 +2538,23 @@ export class DatabaseService {
 
     const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
     return rows.map(rowToWebhookDelivery)
+  }
+
+  // =====================================================================
+  // Generic SQL Helpers (for raw queries)
+  // =====================================================================
+
+  async run(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
+    return this.conn.execute(sql, params)
+  }
+
+  async get<T extends QueryResultRow>(sql: string, params?: unknown[]): Promise<T | undefined> {
+    const rows = await this.conn.query<T>(sql, params)
+    return rows[0]
+  }
+
+  async all<T extends QueryResultRow>(sql: string, params?: unknown[]): Promise<T[]> {
+    return this.conn.query<T>(sql, params)
   }
 }
 

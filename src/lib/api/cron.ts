@@ -14,6 +14,10 @@ import type {
   UpdateWorkflowTemplateDTO,
   TaskQueueFilter,
   DeadLetterQueueItem,
+  WebhookConfig,
+  WebhookDelivery,
+  CreateWebhookConfig,
+  UpdateWebhookConfig,
 } from '@/types/cron'
 
 interface ApiResponse<T> {
@@ -414,7 +418,180 @@ export async function deleteDeadLetterQueueItem(id: string): Promise<ApiResponse
 }
 
 // ============================================
-// Export client for custom use cases
+// Auto-Retry API
 // ============================================
+
+export interface AutoRetryConfig {
+  initialDelayMs: number
+  maxDelayMs: number
+  maxAttempts: number
+  backoffMultiplier: number
+}
+
+export interface AutoRetryStats {
+  enabled: boolean
+  dlqItemCount: number
+  pendingRetryCount: number
+  config: AutoRetryConfig
+}
+
+export async function getAutoRetryStats(): Promise<ApiResponse<AutoRetryStats>> {
+  try {
+    const response = await cronClient.get('/cron/dlq/auto-retry/stats')
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getAutoRetryStats')
+  }
+}
+
+export async function updateAutoRetryConfig(config: {
+  enabled?: boolean
+  initialDelayMs?: number
+  maxDelayMs?: number
+  maxAttempts?: number
+  backoffMultiplier?: number
+}): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.patch('/cron/dlq/auto-retry/config', config)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'updateAutoRetryConfig')
+  }
+}
+
+export async function startAutoRetry(): Promise<ApiResponse<{ message: string }>> {
+  try {
+    const response = await cronClient.post('/cron/dlq/auto-retry/start')
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'startAutoRetry')
+  }
+}
+
+export async function stopAutoRetry(): Promise<ApiResponse<{ message: string }>> {
+  try {
+    const response = await cronClient.post('/cron/dlq/auto-retry/stop')
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'stopAutoRetry')
+  }
+}
+
+export async function getWebhooks(): Promise<ApiResponse<{ webhooks: WebhookConfig[]; total: number }>> {
+  try {
+    const response = await cronClient.get('/cron/webhooks')
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getWebhooks')
+  }
+}
+
+export async function createWebhook(data: CreateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
+  try {
+    const backendData = {
+      job_id: data.jobId,
+      name: data.name,
+      url: data.url,
+      events: data.events,
+      headers: data.headers,
+      secret: data.secret,
+      is_active: data.isActive ?? true,
+    }
+    const response = await cronClient.post('/cron/webhooks', backendData)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'createWebhook')
+  }
+}
+
+export async function updateWebhook(id: string, data: UpdateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
+  try {
+    const backendData: Record<string, unknown> = {}
+    if (data.jobId !== undefined) backendData.job_id = data.jobId
+    if (data.name !== undefined) backendData.name = data.name
+    if (data.url !== undefined) backendData.url = data.url
+    if (data.events !== undefined) backendData.events = data.events
+    if (data.headers !== undefined) backendData.headers = data.headers
+    if (data.secret !== undefined) backendData.secret = data.secret
+    if (data.isActive !== undefined) backendData.is_active = data.isActive
+
+    const response = await cronClient.patch(`/cron/webhooks/${id}`, backendData)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'updateWebhook')
+  }
+}
+
+export async function deleteWebhook(id: string): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.delete(`/cron/webhooks/${id}`)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'deleteWebhook')
+  }
+}
+
+export async function testWebhook(id: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  try {
+    const response = await cronClient.post(`/cron/webhooks/${id}/test`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'testWebhook')
+  }
+}
+
+export async function getWebhookDeliveries(webhookId: string): Promise<ApiResponse<{ deliveries: WebhookDelivery[]; total: number }>> {
+  try {
+    const response = await cronClient.get(`/cron/webhooks/${webhookId}/deliveries`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getWebhookDeliveries')
+  }
+}
+
+export interface ExecutionState {
+  id: string
+  workflowId: string
+  status: 'idle' | 'running' | 'completed' | 'paused'
+  startTime: string
+  endTime: string | null
+  nodeStatuses: Record<string, { status: string; result?: unknown; error?: string }>
+}
+
+export async function pauseExecution(id: string): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.post(`/cron/executions/${id}/pause`)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'pauseExecution')
+  }
+}
+
+export async function resumeExecution(id: string): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.post(`/cron/executions/${id}/resume`)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'resumeExecution')
+  }
+}
+
+export async function cancelExecution(id: string): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.post(`/cron/executions/${id}/cancel`)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'cancelExecution')
+  }
+}
+
+export async function getExecutionState(id: string): Promise<ApiResponse<ExecutionState>> {
+  try {
+    const response = await cronClient.get(`/cron/executions/${id}`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getExecutionState')
+  }
+}
 
 export { cronClient }

@@ -118,6 +118,54 @@ export interface ServiceNodePermission {
 }
 
 // ============================================================================
+// Workflow Template Versions
+// ============================================================================
+
+export interface WorkflowVersion {
+  id: string
+  template_id: string
+  version_number: number
+  name: string
+  description: string | null
+  nodes_json: string
+  edges_json: string
+  change_summary: string | null
+  created_by: string | null
+  created_at: string
+  is_active: boolean
+}
+
+export interface CreateWorkflowVersion {
+  template_id: string
+  version_number: number
+  name: string
+  description?: string | null
+  nodes_json: string
+  edges_json: string
+  change_summary?: string | null
+  created_by?: string | null
+  is_active?: boolean
+}
+
+export interface UpdateWorkflowVersion {
+  is_active?: boolean
+}
+
+export interface WorkflowVersionRow {
+  id: string
+  template_id: string
+  version_number: number
+  name: string
+  description: string | null
+  nodes_json: string
+  edges_json: string
+  change_summary: string | null
+  created_by: string | null
+  created_at: string
+  is_active: number | boolean
+}
+
+// ============================================================================
 // Cron Jobs (UPDATED)
 // ============================================================================
 
@@ -856,4 +904,69 @@ export interface CreateWebhookDelivery {
 export interface WebhookDeliveryQuery {
   webhook_id?: string
   limit?: number
+}
+
+// ============================================================================
+// Execution State
+// ============================================================================
+
+export interface ExecutionState {
+  id: string
+  execution_log_id: string
+  workflow_id: string
+  status: 'pending' | 'running' | 'paused' | 'resumed' | 'completed' | 'failed' | 'cancelled'
+  current_layer: number
+  completed_nodes: string  // JSON array of node IDs
+  failed_nodes: string    // JSON array of {nodeId, error}
+  node_outputs: string    // JSON object of nodeId -> output
+  context: string         // JSON execution context
+  started_at: string
+  updated_at: string
+  paused_at: string | null
+  resumed_at: string | null
+  completed_at: string | null
+  created_by: string | null
+}
+
+export interface ExecutionStateRow {
+  id: string
+  execution_log_id: string
+  workflow_id: string
+  status: string
+  current_layer: number
+  completed_nodes: string
+  failed_nodes: string
+  node_outputs: string
+  context: string
+  started_at: string
+  updated_at: string
+  paused_at: string | null
+  resumed_at: string | null
+  completed_at: string | null
+  created_by: string | null
+}
+
+export interface CreateExecutionState {
+  execution_log_id: string
+  workflow_id: string
+  status?: 'pending' | 'running'
+  current_layer?: number
+  completed_nodes?: string[]
+  failed_nodes?: Array<{ nodeId: string; error: string }>
+  node_outputs?: Record<string, unknown>
+  context?: Record<string, unknown>
+  created_by?: string | null
+}
+
+export interface UpdateExecutionState {
+  status?: string
+  current_layer?: number
+  completed_nodes?: string
+  failed_nodes?: string
+  node_outputs?: string
+  context?: string
+  paused_at?: string | null
+  resumed_at?: string | null
+  completed_at?: string | null
+  updated_at?: string
 }

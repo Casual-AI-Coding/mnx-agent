@@ -39,6 +39,14 @@ import {
   ChevronDown,
   Undo,
   Redo,
+  Play,
+  Pause,
+  Activity,
+  Clock,
+  XCircle,
+  History,
+  Tag,
+  GitCommit,
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
@@ -47,14 +55,32 @@ import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
-import { TemplateSelectorModal } from '@/components/workflow/TemplateSelectorModal'
-import { WorkflowSelectorModal } from '@/components/workflow/WorkflowSelectorModal'
+import { WorkflowSelectorModal } from '@/components/workflow/TemplateSelectorModal'
 import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
 import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
 import { useWorkflowUpdates } from '@/hooks/useWorkflowUpdates'
+import { NodeStatusIndicator } from '@/components/workflow/NodeStatusIndicator'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
+import { validateWorkflow, getNodeErrors, type ValidationError } from '@/lib/workflow-validation'
+import {
+  getWorkflowVersions,
+  getActiveVersion,
+  activateVersion,
+  createVersion,
+  type WorkflowVersion,
+} from '@/lib/api/workflows'
+import {
+  pauseExecution,
+  resumeExecution,
+  cancelExecution,
+} from '@/lib/api/cron'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
+import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
+import { Textarea } from '@/components/ui/Textarea'
+import { Label } from '@/components/ui/Label'
+import { toast } from 'sonner'
 
 interface WorkflowTemplate {
   id: string
@@ -187,12 +213,20 @@ function Toolbar({
   onClear,
   onUndo,
   onRedo,
+  onSaveVersion,
+  onToggleVersionPanel,
   canUndo,
   canRedo,
   isValid,
   nodeCount,
   edgeCount,
   isSaving,
+  validationSummary,
+  currentTemplateId,
+  versions,
+  activeVersion,
+  onVersionChange,
+  isLoadingVersions,
 }: {
   onSave: () => void
   onSaveToServer: () => void
@@ -202,12 +236,20 @@ function Toolbar({
   onClear: () => void
   onUndo: () => void
   onRedo: () => void
+  onSaveVersion: () => void
+  onToggleVersionPanel: () => void
   canUndo: boolean
   canRedo: boolean
   isValid: boolean
   nodeCount: number
   edgeCount: number
   isSaving: boolean
+  validationSummary?: { total: number; errors: number; warnings: number }
+  currentTemplateId?: string
+  versions: WorkflowVersion[]
+  activeVersion: WorkflowVersion | null
+  onVersionChange: (versionId: string) => void
+  isLoadingVersions: boolean
 }) {
   return (
     <div className="h-14 bg-muted/30 border-b border-border flex items-center justify-between px-4">
@@ -219,6 +261,18 @@ function Toolbar({
         <span className="text-xs text-muted-foreground/70">
           {nodeCount} nodes, {edgeCount} edges
         </span>
+        {validationSummary && validationSummary.total > 0 && (
+          <span className={cn(
+            'text-xs px-2 py-0.5 rounded-full font-medium',
+            validationSummary.errors > 0
+              ? 'bg-red-500/20 text-red-400'
+              : 'bg-yellow-500/20 text-yellow-400'
+          )}>
+            {validationSummary.errors > 0 && `${validationSummary.errors} error${validationSummary.errors !== 1 ? 's' : ''}`}
+            {validationSummary.errors > 0 && validationSummary.warnings > 0 && ', '}
+            {validationSummary.warnings > 0 && `${validationSummary.warnings} warning${validationSummary.warnings !== 1 ? 's' : ''}`}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -253,6 +307,63 @@ function Toolbar({
         </button>
 
         <div className="w-px h-6 bg-border mx-1" />
+
+        {/* Version Selector - only show when a workflow is loaded */}
+        {currentTemplateId && (
+          <>
+            <Select 
+              value={activeVersion?.id || ''} 
+              onValueChange={onVersionChange}
+            >
+              <SelectTrigger className="w-48 h-8 text-xs">
+                <SelectValue placeholder={isLoadingVersions ? 'Loading...' : 'Select version'} />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    <div className="flex items-center gap-2">
+                      <span>v{v.version_number}</span>
+                      {v.is_active && (
+                        <span className="text-[10px] bg-green-500/20 text-green-400 px-1 rounded">
+                          active
+                        </span>
+                      )}
+                    </div>
+                    {v.change_summary && (
+                      <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                        {v.change_summary}
+                      </div>
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <button
+              onClick={onSaveVersion}
+              disabled={!isValid}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+                isValid
+                  ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+              )}
+            >
+              <Tag className="w-4 h-4" />
+              <span className="hidden sm:inline">Save Version</span>
+            </button>
+
+            <button
+              onClick={onToggleVersionPanel}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium bg-secondary text-foreground/80 hover:bg-secondary/80 transition-colors"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+
+            <div className="w-px h-6 bg-border mx-1" />
+          </>
+        )}
 
         <button
           onClick={onValidate}
@@ -466,11 +577,13 @@ function ConfigPanel({
   onClose,
   onSave,
   onDelete,
+  validationErrors = [],
 }: {
   node: Node | null
   onClose: () => void
   onSave: (id: string, data: Record<string, unknown>) => void
   onDelete: (id: string) => void
+  validationErrors?: ValidationError[]
 }) {
   const [config, setConfig] = React.useState<Record<string, unknown>>({})
 
@@ -696,6 +809,167 @@ function ConfigPanel({
   )
 }
 
+// Execution Status Panel Component
+function ExecutionStatusPanel({
+  executionId,
+  status,
+  nodeStatuses,
+  startTime,
+  isSubscribed,
+  onPause,
+  onResume,
+  onCancel,
+}: {
+  executionId: string | null
+  status: 'idle' | 'running' | 'completed' | 'paused'
+  nodeStatuses: Map<string, { status: string }>
+  startTime: Date | null
+  isSubscribed: boolean
+  onPause?: () => void
+  onResume?: () => void
+  onCancel?: () => void
+}) {
+  if (!executionId && status === 'idle') return null
+
+  const totalNodes = nodeStatuses.size
+  const completedNodes = Array.from(nodeStatuses.values()).filter(
+    (s) => s.status === 'completed'
+  ).length
+  const runningNodes = Array.from(nodeStatuses.values()).filter(
+    (s) => s.status === 'running'
+  ).length
+  const errorNodes = Array.from(nodeStatuses.values()).filter(
+    (s) => s.status === 'error'
+  ).length
+
+  const elapsed = startTime ? Date.now() - startTime.getTime() : 0
+  const elapsedSeconds = Math.floor(elapsed / 1000)
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+  const elapsedFormatted = `${elapsedMinutes}:${(elapsedSeconds % 60).toString().padStart(2, '0')}`
+
+  const progress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0
+
+  const statusConfig = {
+    idle: { color: 'bg-gray-500', text: 'Idle', icon: Clock },
+    running: { color: 'bg-blue-500', text: 'Running', icon: Play },
+    completed: { color: 'bg-green-500', text: 'Completed', icon: CheckCircle },
+    paused: { color: 'bg-amber-500', text: 'Paused', icon: Pause },
+  }
+
+  const StatusIcon = statusConfig[status].icon
+
+  return (
+    <Panel position="bottom-left" className="m-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 min-w-[280px]"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Execution Status</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={cn('w-2 h-2 rounded-full', statusConfig[status].color, status === 'running' && 'animate-pulse')} />
+            <span className="text-xs font-medium text-muted-foreground">{statusConfig[status].text}</span>
+          </div>
+        </div>
+
+        {executionId && (
+          <div className="mb-3">
+            <span className="text-xs text-muted-foreground">ID:</span>
+            <code className="text-xs font-mono text-foreground ml-2">{executionId.slice(0, 8)}...</code>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Progress</span>
+            <span className="font-medium text-foreground">{completedNodes}/{totalNodes} ({progress}%)</span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <motion.div
+              className={cn('h-full rounded-full', statusConfig[status].color)}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Loader2 className="w-3 h-3 text-blue-500" />
+              <span className="text-sm font-semibold text-foreground">{runningNodes}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Running</span>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span className="text-sm font-semibold text-foreground">{completedNodes}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Completed</span>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <XCircle className="w-3 h-3 text-red-500" />
+              <span className="text-sm font-semibold text-foreground">{errorNodes}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Errors</span>
+          </div>
+        </div>
+
+        {startTime && (
+          <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Elapsed Time</span>
+            <span className="font-mono text-foreground">{elapsedFormatted}</span>
+          </div>
+        )}
+
+        {!isSubscribed && (
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-500">
+            <AlertCircle className="w-3 h-3" />
+            <span>Not connected to updates</span>
+          </div>
+        )}
+
+        {(status === 'running' || status === 'paused') && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+            {status === 'running' && (
+              <button
+                onClick={onPause}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+              >
+                <Pause className="w-3 h-3" />
+                Pause
+              </button>
+            )}
+            {status === 'paused' && (
+              <button
+                onClick={onResume}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400 hover:bg-green-500/30"
+              >
+                <Play className="w-3 h-3" />
+                Resume
+              </button>
+            )}
+            <button
+              onClick={onCancel}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-red-500/20 text-red-400 hover:bg-red-500/30"
+            >
+              <X className="w-3 h-3" />
+              Cancel
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </Panel>
+  )
+}
+
 // Main Workflow Builder Component
 function WorkflowBuilderInner() {
   const [searchParams] = useSearchParams()
@@ -713,16 +987,218 @@ function WorkflowBuilderInner() {
   const [showTemplateSelector, setShowTemplateSelector] = React.useState(false)
   const [showWorkflowSelector, setShowWorkflowSelector] = React.useState(false)
   
+  // Version management state
+  const [versions, setVersions] = React.useState<WorkflowVersion[]>([])
+  const [activeVersion, setActiveVersion] = React.useState<WorkflowVersion | null>(null)
+  const [isLoadingVersions, setIsLoadingVersions] = React.useState(false)
+  const [showVersionPanel, setShowVersionPanel] = React.useState(false)
+  const [showSaveVersionModal, setShowSaveVersionModal] = React.useState(false)
+  const [versionChangeSummary, setVersionChangeSummary] = React.useState('')
+  const [versionName, setVersionName] = React.useState('')
+  const [isSavingVersion, setIsSavingVersion] = React.useState(false)
+  
+  // Execution state
+  const [currentExecutionId, setCurrentExecutionId] = React.useState<string | null>(null)
+  const [executionStartTime, setExecutionStartTime] = React.useState<Date | null>(null)
+  const [executionStatus, setExecutionStatus] = React.useState<'idle' | 'running' | 'completed' | 'paused'>('idle')
+  
   const [history, setHistory] = React.useState<{ past: { nodes: Node[], edges: Edge[] }[], future: { nodes: Node[], edges: Edge[] }[] }>({ past: [], future: [] })
 
+  // Real-time validation state
+  const [validationErrors, setValidationErrors] = React.useState<ValidationError[]>([])
+  const [validationSummary, setValidationSummary] = React.useState<{ total: number; errors: number; warnings: number }>({ total: 0, errors: 0, warnings: 0 })
+
+  // Real-time validation - validate whenever nodes or edges change
+  React.useEffect(() => {
+    const storeNodes = nodes.map(rfNodeToStoreNode)
+    const storeEdges = edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    }))
+    
+    const errors = validateWorkflow(storeNodes as WorkflowNode[], storeEdges as WorkflowEdge[])
+    setValidationErrors(errors)
+    
+    const errorCount = errors.filter(e => e.severity === 'error').length
+    const warningCount = errors.filter(e => e.severity === 'warning').length
+    setValidationSummary({
+      total: errors.length,
+      errors: errorCount,
+      warnings: warningCount,
+    })
+    
+    // Update nodes with validation status for visual indicators
+    if (errors.length > 0) {
+      setNodes((prevNodes) =>
+        prevNodes.map((node) => {
+          const nodeErrors = errors.filter(e => e.nodeId === node.id)
+          const hasError = nodeErrors.some(e => e.severity === 'error')
+          const hasWarning = nodeErrors.some(e => e.severity === 'warning')
+          
+          // Only update if validation status changed
+          if (
+            node.data.hasValidationError !== hasError ||
+            node.data.hasValidationWarning !== hasWarning
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                hasValidationError: hasError,
+                hasValidationWarning: hasWarning,
+              },
+            }
+          }
+          return node
+        })
+      )
+    } else {
+      // Clear validation status from all nodes
+      setNodes((prevNodes) =>
+        prevNodes.map((node) => {
+          if (node.data.hasValidationError || node.data.hasValidationWarning) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                hasValidationError: false,
+                hasValidationWarning: false,
+              },
+            }
+          }
+          return node
+        })
+      )
+    }
+  }, [nodes, edges])
+
   const workflowId = searchParams.get('id')
-  const { nodeStatuses } = useWorkflowUpdates({
+  const { nodeStatuses, isSubscribed } = useWorkflowUpdates({
+    executionId: currentExecutionId ?? undefined,
     workflowId: workflowId ?? undefined,
-    enabled: !!workflowId,
+    enabled: !!currentExecutionId || !!workflowId,
   })
 
+  // Load versions when workflowId changes
   React.useEffect(() => {
-    if (!workflowId || nodeStatuses.size === 0) return
+    const workflowId = searchParams.get('id')
+    if (workflowId) {
+      loadVersions(workflowId)
+    }
+  }, [searchParams])
+
+  const loadVersions = async (templateId: string) => {
+    setIsLoadingVersions(true)
+    try {
+      const [versionsResult, activeResult] = await Promise.all([
+        getWorkflowVersions(templateId),
+        getActiveVersion(templateId),
+      ])
+      if (versionsResult.success && versionsResult.data) {
+        setVersions(versionsResult.data)
+      }
+      if (activeResult.success && activeResult.data) {
+        setActiveVersion(activeResult.data)
+      }
+    } catch (err) {
+      console.error('Failed to load versions:', err)
+    }
+    setIsLoadingVersions(false)
+  }
+
+  const handleVersionChange = async (versionId: string) => {
+    const version = versions.find((v) => v.id === versionId)
+    if (!version) return
+
+    const nodesData = typeof version.nodes_json === 'string'
+      ? JSON.parse(version.nodes_json)
+      : version.nodes_json
+    const edgesData = typeof version.edges_json === 'string'
+      ? JSON.parse(version.edges_json)
+      : version.edges_json
+
+    setNodes(nodesData.map(storeNodeToRFNode))
+    setEdges(edgesData as Edge[])
+    setHistory({ past: [], future: [] })
+    setActiveVersion(version)
+  }
+
+  const handleActivateVersion = async (versionId: string) => {
+    const workflowId = searchParams.get('id')
+    if (!workflowId) return
+
+    try {
+      const result = await activateVersion(workflowId, versionId)
+      if (result.success) {
+        await loadVersions(workflowId)
+        setSaveMessage({ type: 'success', text: 'Version activated successfully!' })
+      } else {
+        setSaveMessage({ type: 'error', text: result.error || 'Failed to activate version' })
+      }
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: 'Failed to activate version' })
+    }
+    setTimeout(() => setSaveMessage(null), 3000)
+  }
+
+  const handleSaveVersion = () => {
+    setVersionChangeSummary('')
+    setVersionName('')
+    setShowSaveVersionModal(true)
+  }
+
+  const handleCreateVersion = async () => {
+    const workflowId = searchParams.get('id')
+    if (!workflowId) return
+
+    setIsSavingVersion(true)
+    try {
+      const result = await createVersion(workflowId, {
+        nodes_json: JSON.stringify(nodes.map(rfNodeToStoreNode)),
+        edges_json: JSON.stringify(edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
+        }))),
+        name: versionName || undefined,
+        change_summary: versionChangeSummary || undefined,
+      })
+
+      if (result.success && result.data) {
+        await loadVersions(workflowId)
+        setSaveMessage({ type: 'success', text: 'Version saved successfully!' })
+        setShowSaveVersionModal(false)
+      } else {
+        setSaveMessage({ type: 'error', text: result.error || 'Failed to save version' })
+      }
+    } catch (err) {
+      setSaveMessage({ type: 'error', text: 'Failed to save version' })
+    }
+    setIsSavingVersion(false)
+    setTimeout(() => setSaveMessage(null), 3000)
+  }
+
+  React.useEffect(() => {
+    if (nodeStatuses.size === 0) return
+
+    // Check if any nodes are running
+    const statusArray = Array.from(nodeStatuses.values())
+    const hasRunning = statusArray.some((s) => s.status === 'running')
+    const hasError = statusArray.some((s) => s.status === 'error')
+    const allCompleted = nodeStatuses.size > 0 && statusArray.every((s) => s.status === 'completed')
+
+    if (hasRunning) {
+      setExecutionStatus('running')
+    } else if (hasError) {
+      setExecutionStatus('idle')
+    } else if (allCompleted) {
+      setExecutionStatus('completed')
+    }
 
     setNodes((prevNodes) =>
       prevNodes.map((node) => {
@@ -740,7 +1216,7 @@ function WorkflowBuilderInner() {
         }
       })
     )
-  }, [nodeStatuses, workflowId])
+  }, [nodeStatuses])
   
   const canUndo = history.past.length > 0
   const canRedo = history.future.length > 0
@@ -1113,12 +1589,20 @@ function WorkflowBuilderInner() {
         onClear={handleClear}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onSaveVersion={handleSaveVersion}
+        onToggleVersionPanel={() => setShowVersionPanel(!showVersionPanel)}
         canUndo={canUndo}
         canRedo={canRedo}
         isValid={workflowIsValid}
         nodeCount={nodes.length}
         edgeCount={edges.length}
         isSaving={isSaving}
+        validationSummary={validationSummary}
+        currentTemplateId={searchParams.get('id') ?? undefined}
+        versions={versions}
+        activeVersion={activeVersion}
+        onVersionChange={handleVersionChange}
+        isLoadingVersions={isLoadingVersions}
       />
 
       {saveMessage && (
@@ -1159,6 +1643,17 @@ function WorkflowBuilderInner() {
             <MiniMap
               className="bg-muted/30 border border-border rounded-md"
               nodeColor={(node) => {
+                const nodeData = node.data as { executionStatus?: string } | undefined
+                switch (nodeData?.executionStatus) {
+                  case 'running':
+                    return '#3b82f6'
+                  case 'completed':
+                    return '#22c55e'
+                  case 'error':
+                    return '#ef4444'
+                  default:
+                    break
+                }
                 switch (node.type) {
                   case 'action':
                     return '#3b82f6'
@@ -1175,6 +1670,49 @@ function WorkflowBuilderInner() {
               maskColor="rgba(0, 0, 0, 0.8)"
             />
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#374151" />
+
+            <ExecutionStatusPanel
+              executionId={currentExecutionId}
+              status={executionStatus}
+              nodeStatuses={nodeStatuses}
+              startTime={executionStartTime}
+              isSubscribed={isSubscribed}
+              onPause={() => {
+                if (!currentExecutionId) return
+                pauseExecution(currentExecutionId).then((response) => {
+                  if (response.success) {
+                    toast.success('Execution paused')
+                    setExecutionStatus('paused')
+                  } else {
+                    toast.error(response.error || 'Failed to pause')
+                  }
+                })
+              }}
+              onResume={() => {
+                if (!currentExecutionId) return
+                resumeExecution(currentExecutionId).then((response) => {
+                  if (response.success) {
+                    toast.success('Execution resumed')
+                    setExecutionStatus('running')
+                  } else {
+                    toast.error(response.error || 'Failed to resume')
+                  }
+                })
+              }}
+              onCancel={() => {
+                if (!currentExecutionId) return
+                cancelExecution(currentExecutionId).then((response) => {
+                  if (response.success) {
+                    toast.success('Execution cancelled')
+                    setExecutionStatus('idle')
+                    setCurrentExecutionId(null)
+                    setExecutionStartTime(null)
+                  } else {
+                    toast.error(response.error || 'Failed to cancel')
+                  }
+                })
+              }}
+            />
 
             <AnimatePresence>
               {validationResult && (
@@ -1213,6 +1751,7 @@ function WorkflowBuilderInner() {
               }}
               onSave={handleConfigSave}
               onDelete={handleDeleteNode}
+              validationErrors={validationErrors}
             />
           )}
         </AnimatePresence>
@@ -1224,17 +1763,153 @@ function WorkflowBuilderInner() {
         onClose={() => setShowSaveModal(false)}
       />
 
-      <TemplateSelectorModal
+      <WorkflowSelectorModal
         isOpen={showTemplateSelector}
         onClose={() => setShowTemplateSelector(false)}
         onSelect={handleSelectTemplate}
+        mode="template"
+        title="Start from Template"
       />
 
       <WorkflowSelectorModal
         isOpen={showWorkflowSelector}
         onClose={() => setShowWorkflowSelector(false)}
         onSelect={handleSelectWorkflow}
+        mode="workflow"
+        title="Load Workflow"
       />
+
+      {/* Version History Panel */}
+      <AnimatePresence>
+        {showVersionPanel && (
+          <motion.div
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed right-0 top-14 bottom-0 w-80 bg-background border-l border-border shadow-xl z-40 flex flex-col"
+          >
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Version History</h3>
+              </div>
+              <button
+                onClick={() => setShowVersionPanel(false)}
+                className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground/70" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {isLoadingVersions ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : versions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  No versions yet
+                </div>
+              ) : (
+                versions.map((version) => (
+                  <div
+                    key={version.id}
+                    className={cn(
+                      'p-3 rounded-lg border transition-colors',
+                      activeVersion?.id === version.id
+                        ? 'bg-primary/10 border-primary/30'
+                        : 'bg-card border-border hover:border-border/80'
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <GitCommit className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">v{version.version_number}</span>
+                        {version.is_active && (
+                          <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
+                            active
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(version.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {version.change_summary && (
+                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                        {version.change_summary}
+                      </p>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleVersionChange(version.id)}
+                        className="flex-1 px-2 py-1.5 text-xs font-medium bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
+                      >
+                        Load
+                      </button>
+                      {!version.is_active && (
+                        <button
+                          onClick={() => handleActivateVersion(version.id)}
+                          className="flex-1 px-2 py-1.5 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 transition-colors"
+                        >
+                          Activate
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Save Version Dialog */}
+      <Dialog
+        open={showSaveVersionModal}
+        onClose={() => setShowSaveVersionModal(false)}
+        title="Save New Version"
+        size="sm"
+      >
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Version Name (optional)</Label>
+            <input
+              type="text"
+              value={versionName}
+              onChange={(e) => setVersionName(e.target.value)}
+              placeholder="e.g., Bug fix for authentication"
+              className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Change Summary</Label>
+            <Textarea
+              value={versionChangeSummary}
+              onChange={(e) => setVersionChangeSummary(e.target.value)}
+              placeholder="Describe what changed in this version..."
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            onClick={() => setShowSaveVersionModal(false)}
+            className="px-4 py-2 rounded-md bg-secondary text-foreground/80 text-sm font-medium hover:bg-secondary/80 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreateVersion}
+            disabled={isSavingVersion}
+            className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSavingVersion && <Loader2 className="w-4 h-4 animate-spin" />}
+            Save Version
+          </button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }

@@ -72,6 +72,13 @@ import type {
   CreateCronJobDTO,
   UpdateCronJobDTO,
 } from '@/types/cron'
+import {
+  getCronDescription,
+  getNextRuns,
+  COMMON_TIMEZONES,
+  getLocalTimezone,
+  formatDateWithTimezone,
+} from '@/lib/cron-utils'
 
 // ============================================
 // Helper Components
@@ -156,11 +163,12 @@ interface CreateJobModalProps {
 }
 
 function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
+  const localTimezone = getLocalTimezone()
   const [formData, setFormData] = useState<CreateCronJobDTO>({
     name: '',
     description: '',
     cronExpression: '',
-    timezone: 'Asia/Shanghai',
+    timezone: localTimezone,
     workflowId: '',
     isActive: true,
   })
@@ -173,14 +181,14 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         name: '',
         description: '',
         cronExpression: '',
-        timezone: 'Asia/Shanghai',
+        timezone: localTimezone,
         workflowId: '',
         isActive: true,
       })
       setErrors({})
       fetchTemplates()
     }
-  }, [isOpen, fetchTemplates])
+  }, [isOpen, fetchTemplates, localTimezone])
 
   const validateCronExpression = (expr: string): boolean => {
     const parts = expr.trim().split(/\s+/)
@@ -297,12 +305,50 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
               placeholder="0 9 * * *"
               className={errors.cronExpression ? 'border-destructive' : ''}
             />
+            {formData.cronExpression && (
+              <div className="text-sm text-muted-foreground mt-1">
+                <span className="font-medium">Schedule: </span>
+                {getCronDescription(formData.cronExpression)}
+              </div>
+            )}
             {errors.cronExpression ? (
               <p className="text-sm text-destructive">{errors.cronExpression}</p>
             ) : (
               <p className="text-xs text-muted-foreground/50">
                 Format: minute hour day month weekday (e.g., &quot;0 9 * * *&quot; runs daily at 9:00 AM)
               </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Timezone
+            </label>
+            <Select
+              value={formData.timezone}
+              onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {COMMON_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label} ({tz.offset})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formData.cronExpression && formData.timezone && (
+              <div className="text-sm text-muted-foreground/70 mt-1">
+                <span className="font-medium">Next 3 runs: </span>
+                {getNextRuns(formData.cronExpression, formData.timezone!, 3).map((date, i) => (
+                  <span key={i}>
+                    {i > 0 && ', '}
+                    {formatDateWithTimezone(date, formData.timezone!)}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
@@ -351,7 +397,7 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
         name: job.name,
         description: job.description,
         cronExpression: job.cronExpression,
-        timezone: job.timezone,
+        timezone: job.timezone || getLocalTimezone(),
         workflowId: job.workflowId ?? undefined,
         isActive: job.isActive,
       })
@@ -462,12 +508,50 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
               placeholder="0 9 * * *"
               className={errors.cronExpression ? 'border-destructive' : ''}
             />
+            {formData.cronExpression && (
+              <div className="text-sm text-muted-foreground mt-1">
+                <span className="font-medium">Schedule: </span>
+                {getCronDescription(formData.cronExpression)}
+              </div>
+            )}
             {errors.cronExpression ? (
               <p className="text-sm text-destructive">{errors.cronExpression}</p>
             ) : (
               <p className="text-xs text-muted-foreground/50">
                 Format: minute hour day month weekday
               </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Timezone
+            </label>
+            <Select
+              value={formData.timezone || getLocalTimezone()}
+              onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {COMMON_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label} ({tz.offset})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formData.cronExpression && formData.timezone && (
+              <div className="text-sm text-muted-foreground/70 mt-1">
+                <span className="font-medium">Next 3 runs: </span>
+                {getNextRuns(formData.cronExpression, formData.timezone!, 3).map((date, i) => (
+                  <span key={i}>
+                    {i > 0 && ', '}
+                    {formatDateWithTimezone(date, formData.timezone!)}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
@@ -533,10 +617,23 @@ const JobsListTab = memo(function JobsListTab() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [jobToEdit, setJobToEdit] = useState<CronJob | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
   useEffect(() => {
     fetchJobs()
   }, [fetchJobs])
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      const matchesSearch = job.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && job.isActive) ||
+        (statusFilter === 'inactive' && !job.isActive)
+      return matchesSearch && matchesStatus
+    })
+  }, [jobs, searchQuery, statusFilter])
 
   const handleCreateJob = async (data: CreateCronJobDTO) => {
     await createJob(data)
@@ -581,18 +678,44 @@ const JobsListTab = memo(function JobsListTab() {
         </Button>
       </div>
 
-      {jobs.length === 0 ? (
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search jobs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filteredJobs.length === 0 ? (
         <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
             <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Cron Jobs Yet</h3>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Cron Jobs Found</h3>
             <p className="text-sm text-muted-foreground/50 mb-6 max-w-md mx-auto">
-              Create your first cron job to automate workflow executions on a schedule.
+              {jobs.length === 0 
+                ? "Create your first cron job to automate workflow executions on a schedule."
+                : "No jobs match your current search or filter criteria."}
             </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Job
-            </Button>
+            {jobs.length === 0 && (
+              <Button onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Your First Job
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -609,7 +732,7 @@ const JobsListTab = memo(function JobsListTab() {
             </div>
           </div>
           <div className="overflow-auto max-h-[60vh]">
-            {jobs.map((job) => (
+            {filteredJobs.map((job) => (
               <div
                 key={job.id}
                 className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors items-center"
@@ -624,6 +747,9 @@ const JobsListTab = memo(function JobsListTab() {
                   <code className="text-xs text-primary font-mono bg-muted/50 px-2 py-1 rounded truncate block">
                     {job.cronExpression}
                   </code>
+                  <p className="text-xs text-muted-foreground/50 mt-1">
+                    {getCronDescription(job.cronExpression)}
+                  </p>
                 </div>
                 <div className="flex justify-center">
                   <StatusBadge status={job.isActive ? 'active' : 'inactive'} />

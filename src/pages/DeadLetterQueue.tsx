@@ -16,12 +16,16 @@ import {
   X,
   Terminal,
   Package,
+  Settings,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
 } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import {
@@ -33,9 +37,22 @@ import {
 } from '@/components/ui/Select'
 import { Switch } from '@/components/ui/Switch'
 import {
+  Dialog,
+  DialogHeader,
+  DialogFooter,
+} from '@/components/ui/Dialog'
+import {
+  Label,
+} from '@/components/ui/Label'
+import {
   getDeadLetterQueue,
   retryDeadLetterQueueItem,
   deleteDeadLetterQueueItem,
+  getAutoRetryStats,
+  updateAutoRetryConfig,
+  startAutoRetry,
+  stopAutoRetry,
+  type AutoRetryStats,
 } from '@/lib/api/cron'
 import type { DeadLetterQueueItem } from '@/types/cron'
 import { toast } from 'sonner'
@@ -180,8 +197,138 @@ function ErrorDetailModal({ isOpen, onClose, item }: ErrorDetailModalProps) {
 }
 
 // ============================================
-// Bulk Retry Modal
+// Auto-Retry Configuration Modal
 // ============================================
+
+interface AutoRetryConfigModalProps {
+  isOpen: boolean
+  onClose: () => void
+  stats: AutoRetryStats | null
+  onSave: () => void
+}
+
+function AutoRetryConfigModal({ isOpen, onClose, stats, onSave }: AutoRetryConfigModalProps) {
+  const [config, setConfig] = useState({
+    initialDelayMs: 60,
+    maxDelayMs: 1440,
+    maxAttempts: 3,
+    backoffMultiplier: 2,
+  })
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (stats?.config) {
+      setConfig({
+        initialDelayMs: Math.round(stats.config.initialDelayMs / 60000),
+        maxDelayMs: Math.round(stats.config.maxDelayMs / 60000),
+        maxAttempts: stats.config.maxAttempts,
+        backoffMultiplier: stats.config.backoffMultiplier,
+      })
+    }
+  }, [stats])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    const response = await updateAutoRetryConfig({
+      initialDelayMs: config.initialDelayMs * 60000,
+      maxDelayMs: config.maxDelayMs * 60000,
+      maxAttempts: config.maxAttempts,
+      backoffMultiplier: config.backoffMultiplier,
+    })
+    setIsSaving(false)
+
+    if (response.success) {
+      toast.success('Configuration saved successfully')
+      onSave()
+      onClose()
+    } else {
+      toast.error(response.error || 'Failed to save configuration')
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} title="Auto-Retry Configuration">
+      <div className="grid gap-6 py-4">
+        <div className="grid gap-2">
+          <Label htmlFor="initialDelay">Initial Delay (minutes)</Label>
+          <Input
+            id="initialDelay"
+            type="number"
+            min={1}
+            max={1440}
+            value={config.initialDelayMs}
+            onChange={(e) => setConfig({ ...config, initialDelayMs: parseInt(e.target.value) || 1 })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Time before the first retry attempt
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="maxDelay">Max Delay (minutes)</Label>
+          <Input
+            id="maxDelay"
+            type="number"
+            min={1}
+            max={10080}
+            value={config.maxDelayMs}
+            onChange={(e) => setConfig({ ...config, maxDelayMs: parseInt(e.target.value) || 1 })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Maximum time between retry attempts
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="maxAttempts">Max Attempts</Label>
+          <Input
+            id="maxAttempts"
+            type="number"
+            min={1}
+            max={10}
+            value={config.maxAttempts}
+            onChange={(e) => setConfig({ ...config, maxAttempts: parseInt(e.target.value) || 1 })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Maximum number of retry attempts per task
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="backoffMultiplier">Backoff Multiplier</Label>
+          <Input
+            id="backoffMultiplier"
+            type="number"
+            min={1}
+            max={10}
+            step={0.5}
+            value={config.backoffMultiplier}
+            onChange={(e) => setConfig({ ...config, backoffMultiplier: parseFloat(e.target.value) || 1 })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Multiplier for exponential backoff (e.g., 2 = double the delay each time)
+          </p>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Configuration'
+          )}
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  )
+}
 
 interface BulkRetryModalProps {
   isOpen: boolean
@@ -267,16 +414,24 @@ export default function DeadLetterQueue() {
   const [detailItem, setDetailItem] = useState<DeadLetterQueueItem | null>(null)
   const [isBulkRetryModalOpen, setIsBulkRetryModalOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [autoRetryStats, setAutoRetryStats] = useState<AutoRetryStats | null>(null)
+  const [showAutoRetryConfig, setShowAutoRetryConfig] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
-  // Fetch DLQ items
+  // Fetch DLQ items and auto-retry stats
   const fetchItems = useCallback(async () => {
     setLoading(true)
-    const response = await getDeadLetterQueue(100)
-    if (response.success && response.data) {
-      setItems(response.data.items)
+    const [dlqResponse, statsResponse] = await Promise.all([
+      getDeadLetterQueue(100),
+      getAutoRetryStats(),
+    ])
+    if (dlqResponse.success && dlqResponse.data) {
+      setItems(dlqResponse.data.items)
     } else {
-      toast.error(response.error || 'Failed to load dead letter queue')
+      toast.error(dlqResponse.error || 'Failed to load dead letter queue')
+    }
+    if (statsResponse.success && statsResponse.data) {
+      setAutoRetryStats(statsResponse.data)
     }
     setLoading(false)
   }, [])
@@ -338,6 +493,16 @@ export default function DeadLetterQueue() {
       newExpanded.add(id)
     }
     setExpandedItems(newExpanded)
+  }
+
+  const handleToggleAutoRetry = async (enabled: boolean) => {
+    const response = enabled ? await startAutoRetry() : await stopAutoRetry()
+    if (response.success) {
+      toast.success(enabled ? 'Auto-retry enabled' : 'Auto-retry disabled')
+      setAutoRetryStats((prev) => prev ? { ...prev, enabled } : null)
+    } else {
+      toast.error(response.error || `Failed to ${enabled ? 'enable' : 'disable'} auto-retry`)
+    }
   }
 
   // Retry single item
@@ -430,6 +595,40 @@ export default function DeadLetterQueue() {
           </Button>
         </div>
       </div>
+
+      {/* Auto-Retry Config Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5" />
+              Auto-Retry
+            </CardTitle>
+            <Switch
+              checked={autoRetryStats?.enabled ?? false}
+              onCheckedChange={handleToggleAutoRetry}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-foreground">{autoRetryStats?.pendingRetryCount ?? 0}</span>
+              <span>pending retries</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-foreground">{autoRetryStats?.dlqItemCount ?? 0}</span>
+              <span>DLQ items</span>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button variant="outline" size="sm" onClick={() => setShowAutoRetryConfig(true)}>
+            <Settings className="w-4 h-4 mr-1" />
+            Configure
+          </Button>
+        </CardFooter>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
@@ -694,7 +893,13 @@ export default function DeadLetterQueue() {
         </div>
       )}
 
-      {/* Modals */}
+      <AutoRetryConfigModal
+        isOpen={showAutoRetryConfig}
+        onClose={() => setShowAutoRetryConfig(false)}
+        stats={autoRetryStats}
+        onSave={() => fetchItems()}
+      />
+
       <ErrorDetailModal
         isOpen={!!detailItem}
         onClose={() => setDetailItem(null)}

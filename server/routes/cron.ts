@@ -5,6 +5,7 @@ import { successResponse, errorResponse, deletedResponse, createdResponse } from
 import { getDatabase } from '../database/service-async.js'
 import { getCronScheduler } from '../services/cron-scheduler'
 import { WorkflowEngine } from '../services/workflow-engine'
+import { getExecutionStateManager } from '../services/execution-state-manager'
 import { getServiceNodeRegistry } from '../services/service-node-registry'
 import { getNotificationService } from '../services/notification-service'
 import { CronExpressionParser } from 'cron-parser'
@@ -471,6 +472,78 @@ router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyn
   }
   const details = await db.getExecutionLogDetailsByLogId(req.params.id)
   res.json({ success: true, data: { log, details } })
+}))
+
+// ============================================
+// Execution State API
+// ============================================
+
+router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const engine = WorkflowEngine.getRunningExecutionEngine(req.params.id)
+  if (!engine) {
+    errorResponse(res, `Execution ${req.params.id} not found or not running`, 404)
+    return
+  }
+  await engine.pauseExecution(req.params.id)
+  successResponse(res, { message: `Execution ${req.params.id} paused` })
+}))
+
+router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const stateManager = getExecutionStateManager(db)
+  const state = await stateManager.getById(req.params.id)
+  
+  if (!state) {
+    errorResponse(res, `Execution ${req.params.id} not found`, 404)
+    return
+  }
+  
+  if (state.status !== 'paused') {
+    errorResponse(res, `Execution ${req.params.id} is not paused (status: ${state.status})`, 400)
+    return
+  }
+  
+  const engine = WorkflowEngine.getRunningExecutionEngine(req.params.id)
+  if (!engine) {
+    errorResponse(res, `Execution ${req.params.id} engine not found`, 500)
+    return
+  }
+  
+  await engine.resumeExecution(req.params.id)
+  successResponse(res, { message: `Execution ${req.params.id} resumed` })
+}))
+
+router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const stateManager = getExecutionStateManager(db)
+  const state = await stateManager.getById(req.params.id)
+  
+  if (!state) {
+    errorResponse(res, `Execution ${req.params.id} not found`, 404)
+    return
+  }
+  
+  if (state.status === 'completed' || state.status === 'failed' || state.status === 'cancelled') {
+    errorResponse(res, `Execution ${req.params.id} already ${state.status}`, 400)
+    return
+  }
+  
+  await stateManager.update(req.params.id, { status: 'cancelled' })
+  successResponse(res, { message: `Execution ${req.params.id} cancelled` })
+}))
+
+router.get('/executions/:id', asyncHandler(async (req, res) => {
+  const db = await getDatabase()
+  const stateManager = getExecutionStateManager(db)
+  const state = await stateManager.getById(req.params.id)
+  
+  if (!state) {
+    errorResponse(res, `Execution ${req.params.id} not found`, 404)
+    return
+  }
+  
+  successResponse(res, state)
 }))
 
 // ============================================

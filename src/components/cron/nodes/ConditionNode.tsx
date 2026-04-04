@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
@@ -9,12 +9,14 @@ export interface ConditionNodeData extends Record<string, unknown> {
   serviceType: string
   threshold?: number
   label?: string
+  hasValidationError?: boolean
+  hasValidationWarning?: boolean
 }
 
 export type ConditionNodeType = Node<ConditionNodeData, 'condition'>
 
 export function ConditionNode({ data, selected }: { data: ConditionNodeData; selected?: boolean }) {
-  const { conditionType, serviceType, threshold, label } = data
+  const { conditionType, serviceType, threshold, label, hasValidationError, hasValidationWarning } = data
 
   return (
     <>
@@ -34,20 +36,39 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
       >
         <BaseNodeWrapper
           isSelected={selected}
-          borderColor="border-amber-500/60"
+          borderColor={cn(
+            'border-amber-500/60',
+            hasValidationError && 'border-red-500',
+            hasValidationWarning && !hasValidationError && 'border-yellow-500'
+          )}
           className="transform -rotate-45 w-36"
           header={
             <div className="flex items-center gap-2">
-              <GitBranch className="w-3 h-3 text-amber-400" />
-              <span className="text-xs font-medium text-amber-400">IF</span>
+              {hasValidationError ? (
+                <AlertCircle className="w-3 h-3 text-red-400" />
+              ) : hasValidationWarning ? (
+                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+              ) : (
+                <GitBranch className="w-3 h-3 text-amber-400" />
+              )}
+              <span className={cn(
+                'text-xs font-medium',
+                hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
+              )}>IF</span>
             </div>
           }
         >
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className={cn(
+              'text-sm font-medium truncate',
+              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+            )}>
               {label || 'Condition'}
             </p>
-            <p className="text-xs text-amber-400 mt-1">
+            <p className={cn(
+              'text-xs mt-1',
+              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
+            )}>
               {conditionType || 'Check'}
             </p>
             <div className="mt-2 text-xs text-muted-foreground/70">

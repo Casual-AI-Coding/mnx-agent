@@ -3,6 +3,8 @@ import { CronExpressionParser } from 'cron-parser'
 import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
 import type { TaskExecutor } from './queue-processor.js'
+import type { NotificationService } from './notification-service.js'
+import { getNotificationService } from './notification-service.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
@@ -15,6 +17,8 @@ export type { DatabaseService }
 
 export interface WorkflowEngine {
   executeWorkflow(workflowJson: string, executionLogId?: string, taskExecutor?: TaskExecutor): Promise<WorkflowResult>
+  pauseExecution(executionId: string): Promise<void>
+  resumeExecution(executionId: string): Promise<void>
 }
 
 export interface CronSchedulerOptions {
@@ -28,16 +32,18 @@ export class CronScheduler {
   private db: DatabaseService
   private workflowEngine: WorkflowEngine
   private taskExecutor: TaskExecutor | null = null
+  private notificationService: NotificationService | null = null
   private timezone: string
   private maxConcurrent: number
   private defaultTimeoutMs: number
   private runningJobs: Set<string> = new Set()
   private isShuttingDown: boolean = false
 
-  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: TaskExecutor, options?: CronSchedulerOptions) {
+  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: TaskExecutor, notificationService?: NotificationService, options?: CronSchedulerOptions) {
     this.db = db
     this.workflowEngine = workflowEngine
     this.taskExecutor = taskExecutor || null
+    this.notificationService = notificationService ?? getNotificationService(db)
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
     this.maxConcurrent = options?.maxConcurrent ?? 5
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? 5 * 60 * 1000 // 5 minutes default
@@ -137,6 +143,13 @@ export class CronScheduler {
         tasks_failed: 0,
       })
 
+      // Notify on_start
+      await this.notificationService?.notifyJobEvent(job.id, 'on_start', {
+        jobId: job.id,
+        jobName: job.name,
+        timestamp: new Date().toISOString(),
+      }).catch(err => console.error('[CronScheduler] Failed to send on_start notification:', err))
+
       // Execute with timeout
       // Fetch workflow template if workflow_id is set
       let workflowJson: string
@@ -197,6 +210,14 @@ export class CronScheduler {
         total_runs: newTotalRuns,
         total_failures: newTotalFailures,
       })
+
+      // Notify on_success
+      await this.notificationService?.notifyJobEvent(job.id, 'on_success', {
+        jobId: job.id,
+        jobName: job.name,
+        duration: durationMs,
+        timestamp: new Date().toISOString(),
+      }).catch(err => console.error('[CronScheduler] Failed to send on_success notification:', err))
     } catch (error) {
       const endTime = Date.now()
       durationMs = endTime - startTime
@@ -224,6 +245,14 @@ export class CronScheduler {
       } catch (dbError) {
         console.error(`[CronScheduler] Failed to update database after job failure:`, dbError)
       }
+
+      // Notify on_failure
+      await this.notificationService?.notifyJobEvent(job.id, 'on_failure', {
+        jobId: job.id,
+        jobName: job.name,
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+      }).catch(err => console.error('[CronScheduler] Failed to send on_failure notification:', err))
     } finally {
       this.releaseExecutionSlot(job.id)
       cronEvents.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
@@ -349,13 +378,22 @@ export class CronScheduler {
     }
     await this.executeJobTick(job)
   }
+
+  async pauseExecution(executionId: string): Promise<void> {
+    await this.workflowEngine.pauseExecution(executionId)
+  }
+
+  async resumeExecution(executionId: string): Promise<void> {
+    await this.workflowEngine.resumeExecution(executionId)
+  }
 }
 
 let schedulerInstance: CronScheduler | null = null
 
 export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: TaskExecutor, options?: CronSchedulerOptions): CronScheduler {
   if (!schedulerInstance) {
-    schedulerInstance = new CronScheduler(db, workflowEngine, taskExecutor, options)
+    const notificationService = getNotificationService(db)
+    schedulerInstance = new CronScheduler(db, workflowEngine, taskExecutor, notificationService, options)
   }
   return schedulerInstance
 }

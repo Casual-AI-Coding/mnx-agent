@@ -32,10 +32,13 @@ interface TemplateEdge {
   target: string
 }
 
-interface TemplateSelectorModalProps {
+interface WorkflowSelectorModalProps {
   isOpen: boolean
   onClose: () => void
   onSelect: (templateId: string, template: WorkflowTemplate) => void
+  mode?: 'template' | 'workflow'
+  title?: string
+  showPreview?: boolean
 }
 
 const NODE_TYPE_COLORS: Record<string, string> = {
@@ -54,13 +57,31 @@ const NODE_TYPE_ICONS: Record<string, string> = {
   default: '◆',
 }
 
-export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSelectorModalProps) {
+export function WorkflowSelectorModal({ 
+  isOpen, 
+  onClose, 
+  onSelect,
+  mode = 'template',
+  title,
+  showPreview = true,
+}: WorkflowSelectorModalProps) {
   const [templates, setTemplates] = React.useState<WorkflowTemplate[]>([])
   const [filteredTemplates, setFilteredTemplates] = React.useState<WorkflowTemplate[]>([])
   const [searchQuery, setSearchQuery] = React.useState('')
   const [selectedTemplate, setSelectedTemplate] = React.useState<WorkflowTemplate | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+
+  // Text based on mode
+  const isWorkflowMode = mode === 'workflow'
+  const modalTitle = title ?? (isWorkflowMode ? 'Load Workflow' : 'Select Workflow Template')
+  const searchPlaceholder = isWorkflowMode 
+    ? 'Search workflows by name or description...' 
+    : 'Search templates by name or description...'
+  const emptyText = isWorkflowMode ? 'No saved workflows found' : 'No saved templates found'
+  const loadingText = isWorkflowMode ? 'Loading workflows...' : 'Loading templates...'
+  const selectButtonText = isWorkflowMode ? 'Load Workflow' : 'Load Template'
+  const selectPromptText = isWorkflowMode ? 'Select a Workflow' : 'Select a Template'
 
   // Load templates on open
   React.useEffect(() => {
@@ -191,7 +212,7 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
     <Dialog
       open={isOpen}
       onClose={handleClose}
-      title="Select Workflow Template"
+      title={modalTitle}
       size="lg"
       className="max-w-4xl"
     >
@@ -201,7 +222,7 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search templates by name or description..."
+              placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-secondary/50"
@@ -212,11 +233,11 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden">
           {/* Template List */}
-          <div className="w-1/2 border-r border-border/50 overflow-y-auto">
+          <div className={cn('overflow-y-auto', showPreview ? 'w-1/2 border-r border-border/50' : 'w-full')}>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading templates...</p>
+                <p className="text-sm text-muted-foreground">{loadingText}</p>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
@@ -230,7 +251,7 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
               <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
                 <FileJson className="w-12 h-12 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground text-center">
-                  {searchQuery ? 'No templates match your search' : 'No saved templates found'}
+                  {searchQuery ? (isWorkflowMode ? 'No workflows match your search' : 'No templates match your search') : emptyText}
                 </p>
               </div>
             ) : (
@@ -286,6 +307,7 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
           </div>
 
           {/* Preview Panel */}
+          {showPreview && (
           <div className="w-1/2 bg-secondary/20 flex flex-col">
             <div className="p-3 border-b border-border/50">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -428,11 +450,12 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
                         )}
                       </div>
                     </div>
-                  )}
+)}
                 </div>
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
 
@@ -448,10 +471,10 @@ export function TemplateSelectorModal({ isOpen, onClose, onSelect }: TemplateSel
           {selectedTemplate ? (
             <>
               <Layers className="w-4 h-4" />
-              Load Template
+              {selectButtonText}
             </>
           ) : (
-            'Select a Template'
+            selectPromptText
           )}
         </Button>
       </DialogFooter>

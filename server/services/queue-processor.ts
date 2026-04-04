@@ -5,6 +5,14 @@ import { cronEvents } from './websocket-service'
 
 export type { DatabaseService }
 
+export interface AutoRetryConfig {
+  enabled: boolean
+  initialDelayMs: number
+  maxDelayMs: number
+  maxAttempts: number
+  backoffMultiplier: number
+}
+
 export interface QueueOptions {
   batchSize?: number
   maxConcurrent?: number
@@ -33,16 +41,26 @@ export class QueueProcessor {
   private db: DatabaseService
   private taskExecutor: TaskExecutor
   private capacityChecker: CapacityChecker
-  private readonly maxRetryDelayMs = 5 * 60 * 1000 // 5 minutes max delay
+  private readonly maxRetryDelayMs = 5 * 60 * 1000
+  private autoRetryConfig: AutoRetryConfig
+  private autoRetryTimer: NodeJS.Timeout | null = null
 
   constructor(
     db: DatabaseService,
     taskExecutor: TaskExecutor,
-    capacityChecker: CapacityChecker
+    capacityChecker: CapacityChecker,
+    autoRetryConfig?: Partial<AutoRetryConfig>
   ) {
     this.db = db
     this.taskExecutor = taskExecutor
     this.capacityChecker = capacityChecker
+    this.autoRetryConfig = {
+      enabled: autoRetryConfig?.enabled ?? true,
+      initialDelayMs: autoRetryConfig?.initialDelayMs ?? 60000,
+      maxDelayMs: autoRetryConfig?.maxDelayMs ?? 300000,
+      maxAttempts: autoRetryConfig?.maxAttempts ?? 3,
+      backoffMultiplier: autoRetryConfig?.backoffMultiplier ?? 2,
+    }
   }
 
   private calculateRetryDelay(retryCount: number): number {
@@ -371,12 +389,90 @@ export class QueueProcessor {
       capacityRemaining: remainingCapacity,
     }
   }
+
+  startAutoRetry(): void {
+    if (!this.autoRetryConfig.enabled || this.autoRetryTimer) {
+      return
+    }
+
+    console.log('[QueueProcessor] Starting auto-retry scheduler')
+    this.autoRetryTimer = setInterval(
+      () => this.processDLQAutoRetry(),
+      this.autoRetryConfig.initialDelayMs
+    )
+  }
+
+  stopAutoRetry(): void {
+    if (this.autoRetryTimer) {
+      clearInterval(this.autoRetryTimer)
+      this.autoRetryTimer = null
+      console.log('[QueueProcessor] Stopped auto-retry scheduler')
+    }
+  }
+
+  private async processDLQAutoRetry(): Promise<void> {
+    try {
+      const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 10)
+      
+      for (const item of dlqItems) {
+        if (item.resolved_at) continue
+        
+        const retryCount = item.retry_count ?? 0
+        if (retryCount >= this.autoRetryConfig.maxAttempts) {
+          console.log(`[QueueProcessor] DLQ item ${item.id} exceeded max attempts (${retryCount}/${this.autoRetryConfig.maxAttempts})`)
+          continue
+        }
+
+        const delayMs = Math.min(
+          this.autoRetryConfig.initialDelayMs * Math.pow(this.autoRetryConfig.backoffMultiplier, retryCount),
+          this.autoRetryConfig.maxDelayMs
+        )
+
+        const failedAt = new Date(item.failed_at).getTime()
+        const now = Date.now()
+        if (now - failedAt < delayMs) {
+          continue
+        }
+
+        console.log(`[QueueProcessor] Auto-retrying DLQ item ${item.id} (attempt ${retryCount + 1}/${this.autoRetryConfig.maxAttempts})`)
+        
+        try {
+          const taskId = await this.db.retryDeadLetterQueueItem(item.id, item.owner_id ?? undefined)
+          console.log(`[QueueProcessor] DLQ item ${item.id} requeued as task ${taskId}`)
+        } catch (error) {
+          console.error(`[QueueProcessor] Failed to retry DLQ item ${item.id}:`, error)
+        }
+      }
+    } catch (error) {
+      console.error('[QueueProcessor] Error in auto-retry processing:', error)
+    }
+  }
+
+  async getAutoRetryStats(): Promise<{
+    enabled: boolean
+    dlqItemCount: number
+    pendingRetryCount: number
+    config: AutoRetryConfig
+  }> {
+    const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 1000)
+    const pendingRetry = dlqItems.filter(item => 
+      !item.resolved_at && (item.retry_count ?? 0) < this.autoRetryConfig.maxAttempts
+    )
+
+    return {
+      enabled: this.autoRetryConfig.enabled,
+      dlqItemCount: dlqItems.length,
+      pendingRetryCount: pendingRetry.length,
+      config: this.autoRetryConfig,
+    }
+  }
 }
 
 export function createQueueProcessor(
   db: DatabaseService,
   taskExecutor: TaskExecutor,
-  capacityChecker: CapacityChecker
+  capacityChecker: CapacityChecker,
+  autoRetryConfig?: Partial<AutoRetryConfig>
 ): QueueProcessor {
-  return new QueueProcessor(db, taskExecutor, capacityChecker)
+  return new QueueProcessor(db, taskExecutor, capacityChecker, autoRetryConfig)
 }

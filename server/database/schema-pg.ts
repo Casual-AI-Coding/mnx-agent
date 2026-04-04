@@ -418,6 +418,47 @@ INSERT INTO cron_jobs (id, name, description, cron_expression, timezone, workflo
     CURRENT_TIMESTAMP
   )
 ON CONFLICT (id) DO NOTHING;
+
+-- Execution states for persistence
+CREATE TABLE IF NOT EXISTS execution_states (
+  id TEXT PRIMARY KEY,
+  execution_log_id TEXT NOT NULL,
+  workflow_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  current_layer INTEGER DEFAULT 0,
+  completed_nodes TEXT NOT NULL DEFAULT '[]',
+  failed_nodes TEXT NOT NULL DEFAULT '[]',
+  node_outputs TEXT NOT NULL DEFAULT '{}',
+  context TEXT NOT NULL DEFAULT '{}',
+  started_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  paused_at TEXT,
+  resumed_at TEXT,
+  completed_at TEXT,
+  created_by TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_execution_states_status ON execution_states(status);
+CREATE INDEX IF NOT EXISTS idx_execution_states_log_id ON execution_states(execution_log_id);
+
+-- Workflow template versions for versioning
+CREATE TABLE IF NOT EXISTS workflow_versions (
+  id TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  nodes_json TEXT NOT NULL,
+  edges_json TEXT NOT NULL,
+  change_summary TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  is_active INTEGER DEFAULT 1,
+  UNIQUE(template_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_versions_template_id ON workflow_versions(template_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_versions_active ON workflow_versions(is_active);
 `
 
 export const PG_MIGRATIONS = [

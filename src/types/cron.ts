@@ -221,6 +221,53 @@ export interface TaskQueueFilter {
   jobId?: string
 }
 
+export type WebhookEvent = 'on_start' | 'on_success' | 'on_failure'
+
+export interface WebhookConfig {
+  id: string
+  jobId: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers: Record<string, string> | null
+  secret: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WebhookDelivery {
+  id: string
+  webhookId: string
+  executionLogId: string | null
+  event: WebhookEvent
+  payload: Record<string, unknown>
+  responseStatus: number | null
+  responseBody: string | null
+  errorMessage: string | null
+  deliveredAt: string
+}
+
+export interface CreateWebhookConfig {
+  jobId?: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  isActive?: boolean
+}
+
+export interface UpdateWebhookConfig {
+  jobId?: string | null
+  name?: string
+  url?: string
+  events?: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  isActive?: boolean
+}
+
 // ============================================
 // Dead Letter Queue Types
 // ============================================

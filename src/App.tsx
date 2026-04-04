@@ -34,6 +34,7 @@ const InvitationCodes = lazy(() => import('@/pages/InvitationCodes'))
 const ServiceNodeManagement = lazy(() => import('@/pages/ServiceNodeManagement'))
 const WorkflowTemplateManagement = lazy(() => import('@/pages/WorkflowTemplateManagement'))
 const DeadLetterQueue = lazy(() => import('@/pages/DeadLetterQueue'))
+const WebhookManagement = lazy(() => import('@/pages/WebhookManagement'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -310,6 +311,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="死信队列">
               <DeadLetterQueue />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="webhooks"
+          element={
+            <RouteWithErrorBoundary pageName="Webhook管理">
+              <WebhookManagement />
             </RouteWithErrorBoundary>
           }
         />

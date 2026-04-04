@@ -2,6 +2,8 @@ import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodeRegistry } from './service-node-registry.js'
 import { WorkflowNodeType } from '../types/workflow.js'
 import type { TaskExecutor } from './queue-processor.js'
+import { cronEvents } from './websocket-service.js'
+import { getExecutionStateManager } from './execution-state-manager.js'
 
 export interface TaskResult {
   success: boolean
@@ -52,8 +54,23 @@ export class WorkflowEngine {
   private serviceRegistry: ServiceNodeRegistry
   private taskExecutor: TaskExecutor | null = null
   private executionLogId: string | null = null
+  private workflowId: string | null = null
   private workflowNodes: WorkflowNode[] = []
   private workflowEdges: WorkflowEdge[] = []
+  private pauseSignals = new Map<string, AbortController>()
+  private static runningExecutions = new Map<string, WorkflowEngine>()
+
+  private static setRunningExecution(executionId: string, engine: WorkflowEngine): void {
+    this.runningExecutions.set(executionId, engine)
+  }
+
+  private static removeRunningExecution(executionId: string): void {
+    this.runningExecutions.delete(executionId)
+  }
+
+  static getRunningExecutionEngine(executionId: string): WorkflowEngine | undefined {
+    return this.runningExecutions.get(executionId)
+  }
 
   constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor?: TaskExecutor) {
     this.db = db
@@ -73,11 +90,31 @@ export class WorkflowEngine {
     this.taskExecutor = taskExecutor || this.taskExecutor
     this.executionLogId = executionLogId || null
 
+    // Check if database supports execution state persistence
+    const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
+    const stateManager = supportsStatePersistence ? getExecutionStateManager(this.db) : null
+    let executionStateId: string | null = null
+    let abortController: AbortController | null = null
+
     try {
       const workflow = this.parseWorkflowJson(workflowJson)
       this.validateWorkflow(workflow)
       this.workflowNodes = workflow.nodes
       this.workflowEdges = workflow.edges || []
+      this.workflowId = (workflow as unknown as { id?: string }).id || null
+
+      if (stateManager) {
+        const executionState = await stateManager.create({
+          execution_log_id: executionLogId || `exec_${Date.now()}`,
+          workflow_id: this.workflowId || 'unknown',
+          status: 'running',
+        })
+        executionStateId = executionState.id
+        abortController = new AbortController()
+        this.pauseSignals.set(executionStateId, abortController)
+        WorkflowEngine.setRunningExecution(executionStateId, this)
+      }
+
       const executionLayers = this.buildExecutionLayers(workflow)
       const nodeOutputs = new Map<string, unknown>()
       const excludedNodes = new Set<string>()
@@ -86,7 +123,15 @@ export class WorkflowEngine {
       
       const conditionResults = new Map<string, boolean>()
 
-      for (const layer of executionLayers) {
+      for (let layerIndex = 0; layerIndex < executionLayers.length; layerIndex++) {
+        if (abortController?.signal.aborted) {
+          await stateManager?.pause(executionStateId!)
+          throw new Error(`Execution ${executionStateId} paused at layer ${layerIndex}`)
+        }
+
+        await stateManager?.update(executionStateId!, { current_layer: layerIndex })
+
+        const layer = executionLayers[layerIndex]
         const nodesInLayer = layer.filter(nodeId => !excludedNodes.has(nodeId))
         
         if (nodesInLayer.length === 0) continue
@@ -130,8 +175,26 @@ export class WorkflowEngine {
         if (executionError) break
       }
 
+      if (executionStateId && stateManager) {
+        if (executionError) {
+          await stateManager.fail(executionStateId)
+        } else {
+          await stateManager.complete(executionStateId)
+        }
+      }
+
     } catch (error) {
       executionError = (error as Error).message
+      if (executionError && !executionError.includes('paused')) {
+        if (executionStateId && stateManager) {
+          await stateManager.fail(executionStateId)
+        }
+      }
+    } finally {
+      if (executionStateId) {
+        this.pauseSignals.delete(executionStateId)
+        WorkflowEngine.removeRunningExecution(executionStateId)
+      }
     }
 
     return {
@@ -139,6 +202,37 @@ export class WorkflowEngine {
       nodeResults,
       totalDurationMs: Date.now() - startTime,
       error: executionError,
+    }
+  }
+
+  async pauseExecution(executionId: string): Promise<void> {
+    const controller = this.pauseSignals.get(executionId)
+    if (controller) {
+      controller.abort()
+    } else {
+      throw new Error(`Execution ${executionId} not found or not running`)
+    }
+  }
+
+  async resumeExecution(executionId: string): Promise<void> {
+    const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
+    if (!supportsStatePersistence) {
+      throw new Error('Execution state persistence is not supported')
+    }
+    
+    const stateManager = getExecutionStateManager(this.db)
+    const state = await stateManager.getById(executionId)
+    
+    if (!state || state.status !== 'paused') {
+      throw new Error(`Execution ${executionId} not found or not paused`)
+    }
+    
+    await stateManager.resume(executionId)
+    
+    const controller = this.pauseSignals.get(executionId)
+    if (controller) {
+      const newController = new AbortController()
+      this.pauseSignals.set(executionId, newController)
     }
   }
 
@@ -435,13 +529,13 @@ export class WorkflowEngine {
             case 'action':
               return await this.executeActionNode(node, config)
             case 'condition':
-              return await this.executeConditionNode(config, nodeOutputs)
+              return await this.executeConditionNode(node, config, nodeOutputs)
             case 'loop':
               return await this.executeLoopNode(node, config, nodeOutputs)
             case 'transform':
-              return await this.executeTransformNode(config, nodeOutputs)
+              return await this.executeTransformNode(node, config, nodeOutputs)
             case 'queue':
-              return await this.executeQueueNode(config)
+              return await this.executeQueueNode(node, config)
             default:
               throw new Error(`Unknown node type: ${node.type}`)
           }
@@ -503,6 +597,18 @@ export class WorkflowEngine {
     const detailStartTime = Date.now()
     let detailId: string | null = null
 
+    // EMIT: workflow_node_start
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'action',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
+    }
+
     if (this.executionLogId) {
       detailId = await this.db.createExecutionLogDetail({
         log_id: this.executionLogId,
@@ -526,6 +632,21 @@ export class WorkflowEngine {
         })
       }
 
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'action',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result,
+          workflowId: this.workflowId,
+        })
+      }
+
       return result
     } catch (error) {
       if (detailId) {
@@ -535,11 +656,25 @@ export class WorkflowEngine {
           duration_ms: Date.now() - detailStartTime,
         })
       }
+
+      // EMIT: workflow_node_error
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'action',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
       throw error
     }
   }
 
   private async executeConditionNode(
+    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
   ): Promise<boolean> {
@@ -548,8 +683,55 @@ export class WorkflowEngine {
       throw new Error('Condition node requires a condition config')
     }
 
-    const resolvedCondition = this.resolveTemplateString(condition, nodeOutputs)
-    return this.evaluateCondition(resolvedCondition)
+    const detailStartTime = Date.now()
+
+    // EMIT: workflow_node_start
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'condition',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
+    }
+
+    try {
+      const resolvedCondition = this.resolveTemplateString(condition, nodeOutputs)
+      const result = this.evaluateCondition(resolvedCondition)
+
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'condition',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return result
+    } catch (error) {
+      // EMIT: workflow_node_error
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'condition',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+      throw error
+    }
   }
 
   private evaluateCondition(condition: string): boolean {
@@ -590,72 +772,119 @@ export class WorkflowEngine {
     const subNodes = config.subNodes as WorkflowNode[] | undefined
     const subEdges = config.subEdges as WorkflowEdge[] | undefined
     
-    let itemsArray: unknown[] = []
-    if (items) {
-      const resolved = this.resolveTemplateString(items, nodeOutputs)
-      try {
-        itemsArray = JSON.parse(resolved)
-      } catch {
-        itemsArray = [resolved]
-      }
+    const detailStartTime = Date.now()
+
+    // EMIT: workflow_node_start
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'loop',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
     }
 
-    const bodyNodes = this.findLoopBodyNodes(node.id)
-    const bodyEdges = this.findLoopBodyEdges(node.id)
-
-    const results: unknown[] = []
-    let iterationCount = 0
-
-    while (iterationCount < maxIterations) {
-      if (itemsArray.length > 0 && iterationCount >= itemsArray.length) break
-
-      if (itemsArray.length > 0) {
-        nodeOutputs.set('item', itemsArray[iterationCount])
-      }
-      nodeOutputs.set('index', iterationCount)
-
-      if (condition) {
-        const resolved = this.resolveTemplateString(condition, nodeOutputs)
-        if (!this.evaluateCondition(resolved)) break
-      }
-
-      const nodesToExecute = bodyNodes.length > 0 ? bodyNodes : subNodes
-      const edgesToUse = bodyNodes.length > 0 ? bodyEdges : subEdges
-
-      if (nodesToExecute && nodesToExecute.length > 0) {
-        const iterationOutputs = new Map(nodeOutputs)
-        const subGraph: WorkflowGraph = { nodes: nodesToExecute, edges: edgesToUse || [] }
-        const executionOrder = this.buildExecutionOrder(subGraph)
-        
-        let iterationResult: unknown = undefined
-        for (const subNodeId of executionOrder) {
-          const subNode = nodesToExecute.find(n => n.id === subNodeId)
-          if (!subNode) continue
-          
-          const resolvedConfig = this.resolveNodeConfig(subNode.data.config, iterationOutputs)
-          const subResult = await this.executeNode(subNode, resolvedConfig, iterationOutputs)
-          
-          if (!subResult.success) {
-            throw new Error(`Loop iteration ${iterationCount}: subNode ${subNodeId} failed - ${subResult.error}`)
-          }
-          
-          if (subResult.data !== undefined) {
-            iterationOutputs.set(subNodeId, subResult.data)
-            iterationResult = subResult.data
-          }
+    try {
+      let itemsArray: unknown[] = []
+      if (items) {
+        const resolved = this.resolveTemplateString(items, nodeOutputs)
+        try {
+          itemsArray = JSON.parse(resolved)
+        } catch {
+          itemsArray = [resolved]
         }
-        results.push(iterationResult)
-      } else {
-        results.push({ iteration: iterationCount })
       }
 
-      iterationCount++
+      const bodyNodes = this.findLoopBodyNodes(node.id)
+      const bodyEdges = this.findLoopBodyEdges(node.id)
+
+      const results: unknown[] = []
+      let iterationCount = 0
+
+      while (iterationCount < maxIterations) {
+        if (itemsArray.length > 0 && iterationCount >= itemsArray.length) break
+
+        if (itemsArray.length > 0) {
+          nodeOutputs.set('item', itemsArray[iterationCount])
+        }
+        nodeOutputs.set('index', iterationCount)
+
+        if (condition) {
+          const resolved = this.resolveTemplateString(condition, nodeOutputs)
+          if (!this.evaluateCondition(resolved)) break
+        }
+
+        const nodesToExecute = bodyNodes.length > 0 ? bodyNodes : subNodes
+        const edgesToUse = bodyNodes.length > 0 ? bodyEdges : subEdges
+
+        if (nodesToExecute && nodesToExecute.length > 0) {
+          const iterationOutputs = new Map(nodeOutputs)
+          const subGraph: WorkflowGraph = { nodes: nodesToExecute, edges: edgesToUse || [] }
+          const executionOrder = this.buildExecutionOrder(subGraph)
+          
+          let iterationResult: unknown = undefined
+          for (const subNodeId of executionOrder) {
+            const subNode = nodesToExecute.find(n => n.id === subNodeId)
+            if (!subNode) continue
+            
+            const resolvedConfig = this.resolveNodeConfig(subNode.data.config, iterationOutputs)
+            const subResult = await this.executeNode(subNode, resolvedConfig, iterationOutputs)
+            
+            if (!subResult.success) {
+              throw new Error(`Loop iteration ${iterationCount}: subNode ${subNodeId} failed - ${subResult.error}`)
+            }
+            
+            if (subResult.data !== undefined) {
+              iterationOutputs.set(subNodeId, subResult.data)
+              iterationResult = subResult.data
+            }
+          }
+          results.push(iterationResult)
+        } else {
+          results.push({ iteration: iterationCount })
+        }
+
+        iterationCount++
+      }
+
+      nodeOutputs.delete('item')
+      nodeOutputs.delete('index')
+
+      const loopResult = { iterations: iterationCount, results }
+
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'loop',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result: loopResult,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return loopResult
+    } catch (error) {
+      // EMIT: workflow_node_error
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'loop',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+      throw error
     }
-
-    nodeOutputs.delete('item')
-    nodeOutputs.delete('index')
-
-    return { iterations: iterationCount, results }
   }
 
   private findLoopBodyNodes(loopNodeId: string): WorkflowNode[] {
@@ -685,6 +914,7 @@ export class WorkflowEngine {
   }
 
   private async executeTransformNode(
+    node: WorkflowNode,
     config: Record<string, unknown>,
     nodeOutputs: Map<string, unknown>
   ): Promise<unknown> {
@@ -693,66 +923,111 @@ export class WorkflowEngine {
     const outputFormat = config.outputFormat as string | undefined
     const inputNodeId = config.inputNode as string | undefined
     
-    let inputData: unknown
+    const detailStartTime = Date.now()
 
-    if (inputNodeId) {
-      inputData = nodeOutputs.get(inputNodeId)
-      if (inputPath && inputData) {
-        inputData = this.getValueAtPath(inputData, inputPath)
-      }
+    // EMIT: workflow_node_start
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'transform',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
     }
 
-    let outputData: unknown = inputData
+    try {
+      let inputData: unknown
 
-    switch (transformType) {
-      case 'passthrough':
-        outputData = inputData
-        break
-      case 'extract':
-        if (outputFormat) {
-          outputData = this.extractData(inputData, outputFormat)
+      if (inputNodeId) {
+        inputData = nodeOutputs.get(inputNodeId)
+        if (inputPath && inputData) {
+          inputData = this.getValueAtPath(inputData, inputPath)
         }
-        break
-      case 'map': {
-        const mapFunction = config.mapFunction as string | undefined
-        if (mapFunction && Array.isArray(inputData)) {
-          const sanitizedFunction = mapFunction
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;')
-          outputData = inputData.map((item, index) => {
-            return sanitizedFunction
-              .replace(/\$item/g, JSON.stringify(item))
-              .replace(/\$index/g, String(index))
-          })
-        }
-        break
       }
-      case 'filter': {
-        const filterCondition = config.filterCondition as string | undefined
-        if (filterCondition && Array.isArray(inputData)) {
-          const sanitizedCondition = filterCondition
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-          outputData = inputData.filter(item => {
-            const conditionStr = sanitizedCondition.replace(/\$item/g, JSON.stringify(item))
-            return this.evaluateCondition(conditionStr)
-          })
+
+      let outputData: unknown = inputData
+
+      switch (transformType) {
+        case 'passthrough':
+          outputData = inputData
+          break
+        case 'extract':
+          if (outputFormat) {
+            outputData = this.extractData(inputData, outputFormat)
+          }
+          break
+        case 'map': {
+          const mapFunction = config.mapFunction as string | undefined
+          if (mapFunction && Array.isArray(inputData)) {
+            const sanitizedFunction = mapFunction
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#x27;')
+              .replace(/\//g, '&#x2F;')
+            outputData = inputData.map((item, index) => {
+              return sanitizedFunction
+                .replace(/\$item/g, JSON.stringify(item))
+                .replace(/\$index/g, String(index))
+            })
+          }
+          break
         }
-        break
+        case 'filter': {
+          const filterCondition = config.filterCondition as string | undefined
+          if (filterCondition && Array.isArray(inputData)) {
+            const sanitizedCondition = filterCondition
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+            outputData = inputData.filter(item => {
+              const conditionStr = sanitizedCondition.replace(/\$item/g, JSON.stringify(item))
+              return this.evaluateCondition(conditionStr)
+            })
+          }
+          break
+        }
+        case 'format':
+          if (typeof inputData === 'object' && outputFormat) {
+            outputData = this.formatOutput(inputData, outputFormat)
+          }
+          break
+        default:
+          throw new Error(`Unknown transform type: ${transformType}`)
       }
-      case 'format':
-        if (typeof inputData === 'object' && outputFormat) {
-          outputData = this.formatOutput(inputData, outputFormat)
-        }
-        break
-      default:
-        throw new Error(`Unknown transform type: ${transformType}`)
+
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'transform',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result: outputData,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return outputData
+    } catch (error) {
+      // EMIT: workflow_node_error
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'transform',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+      throw error
     }
-
-    return outputData
   }
 
   private extractData(data: unknown, format: string): unknown {
@@ -807,62 +1082,110 @@ export class WorkflowEngine {
   }
 
   private async executeQueueNode(
+    node: WorkflowNode,
     config: Record<string, unknown>
   ): Promise<{ total: number; succeeded: number; failed: number }> {
     const jobId = config.jobId as string | undefined
     const taskType = config.taskType as string | undefined
     const limit = (config.limit as number) ?? 10
 
-    let tasks: { id: string; task_type: string; payload: string; retry_count: number; max_retries: number }[] = []
+    const detailStartTime = Date.now()
 
-    if (jobId) {
-      tasks = await this.db.getPendingTasksByJob(jobId, limit)
-    } else if (taskType) {
-      tasks = await this.db.getPendingTasksByType(taskType, limit)
+    // EMIT: workflow_node_start
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'queue',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
     }
 
-    const total = tasks.length
-    let succeeded = 0
-    let failed = 0
+    try {
+      let tasks: { id: string; task_type: string; payload: string; retry_count: number; max_retries: number }[] = []
 
-    for (const task of tasks) {
-      try {
-        await this.db.markTaskRunning(task.id)
+      if (jobId) {
+        tasks = await this.db.getPendingTasksByJob(jobId, limit)
+      } else if (taskType) {
+        tasks = await this.db.getPendingTasksByType(taskType, limit)
+      }
 
-        const payload = JSON.parse(task.payload)
-        let result: TaskResult
+      const total = tasks.length
+      let succeeded = 0
+      let failed = 0
 
-        if (this.taskExecutor) {
-          result = await this.taskExecutor.executeTask(task.task_type, payload)
-        } else {
-          result = await this.serviceRegistry.call('task-executor', 'executeTask', [
-            task.task_type,
-            payload,
-          ]) as TaskResult
-        }
+      for (const task of tasks) {
+        try {
+          await this.db.markTaskRunning(task.id)
 
-        await this.db.markTaskCompleted(task.id, JSON.stringify(result))
-        succeeded++
-      } catch (error) {
-        const errorMessage = (error as Error).message
-        await this.db.markTaskFailed(task.id, errorMessage)
-        failed++
+          const payload = JSON.parse(task.payload)
+          let result: TaskResult
 
-        const newRetryCount = task.retry_count + 1
-        if (newRetryCount >= task.max_retries) {
-          await this.db.createDeadLetterQueueItem({
-            original_task_id: task.id,
-            job_id: jobId ?? undefined,
-            task_type: task.task_type,
-            payload: JSON.parse(task.payload),
-            error_message: errorMessage,
-            retry_count: newRetryCount,
-            max_retries: task.max_retries,
-          })
+          if (this.taskExecutor) {
+            result = await this.taskExecutor.executeTask(task.task_type, payload)
+          } else {
+            result = await this.serviceRegistry.call('task-executor', 'executeTask', [
+              task.task_type,
+              payload,
+            ]) as TaskResult
+          }
+
+          await this.db.markTaskCompleted(task.id, JSON.stringify(result))
+          succeeded++
+        } catch (error) {
+          const errorMessage = (error as Error).message
+          await this.db.markTaskFailed(task.id, errorMessage)
+          failed++
+
+          const newRetryCount = task.retry_count + 1
+          if (newRetryCount >= task.max_retries) {
+            await this.db.createDeadLetterQueueItem({
+              original_task_id: task.id,
+              job_id: jobId ?? undefined,
+              task_type: task.task_type,
+              payload: JSON.parse(task.payload),
+              error_message: errorMessage,
+              retry_count: newRetryCount,
+              max_retries: task.max_retries,
+            })
+          }
         }
       }
-    }
 
-    return { total, succeeded, failed }
+      const queueResult = { total, succeeded, failed }
+
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'queue',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result: queueResult,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return queueResult
+    } catch (error) {
+      // EMIT: workflow_node_error
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'queue',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+      throw error
+    }
   }
 }
