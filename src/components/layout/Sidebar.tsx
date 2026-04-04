@@ -29,6 +29,7 @@ import {
   Lock,
   Github,
   Layers,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -177,6 +178,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
         { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
         { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
         { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
+        { path: '/dead-letter-queue', label: t('sidebar.deadLetterQueue', '死信队列'), icon: AlertTriangle },
       ],
     },
     {

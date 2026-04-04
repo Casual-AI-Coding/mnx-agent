@@ -16,10 +16,17 @@ export enum WorkflowNodeType {
   Queue = 'queue',
 }
 
+export interface RetryPolicy {
+  maxRetries: number
+  backoffMultiplier: number
+}
+
 export interface WorkflowNode {
   id: string
   type: WorkflowNodeType
   position: { x: number; y: number }
+  timeout?: number
+  retryPolicy?: RetryPolicy
   data: {
     label: string
     config: Record<string, unknown>

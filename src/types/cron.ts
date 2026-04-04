@@ -222,6 +222,25 @@ export interface TaskQueueFilter {
 }
 
 // ============================================
+// Dead Letter Queue Types
+// ============================================
+
+export interface DeadLetterQueueItem {
+  id: string
+  originalTaskId: string | null
+  jobId: string | null
+  taskType: string
+  payload: Record<string, unknown>
+  errorMessage: string | null
+  retryCount: number
+  maxRetries: number
+  failedAt: string
+  resolvedAt: string | null
+  resolution: string | null
+  createdAt: string
+}
+
+// ============================================
 // API Response Types
 // ============================================
 

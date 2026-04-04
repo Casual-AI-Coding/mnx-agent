@@ -51,6 +51,7 @@ import { TemplateSelectorModal } from '@/components/workflow/TemplateSelectorMod
 import { WorkflowSelectorModal } from '@/components/workflow/WorkflowSelectorModal'
 import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
 import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
+import { useWorkflowUpdates } from '@/hooks/useWorkflowUpdates'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
@@ -713,6 +714,33 @@ function WorkflowBuilderInner() {
   const [showWorkflowSelector, setShowWorkflowSelector] = React.useState(false)
   
   const [history, setHistory] = React.useState<{ past: { nodes: Node[], edges: Edge[] }[], future: { nodes: Node[], edges: Edge[] }[] }>({ past: [], future: [] })
+
+  const workflowId = searchParams.get('id')
+  const { nodeStatuses } = useWorkflowUpdates({
+    workflowId: workflowId ?? undefined,
+    enabled: !!workflowId,
+  })
+
+  React.useEffect(() => {
+    if (!workflowId || nodeStatuses.size === 0) return
+
+    setNodes((prevNodes) =>
+      prevNodes.map((node) => {
+        const status = nodeStatuses.get(node.id)
+        if (!status) return node
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            executionStatus: status.status,
+            executionError: status.errorMessage,
+            executionResult: status.result,
+          },
+        }
+      })
+    )
+  }, [nodeStatuses, workflowId])
   
   const canUndo = history.past.length > 0
   const canRedo = history.future.length > 0

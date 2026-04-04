@@ -1,7 +1,8 @@
 import { DatabaseConnection } from './connection.js'
 import { PG_SCHEMA_SQL } from './schema-pg.js'
+import { migration_021 } from './migrations/021_performance_indexes.js'
 
-interface Migration {
+export interface Migration {
   id: number
   name: string
   sql: string
@@ -490,6 +491,7 @@ CREATE INDEX IF NOT EXISTS idx_workflow_templates_owner_public ON workflow_templ
 CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_id, type);
     `,
   },
+  migration_021,
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

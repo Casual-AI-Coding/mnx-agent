@@ -13,6 +13,7 @@ import type {
   UpdateTaskDTO,
   UpdateWorkflowTemplateDTO,
   TaskQueueFilter,
+  DeadLetterQueueItem,
 } from '@/types/cron'
 
 interface ApiResponse<T> {
@@ -370,6 +371,45 @@ export async function getJobDependents(jobId: string): Promise<ApiResponse<{ dep
     return { success: true, data: response.data.data }
   } catch (error) {
     return handleApiError(error, 'getJobDependents')
+  }
+}
+
+// ============================================
+// Dead Letter Queue API
+// ============================================
+
+interface DLQListResponse {
+  items: DeadLetterQueueItem[]
+  total: number
+}
+
+export async function getDeadLetterQueue(limit?: number): Promise<ApiResponse<DLQListResponse>> {
+  try {
+    const params = new URLSearchParams()
+    if (limit) params.append('limit', String(limit))
+    
+    const response = await cronClient.get('/cron/dlq', { params })
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getDeadLetterQueue')
+  }
+}
+
+export async function retryDeadLetterQueueItem(id: string): Promise<ApiResponse<{ taskId: string; message: string }>> {
+  try {
+    const response = await cronClient.post(`/cron/dlq/${id}/retry`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'retryDeadLetterQueueItem')
+  }
+}
+
+export async function deleteDeadLetterQueueItem(id: string): Promise<ApiResponse<void>> {
+  try {
+    await cronClient.delete(`/cron/dlq/${id}`)
+    return { success: true }
+  } catch (error) {
+    return handleApiError(error, 'deleteDeadLetterQueueItem')
   }
 }
 

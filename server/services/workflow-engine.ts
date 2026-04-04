@@ -17,6 +17,11 @@ export interface WorkflowResult {
   error?: string
 }
 
+export interface RetryPolicy {
+  maxRetries: number
+  backoffMultiplier: number
+}
+
 export interface WorkflowNode {
   id: string
   type: WorkflowNodeType
@@ -25,6 +30,8 @@ export interface WorkflowNode {
     config: Record<string, unknown>
   }
   position?: { x: number; y: number }
+  timeout?: number
+  retryPolicy?: RetryPolicy
 }
 
 export interface WorkflowEdge {
@@ -71,7 +78,7 @@ export class WorkflowEngine {
       this.validateWorkflow(workflow)
       this.workflowNodes = workflow.nodes
       this.workflowEdges = workflow.edges || []
-      const executionOrder = this.buildExecutionOrder(workflow)
+      const executionLayers = this.buildExecutionLayers(workflow)
       const nodeOutputs = new Map<string, unknown>()
       const excludedNodes = new Set<string>()
       
@@ -79,39 +86,48 @@ export class WorkflowEngine {
       
       const conditionResults = new Map<string, boolean>()
 
-      for (const nodeId of executionOrder) {
-        if (excludedNodes.has(nodeId)) {
-          continue
-        }
+      for (const layer of executionLayers) {
+        const nodesInLayer = layer.filter(nodeId => !excludedNodes.has(nodeId))
+        
+        if (nodesInLayer.length === 0) continue
 
-        const node = workflow.nodes.find(n => n.id === nodeId)
-        if (!node) {
-          throw new Error(`Node ${nodeId} not found in workflow`)
-        }
+        const layerResults = await Promise.all(
+          nodesInLayer.map(async (nodeId) => {
+            const node = workflow.nodes.find(n => n.id === nodeId)
+            if (!node) {
+              return { nodeId, result: { success: false, error: `Node ${nodeId} not found`, durationMs: 0 } as TaskResult }
+            }
+            const resolvedConfig = this.resolveNodeConfig(node.data.config, nodeOutputs)
+            const result = await this.executeNode(node, resolvedConfig, nodeOutputs)
+            return { nodeId, result }
+          })
+        )
 
-        const resolvedConfig = this.resolveNodeConfig(node.data.config, nodeOutputs)
-        const result = await this.executeNode(node, resolvedConfig, nodeOutputs)
-        nodeResults.set(nodeId, result)
+        for (const { nodeId, result } of layerResults) {
+          nodeResults.set(nodeId, result)
 
-        if (result.success && result.data !== undefined) {
-          nodeOutputs.set(nodeId, result.data)
+          if (result.success && result.data !== undefined) {
+            nodeOutputs.set(nodeId, result.data)
 
-          if (node.type === 'condition') {
-            const conditionResult = result.data as boolean
-            conditionResults.set(nodeId, conditionResult)
-            this.updateExcludedNodes(
-              nodeId,
-              conditionResult,
-              workflow.edges,
-              excludedNodes
-            )
+            const node = workflow.nodes.find(n => n.id === nodeId)
+            if (node?.type === 'condition') {
+              const conditionResult = result.data as boolean
+              conditionResults.set(nodeId, conditionResult)
+              this.updateExcludedNodes(
+                nodeId,
+                conditionResult,
+                workflow.edges,
+                excludedNodes
+              )
+            }
+          }
+
+          if (!result.success && !executionError) {
+            executionError = `Node ${nodeId} failed: ${result.error}`
           }
         }
 
-        if (!result.success) {
-          executionError = `Node ${nodeId} failed: ${result.error}`
-          break
-        }
+        if (executionError) break
       }
 
     } catch (error) {
@@ -233,57 +249,52 @@ export class WorkflowEngine {
   }
 
   private buildExecutionOrder(workflow: WorkflowGraph): string[] {
+    const layers = this.buildExecutionLayers(workflow)
+    return layers.flat()
+  }
+
+  private buildExecutionLayers(workflow: WorkflowGraph): string[][] {
     const nodes = workflow.nodes
     const edges = workflow.edges || []
 
     const dependencies = new Map<string, Set<string>>()
-    const dependents = new Map<string, Set<string>>()
 
     for (const node of nodes) {
       dependencies.set(node.id, new Set())
-      dependents.set(node.id, new Set())
     }
 
     for (const edge of edges) {
       dependencies.get(edge.target)?.add(edge.source)
-      dependents.get(edge.source)?.add(edge.target)
     }
 
-    const order: string[] = []
-    const visited = new Set<string>()
-    const noDeps = nodes.filter(n => dependencies.get(n.id)?.size === 0)
-    const queue: string[] = noDeps.map(n => n.id)
+    const layers: string[][] = []
+    const assigned = new Set<string>()
 
-    while (queue.length > 0) {
-      const nodeId = queue.shift()!
-      if (visited.has(nodeId)) continue
-      
-      visited.add(nodeId)
-      order.push(nodeId)
-
-      const dependentSet = dependents.get(nodeId)
-      if (dependentSet) {
-        dependentSet.forEach(dependentId => {
-          const deps = dependencies.get(dependentId)
-          if (deps) {
-            let allVisited = true
-            deps.forEach(d => {
-              if (!visited.has(d)) allVisited = false
-            })
-            if (allVisited) {
-              queue.push(dependentId)
-            }
+    while (assigned.size < nodes.length) {
+      const readyNodes = nodes
+        .filter(n => {
+          if (assigned.has(n.id)) return false
+          const deps = dependencies.get(n.id)
+          if (!deps) return false
+          for (const dep of deps) {
+            if (!assigned.has(dep)) return false
           }
+          return true
         })
+        .map(n => n.id)
+
+      if (readyNodes.length === 0) {
+        const remaining = nodes.filter(n => !assigned.has(n.id)).map(n => n.id)
+        throw new Error(`Workflow contains cycle involving nodes: ${remaining.join(', ')}`)
+      }
+
+      layers.push(readyNodes)
+      for (const nodeId of readyNodes) {
+        assigned.add(nodeId)
       }
     }
 
-    if (order.length !== nodes.length) {
-      const remaining = nodes.filter(n => !visited.has(n.id)).map(n => n.id)
-      throw new Error(`Workflow contains cycle involving nodes: ${remaining.join(', ')}`)
-    }
-
-    return order
+    return layers
   }
 
   private resolveNodeConfig(
@@ -412,48 +423,73 @@ export class WorkflowEngine {
     nodeOutputs: Map<string, unknown>
   ): Promise<TaskResult> {
     const startTime = Date.now()
-    const timeoutMs = (config.timeoutMs as number) ?? 300000
+    const timeoutMs = (node.timeout as number) ?? (config.timeoutMs as number) ?? 300000
+    const retryPolicy = node.retryPolicy
 
-    try {
-      let result: unknown
+    const executeOnce = async (): Promise<TaskResult> => {
+      try {
+        let result: unknown
 
-      const executionPromise = (async () => {
-        switch (node.type) {
-          case 'action':
-            return await this.executeActionNode(node, config)
-          case 'condition':
-            return await this.executeConditionNode(config, nodeOutputs)
-          case 'loop':
-            return await this.executeLoopNode(node, config, nodeOutputs)
-          case 'transform':
-            return await this.executeTransformNode(config, nodeOutputs)
-          case 'queue':
-            return await this.executeQueueNode(config)
-          default:
-            throw new Error(`Unknown node type: ${node.type}`)
+        const executionPromise = (async () => {
+          switch (node.type) {
+            case 'action':
+              return await this.executeActionNode(node, config)
+            case 'condition':
+              return await this.executeConditionNode(config, nodeOutputs)
+            case 'loop':
+              return await this.executeLoopNode(node, config, nodeOutputs)
+            case 'transform':
+              return await this.executeTransformNode(config, nodeOutputs)
+            case 'queue':
+              return await this.executeQueueNode(config)
+            default:
+              throw new Error(`Unknown node type: ${node.type}`)
+          }
+        })()
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Execution timed out after ${timeoutMs}ms`))
+          }, timeoutMs)
+        })
+
+        result = await Promise.race([executionPromise, timeoutPromise])
+
+        return {
+          success: true,
+          data: result,
+          durationMs: Date.now() - startTime,
         }
-      })()
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Execution timed out after ${timeoutMs}ms`))
-        }, timeoutMs)
-      })
-
-      result = await Promise.race([executionPromise, timeoutPromise])
-
-      return {
-        success: true,
-        data: result,
-        durationMs: Date.now() - startTime,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: (error as Error).message,
-        durationMs: Date.now() - startTime,
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          durationMs: Date.now() - startTime,
+        }
       }
     }
+
+    if (!retryPolicy) {
+      return executeOnce()
+    }
+
+    let lastResult: TaskResult
+    let attempt = 0
+    const maxAttempts = retryPolicy.maxRetries + 1
+
+    while (attempt < maxAttempts) {
+      lastResult = await executeOnce()
+      if (lastResult.success) {
+        return lastResult
+      }
+      attempt++
+      if (attempt < maxAttempts) {
+        const backoffDelay = Math.pow(retryPolicy.backoffMultiplier, attempt - 1)
+        await new Promise(resolve => setTimeout(resolve, backoffDelay * 1000))
+      }
+    }
+
+    return lastResult!
   }
 
   private async executeActionNode(

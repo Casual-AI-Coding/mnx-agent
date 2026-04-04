@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.5] - 2026-04-04
+
+### Added
+- **API Response Helpers** - Standardized API response middleware
+  - `server/middleware/api-response.ts` with `successResponse`, `errorResponse`, `createdResponse`, `deletedResponse`
+  - Consistent `{ success, data, error }` response format across all routes
+
+- **Workflow Engine Enhancements** - Advanced execution features
+  - **Node-level timeout**: Configure timeout per node (`timeout?: number` in seconds)
+  - **Retry policy**: Support for `retryPolicy.maxRetries` and `retryPolicy.backoffMultiplier`
+  - **Parallel execution**: Independent nodes in same topological layer execute concurrently via `Promise.all()`
+
+- **WebSocket Real-time Updates** - Live workflow execution tracking
+  - New `useWorkflowUpdates` hook for subscribing to workflow execution events
+  - Events: `workflow_node_start`, `workflow_node_complete`, `workflow_node_error`
+  - Visual feedback on nodes during workflow execution
+
+- **Dead Letter Queue UI** - Failed task management interface
+  - New `DeadLetterQueue.tsx` page at `/dead-letter-queue`
+  - List/retry/delete failed tasks
+  - Filter by task type, date range
+  - Bulk retry functionality
+  - Statistics dashboard
+
+### Performance
+- **Database indexes**: Added `migration_021` with `idx_execution_log_details_log_id`
+- Most indexes from task requirements already existed in `migration_020` and `migration_002`
+
 ## [1.3.4] - 2026-04-04
 
 ### Added

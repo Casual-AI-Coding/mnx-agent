@@ -15,6 +15,11 @@ class TestableWorkflowEngine extends WorkflowEngine {
       .buildExecutionOrder(workflow)
   }
 
+  testBuildExecutionLayers(workflow: WorkflowGraph): string[][] {
+    return (this as unknown as { buildExecutionLayers(w: WorkflowGraph): string[][] })
+      .buildExecutionLayers(workflow)
+  }
+
   testResolveTemplateString(template: string, nodeOutputs: Map<string, unknown>): string {
     return (this as unknown as { resolveTemplateString(t: string, n: Map<string, unknown>): string })
       .resolveTemplateString(template, nodeOutputs)
@@ -186,6 +191,29 @@ describe('WorkflowEngine', () => {
       expect(sorted).toContain('a')
       expect(sorted).toContain('b')
       expect(sorted).toContain('c')
+    })
+
+    it('should build correct execution layers for parallel execution', () => {
+      const nodes: WorkflowNode[] = [
+        { id: 'start', type: 'action', data: { label: 'start', config: {} } },
+        { id: 'a', type: 'action', data: { label: 'a', config: {} } },
+        { id: 'b', type: 'action', data: { label: 'b', config: {} } },
+        { id: 'c', type: 'action', data: { label: 'c', config: {} } },
+      ]
+      const edges: WorkflowEdge[] = [
+        { id: 'e1', source: 'start', target: 'a' },
+        { id: 'e2', source: 'start', target: 'b' },
+        { id: 'e3', source: 'a', target: 'c' },
+        { id: 'e4', source: 'b', target: 'c' },
+      ]
+      
+      const workflow: WorkflowGraph = { nodes, edges }
+      const layers = engine.testBuildExecutionLayers(workflow)
+      
+      expect(layers.length).toBe(3)
+      expect(layers[0]).toEqual(['start'])
+      expect(layers[1]).toEqual(expect.arrayContaining(['a', 'b']))
+      expect(layers[2]).toEqual(['c'])
     })
   })
 
@@ -837,6 +865,191 @@ describe('WorkflowEngine', () => {
       expect(result.success).toBe(true)
       expect(result.nodeResults.has('cond')).toBe(true)
       expect(result.nodeResults.has('defaultNode')).toBe(true) // default handle should execute regardless
+    })
+  })
+
+  describe('Node-Level Timeout', () => {
+    it('should use node-level timeout when specified', async () => {
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'slow-node', 
+            type: 'action', 
+            timeout: 5000, // 5 seconds
+            data: { label: 'slow', config: { service: 'svc', method: 'slow' } } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+    })
+
+    it('should fail when node exceeds its timeout', async () => {
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100)) // 100ms delay
+        return 'result'
+      })
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'fast-timeout', 
+            type: 'action', 
+            timeout: 50, // 50ms timeout - should fail
+            data: { label: 'fast', config: { service: 'svc', method: 'slow' } } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('timed out')
+    })
+  })
+
+  describe('Node-Level Retry Policy', () => {
+    it('should retry failed node according to retryPolicy', async () => {
+      let callCount = 0
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++
+        if (callCount < 3) {
+          throw new Error('Temporary failure')
+        }
+        return 'success after retry'
+      })
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'retry-node', 
+            type: 'action', 
+            retryPolicy: { maxRetries: 3, backoffMultiplier: 1 },
+            data: { label: 'retry', config: { service: 'svc', method: 'flaky' } } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      expect(callCount).toBe(3)
+      expect(result.nodeResults.get('retry-node')?.data).toBe('success after retry')
+    })
+
+    it('should fail after exceeding maxRetries', async () => {
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Persistent failure'))
+      
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { 
+            id: 'fail-node', 
+            type: 'action', 
+            retryPolicy: { maxRetries: 2, backoffMultiplier: 1 },
+            data: { label: 'fail', config: { service: 'svc', method: 'alwaysFail' } } 
+          },
+        ],
+        edges: [],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Persistent failure')
+      // Should have tried initial + 2 retries = 3 total
+      expect((mockServiceRegistry.call as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3)
+    })
+  })
+
+  describe('Parallel Execution', () => {
+    it('should execute independent nodes in parallel', async () => {
+      const callOrder: string[] = []
+      
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockImplementation(async (service: string, method: string) => {
+        callOrder.push(`${method}-start`)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        callOrder.push(`${method}-end`)
+        return 'result'
+      })
+      
+      // Nodes a and b are independent (both depend only on start)
+      // Node c depends on both a and b
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'start', type: 'action', data: { label: 'start', config: { service: 'svc', method: 'start' } } },
+          { id: 'a', type: 'action', data: { label: 'a', config: { service: 'svc', method: 'a' } } },
+          { id: 'b', type: 'action', data: { label: 'b', config: { service: 'svc', method: 'b' } } },
+          { id: 'c', type: 'action', data: { label: 'c', config: { service: 'svc', method: 'c' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'start', target: 'a' },
+          { id: 'e2', source: 'start', target: 'b' },
+          { id: 'e3', source: 'a', target: 'c' },
+          { id: 'e4', source: 'b', target: 'c' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      
+      // Verify c is called after both a and b
+      const cStartIndex = callOrder.indexOf('c-start')
+      const aEndIndex = callOrder.indexOf('a-end')
+      const bEndIndex = callOrder.indexOf('b-end')
+      
+      expect(cStartIndex).toBeGreaterThan(aEndIndex)
+      expect(cStartIndex).toBeGreaterThan(bEndIndex)
+    })
+
+    it('should not execute dependent node until all dependencies complete', async () => {
+      const executionOrder: string[] = []
+      
+      ;(mockServiceRegistry.call as ReturnType<typeof vi.fn>).mockImplementation(async (service: string, method: string) => {
+        executionOrder.push(`${method}-start`)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        executionOrder.push(`${method}-end`)
+        return 'result'
+      })
+      
+      // Diamond pattern: a -> b,c -> d
+      // b and c are independent but both depend on a
+      // d depends on both b and c
+      const workflowJson = JSON.stringify({
+        nodes: [
+          { id: 'a', type: 'action', data: { label: 'a', config: { service: 'svc', method: 'a' } } },
+          { id: 'b', type: 'action', data: { label: 'b', config: { service: 'svc', method: 'b' } } },
+          { id: 'c', type: 'action', data: { label: 'c', config: { service: 'svc', method: 'c' } } },
+          { id: 'd', type: 'action', data: { label: 'd', config: { service: 'svc', method: 'd' } } },
+        ],
+        edges: [
+          { id: 'e1', source: 'a', target: 'b' },
+          { id: 'e2', source: 'a', target: 'c' },
+          { id: 'e3', source: 'b', target: 'd' },
+          { id: 'e4', source: 'c', target: 'd' },
+        ],
+      })
+      
+      const result = await engine.executeWorkflow(workflowJson)
+      
+      expect(result.success).toBe(true)
+      // a must complete before b and c start
+      const aEndIndex = executionOrder.findIndex(e => e.includes('a-end'))
+      const bStartIndex = executionOrder.findIndex(e => e.includes('b-start'))
+      const cStartIndex = executionOrder.findIndex(e => e.includes('c-start'))
+      expect(aEndIndex).toBeLessThan(bStartIndex)
+      expect(aEndIndex).toBeLessThan(cStartIndex)
+      // d must start after both b and c complete
+      const dStartIndex = executionOrder.findIndex(e => e.includes('d-start'))
+      const bEndIndex = executionOrder.findIndex(e => e.includes('b-end'))
+      const cEndIndex = executionOrder.findIndex(e => e.includes('c-end'))
+      expect(dStartIndex).toBeGreaterThan(bEndIndex)
+      expect(dStartIndex).toBeGreaterThan(cEndIndex)
     })
   })
 })
