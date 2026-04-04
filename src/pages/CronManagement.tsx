@@ -62,6 +62,9 @@ import { useExecutionLogsStore } from '@/stores/executionLogs'
 import { useCapacityStore } from '@/stores/capacity'
 import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
 import { useTaskQueueStore } from '@/stores/taskQueue'
+import { useCronJobsWebSocket } from '@/hooks/useCronJobsWebSocket'
+import { useTaskQueueWebSocket } from '@/hooks/useTaskQueueWebSocket'
+import { useExecutionLogsWebSocket } from '@/hooks/useExecutionLogsWebSocket'
 import { TaskStatus } from '@/types/cron'
 import type {
   CronJob,
@@ -79,6 +82,7 @@ import {
   getLocalTimezone,
   formatDateWithTimezone,
 } from '@/lib/cron-utils'
+import { CronExpressionBuilder } from '@/components/cron/CronExpressionBuilder'
 
 // ============================================
 // Helper Components
@@ -299,24 +303,13 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             <label className="text-sm font-medium text-muted-foreground">
               Cron Expression <span className="text-destructive">*</span>
             </label>
-            <Input
+            <CronExpressionBuilder
               value={formData.cronExpression}
-              onChange={(e) => setFormData({ ...formData, cronExpression: e.target.value })}
-              placeholder="0 9 * * *"
-              className={errors.cronExpression ? 'border-destructive' : ''}
+              onChange={(expression) => setFormData({ ...formData, cronExpression: expression })}
+              timezone={formData.timezone}
             />
-            {formData.cronExpression && (
-              <div className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium">Schedule: </span>
-                {getCronDescription(formData.cronExpression)}
-              </div>
-            )}
-            {errors.cronExpression ? (
+            {errors.cronExpression && (
               <p className="text-sm text-destructive">{errors.cronExpression}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground/50">
-                Format: minute hour day month weekday (e.g., &quot;0 9 * * *&quot; runs daily at 9:00 AM)
-              </p>
             )}
           </div>
 
@@ -502,24 +495,13 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
             <label className="text-sm font-medium text-muted-foreground">
               Cron Expression <span className="text-destructive">*</span>
             </label>
-            <Input
+            <CronExpressionBuilder
               value={formData.cronExpression ?? ''}
-              onChange={(e) => setFormData({ ...formData, cronExpression: e.target.value })}
-              placeholder="0 9 * * *"
-              className={errors.cronExpression ? 'border-destructive' : ''}
+              onChange={(expression) => setFormData({ ...formData, cronExpression: expression })}
+              timezone={formData.timezone || getLocalTimezone()}
             />
-            {formData.cronExpression && (
-              <div className="text-sm text-muted-foreground mt-1">
-                <span className="font-medium">Schedule: </span>
-                {getCronDescription(formData.cronExpression)}
-              </div>
-            )}
-            {errors.cronExpression ? (
+            {errors.cronExpression && (
               <p className="text-sm text-destructive">{errors.cronExpression}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground/50">
-                Format: minute hour day month weekday
-              </p>
             )}
           </div>
 
@@ -1268,6 +1250,10 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
 // ============================================
 
 export default function CronManagement() {
+  useCronJobsWebSocket()
+  useTaskQueueWebSocket()
+  useExecutionLogsWebSocket()
+
   const [activeTab, setActiveTab] = useState('jobs')
 
   const tabs = [

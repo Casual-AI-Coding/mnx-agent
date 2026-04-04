@@ -47,6 +47,7 @@ import {
   History,
   Tag,
   GitCommit,
+  Bug,
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
@@ -56,14 +57,19 @@ import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
 import { WorkflowSelectorModal } from '@/components/workflow/TemplateSelectorModal'
+import { TestRunPanel } from '@/components/workflow/TestRunPanel'
+import { NodeOutputPanel } from '@/components/workflow/NodeOutputPanel'
 import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
 import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
 import { useWorkflowUpdates } from '@/hooks/useWorkflowUpdates'
 import { NodeStatusIndicator } from '@/components/workflow/NodeStatusIndicator'
+import { getWebSocketClient } from '@/lib/websocket-client'
+import type { WebSocketEvent, WorkflowTestEventPayload, WorkflowNodeOutputPayload } from '@/lib/websocket-client'
 import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
 import { validateWorkflow, getNodeErrors, type ValidationError } from '@/lib/workflow-validation'
+import { getErrorHelp } from '@/lib/workflow-error-messages'
 import {
   getWorkflowVersions,
   getActiveVersion,
@@ -215,6 +221,7 @@ function Toolbar({
   onRedo,
   onSaveVersion,
   onToggleVersionPanel,
+  onTestRun,
   canUndo,
   canRedo,
   isValid,
@@ -227,6 +234,7 @@ function Toolbar({
   activeVersion,
   onVersionChange,
   isLoadingVersions,
+  hasWorkflowId,
 }: {
   onSave: () => void
   onSaveToServer: () => void
@@ -238,6 +246,7 @@ function Toolbar({
   onRedo: () => void
   onSaveVersion: () => void
   onToggleVersionPanel: () => void
+  onTestRun?: () => void
   canUndo: boolean
   canRedo: boolean
   isValid: boolean
@@ -250,6 +259,7 @@ function Toolbar({
   activeVersion: WorkflowVersion | null
   onVersionChange: (versionId: string) => void
   isLoadingVersions: boolean
+  hasWorkflowId: boolean
 }) {
   return (
     <div className="h-14 bg-muted/30 border-b border-border flex items-center justify-between px-4">
@@ -376,6 +386,21 @@ function Toolbar({
         >
           <CheckCircle className="w-4 h-4" />
           Validate
+        </button>
+
+        <button
+          onClick={onTestRun}
+          disabled={!hasWorkflowId}
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+            hasWorkflowId
+              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+          )}
+          title={hasWorkflowId ? '运行测试' : '请先保存工作流'}
+        >
+          <Bug className="w-4 h-4" />
+          测试运行
         </button>
 
         <button
@@ -635,6 +660,31 @@ function ConfigPanel({
           <X className="w-4 h-4 text-muted-foreground/70" />
         </button>
       </div>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="px-4 pt-4">
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>配置问题</span>
+            </div>
+            {validationErrors.map((error, idx) => {
+              const help = getErrorHelp(error.code)
+              return (
+                <div key={idx} className="text-xs">
+                  <div className="text-red-300 font-medium">{help.title}</div>
+                  <div className="text-red-400/70 mt-0.5">{help.description}</div>
+                  <div className="text-primary-foreground/60 mt-1 flex items-start gap-1.5">
+                    <span className="text-[10px] text-primary">💡</span>
+                    <span>{help.suggestion}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Config Fields */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1004,11 +1054,51 @@ function WorkflowBuilderInner() {
   
   const [history, setHistory] = React.useState<{ past: { nodes: Node[], edges: Edge[] }[], future: { nodes: Node[], edges: Edge[] }[] }>({ past: [], future: [] })
 
-  // Real-time validation state
   const [validationErrors, setValidationErrors] = React.useState<ValidationError[]>([])
   const [validationSummary, setValidationSummary] = React.useState<{ total: number; errors: number; warnings: number }>({ total: 0, errors: 0, warnings: 0 })
 
-  // Real-time validation - validate whenever nodes or edges change
+  const [showTestPanel, setShowTestPanel] = React.useState(false)
+  const [testNodeResults, setTestNodeResults] = React.useState<Map<string, { input?: unknown; output?: unknown; error?: string; duration?: number }>>(new Map())
+  const [selectedTestNode, setSelectedTestNode] = React.useState<string | null>(null)
+  const [showNodeOutputPanel, setShowNodeOutputPanel] = React.useState(false)
+  
+  React.useEffect(() => {
+    const client = getWebSocketClient()
+    if (!client) return
+
+    const unsubscribe = client.onEvent('workflows', (event: WebSocketEvent) => {
+      switch (event.type) {
+        case 'workflow_test_started': {
+          const payload = event.payload as WorkflowTestEventPayload
+          setCurrentExecutionId(payload.executionId)
+          setExecutionStatus('running')
+          setExecutionStartTime(new Date())
+          setTestNodeResults(new Map())
+          break
+        }
+        case 'workflow_test_completed': {
+          const payload = event.payload as WorkflowTestEventPayload
+          setExecutionStatus(payload.status === 'failed' ? 'idle' : 'completed')
+          break
+        }
+        case 'workflow_node_output': {
+          const payload = event.payload as WorkflowNodeOutputPayload
+          setTestNodeResults((prev) => {
+            const next = new Map(prev)
+            next.set(payload.nodeId, {
+              output: payload.output,
+              duration: payload.duration,
+            })
+            return next
+          })
+          break
+        }
+      }
+    })
+
+    return () => unsubscribe()
+  }, [])
+
   React.useEffect(() => {
     const storeNodes = nodes.map(rfNodeToStoreNode)
     const storeEdges = edges.map((e) => ({
@@ -1591,6 +1681,7 @@ function WorkflowBuilderInner() {
         onRedo={handleRedo}
         onSaveVersion={handleSaveVersion}
         onToggleVersionPanel={() => setShowVersionPanel(!showVersionPanel)}
+        onTestRun={() => setShowTestPanel(!showTestPanel)}
         canUndo={canUndo}
         canRedo={canRedo}
         isValid={workflowIsValid}
@@ -1603,6 +1694,7 @@ function WorkflowBuilderInner() {
         activeVersion={activeVersion}
         onVersionChange={handleVersionChange}
         isLoadingVersions={isLoadingVersions}
+        hasWorkflowId={!!searchParams.get('id')}
       />
 
       {saveMessage && (
@@ -1753,6 +1845,71 @@ function WorkflowBuilderInner() {
               onDelete={handleDeleteNode}
               validationErrors={validationErrors}
             />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showTestPanel && (
+            <motion.div
+              initial={{ x: 320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 320, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-80 bg-background border-l border-border flex flex-col h-full"
+            >
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bug className="w-5 h-5 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">测试运行</h3>
+                </div>
+                <button
+                  onClick={() => setShowTestPanel(false)}
+                  className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground/70" />
+                </button>
+              </div>
+              <div className="p-4 flex-1 overflow-y-auto">
+                {searchParams.get('id') ? (
+                  <TestRunPanel
+                    workflowId={searchParams.get('id')!}
+                    nodes={nodes}
+                    onNodeClick={(nodeId) => {
+                      setSelectedTestNode(nodeId)
+                      setShowNodeOutputPanel(true)
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    请先保存工作流以运行测试
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showNodeOutputPanel && selectedTestNode && (
+            <motion.div
+              initial={{ x: 320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 320, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed right-0 top-14 bottom-0 w-80 z-50"
+            >
+              <NodeOutputPanel
+                nodeId={selectedTestNode}
+                nodeName={nodes.find((n) => n.id === selectedTestNode)?.data?.label as string || selectedTestNode}
+                output={testNodeResults.get(selectedTestNode)?.output}
+                error={testNodeResults.get(selectedTestNode)?.error}
+                duration={testNodeResults.get(selectedTestNode)?.duration}
+                onClose={() => {
+                  setShowNodeOutputPanel(false)
+                  setSelectedTestNode(null)
+                }}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

@@ -6,7 +6,8 @@ import { UserService } from './user-service.js'
 export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
         'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
-        'log_created' | 'log_updated'
+        'log_created' | 'log_updated' |
+        'workflow_test_started' | 'workflow_test_completed' | 'workflow_node_output'
   payload: unknown
   timestamp: string
 }
@@ -104,6 +105,30 @@ class CronEventEmitter extends EventEmitter {
     this.emit('log_event', {
       type: 'log_updated',
       payload: log,
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitWorkflowTestStarted(workflowId: string, executionId: string): void {
+    this.emit('workflow_event', {
+      type: 'workflow_test_started',
+      payload: { workflowId, executionId },
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitWorkflowTestCompleted(workflowId: string, executionId: string, result: unknown, error?: string): void {
+    this.emit('workflow_event', {
+      type: 'workflow_test_completed',
+      payload: { workflowId, executionId, result, error },
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitWorkflowNodeOutput(nodeId: string, output: unknown, executionId: string): void {
+    this.emit('workflow_event', {
+      type: 'workflow_node_output',
+      payload: { nodeId, output, executionId },
       timestamp: new Date().toISOString()
     } as CronEvent)
   }
@@ -207,6 +232,7 @@ export function initCronWebSocket(server: Server): WebSocketServer {
   cronEvents.on('job_event', (event: CronEvent) => sendToClients('jobs', event))
   cronEvents.on('task_event', (event: CronEvent) => sendToClients('tasks', event))
   cronEvents.on('log_event', (event: CronEvent) => sendToClients('logs', event))
+  cronEvents.on('workflow_event', (event: CronEvent) => sendToClients('workflows', event))
 
   startHeartbeat()
 

@@ -1,14 +1,19 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ExecutionLog } from '../types/cron'
+import { TaskStatus, TriggerType } from '../types/cron'
 import { getLogs, getLogById } from '@/lib/api/cron'
+import { getWebSocketClient, type LogEventPayload } from '@/lib/websocket-client'
 
 interface ExecutionLogsState {
   logs: ExecutionLog[]
   loading: boolean
   error: string | null
+  _wsUnsubscribe?: () => void
   fetchLogs: (jobId?: string, limit?: number) => Promise<void>
   fetchLogById: (id: string) => Promise<ExecutionLog | null>
+  subscribeToWebSocket: () => void
+  unsubscribeFromWebSocket: () => void
 }
 
 export const useExecutionLogsStore = create<ExecutionLogsState>()(
@@ -58,6 +63,87 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
             loading: false,
           })
           return null
+        }
+      },
+
+      subscribeToWebSocket: () => {
+        const client = getWebSocketClient()
+        if (!client) return
+
+        const currentUnsub = get()._wsUnsubscribe
+        if (currentUnsub) return
+
+        const mapStatus = (status: string | undefined): TaskStatus => {
+          switch (status) {
+            case 'success':
+              return TaskStatus.Completed
+            case 'failed':
+              return TaskStatus.Failed
+            case 'running':
+              return TaskStatus.Running
+            default:
+              return TaskStatus.Running
+          }
+        }
+
+        const unsub = client.onEvent('logs', (event) => {
+          const { type, payload } = event
+          const logPayload = payload as LogEventPayload
+
+          switch (type) {
+            case 'log_created':
+              if (logPayload.id && logPayload.jobId) {
+                const { id, jobId, status, executedAt } = logPayload
+                set((state) => {
+                  if (state.logs.find((l) => l.id === id)) return state
+                  const newLog: ExecutionLog = {
+                    id,
+                    jobId,
+                    status: mapStatus(status),
+                    triggerType: TriggerType.Cron,
+                    startedAt: executedAt,
+                    completedAt: null,
+                    durationMs: null,
+                    tasksExecuted: logPayload.tasksExecuted ?? 0,
+                    tasksSucceeded: logPayload.tasksSucceeded ?? 0,
+                    tasksFailed: logPayload.tasksFailed ?? 0,
+                    errorSummary: logPayload.error ?? null,
+                    logDetail: null,
+                  }
+                  return { logs: [newLog, ...state.logs].slice(0, 100) }
+                })
+              }
+              break
+
+            case 'log_updated':
+              if (logPayload.id) {
+                set((state) => ({
+                  logs: state.logs.map((log) =>
+                    log.id === logPayload.id
+                      ? {
+                          ...log,
+                          status: logPayload.status ? mapStatus(logPayload.status) : log.status,
+                          tasksExecuted: logPayload.tasksExecuted ?? log.tasksExecuted,
+                          tasksSucceeded: logPayload.tasksSucceeded ?? log.tasksSucceeded,
+                          tasksFailed: logPayload.tasksFailed ?? log.tasksFailed,
+                          errorSummary: logPayload.error ?? log.errorSummary,
+                        }
+                      : log
+                  ),
+                }))
+              }
+              break
+          }
+        })
+
+        set({ _wsUnsubscribe: unsub })
+      },
+
+      unsubscribeFromWebSocket: () => {
+        const unsub = get()._wsUnsubscribe
+        if (unsub) {
+          unsub()
+          set({ _wsUnsubscribe: undefined })
         }
       },
     }),

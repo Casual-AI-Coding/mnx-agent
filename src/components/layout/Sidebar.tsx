@@ -31,6 +31,7 @@ import {
   Layers,
   AlertTriangle,
   Webhook,
+  Store,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -170,19 +171,20 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
         { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield },
       ],
     },
-    {
-      id: 'automation',
-      label: '自动化',
-      icon: Cog,
-      minRole: 'pro' as UserRole,
-      items: [
-        { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
-        { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
-        { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
-        { path: '/webhooks', label: 'Webhooks', icon: Webhook },
-        { path: '/dead-letter-queue', label: t('sidebar.deadLetterQueue', '死信队列'), icon: AlertTriangle },
-      ],
-    },
+      {
+        id: 'automation',
+        label: '自动化',
+        icon: Cog,
+        minRole: 'pro' as UserRole,
+        items: [
+          { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+          { path: '/workflow-marketplace', label: '模板市场', icon: Store },
+          { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
+          { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
+          { path: '/webhooks', label: 'Webhooks', icon: Webhook },
+          { path: '/dead-letter-queue', label: t('sidebar.deadLetterQueue', '死信队列'), icon: AlertTriangle },
+        ],
+      },
     {
       id: 'system',
       label: '系统管理',

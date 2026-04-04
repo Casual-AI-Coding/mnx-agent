@@ -32,3 +32,8 @@ export const listWorkflowsQuerySchema = z.object({
 })
 
 export const partialWorkflowSchema = updateWorkflowSchema
+
+export const testRunWorkflowSchema = z.object({
+  testData: z.record(z.string(), z.unknown()).optional().default({}),
+  dryRun: z.boolean().optional().default(false),
+})

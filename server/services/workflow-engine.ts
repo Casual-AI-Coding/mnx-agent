@@ -49,6 +49,11 @@ export interface WorkflowGraph {
   edges: WorkflowEdge[]
 }
 
+export interface TestExecutionOptions {
+  testData?: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
+  dryRun?: boolean
+}
+
 export class WorkflowEngine {
   private db: DatabaseService
   private serviceRegistry: ServiceNodeRegistry
@@ -59,6 +64,8 @@ export class WorkflowEngine {
   private workflowEdges: WorkflowEdge[] = []
   private pauseSignals = new Map<string, AbortController>()
   private static runningExecutions = new Map<string, WorkflowEngine>()
+  private testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }> = {}
+  private dryRun: boolean = false
 
   private static setRunningExecution(executionId: string, engine: WorkflowEngine): void {
     this.runningExecutions.set(executionId, engine)
@@ -81,7 +88,8 @@ export class WorkflowEngine {
   async executeWorkflow(
     workflowJson: string,
     executionLogId?: string,
-    taskExecutor?: TaskExecutor
+    taskExecutor?: TaskExecutor,
+    options?: TestExecutionOptions
   ): Promise<WorkflowResult> {
     const startTime = Date.now()
     const nodeResults = new Map<string, TaskResult>()
@@ -89,6 +97,8 @@ export class WorkflowEngine {
 
     this.taskExecutor = taskExecutor || this.taskExecutor
     this.executionLogId = executionLogId || null
+    this.testData = options?.testData || {}
+    this.dryRun = options?.dryRun || false
 
     // Check if database supports execution state persistence
     const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
@@ -607,6 +617,35 @@ export class WorkflowEngine {
         startedAt: new Date().toISOString(),
         workflowId: this.workflowId,
       })
+    }
+
+    if (this.dryRun) {
+      const mockResponse = this.testData[node.id]?.mockResponse || {
+        success: true,
+        message: '[Dry Run] API call skipped',
+        service,
+        method,
+        mockData: true,
+      }
+
+      cronEvents.emitWorkflowNodeOutput(node.id, mockResponse, this.executionLogId || 'test-run')
+
+      // EMIT: workflow_node_complete
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'action',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result: mockResponse,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return mockResponse
     }
 
     if (this.executionLogId) {

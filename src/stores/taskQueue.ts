@@ -8,17 +8,21 @@ import type {
   TaskQueueFilter,
 } from '../types/cron'
 import { getTasks, createTask, updateTask, deleteTask } from '@/lib/api/cron'
+import { getWebSocketClient, type TaskEventPayload } from '@/lib/websocket-client'
 
 interface TaskQueueState {
   tasks: TaskQueueItem[]
   loading: boolean
   error: string | null
   filter: TaskQueueFilter
+  _wsUnsubscribe?: () => void
   fetchTasks: (filter?: TaskQueueFilter) => Promise<void>
   createTask: (task: CreateTaskDTO) => Promise<TaskQueueItem>
   updateTask: (id: string, updates: UpdateTaskDTO) => Promise<TaskQueueItem>
   deleteTask: (id: string) => Promise<void>
   setFilter: (filter: TaskQueueFilter) => void
+  subscribeToWebSocket: () => void
+  unsubscribeFromWebSocket: () => void
 }
 
 const realApi = {
@@ -132,6 +136,113 @@ export const useTaskQueueStore = create<TaskQueueState>()(
 
       setFilter: (filter) => {
         set({ filter })
+      },
+
+      subscribeToWebSocket: () => {
+        const client = getWebSocketClient()
+        if (!client) return
+
+        const currentUnsub = get()._wsUnsubscribe
+        if (currentUnsub) return
+
+        const unsub = client.onEvent('tasks', (event) => {
+          const { type, payload } = event
+          const taskPayload = payload as TaskEventPayload
+
+          switch (type) {
+            case 'task_created':
+              if (
+                taskPayload.id &&
+                taskPayload.jobId &&
+                taskPayload.taskType &&
+                taskPayload.status
+              ) {
+                const {
+                  id,
+                  jobId,
+                  taskType,
+                  status,
+                  retryCount,
+                  error,
+                } = taskPayload
+                set((state) => {
+                  if (state.tasks.find((t) => t.id === id)) return state
+                  const newTask: TaskQueueItem = {
+                    id,
+                    jobId,
+                    taskType,
+                    status: status as TaskStatus,
+                    payload: {},
+                    priority: 5,
+                    retryCount: retryCount ?? 0,
+                    maxRetries: 5,
+                    errorMessage: error ?? null,
+                    result: null,
+                    createdAt: new Date().toISOString(),
+                    startedAt: null,
+                    completedAt: null,
+                  }
+                  return { tasks: [newTask, ...state.tasks] }
+                })
+              }
+              break
+
+            case 'task_updated':
+            case 'task_completed':
+            case 'task_failed':
+              set((state) => ({
+                tasks: state.tasks.map((task) =>
+                  task.id === taskPayload.id
+                    ? {
+                        ...task,
+                        status: taskPayload.status as TaskStatus,
+                        errorMessage: taskPayload.error ?? task.errorMessage,
+                        result: taskPayload.result
+                          ? (taskPayload.result as Record<string, unknown>)
+                          : task.result,
+                        completedAt:
+                          taskPayload.status === 'completed' || taskPayload.status === 'failed'
+                            ? new Date().toISOString()
+                            : task.completedAt,
+                      }
+                    : task
+                ),
+              }))
+              break
+
+            case 'task_moved_to_dlq':
+              if (taskPayload.id) {
+                set((state) => ({
+                  tasks: state.tasks.filter((task) => task.id !== taskPayload.id),
+                }))
+              }
+              break
+
+            case 'retry_scheduled':
+              set((state) => ({
+                tasks: state.tasks.map((task) =>
+                  task.id === taskPayload.id
+                    ? {
+                        ...task,
+                        status: 'pending' as TaskStatus,
+                        retryCount: taskPayload.retryCount ?? task.retryCount + 1,
+                      }
+                    : task
+                ),
+              }))
+              break
+          }
+        })
+
+        set({ _wsUnsubscribe: unsub })
+      },
+
+      unsubscribeFromWebSocket: () => {
+        const unsub = get()._wsUnsubscribe
+        if (unsub) {
+          unsub()
+          set({ _wsUnsubscribe: undefined })
+        }
       },
     }),
     {

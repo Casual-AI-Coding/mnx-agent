@@ -2,10 +2,62 @@ import { toastInfo, toastSuccess, toastError } from './toast'
 
 export interface WebSocketMessage {
   type: 'connected' | 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
-        'task_created' | 'task_updated' | 'task_completed' | 'task_failed' |
-        'log_created' | 'log_updated'
+        'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
+        'log_created' | 'log_updated' |
+        'workflow_test_started' | 'workflow_test_completed' | 'workflow_node_output' |
+        'retry_scheduled' | 'queue_capacity_warning'
   timestamp: string
   payload?: unknown
+}
+
+export interface TaskEventPayload {
+  id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  jobId?: string
+  taskType?: string
+  result?: unknown
+  error?: string
+  retryCount?: number
+  retryAt?: string
+}
+
+export interface LogEventPayload {
+  id: string
+  jobId: string
+  status: 'success' | 'failed' | 'running'
+  output?: unknown
+  error?: string
+  tasksExecuted?: number
+  tasksSucceeded?: number
+  tasksFailed?: number
+  executedAt: string
+}
+
+export interface JobEventPayload {
+  id: string
+  jobId?: string
+  name?: string
+  is_active?: boolean
+  last_run_at?: string
+  next_run_at?: string
+  total_runs?: number
+  total_failures?: number
+  success?: boolean
+}
+
+export interface WorkflowTestEventPayload {
+  workflowId: string
+  executionId: string
+  status?: 'running' | 'completed' | 'failed'
+  result?: unknown
+  error?: string
+}
+
+export interface WorkflowNodeOutputPayload {
+  nodeId: string
+  executionId: string
+  output: unknown
+  duration?: number
 }
 
 export interface SubscribeMessage {
@@ -13,7 +65,7 @@ export interface SubscribeMessage {
   channels: string[]
 }
 
-export type WebSocketChannel = 'all' | 'jobs' | 'tasks' | 'logs'
+export type WebSocketChannel = 'all' | 'jobs' | 'tasks' | 'logs' | 'workflows'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
 
@@ -249,6 +301,9 @@ export class ReconnectingWebSocket {
     if (type.startsWith('job_')) return 'jobs'
     if (type.startsWith('task_')) return 'tasks'
     if (type.startsWith('log_')) return 'logs'
+    if (type.startsWith('workflow_')) return 'workflows'
+    if (type.startsWith('retry_')) return 'tasks'
+    if (type.startsWith('queue_')) return 'tasks'
     return 'all'
   }
 
@@ -391,6 +446,27 @@ export function showEventToast(event: WebSocketEvent): void {
       break
     case 'task_failed':
       toastError('任务执行失败', (event.payload as { id?: string })?.id || '')
+      break
+    case 'task_moved_to_dlq':
+      toastError('任务移至死信队列', (event.payload as { id?: string })?.id || '')
+      break
+    case 'workflow_test_started':
+      toastInfo('开始测试工作流', (event.payload as { workflowId?: string })?.workflowId || '')
+      break
+    case 'workflow_test_completed': {
+      const payload = event.payload as { status?: string; error?: string }
+      if (payload.status === 'failed' || payload.error) {
+        toastError('工作流测试失败', payload.error || '未知错误')
+      } else {
+        toastSuccess('工作流测试完成', '所有节点执行成功')
+      }
+      break
+    }
+    case 'retry_scheduled':
+      toastInfo('任务重试已调度', `将在 ${(event.payload as { retryAt?: string })?.retryAt} 重试`)
+      break
+    case 'queue_capacity_warning':
+      toastError('队列容量警告', `剩余容量: ${(event.payload as { remaining?: number })?.remaining || 0}`)
       break
   }
 }

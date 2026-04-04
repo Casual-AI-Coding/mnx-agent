@@ -15,8 +15,13 @@ import { cronEvents } from './websocket-service'
 
 export type { DatabaseService }
 
+export interface TestExecutionOptions {
+  testData?: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
+  dryRun?: boolean
+}
+
 export interface WorkflowEngine {
-  executeWorkflow(workflowJson: string, executionLogId?: string, taskExecutor?: TaskExecutor): Promise<WorkflowResult>
+  executeWorkflow(workflowJson: string, executionLogId?: string, taskExecutor?: TaskExecutor, options?: TestExecutionOptions): Promise<WorkflowResult>
   pauseExecution(executionId: string): Promise<void>
   resumeExecution(executionId: string): Promise<void>
 }

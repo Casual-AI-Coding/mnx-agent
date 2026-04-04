@@ -9,9 +9,12 @@ import {
   createWorkflowSchema,
   updateWorkflowSchema,
   partialWorkflowSchema,
+  testRunWorkflowSchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import { ROLE_HIERARCHY } from '../types/workflow'
+import { WorkflowEngine } from '../services/workflow-engine'
+import { cronEvents } from '../services/websocket-service'
 
 const router = Router()
 
@@ -275,6 +278,56 @@ router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async
     return
   }
   deletedResponse(res)
+}))
+
+router.post('/:id/test-run', asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { testData = {}, dryRun = false } = req.body
+  const ownerId = buildOwnerFilter(req).params[0]
+
+  const db = await getDatabase()
+
+  const workflow = await db.getWorkflowTemplateById(id, ownerId)
+  if (!workflow) {
+    return errorResponse(res, 'Workflow not found', 404)
+  }
+
+  const nodes = JSON.parse(workflow.nodes_json)
+  const edges = JSON.parse(workflow.edges_json)
+  const executionId = `test_${Date.now()}`
+
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const workflowEngine = new WorkflowEngine(db, serviceRegistry)
+
+  cronEvents.emitWorkflowTestStarted(id, executionId)
+
+  try {
+    const workflowJson = JSON.stringify({ nodes, edges })
+    const result = await workflowEngine.executeWorkflow(workflowJson, executionId, undefined, { testData, dryRun })
+
+    const nodeResults: Array<{ id: string; status: string; output: unknown; duration: number }> = []
+    result.nodeResults.forEach((nodeResult, nodeId) => {
+      nodeResults.push({
+        id: nodeId,
+        status: nodeResult.success ? 'completed' : 'failed',
+        output: nodeResult.data,
+        duration: nodeResult.durationMs,
+      })
+    })
+
+    cronEvents.emitWorkflowTestCompleted(id, executionId, { nodeResults, success: result.success })
+
+    successResponse(res, {
+      executionId,
+      nodes: nodeResults,
+      duration: result.totalDurationMs,
+      status: result.success ? 'completed' : 'failed',
+    })
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Test run failed'
+    cronEvents.emitWorkflowTestCompleted(id, executionId, null, errorMessage)
+    errorResponse(res, errorMessage, 500)
+  }
 }))
 
 export default router

@@ -19,6 +19,7 @@ import {
   removeJobDependency as apiRemoveJobDependency,
   getJobDependencies as apiGetJobDependencies,
 } from '../lib/api/cron'
+import { getWebSocketClient, type JobEventPayload } from '@/lib/websocket-client'
 
 function transformJobResponse(job: BackendJob): CronJob {
   return {
@@ -42,6 +43,7 @@ interface CronJobsState {
   jobs: CronJob[]
   loading: boolean
   error: string | null
+  _wsUnsubscribe?: () => void
   fetchJobs: () => Promise<void>
   createJob: (job: CreateCronJobDTO) => Promise<CronJob>
   updateJob: (id: string, updates: UpdateCronJobDTO) => Promise<CronJob>
@@ -54,6 +56,8 @@ interface CronJobsState {
   addJobDependency: (jobId: string, dependsOnJobId: string) => Promise<string[]>
   removeJobDependency: (jobId: string, dependsOnJobId: string) => Promise<string[]>
   getJobDependencies: (jobId: string) => Promise<string[]>
+  subscribeToWebSocket: () => void
+  unsubscribeFromWebSocket: () => void
 }
 
 export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
@@ -297,6 +301,84 @@ export const useCronJobsStore = create<CronJobsState>()((set, get) => ({
         loading: false,
       })
       throw err
+    }
+  },
+
+  subscribeToWebSocket: () => {
+    const client = getWebSocketClient()
+    if (!client) return
+
+    const currentUnsub = get()._wsUnsubscribe
+    if (currentUnsub) return
+
+    const unsub = client.onEvent('jobs', (event) => {
+      const { type, payload } = event
+      const jobPayload = payload as JobEventPayload
+
+      switch (type) {
+        case 'job_created': {
+          if (jobPayload.id) {
+            const newJob = transformJobResponse(jobPayload as BackendJob)
+            set((state) => {
+              if (state.jobs.find((j) => j.id === newJob.id)) return state
+              return { jobs: [...state.jobs, newJob] }
+            })
+          }
+          break
+        }
+
+        case 'job_updated':
+        case 'job_toggled': {
+          if (jobPayload.id) {
+            const updatedJob = transformJobResponse(jobPayload as BackendJob)
+            set((state) => ({
+              jobs: state.jobs.map((job) =>
+                job.id === updatedJob.id ? { ...job, ...updatedJob } : job
+              ),
+            }))
+          }
+          break
+        }
+
+        case 'job_deleted': {
+          const { id } = jobPayload
+          if (id) {
+            set((state) => ({
+              jobs: state.jobs.filter((job) => job.id !== id),
+            }))
+          }
+          break
+        }
+
+        case 'job_executed': {
+          const { jobId, success } = jobPayload
+          if (jobId) {
+            set((state) => ({
+              jobs: state.jobs.map((job) =>
+                job.id === jobId
+                  ? {
+                      ...job,
+                      lastRunAt: new Date().toISOString(),
+                      totalRuns: job.totalRuns + 1,
+                      totalFailures: success ? job.totalFailures : job.totalFailures + 1,
+                    }
+                  : job
+              ),
+            }))
+          }
+          break
+        }
+      }
+    })
+
+    set({ _wsUnsubscribe: unsub })
+  },
+
+  unsubscribeFromWebSocket: () => {
+    const unsub = get()._wsUnsubscribe
+    if (unsub) {
+      unsub()
+      set({ _wsUnsubscribe: undefined })
     }
   },
 }))

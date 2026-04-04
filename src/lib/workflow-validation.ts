@@ -1,10 +1,23 @@
 import type { WorkflowNode, WorkflowEdge } from '@/types/cron'
 
+// Error codes for workflow validation
+export const ValidationErrorCode = {
+  ORPHANED_NODE: 'ORPHANED_NODE',
+  MISSING_SERVICE: 'MISSING_SERVICE',
+  MISSING_METHOD: 'MISSING_METHOD',
+  MISSING_CONDITION: 'MISSING_CONDITION',
+  CYCLE_DETECTED: 'CYCLE_DETECTED',
+  INVALID_TEMPLATE: 'INVALID_TEMPLATE',
+} as const
+
+export type ValidationErrorCode = typeof ValidationErrorCode[keyof typeof ValidationErrorCode]
+
 export interface ValidationError {
   nodeId: string
   field: string
   message: string
   severity: 'error' | 'warning'
+  code: ValidationErrorCode
 }
 
 /**
@@ -13,17 +26,16 @@ export interface ValidationError {
 export function validateNode(node: WorkflowNode): ValidationError[] {
   const errors: ValidationError[] = []
 
-  // Check required fields based on node type
   if (!node.data?.label || node.data.label.trim() === '') {
     errors.push({
       nodeId: node.id,
       field: 'label',
-      message: 'Node label is required',
+      message: '节点名称不能为空',
       severity: 'error',
+      code: 'MISSING_LABEL' as ValidationErrorCode,
     })
   }
 
-  // Validate action nodes
   if (node.type === 'action') {
     const config = node.data?.config as { service?: string; method?: string; args?: unknown[] } | undefined
 
@@ -31,8 +43,9 @@ export function validateNode(node: WorkflowNode): ValidationError[] {
       errors.push({
         nodeId: node.id,
         field: 'service',
-        message: 'Service is required for action nodes',
+        message: '动作节点需要选择服务',
         severity: 'error',
+        code: ValidationErrorCode.MISSING_SERVICE,
       })
     }
 
@@ -40,12 +53,12 @@ export function validateNode(node: WorkflowNode): ValidationError[] {
       errors.push({
         nodeId: node.id,
         field: 'method',
-        message: 'Method is required for action nodes',
+        message: '动作节点需要选择方法',
         severity: 'error',
+        code: ValidationErrorCode.MISSING_METHOD,
       })
     }
 
-    // Validate args is valid JSON if provided
     if (config?.args !== undefined) {
       try {
         JSON.stringify(config.args)
@@ -53,22 +66,23 @@ export function validateNode(node: WorkflowNode): ValidationError[] {
         errors.push({
           nodeId: node.id,
           field: 'args',
-          message: 'Arguments must be valid JSON',
+          message: '参数必须是有效的 JSON',
           severity: 'error',
+          code: ValidationErrorCode.INVALID_TEMPLATE,
         })
       }
     }
   }
 
-  // Validate condition nodes
   if (node.type === 'condition') {
     const conditionType = node.data?.config?.conditionType as string | undefined
     if (!conditionType || conditionType.trim() === '') {
       errors.push({
         nodeId: node.id,
         field: 'conditionType',
-        message: 'Condition type is required',
+        message: '条件类型是必需的',
         severity: 'error',
+        code: ValidationErrorCode.MISSING_CONDITION,
       })
     }
 
@@ -77,38 +91,38 @@ export function validateNode(node: WorkflowNode): ValidationError[] {
       errors.push({
         nodeId: node.id,
         field: 'serviceType',
-        message: 'Service type is required',
+        message: '服务类型是必需的',
         severity: 'error',
+        code: ValidationErrorCode.MISSING_CONDITION,
       })
     }
   }
 
-  // Validate loop nodes
   if (node.type === 'loop') {
     const maxIterations = node.data?.config?.maxIterations as number | undefined
     if (maxIterations !== undefined && maxIterations < 1) {
       errors.push({
         nodeId: node.id,
         field: 'maxIterations',
-        message: 'Max iterations must be at least 1',
+        message: '最大迭代次数必须至少为 1',
         severity: 'error',
+        code: 'INVALID_ITERATION' as ValidationErrorCode,
       })
     }
   }
 
-  // Validate transform nodes
   if (node.type === 'transform') {
     const transformType = node.data?.config?.transformType as string | undefined
     if (!transformType || transformType.trim() === '') {
       errors.push({
         nodeId: node.id,
         field: 'transformType',
-        message: 'Transform type is required',
+        message: '转换类型是必需的',
         severity: 'error',
+        code: ValidationErrorCode.INVALID_TEMPLATE,
       })
     }
 
-    // Validate mapping is valid JSON if provided
     const mapping = node.data?.config?.mapping
     if (mapping !== undefined) {
       try {
@@ -117,8 +131,9 @@ export function validateNode(node: WorkflowNode): ValidationError[] {
         errors.push({
           nodeId: node.id,
           field: 'mapping',
-          message: 'Mapping must be valid JSON',
+          message: '映射必须是有效的 JSON',
           severity: 'error',
+          code: ValidationErrorCode.INVALID_TEMPLATE,
         })
       }
     }
@@ -174,6 +189,49 @@ export function getValidationSummary(errors: ValidationError[]): {
 }
 
 /**
+ * Detect cycles in the workflow using DFS
+ */
+function detectCycles(nodes: WorkflowNode[], edges: WorkflowEdge[]): string[][] {
+  const cycles: string[][] = []
+  const graph = new Map<string, string[]>()
+
+  edges.forEach(edge => {
+    if (!graph.has(edge.source)) graph.set(edge.source, [])
+    graph.get(edge.source)!.push(edge.target)
+  })
+
+  const visited = new Set<string>()
+  const recStack = new Set<string>()
+  const nodeIds = new Set(nodes.map(n => n.id))
+
+  function dfs(nodeId: string, path: string[]): void {
+    visited.add(nodeId)
+    recStack.add(nodeId)
+    path.push(nodeId)
+
+    const neighbors = graph.get(nodeId) || []
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        dfs(neighbor, [...path])
+      } else if (recStack.has(neighbor)) {
+        const cycleStart = path.indexOf(neighbor)
+        cycles.push(path.slice(cycleStart))
+      }
+    }
+
+    recStack.delete(nodeId)
+  }
+
+  nodes.forEach(node => {
+    if (!visited.has(node.id)) {
+      dfs(node.id, [])
+    }
+  })
+
+  return cycles
+}
+
+/**
  * Validate the entire workflow
  */
 export function validateWorkflow(
@@ -182,12 +240,10 @@ export function validateWorkflow(
 ): ValidationError[] {
   const errors: ValidationError[] = []
 
-  // Validate each node
   for (const node of nodes) {
     errors.push(...validateNode(node))
   }
 
-  // Check for disconnected nodes (warning)
   if (nodes.length > 1) {
     const connectedNodeIds = new Set<string>()
     for (const edge of edges) {
@@ -200,29 +256,29 @@ export function validateWorkflow(
         errors.push({
           nodeId: node.id,
           field: 'connection',
-          message: 'Node is not connected to any other node',
+          message: '节点未连接到工作流',
           severity: 'warning',
+          code: ValidationErrorCode.ORPHANED_NODE,
         })
       }
     }
   }
 
-  // Check for nodes with only incoming edges (end nodes without action)
-  const outgoingNodeIds = new Set(edges.map(e => e.source))
-  const actionNodes = nodes.filter(n => n.type === 'action')
-  
-  // Warn if action nodes have no outgoing edges but could benefit from them
-  for (const node of actionNodes) {
-    if (!outgoingNodeIds.has(node.id) && nodes.length > 1) {
-      // This is a terminal node - not necessarily an error, but could be a warning
-      // Only warn if there are other nodes that could connect
-      const otherNodes = nodes.filter(n => n.id !== node.id)
-      if (otherNodes.length > 0 && !errors.some(e => e.nodeId === node.id && e.field === 'connection')) {
-        // Optional: add a warning that this is a terminal action
-        // Keeping it silent for now as terminal actions are valid
+  const cycles = detectCycles(nodes, edges)
+  const nodeIdSet = new Set(nodes.map(n => n.id))
+  cycles.forEach(cycle => {
+    cycle.forEach(nodeId => {
+      if (nodeIdSet.has(nodeId)) {
+        errors.push({
+          nodeId,
+          field: 'connection',
+          message: '检测到循环依赖',
+          severity: 'error',
+          code: ValidationErrorCode.CYCLE_DETECTED,
+        })
       }
-    }
-  }
+    })
+  })
 
   return errors
 }
