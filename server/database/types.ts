@@ -70,6 +70,7 @@ export interface TaskQueueItem {
   created_at: string
   started_at: string | null
   completed_at: string | null
+  owner_id: string | null
 }
 
 export interface CapacityRecord {
@@ -364,6 +365,7 @@ export interface TaskQueueRow {
   created_at: string
   started_at: string | null
   completed_at: string | null
+  owner_id: string | null
 }
 
 export interface ExecutionLogRow {
@@ -668,4 +670,190 @@ export interface AuditStats {
   by_resource_type: Record<string, number>
   by_response_status: Record<string, number>
   avg_duration_ms: number
+}
+
+// ============================================================================
+// Dead Letter Queue
+// ============================================================================
+
+export interface DeadLetterQueueItem {
+  id: string
+  original_task_id: string | null
+  job_id: string | null
+  owner_id: string | null
+  task_type: string
+  payload: Record<string, unknown>
+  error_message: string | null
+  retry_count: number
+  max_retries: number
+  failed_at: string
+  resolved_at: string | null
+  resolution: string | null
+  created_at: string
+}
+
+export interface DeadLetterQueueRow {
+  id: string
+  original_task_id: string | null
+  job_id: string | null
+  owner_id: string | null
+  task_type: string
+  payload: string
+  error_message: string | null
+  retry_count: number
+  max_retries: number
+  failed_at: string
+  resolved_at: string | null
+  resolution: string | null
+  created_at: string
+}
+
+export interface CreateDeadLetterQueueItem {
+  original_task_id?: string
+  job_id?: string
+  task_type: string
+  payload: Record<string, unknown>
+  error_message?: string
+  retry_count?: number
+  max_retries?: number
+  owner_id?: string | null
+}
+
+export interface UpdateDeadLetterQueueItem {
+  resolved_at?: string
+  resolution?: string
+  retry_count?: number
+}
+
+// ============================================================================
+// Job Tags
+// ============================================================================
+
+export interface JobTag {
+  id: string
+  job_id: string
+  tag: string
+  created_at: string
+}
+
+export interface JobTagRow {
+  id: string
+  job_id: string
+  tag: string
+  created_at: string
+}
+
+// ============================================================================
+// Job Dependencies
+// ============================================================================
+
+export interface JobDependency {
+  id: string
+  job_id: string
+  depends_on_job_id: string
+  created_at: string
+}
+
+export interface JobDependencyRow {
+  id: string
+  job_id: string
+  depends_on_job_id: string
+  created_at: string
+}
+
+// ============================================================================
+// Webhook Types
+// ============================================================================
+
+export type WebhookEvent = 'on_start' | 'on_success' | 'on_failure'
+
+export interface WebhookConfig {
+  id: string
+  job_id: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers: Record<string, string> | null
+  secret: string | null
+  is_active: boolean
+  owner_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookDelivery {
+  id: string
+  webhook_id: string
+  execution_log_id: string | null
+  event: WebhookEvent
+  payload: Record<string, unknown>
+  response_status: number | null
+  response_body: string | null
+  error_message: string | null
+  delivered_at: string
+  owner_id: string | null
+}
+
+export interface WebhookConfigRow {
+  id: string
+  job_id: string | null
+  name: string
+  url: string
+  events: string
+  headers: string | null
+  secret: string | null
+  is_active: boolean
+  owner_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookDeliveryRow {
+  id: string
+  webhook_id: string
+  execution_log_id: string | null
+  event: string
+  payload: string
+  response_status: number | null
+  response_body: string | null
+  error_message: string | null
+  delivered_at: string
+  owner_id: string | null
+}
+
+export interface CreateWebhookConfig {
+  job_id?: string | null
+  name: string
+  url: string
+  events: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  is_active?: boolean
+  owner_id?: string | null
+}
+
+export interface UpdateWebhookConfig {
+  job_id?: string | null
+  name?: string
+  url?: string
+  events?: WebhookEvent[]
+  headers?: Record<string, string> | null
+  secret?: string | null
+  is_active?: boolean
+}
+
+export interface CreateWebhookDelivery {
+  webhook_id: string
+  execution_log_id?: string | null
+  event: WebhookEvent
+  payload: Record<string, unknown>
+  response_status?: number | null
+  response_body?: string | null
+  error_message?: string | null
+  owner_id?: string | null
+}
+
+export interface WebhookDeliveryQuery {
+  webhook_id?: string
+  limit?: number
 }

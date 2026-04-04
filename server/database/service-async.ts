@@ -38,6 +38,22 @@ import type {
   AuditStats,
   ServiceNodePermission,
   ServiceNodePermissionRow,
+  DeadLetterQueueItem,
+  DeadLetterQueueRow,
+  CreateDeadLetterQueueItem,
+  UpdateDeadLetterQueueItem,
+  JobTag,
+  JobTagRow,
+  JobDependency,
+  JobDependencyRow,
+  WebhookConfig,
+  WebhookConfigRow,
+  WebhookDelivery,
+  WebhookDeliveryRow,
+  CreateWebhookConfig,
+  UpdateWebhookConfig,
+  CreateWebhookDelivery,
+  WebhookEvent,
 } from './types.js'
 
 function toISODate(): string {
@@ -116,6 +132,42 @@ function rowToAuditLog(row: AuditLogRow): AuditLog {
 function rowToServiceNodePermission(row: ServiceNodePermissionRow): ServiceNodePermission {
   return {
     ...row,
+  }
+}
+
+function rowToDeadLetterQueueItem(row: DeadLetterQueueRow): DeadLetterQueueItem {
+  const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+  return {
+    ...row,
+    payload,
+  }
+}
+
+function rowToJobTag(row: JobTagRow): JobTag {
+  return { ...row }
+}
+
+function rowToJobDependency(row: JobDependencyRow): JobDependency {
+  return { ...row }
+}
+
+function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
+  const events = typeof row.events === 'string' ? JSON.parse(row.events) : row.events
+  const headers = row.headers ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers) : null
+  return {
+    ...row,
+    events: events as WebhookEvent[],
+    headers: headers as Record<string, string> | null,
+    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
+  }
+}
+
+function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
+  const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+  return {
+    ...row,
+    event: row.event as WebhookEvent,
+    payload,
   }
 }
 
@@ -1913,6 +1965,417 @@ if (data.is_enabled !== undefined) {
       [userId]
     )
     return rows.map(rowToWorkflowTemplate)
+  }
+
+  // =====================================================================
+  // Dead Letter Queue
+  // =====================================================================
+
+  async createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> {
+    const id = uuidv4()
+    const now = toISODate()
+    const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
+
+    await this.conn.execute(
+      `INSERT INTO dead_letter_queue (id, original_task_id, job_id, owner_id, task_type, payload, error_message, retry_count, max_retries, failed_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [id, data.original_task_id ?? null, data.job_id ?? null, ownerId ?? null, data.task_type, payload, data.error_message ?? null, data.retry_count ?? 0, data.max_retries ?? 3, now, now]
+    )
+
+    return (await this.getDeadLetterQueueItemById(id))!
+  }
+
+  async getDeadLetterQueueItems(ownerId?: string, limit: number = 50): Promise<DeadLetterQueueItem[]> {
+    let sql: string
+    let params: (string | number)[]
+
+    if (ownerId) {
+      sql = `SELECT * FROM dead_letter_queue WHERE owner_id = $1 AND resolved_at IS NULL ORDER BY failed_at DESC LIMIT $2`
+      params = [ownerId, limit]
+    } else {
+      sql = `SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT $1`
+      params = [limit]
+    }
+
+    const rows = await this.conn.query<DeadLetterQueueRow>(sql, params)
+    return rows.map(rowToDeadLetterQueueItem)
+  }
+
+  async getDeadLetterQueueItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
+    if (ownerId) {
+      const rows = await this.conn.query<DeadLetterQueueRow>(
+        'SELECT * FROM dead_letter_queue WHERE id = $1 AND owner_id = $2',
+        [id, ownerId]
+      )
+      return rows[0] ? rowToDeadLetterQueueItem(rows[0]) : null
+    }
+    const rows = await this.conn.query<DeadLetterQueueRow>(
+      'SELECT * FROM dead_letter_queue WHERE id = $1',
+      [id]
+    )
+    return rows[0] ? rowToDeadLetterQueueItem(rows[0]) : null
+  }
+
+  async updateDeadLetterQueueItem(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null> {
+    const existing = await this.getDeadLetterQueueItemById(id, ownerId)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | number)[] = []
+    let paramIndex = 1
+
+    if (data.resolved_at !== undefined) {
+      fields.push(`resolved_at = $${paramIndex}`)
+      values.push(data.resolved_at)
+      paramIndex++
+    }
+    if (data.resolution !== undefined) {
+      fields.push(`resolution = $${paramIndex}`)
+      values.push(data.resolution)
+      paramIndex++
+    }
+    if (data.retry_count !== undefined) {
+      fields.push(`retry_count = $${paramIndex}`)
+      values.push(data.retry_count)
+      paramIndex++
+    }
+
+    if (fields.length === 0) return existing
+
+    values.push(id)
+    if (ownerId) {
+      values.push(ownerId)
+      await this.conn.execute(
+        `UPDATE dead_letter_queue SET ${fields.join(', ')} WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}`,
+        values
+      )
+    } else {
+      await this.conn.execute(
+        `UPDATE dead_letter_queue SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+        values
+      )
+    }
+
+    return this.getDeadLetterQueueItemById(id, ownerId)
+  }
+
+  async retryDeadLetterQueueItem(id: string, ownerId?: string): Promise<string> {
+    const item = await this.getDeadLetterQueueItemById(id, ownerId)
+    if (!item) {
+      throw new Error(`Dead letter queue item not found: ${id}`)
+    }
+
+    const payload = typeof item.payload === 'string' ? item.payload : JSON.stringify(item.payload)
+
+    const newTask = await this.createTask({
+      job_id: item.job_id ?? undefined,
+      task_type: item.task_type,
+      payload: payload,
+      max_retries: item.max_retries,
+    }, item.owner_id ?? undefined)
+
+    await this.updateDeadLetterQueueItem(id, {
+      resolved_at: toISODate(),
+      resolution: 'retried',
+    }, ownerId)
+
+    return newTask.id
+  }
+
+  // =====================================================================
+  // Job Tags
+  // =====================================================================
+
+  async addJobTag(jobId: string, tag: string): Promise<void> {
+    const id = uuidv4()
+    const now = toISODate()
+    await this.conn.execute(
+      `INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)`,
+      [id, jobId, tag, now]
+    )
+  }
+
+  async removeJobTag(jobId: string, tag: string): Promise<void> {
+    await this.conn.execute(
+      `DELETE FROM job_tags WHERE job_id = $1 AND tag = $2`,
+      [jobId, tag]
+    )
+  }
+
+  async getJobTags(jobId: string): Promise<string[]> {
+    const rows = await this.conn.query<{ tag: string }>(
+      `SELECT tag FROM job_tags WHERE job_id = $1 ORDER BY tag`,
+      [jobId]
+    )
+    return rows.map(r => r.tag)
+  }
+
+  async getJobsByTag(tag: string, ownerId?: string): Promise<CronJob[]> {
+    let sql: string
+    let params: string[]
+
+    if (ownerId) {
+      sql = `
+        SELECT c.* FROM cron_jobs c
+        INNER JOIN job_tags jt ON c.id = jt.job_id
+        WHERE jt.tag = $1 AND c.owner_id = $2
+        ORDER BY c.created_at DESC
+      `
+      params = [tag, ownerId]
+    } else {
+      sql = `
+        SELECT c.* FROM cron_jobs c
+        INNER JOIN job_tags jt ON c.id = jt.job_id
+        WHERE jt.tag = $1
+        ORDER BY c.created_at DESC
+      `
+      params = [tag]
+    }
+
+    const rows = await this.conn.query<CronJobRow>(sql, params)
+    return rows.map(rowToCronJob)
+  }
+
+  async getAllTags(): Promise<{ tag: string; count: number }[]> {
+    const rows = await this.conn.query<{ tag: string; count: string }>(
+      `SELECT tag, COUNT(*) as count FROM job_tags GROUP BY tag ORDER BY tag`
+    )
+    return rows.map(r => ({ tag: r.tag, count: parseInt(r.count, 10) }))
+  }
+
+  // =====================================================================
+  // Job Dependencies
+  // =====================================================================
+
+  async addJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
+    const id = uuidv4()
+    const now = toISODate()
+    await this.conn.execute(
+      `INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)`,
+      [id, jobId, dependsOnJobId, now]
+    )
+  }
+
+  async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
+    await this.conn.execute(
+      `DELETE FROM job_dependencies WHERE job_id = $1 AND depends_on_job_id = $2`,
+      [jobId, dependsOnJobId]
+    )
+  }
+
+  async getJobDependencies(jobId: string): Promise<string[]> {
+    const rows = await this.conn.query<{ depends_on_job_id: string }>(
+      `SELECT depends_on_job_id FROM job_dependencies WHERE job_id = $1 ORDER BY created_at`,
+      [jobId]
+    )
+    return rows.map(r => r.depends_on_job_id)
+  }
+
+  async getJobDependents(jobId: string): Promise<string[]> {
+    const rows = await this.conn.query<{ job_id: string }>(
+      `SELECT job_id FROM job_dependencies WHERE depends_on_job_id = $1 ORDER BY created_at`,
+      [jobId]
+    )
+    return rows.map(r => r.job_id)
+  }
+
+  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
+    const visited = new Set<string>()
+    const queue = [dependsOnJobId]
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      if (current === jobId) {
+        return true
+      }
+      if (visited.has(current)) {
+        continue
+      }
+      visited.add(current)
+
+      const dependencies = await this.getJobDependencies(current)
+      queue.push(...dependencies)
+    }
+
+    return false
+  }
+
+  // =====================================================================
+  // Webhook Configs
+  // =====================================================================
+
+  async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
+    const id = uuidv4()
+    const now = toISODate()
+    const events = JSON.stringify(data.events)
+    const headers = data.headers ? JSON.stringify(data.headers) : null
+
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, owner_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [id, data.job_id ?? null, data.name, data.url, events, headers, data.secret ?? null, data.is_active ?? true, ownerId ?? null, now, now]
+      )
+    } else {
+      await this.conn.execute(
+        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, owner_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.job_id ?? null, data.name, data.url, events, headers, data.secret ?? null, data.is_active ?? 1, ownerId ?? null, now, now]
+      )
+    }
+    return (await this.getWebhookConfigById(id))!
+  }
+
+  async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
+    if (ownerId) {
+      const rows = await this.conn.query<WebhookConfigRow>(
+        'SELECT * FROM webhook_configs WHERE id = $1 AND owner_id = $2',
+        [id, ownerId]
+      )
+      return rows[0] ? rowToWebhookConfig(rows[0]) : null
+    }
+    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1', [id])
+    return rows[0] ? rowToWebhookConfig(rows[0]) : null
+  }
+
+  async getWebhookConfigsByJobId(jobId: string): Promise<WebhookConfig[]> {
+    const rows = await this.conn.query<WebhookConfigRow>(
+      'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true',
+      [jobId]
+    )
+    return rows.map(rowToWebhookConfig)
+  }
+
+  async getWebhookConfigsByOwner(ownerId: string): Promise<WebhookConfig[]> {
+    const rows = await this.conn.query<WebhookConfigRow>(
+      'SELECT * FROM webhook_configs WHERE owner_id = $1 ORDER BY created_at DESC',
+      [ownerId]
+    )
+    return rows.map(rowToWebhookConfig)
+  }
+
+  async getAllWebhookConfigs(ownerId?: string): Promise<WebhookConfig[]> {
+    if (ownerId) {
+      const rows = await this.conn.query<WebhookConfigRow>(
+        'SELECT * FROM webhook_configs WHERE owner_id = $1 ORDER BY created_at DESC',
+        [ownerId]
+      )
+      return rows.map(rowToWebhookConfig)
+    }
+    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs ORDER BY created_at DESC')
+    return rows.map(rowToWebhookConfig)
+  }
+
+  async updateWebhookConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> {
+    const existing = await this.getWebhookConfigById(id, ownerId)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | number | boolean | null)[] = []
+    let paramIndex = 1
+
+    if (updates.job_id !== undefined) { fields.push(`job_id = $${paramIndex}`); values.push(updates.job_id); paramIndex++ }
+    if (updates.name !== undefined) { fields.push(`name = $${paramIndex}`); values.push(updates.name); paramIndex++ }
+    if (updates.url !== undefined) { fields.push(`url = $${paramIndex}`); values.push(updates.url); paramIndex++ }
+    if (updates.events !== undefined) { fields.push(`events = $${paramIndex}`); values.push(JSON.stringify(updates.events)); paramIndex++ }
+    if (updates.headers !== undefined) { fields.push(`headers = $${paramIndex}`); values.push(updates.headers ? JSON.stringify(updates.headers) : null); paramIndex++ }
+    if (updates.secret !== undefined) { fields.push(`secret = $${paramIndex}`); values.push(updates.secret); paramIndex++ }
+    if (updates.is_active !== undefined) {
+      fields.push(`is_active = $${paramIndex}`)
+      values.push(this.conn.isPostgres() ? updates.is_active : (updates.is_active ? 1 : 0))
+      paramIndex++
+    }
+
+    if (fields.length === 0) return existing
+
+    fields.push(`updated_at = $${paramIndex}`)
+    values.push(toISODate())
+    paramIndex++
+    values.push(id)
+    if (ownerId) {
+      values.push(ownerId)
+      await this.conn.execute(
+        `UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}`,
+        values
+      )
+    } else {
+      await this.conn.execute(
+        `UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+        values
+      )
+    }
+    return this.getWebhookConfigById(id, ownerId)
+  }
+
+  async deleteWebhookConfig(id: string, ownerId?: string): Promise<boolean> {
+    if (ownerId) {
+      const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
+      return result.changes > 0
+    }
+    const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1', [id])
+    return result.changes > 0
+  }
+
+  // =====================================================================
+  // Webhook Deliveries
+  // =====================================================================
+
+  async createWebhookDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> {
+    const id = uuidv4()
+    const now = toISODate()
+    const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
+
+    if (this.conn.isPostgres()) {
+      await this.conn.execute(
+        `INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, owner_id, delivered_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [id, data.webhook_id, data.execution_log_id ?? null, data.event, payload, data.response_status ?? null, data.response_body ?? null, data.error_message ?? null, ownerId ?? null, now]
+      )
+    } else {
+      await this.conn.execute(
+        `INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, owner_id, delivered_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.webhook_id, data.execution_log_id ?? null, data.event, payload, data.response_status ?? null, data.response_body ?? null, data.error_message ?? null, ownerId ?? null, now]
+      )
+    }
+    return (await this.getWebhookDeliveryById(id))!
+  }
+
+  async getWebhookDeliveryById(id: string): Promise<WebhookDelivery | null> {
+    const rows = await this.conn.query<WebhookDeliveryRow>('SELECT * FROM webhook_deliveries WHERE id = $1', [id])
+    return rows[0] ? rowToWebhookDelivery(rows[0]) : null
+  }
+
+  async getWebhookDeliveriesByWebhook(webhookId: string, limit: number = 50, ownerId?: string): Promise<WebhookDelivery[]> {
+    let sql: string
+    let params: (string | number)[]
+
+    if (ownerId) {
+      sql = 'SELECT * FROM webhook_deliveries WHERE webhook_id = $1 AND owner_id = $2 ORDER BY delivered_at DESC LIMIT $3'
+      params = [webhookId, ownerId, limit]
+    } else {
+      sql = 'SELECT * FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY delivered_at DESC LIMIT $2'
+      params = [webhookId, limit]
+    }
+
+    const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
+    return rows.map(rowToWebhookDelivery)
+  }
+
+  async getWebhookDeliveryByExecutionLog(executionLogId: string, ownerId?: string): Promise<WebhookDelivery[]> {
+    let sql: string
+    let params: string[]
+
+    if (ownerId) {
+      sql = 'SELECT * FROM webhook_deliveries WHERE execution_log_id = $1 AND owner_id = $2 ORDER BY delivered_at DESC'
+      params = [executionLogId, ownerId]
+    } else {
+      sql = 'SELECT * FROM webhook_deliveries WHERE execution_log_id = $1 ORDER BY delivered_at DESC'
+      params = [executionLogId]
+    }
+
+    const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
+    return rows.map(rowToWebhookDelivery)
   }
 }
 

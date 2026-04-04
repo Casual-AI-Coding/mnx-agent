@@ -463,6 +463,22 @@ ON CONFLICT (id) DO NOTHING;
       WHERE id = 'wf-example-003';
     `,
   },
+  {
+    id: 19,
+    name: 'migration_019_add_owner_id_and_dlq_enhancements',
+    sql: `
+      ALTER TABLE execution_log_details ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+      CREATE INDEX IF NOT EXISTS idx_execution_log_details_owner ON execution_log_details(owner_id);
+
+      ALTER TABLE webhook_deliveries ADD COLUMN IF NOT EXISTS owner_id VARCHAR(36) REFERENCES users(id);
+      CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_owner ON webhook_deliveries(owner_id);
+
+      ALTER TABLE dead_letter_queue ADD COLUMN IF NOT EXISTS max_retries INTEGER DEFAULT 3;
+      ALTER TABLE dead_letter_queue ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+      CREATE INDEX IF NOT EXISTS idx_dead_letter_queue_resolved ON dead_letter_queue(resolved_at);
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
