@@ -1,7 +1,7 @@
-import type { DatabaseService } from '../database/service-async'
-import type { ServiceNodeRegistry } from '../services/service-node-registry'
-import { WorkflowEngine } from '../services/workflow-engine'
-import { CronScheduler } from '../services/cron-scheduler'
+import type { DatabaseService } from '../../database/service-async'
+import type { ServiceNodeRegistry } from '../../services/service-node-registry'
+import { WorkflowEngine } from '../../services/workflow-engine'
+import { CronScheduler } from '../../services/cron-scheduler'
 
 export interface TestWorkflowFixture {
   id: string

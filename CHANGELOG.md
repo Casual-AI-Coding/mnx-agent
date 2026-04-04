@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-04-04
+
+### Added
+- **Service Node Registry Expansion** - Expanded from 16 to 61 registered actions
+  - MiniMax API: videoAgentGenerate/Status, fileList/Upload/Retrieve/Delete, voiceList/Delete/Clone/Design, getBalance, getCodingPlanRemains
+  - Database: getAllCronJobs, getCronJobById, createCronJob, updateCronJob, deleteCronJob, toggleCronJobActive, getActiveCronJobs, getAllTasks, createTask, markTaskRunning/Completed/Failed, getQueueStats, getAllExecutionLogs, createExecutionLog, updateExecutionLog, getMediaRecords, getMediaRecordById, updateMediaRecord
+  - Capacity: getRemainingCapacity, hasCapacity, getSafeExecutionLimit, checkBalance, refreshAllCapacity, canExecuteTask, waitForCapacity
+  - Media Storage: saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile
+  - Utils: toCSV, generateMediaToken, verifyMediaToken
+
+- **Visual Workflow Preview** - WorkflowTemplateManagement detail dialog now shows visual React Flow preview
+  - WorkflowPreview component with ActionNode, ConditionNode, LoopNode, TransformNode support
+  - "在编排器中编辑" button to navigate to WorkflowBuilder
+  - WorkflowBuilder supports loading templates via URL query parameter `?id=xxx`
+
+- **Integration Test Framework** - Complete testing infrastructure
+  - Test setup file for PostgreSQL environment loading
+  - WorkflowTestHelper class with predefined templates
+  - Phase A tests (5 tests): Mock-based core engine verification
+  - Phase B tests (5 tests): Real API integration with MiniMax
+  - Phase C tests (2 tests): End-to-end cron workflow execution
+
+### Fixed
+- **Service Node Registry** - Fix `this` binding in `call()` method
+- **JSONB Field Handling** - Ensure `nodes_json`/`edges_json` always return strings
+- **Cron Scheduler** - Handle JSONB columns that may already be objects
+- **Pagination Tests** - Update to match clamping behavior (negative values clamped to min)
+- **Test Environment** - Fix import paths and exclude test files from build
+
+### Changed
+- **Auth Rate Limit** - Increased default from 10 to 100 attempts
+- **Service Registration** - Changed to async, auto-syncs permissions to database
+- **TypeScript Config** - Exclude test files (`**/__tests__/**`, `**/*.test.tsx`)
+
+### API
+- `GET /api/cron/logs/:id/details` - New endpoint for execution log details
+
+### Database
+- `migration_014` - Add example workflow templates (wf-example-001, wf-example-002, wf-example-003)
+
+### Tests
+- 54 workflow tests passing (98% pass rate)
+- Integration tests now work with real PostgreSQL connection
+- E2E tests verify complete cron → workflow → API → DB pipeline
+
 ## [1.3.0] - 2026-04-03
 
 ### Added
