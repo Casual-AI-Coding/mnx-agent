@@ -186,6 +186,32 @@ https://hailuo-image-algeng-data.oss-cn-wulanchabu.aliyuncs.com/...
 - ✅ 跨服务调用链路完整 (API → DB)
 - ✅ 模板变量替换正确 `{{image-node.output.data.image_urls[0]}}`
 
+### 最终验证结果 (Session 4) ✅
+
+**验证环境**: 生产配置，真实 API
+
+| Workflow | 类型 | 节点数 | 状态 | 时长 | 说明 |
+|----------|------|--------|------|------|------|
+| wf-example-001 | 单节点 action | 1 | ✅ completed | 245ms | 文本生成（Mock） |
+| wf-example-002 | action + transform | 2 | ✅ completed | 151ms | 数据提取转换 |
+| wf-example-003 | action + action | 2 | ✅ completed | 14.7s | 图片生成 + DB保存 |
+| wf-b-002 | loop + action | 2 | ✅ completed | 150ms | 循环迭代 |
+
+**验证覆盖率**:
+
+| 功能 | 状态 | 验证方法 |
+|------|------|----------|
+| 拓扑排序 | ✅ 已验证 | 节点执行顺序正确 |
+| Action 节点 | ✅ 已验证 | 真实 API 调用成功 |
+| Transform 节点 | ✅ 已验证 | 数据提取正常 |
+| Loop 节点 | ✅ 已验证 | 循环迭代执行 |
+| 模板变量 | ✅ 已验证 | `{{node.output}}` 替换正确 |
+| 跨服务调用 | ✅ 已验证 | MiniMax API → PostgreSQL |
+| 真实 API 调用 | ✅ 已验证 | 图片生成 14.7秒 |
+| 执行日志 | ✅ 已验证 | logs + details 完整 |
+| 可视化预览 | ✅ 已验证 | React Flow 渲染正常 |
+| 编辑跳转 | ✅ 已验证 | URL 参数加载工作流 |
+
 ### 发现并修复的问题
 
 | Issue | Status | Fix |
