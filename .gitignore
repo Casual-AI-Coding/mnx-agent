@@ -66,3 +66,4 @@ data/
 # Dev CLI
 .dev.pid
 .dev.log
+.worktrees/
