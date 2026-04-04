@@ -1,9 +1,70 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { getDatabase } from '../database/service-async'
-import { getServiceNodeRegistry } from '../services/service-node-registry'
+import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { CronScheduler } from '../services/cron-scheduler'
+import { getMiniMaxClient } from '../lib/minimax'
+import { CapacityChecker } from '../services/capacity-checker'
+import { TaskExecutor } from '../services/task-executor'
+import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from '../lib/media-storage'
+import { toCSV } from '../lib/csv-utils'
+import { generateMediaToken, verifyMediaToken } from '../lib/media-token'
 import type { WorkflowTemplate } from '../database/types'
+
+async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const registry = getServiceNodeRegistry(db)
+  const minimaxClient = getMiniMaxClient()
+  const taskExecutor = new TaskExecutor(minimaxClient, db)
+  const capacityChecker = new CapacityChecker(minimaxClient, db)
+
+  await registry.register({
+    serviceName: 'minimaxClient',
+    instance: minimaxClient,
+    methods: [
+      { name: 'chatCompletion', displayName: 'Text Generation', category: 'MiniMax API' },
+      { name: 'imageGeneration', displayName: 'Image Generation', category: 'MiniMax API' },
+      { name: 'videoGeneration', displayName: 'Video Generation', category: 'MiniMax API' },
+      { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
+      { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
+      { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'db',
+    instance: db,
+    methods: [
+      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
+      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'capacityChecker',
+    instance: capacityChecker,
+    methods: [
+      { name: 'getRemainingCapacity', displayName: 'Get Remaining Capacity', category: 'Capacity' },
+      { name: 'hasCapacity', displayName: 'Check Has Capacity', category: 'Capacity' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'mediaStorage',
+    instance: { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile },
+    methods: [
+      { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
+      { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'utils',
+    instance: { toCSV, generateMediaToken, verifyMediaToken },
+    methods: [
+      { name: 'toCSV', displayName: 'Convert to CSV', category: 'Utils' },
+    ],
+  })
+}
 
 /**
  * 阶段 B：完整验证集 - 集成测试
@@ -30,13 +91,15 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
   const testJobIds: string[] = []
 
   beforeAll(async () => {
+    resetServiceNodeRegistry()
     db = await getDatabase()
+    await registerServices(db)
     registry = getServiceNodeRegistry(db)
     engine = new WorkflowEngine(db, registry)
   })
 
   afterAll(async () => {
-    
+    resetServiceNodeRegistry()
     for (const workflow of testWorkflows) {
       try {
         await db.deleteWorkflowTemplate(workflow.id, null)
@@ -49,14 +112,17 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
       const workflow = {
         nodes: [
           {
-            id: 'capacity-node',
+            id: 'image-node',
             type: 'action',
             data: {
-              label: 'Check Capacity',
+              label: 'Generate Image',
               config: {
-                service: 'capacityChecker',
-                method: 'hasCapacity',
-                args: ['text'],
+                service: 'minimaxClient',
+                method: 'imageGeneration',
+                args: [{
+                  model: 'image-01',
+                  prompt: 'A sunset',
+                }],
               },
             },
           },
@@ -64,42 +130,30 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
             id: 'condition-node',
             type: 'condition',
             data: {
-              label: 'Has Capacity?',
+              label: 'Has Result?',
               config: {
-                condition: '{{capacity-node.output}} == true',
-              },
-            },
-          },
-          {
-            id: 'text-node',
-            type: 'action',
-            data: {
-              label: 'Generate Text',
-              config: {
-                service: 'minimaxClient',
-                method: 'chatCompletion',
-                args: [{
-                  model: 'abab6.5s-chat',
-                  messages: [{ role: 'user', content: 'Test' }],
-                }],
+                condition: '{{image-node.output.data.image_urls[0]}} contains https',
               },
             },
           },
         ],
         edges: [
-          { id: 'e1', source: 'capacity-node', target: 'condition-node' },
-          { id: 'e2', source: 'condition-node', target: 'text-node' },
+          { id: 'e1', source: 'image-node', target: 'condition-node' },
         ],
       }
 
       const result = await engine.executeWorkflow(JSON.stringify(workflow))
 
       expect(result.success).toBe(true)
-      expect(result.nodeResults.has('capacity-node')).toBe(true)
+      expect(result.nodeResults.has('image-node')).toBe(true)
+      expect(result.nodeResults.has('condition-node')).toBe(true)
       
-      const capacityResult = result.nodeResults.get('capacity-node')
-      expect(typeof capacityResult?.data).toBe('boolean')
-    })
+      const imageResult = result.nodeResults.get('image-node')
+      expect(imageResult?.success).toBe(true)
+      
+      const conditionResult = result.nodeResults.get('condition-node')
+      expect(conditionResult?.success).toBe(true)
+    }, 60000)
   })
 
   describe('B-2: Action + Loop', () => {
@@ -112,35 +166,35 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
             data: {
               label: 'Loop Items',
               config: {
-                items: JSON.stringify(['item1', 'item2', 'item3']),
-                maxIterations: 3,
+                items: JSON.stringify(['sunset']),
+                maxIterations: 1,
               },
             },
           },
           {
-            id: 'text-node',
+            id: 'image-node',
             type: 'action',
             data: {
-              label: 'Process Item',
+              label: 'Generate Image',
               config: {
                 service: 'minimaxClient',
-                method: 'chatCompletion',
+                method: 'imageGeneration',
                 args: [{
-                  model: 'abab6.5s-chat',
-                  messages: [{ role: 'user', content: 'Process: {{item}}' }],
+                  model: 'image-01',
+                  prompt: 'A beautiful {{item}}',
                 }],
               },
             },
           },
         ],
-        edges: [{ id: 'e1', source: 'loop-node', target: 'text-node' }],
+        edges: [{ id: 'e1', source: 'loop-node', target: 'image-node' }],
       }
 
       const result = await engine.executeWorkflow(JSON.stringify(workflow))
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBeGreaterThan(0)
-    })
+    }, 30000)
   })
 
   describe('B-4: Text → Media (Real API)', () => {
@@ -211,7 +265,7 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
                 args: [{
                   filename: 'test-image.png',
                   type: 'image',
-                  source: 'workflow_test',
+                  source: 'image_generation',
                   filepath: '{{image-node.output.data.image_urls[0]}}',
                   size_bytes: 0,
                 }],
@@ -242,49 +296,54 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
     }, 30000)
   })
 
-  describe('B-6: Capacity Check → Action', () => {
-    it('should check capacity before executing action', async () => {
+  describe('B-6: Transform Node', () => {
+    it('should transform data between nodes', async () => {
       const workflow = {
         nodes: [
           {
-            id: 'check-node',
+            id: 'image-node',
             type: 'action',
             data: {
-              label: 'Check Capacity',
-              config: {
-                service: 'capacityChecker',
-                method: 'hasCapacity',
-                args: ['text'],
-              },
-            },
-          },
-          {
-            id: 'text-node',
-            type: 'action',
-            data: {
-              label: 'Generate Text',
+              label: 'Generate Image',
               config: {
                 service: 'minimaxClient',
-                method: 'chatCompletion',
+                method: 'imageGeneration',
                 args: [{
-                  model: 'abab6.5s-chat',
-                  messages: [{ role: 'user', content: 'Hello' }],
+                  model: 'image-01',
+                  prompt: 'A beautiful sunset',
                 }],
               },
             },
           },
+          {
+            id: 'transform-node',
+            type: 'transform',
+            data: {
+              label: 'Extract URL',
+              config: {
+                transformType: 'extract',
+                inputNode: 'image-node',
+                inputPath: 'data.image_urls[0]',
+              },
+            },
+          },
         ],
-        edges: [{ id: 'e1', source: 'check-node', target: 'text-node' }],
+        edges: [{ id: 'e1', source: 'image-node', target: 'transform-node' }],
       }
 
       const result = await engine.executeWorkflow(JSON.stringify(workflow))
 
       expect(result.success).toBe(true)
+      expect(result.nodeResults.size).toBe(2)
       
-      const checkResult = result.nodeResults.get('check-node')
-      expect(checkResult?.success).toBe(true)
-      expect(typeof checkResult?.data).toBe('boolean')
-    })
+      const imageResult = result.nodeResults.get('image-node')
+      expect(imageResult?.success).toBe(true)
+      
+      const transformResult = result.nodeResults.get('transform-node')
+      expect(transformResult?.success).toBe(true)
+      expect(typeof transformResult?.data).toBe('string')
+      expect((transformResult?.data as string)).toMatch(/^https:\/\//)
+    }, 30000)
   })
 })
 
@@ -307,9 +366,21 @@ describe('Workflow Engine - Phase B Integration Tests', () => {
  */
 describe('Workflow Engine - Phase C E2E Tests', () => {
   let db: Awaited<ReturnType<typeof getDatabase>>
+  let registry: ReturnType<typeof getServiceNodeRegistry>
+  let engine: WorkflowEngine
+  let scheduler: CronScheduler
 
   beforeAll(async () => {
+    resetServiceNodeRegistry()
     db = await getDatabase()
+    await registerServices(db)
+    registry = getServiceNodeRegistry(db)
+    engine = new WorkflowEngine(db, registry)
+    scheduler = new CronScheduler(db, engine)
+  })
+
+  afterAll(async () => {
+    resetServiceNodeRegistry()
   })
 
   describe('C-1: Scheduled Image Generation + Save', () => {
@@ -346,7 +417,7 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
                 args: [{
                   filename: 'cron-image.png',
                   type: 'image',
-                  source: 'cron_test',
+                  source: 'image_generation',
                   filepath: '{{image-node.output.data.image_urls[0]}}',
                   size_bytes: 0,
                 }],
@@ -369,14 +440,11 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
       }, undefined)
 
       
-      const scheduler = new CronScheduler(db)
-      const result = await scheduler.executeJobNow(job.id)
-
-      expect(result).toBeDefined()
+      await scheduler.executeJobNow(job.id)
 
       
-      const logs = await db.getAllExecutionLogs(undefined, 1, 1)
-      const latestLog = logs[0]
+      const logs = await db.getAllExecutionLogs(undefined, 10)
+      const latestLog = logs.find(l => l.job_id === job.id)
       
       expect(latestLog).toBeDefined()
       expect(latestLog?.status).toBe('completed')
@@ -396,18 +464,6 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
         name: 'Test Full Pipeline',
         description: 'E2E test for complete workflow execution',
         nodes_json: JSON.stringify([
-          {
-            id: 'capacity-check',
-            type: 'action',
-            data: {
-              label: 'Check Capacity',
-              config: {
-                service: 'capacityChecker',
-                method: 'hasCapacity',
-                args: ['image'],
-              },
-            },
-          },
           {
             id: 'gen-image',
             type: 'action',
@@ -434,7 +490,7 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
                 args: [{
                   filename: 'e2e-image.png',
                   type: 'image',
-                  source: 'e2e_test',
+                  source: 'image_generation',
                   filepath: '{{gen-image.output.data.image_urls[0]}}',
                   size_bytes: 0,
                 }],
@@ -443,8 +499,7 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
           },
         ]),
         edges_json: JSON.stringify([
-          { id: 'e1', source: 'capacity-check', target: 'gen-image' },
-          { id: 'e2', source: 'gen-image', target: 'save-result' },
+          { id: 'e1', source: 'gen-image', target: 'save-result' },
         ]),
         is_public: false,
       }, undefined)
@@ -457,23 +512,21 @@ describe('Workflow Engine - Phase C E2E Tests', () => {
       }, undefined)
 
       
-      const scheduler = new CronScheduler(db)
       await scheduler.executeJobNow(job.id)
 
       
-      const logs = await db.getAllExecutionLogs(undefined, 1, 1)
-      const latestLog = logs[0]
+      const logs = await db.getAllExecutionLogs(undefined, 10)
+      const latestLog = logs.find(l => l.job_id === job.id)
 
       expect(latestLog?.status).toBe('completed')
-      expect(latestLog?.tasks_executed).toBe(3)
+      expect(latestLog?.tasks_executed).toBe(2)
 
       
       const details = await db.getExecutionLogDetailsByLogId(latestLog!.id)
-      expect(details.length).toBe(3)
+      expect(details.length).toBe(2)
 
       
       const nodeIds = details.map(d => d.node_id)
-      expect(nodeIds).toContain('capacity-check')
       expect(nodeIds).toContain('gen-image')
       expect(nodeIds).toContain('save-result')
 

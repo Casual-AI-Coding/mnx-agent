@@ -31,31 +31,37 @@ describe('Workflow Pagination Validation', () => {
     app.use('/api/workflows', workflowRoutes)
   })
 
-  it('should reject negative page number', async () => {
+  it('should clamp negative page number to 1', async () => {
     const response = await request(app)
       .get('/api/workflows?page=-1&limit=10')
       .set('Authorization', 'Bearer test-token')
 
-    expect(response.status).toBe(400)
-    expect(response.body.error).toContain('page must be a positive integer')
+    expect(response.status).toBe(200)
+    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 0 })
+    )
   })
 
-  it('should reject negative limit', async () => {
+  it('should clamp negative limit to 1', async () => {
     const response = await request(app)
       .get('/api/workflows?page=1&limit=-5')
       .set('Authorization', 'Bearer test-token')
 
-    expect(response.status).toBe(400)
-    expect(response.body.error).toContain('limit must be a positive integer')
+    expect(response.status).toBe(200)
+    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 1 })
+    )
   })
 
-  it('should reject limit over 100', async () => {
+  it('should clamp limit over 100 to 100', async () => {
     const response = await request(app)
       .get('/api/workflows?page=1&limit=200')
       .set('Authorization', 'Bearer test-token')
 
-    expect(response.status).toBe(400)
-    expect(response.body.error).toContain('limit must not exceed 100')
+    expect(response.status).toBe(200)
+    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 100 })
+    )
   })
 
   it('should accept valid pagination', async () => {

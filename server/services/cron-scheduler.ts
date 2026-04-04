@@ -338,6 +338,14 @@ export class CronScheduler {
   getTimezone(): string {
     return this.timezone
   }
+
+  async executeJobNow(jobId: string): Promise<void> {
+    const job = await this.db.getCronJobById(jobId)
+    if (!job) {
+      throw new Error(`Job ${jobId} not found`)
+    }
+    await this.executeJobTick(job)
+  }
 }
 
 let schedulerInstance: CronScheduler | null = null
