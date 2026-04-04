@@ -35,7 +35,7 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
     return acc
   }, {})
 
-  res.json({ success: true, data: grouped })
+  successResponse(res, grouped)
 }))
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -62,16 +62,13 @@ router.get('/', asyncHandler(async (req, res) => {
     offset,
   })
 
-  res.json({
-    success: true,
-    data: {
-      workflows: result.templates,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total: result.total,
-        totalPages: Math.ceil(result.total / limitNum),
-      },
+  successResponse(res, {
+    workflows: result.templates,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total: result.total,
+      totalPages: Math.ceil(result.total / limitNum),
     },
   })
 }))
@@ -83,7 +80,7 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 
   const workflow = await db.getWorkflowTemplateById(req.params.id)
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
@@ -94,11 +91,11 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
     await db.hasWorkflowPermission(req.params.id, userId)
 
   if (!hasAccess) {
-    res.status(403).json({ success: false, error: 'You do not have access to this workflow' })
+    errorResponse(res, 'You do not have access to this workflow', 403)
     return
   }
 
-  res.json({ success: true, data: workflow })
+  successResponse(res, workflow)
 }))
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
@@ -112,7 +109,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
     const parsed = JSON.parse(nodes_json)
     actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
   } catch {
-    res.status(400).json({ success: false, error: 'nodes_json must be valid JSON' })
+    errorResponse(res, 'nodes_json must be valid JSON', 400)
     return
   }
 
@@ -127,27 +124,18 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
     const permission = await db.getServiceNodePermission(service, method)
 
     if (!permission) {
-      res.status(400).json({
-        success: false,
-        error: `Unknown service method: ${service}.${method}`
-      })
+      errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
       return
     }
 
     if (!permission.is_enabled) {
-      res.status(403).json({
-        success: false,
-        error: `Service method ${service}.${method} is disabled`
-      })
+      errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
       return
     }
 
     const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
     if (nodeLevel > userLevel) {
-      res.status(403).json({
-        success: false,
-        error: `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`
-      })
+      errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
       return
     }
   }
@@ -159,7 +147,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
     edges_json: req.body.edges_json,
     is_public: req.body.is_public ?? req.body.is_template,
   }, ownerId)
-  res.status(201).json({ success: true, data: workflow })
+  createdResponse(res, workflow)
 }))
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
@@ -169,7 +157,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
 
   const existing = await db.getWorkflowTemplateById(req.params.id)
   if (!existing) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
@@ -178,7 +166,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
     userRole === 'super'
 
   if (!hasAccess) {
-    res.status(403).json({ success: false, error: 'You do not have permission to update this workflow' })
+    errorResponse(res, 'You do not have permission to update this workflow', 403)
     return
   }
 
@@ -188,7 +176,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
       const parsed = JSON.parse(req.body.nodes_json)
       actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
     } catch {
-      res.status(400).json({ success: false, error: 'nodes_json must be valid JSON' })
+      errorResponse(res, 'nodes_json must be valid JSON', 400)
       return
     }
 
@@ -203,27 +191,18 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
       const permission = await db.getServiceNodePermission(service, method)
 
       if (!permission) {
-        res.status(400).json({
-          success: false,
-          error: `Unknown service method: ${service}.${method}`
-        })
+        errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
         return
       }
 
       if (!permission.is_enabled) {
-        res.status(403).json({
-          success: false,
-          error: `Service method ${service}.${method} is disabled`
-        })
+        errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
         return
       }
 
       const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
       if (nodeLevel > userLevel) {
-        res.status(403).json({
-          success: false,
-          error: `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`
-        })
+        errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
         return
       }
     }
@@ -292,10 +271,10 @@ router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async
   const ownerId = buildOwnerFilter(req).params[0]
   const success = await db.deleteWorkflowTemplate(req.params.id, ownerId)
   if (!success) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
-  res.json({ success: true, data: { deleted: true } })
+  deletedResponse(res)
 }))
 
 export default router
