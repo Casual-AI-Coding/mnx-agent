@@ -2,6 +2,101 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.7] - 2026-04-04
+
+### Added
+
+**Phase 1: WebSocket Real-time Integration**
+- Extended WebSocket event types: `workflow_test_started`, `workflow_test_completed`, `workflow_node_output`, `retry_scheduled`, `queue_capacity_warning`, `task_moved_to_dlq`
+- Integrated `taskQueue`, `executionLogs`, `cronJobs` stores with WebSocket for real-time state updates
+- New hooks: `useTaskQueueWebSocket`, `useExecutionLogsWebSocket`, `useCronJobsWebSocket`
+- Real-time status updates without manual page refresh
+
+**Phase 2: Configuration Experience Optimization**
+- **Cron Expression Builder** (`CronExpressionBuilder.tsx`)
+  - Visual cron expression builder with presets (daily, weekly, monthly, custom)
+  - Time selector with hour/minute dropdowns
+  - Weekday selection for weekly schedules
+  - Real-time expression display and natural language description
+  - Next 5 execution times preview
+  
+- **Node Configuration Forms** (`FieldBuilder.tsx`, `ActionConfigPanel.tsx`)
+  - Dynamic form generation based on service/method
+  - Support for field types: text, number, select, textarea, json, template
+  - Field validation and error display
+  - Service documentation (`workflow-service-docs.ts`)
+  
+- **Validation & Error Messages**
+  - Enhanced `workflow-validation.ts` with cycle detection and severity levels
+  - New `workflow-error-messages.ts` with human-readable error messages and suggestions
+
+**Phase 3: Test & Debug Capabilities**
+- **Test Run API** (`POST /workflows/:id/test-run`)
+  - Dry-run mode for testing without actual API calls
+  - Test data injection support
+  - Node-level execution results
+  
+- **Test Run Panel** (`TestRunPanel.tsx`)
+  - Run test and dry-run buttons
+  - Test data configuration (JSON editor)
+  - Execution results display with node status and duration
+  
+- **Node Output Panel** (`NodeOutputPanel.tsx`)
+  - Node input/output preview
+  - JSON formatting with syntax highlighting
+  - Copy to clipboard functionality
+  - Error message display
+
+**Phase 4: Template Marketplace**
+- **Workflow Marketplace** (`WorkflowMarketplace.tsx`)
+  - Template card grid display
+  - Category filtering (text, image, voice, video, music, analytics)
+  - Search functionality
+  - Template preview modal
+  - "Use Template" button to load template into WorkflowBuilder
+  
+- **Built-in Templates** (8 templates)
+  - AI Content Assistant
+  - Customer Service Bot
+  - Social Media Content Generator
+  - Image Batch Processor
+  - Podcast Generator
+  - Video Production Prep
+  - Data Analytics Report
+  - Music Emotion Matcher
+
+### API
+- `POST /workflows/:id/test-run` - Test run workflow with optional dry-run mode and test data
+- Extended WebSocket events for workflow test execution
+
+### Changed
+- **WebSocket Client** (`websocket-client.ts`)
+  - Added `workflows` channel support
+  - Extended event payload types for tasks, logs, jobs, and workflows
+  - Enhanced toast notifications for new event types
+
+- **Stores** (`taskQueue.ts`, `executionLogs.ts`, `cronJobs.ts`)
+  - Added `subscribeToWebSocket()` and `unsubscribeFromWebSocket()` methods
+  - Real-time state updates from WebSocket events
+
+- **WorkflowEngine** (`workflow-engine.ts`)
+  - Added `TestExecutionOptions` interface with `testData` and `dryRun` fields
+  - Modified `executeWorkflow()` to accept test options
+  - Dry-run mode returns mock data instead of calling actual APIs
+
+- **CronManagement** (`CronManagement.tsx`)
+  - Integrated WebSocket hooks for real-time updates
+  - Updated job creation/edit modals with CronExpressionBuilder
+
+- **WorkflowBuilder** (`WorkflowBuilder.tsx`)
+  - Added test run button to toolbar
+  - Integrated TestRunPanel and NodeOutputPanel
+  - WebSocket subscription for workflow test events
+
+### Fixed
+- Fixed `hasWorkflowId` prop missing in WorkflowBuilder Toolbar
+- Fixed TypeScript types in TestRunPanel API response
+
 ## [1.3.6] - 2026-04-04
 
 ### Added
