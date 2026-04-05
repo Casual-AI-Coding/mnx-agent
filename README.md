@@ -80,8 +80,13 @@ npm install
 MINIMAX_API_KEY=your_api_key
 MINIMAX_BASE_URL=https://api.minimax.chat
 
-# 可选：数据库路径
-DATABASE_PATH=./data/minimax.db
+# 数据库配置 (PostgreSQL)
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=mnx_agent_server
+DB_PASSWORD=your_password
+DB_NAME=mnx_agent
 
 # 可选：Cron 时区
 CRON_TIMEZONE=Asia/Shanghai
@@ -244,7 +249,7 @@ mnx-agent/
 │   ├── lib/               # 工具库
 │   └── types/             # 类型定义
 └── data/                  # 数据目录
-    └── minimax.db         # SQLite 数据库
+    └── media/             # 媒体文件存储
 ```
 
 ## 数据库表

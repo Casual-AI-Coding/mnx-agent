@@ -461,7 +461,7 @@ node scripts/dev.js restart
 
 检查数据库是否有 `media_records` 表：
 ```bash
-sqlite3 data/minimax.db ".tables"
+psql -h localhost -U mnx_agent_server -d mnx_agent -c "\dt"
 ```
 
 如果没有，运行迁移：重启服务器会自动执行。
