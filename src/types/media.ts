@@ -11,7 +11,7 @@ export interface MediaRecord {
   size_bytes: number
   source: MediaSource | null
   task_id: string | null
-  metadata: Record<string, unknown> | null
+  metadata: string | Record<string, unknown> | null
   is_deleted: boolean
   created_at: string
   updated_at: string
