@@ -21,7 +21,7 @@ export default defineConfig({
       './src/__tests__/setup.ts',
     ],
     globals: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/__tests__/*.{test,spec}.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist', '.next'],
     singleThread: true,
     fileParallelism: false,
