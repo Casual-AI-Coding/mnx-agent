@@ -1,8 +1,12 @@
-import { useAppStore, type ApiMode, PROXY_BASE_URL } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { API_HOSTS } from '@/types'
 
+export type ApiMode = 'direct' | 'proxy'
+export const PROXY_BASE_URL = '/api'
+
 export function getBaseUrl(): string {
-  const { region, apiMode } = useAppStore.getState()
+  const { settings } = useSettingsStore.getState()
+  const { region, mode: apiMode } = settings.api
   
   if (apiMode === 'proxy') {
     return PROXY_BASE_URL
@@ -12,7 +16,8 @@ export function getBaseUrl(): string {
 }
 
 export function getHeaders(): HeadersInit {
-  const { apiKey, apiMode, region } = useAppStore.getState()
+  const { settings } = useSettingsStore.getState()
+  const { minimaxKey: apiKey, mode: apiMode, region } = settings.api
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -40,7 +45,7 @@ export function getApiModeLabel(mode: ApiMode): string {
 }
 
 export function getApiMode(): ApiMode {
-  return useAppStore.getState().apiMode
+  return useSettingsStore.getState().settings.api.mode
 }
 
 export function getApiModeDescription(mode: ApiMode): string {

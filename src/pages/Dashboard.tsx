@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/Badge'
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal'
 import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
-import { useAppStore } from '@/stores/app'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import type { ConnectionStatus } from '@/lib/websocket-client'
 
@@ -38,7 +37,7 @@ export default function Dashboard() {
   const { t } = useTranslation()
   const { usage } = useUsageStore()
   const { items, addItem } = useHistoryStore()
-  const { setWsStatus, hasCompletedOnboarding, setHasCompletedOnboarding } = useAppStore()
+  const hasCompletedOnboarding = localStorage.getItem('onboarding-complete') === 'true'
   const { status, events } = useWebSocket({
     channels: ['jobs', 'tasks'],
     showToasts: true,
@@ -55,7 +54,7 @@ export default function Dashboard() {
   const handleCloseWelcomeModal = () => {
     setShowWelcomeModal(false)
     if (dontShowAgain) {
-      setHasCompletedOnboarding(true)
+      localStorage.setItem('onboarding-complete', 'true')
     }
   }
 
@@ -116,10 +115,6 @@ export default function Dashboard() {
     { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: 'text-purple-400' },
     { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: 'text-orange-400' },
   ], [usage, t])
-
-  useEffect(() => {
-    setWsStatus(status)
-  }, [status, setWsStatus])
 
   useEffect(() => {
     if (events.length === 0) return

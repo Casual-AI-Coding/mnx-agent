@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useThemeEffect, resetMediaQueryCache } from './useThemeEffect'
-import * as appStore from '@/stores/app'
 
 const mockMatchMedia = vi.fn()
+
+vi.mock('@/settings/store', () => ({
+  useSettingsStore: vi.fn(),
+}))
+
+import { useSettingsStore } from '@/settings/store'
+
 beforeEach(() => {
   resetMediaQueryCache()
   vi.stubGlobal('matchMedia', mockMatchMedia)
@@ -24,10 +30,12 @@ afterEach(() => {
 
 describe('useThemeEffect', () => {
   it('applies theme class to document root when theme is specific ID', () => {
-    vi.spyOn(appStore, 'useAppStore').mockImplementation(() => ({
-      theme: 'dracula',
-      setTheme: vi.fn(),
-    }))
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector({ settings: { ui: { theme: 'dracula' } } })
+      }
+      return { settings: { ui: { theme: 'dracula' } } }
+    })
 
     renderHook(() => useThemeEffect())
 
@@ -41,10 +49,12 @@ describe('useThemeEffect', () => {
       removeEventListener: vi.fn(),
     })
 
-    vi.spyOn(appStore, 'useAppStore').mockImplementation(() => ({
-      theme: 'system',
-      setTheme: vi.fn(),
-    }))
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector({ settings: { ui: { theme: 'system' } } })
+      }
+      return { settings: { ui: { theme: 'system' } } }
+    })
 
     renderHook(() => useThemeEffect())
 
@@ -58,10 +68,12 @@ describe('useThemeEffect', () => {
       removeEventListener: vi.fn(),
     })
 
-    vi.spyOn(appStore, 'useAppStore').mockImplementation(() => ({
-      theme: 'system',
-      setTheme: vi.fn(),
-    }))
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector({ settings: { ui: { theme: 'system' } } })
+      }
+      return { settings: { ui: { theme: 'system' } } }
+    })
 
     renderHook(() => useThemeEffect())
 
@@ -71,10 +83,12 @@ describe('useThemeEffect', () => {
   it('removes old theme class before adding new one', () => {
     document.documentElement.classList.add('theme-midnight')
 
-    vi.spyOn(appStore, 'useAppStore').mockImplementation(() => ({
-      theme: 'nord',
-      setTheme: vi.fn(),
-    }))
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector({ settings: { ui: { theme: 'nord' } } })
+      }
+      return { settings: { ui: { theme: 'nord' } } }
+    })
 
     renderHook(() => useThemeEffect())
 
@@ -83,10 +97,12 @@ describe('useThemeEffect', () => {
   })
 
   it('sets data attributes on document root', () => {
-    vi.spyOn(appStore, 'useAppStore').mockImplementation(() => ({
-      theme: 'github-dark',
-      setTheme: vi.fn(),
-    }))
+    vi.mocked(useSettingsStore).mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector({ settings: { ui: { theme: 'github-dark' } } })
+      }
+      return { settings: { ui: { theme: 'github-dark' } } }
+    })
 
     renderHook(() => useThemeEffect())
 

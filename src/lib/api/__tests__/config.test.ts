@@ -1,13 +1,22 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { getBaseUrl, getHeaders, getApiModeLabel, getApiMode, getApiModeDescription } from '../config'
-import { useAppStore, PROXY_BASE_URL } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { API_HOSTS } from '@/types'
 
-vi.mock('@/stores/app', () => ({
-  useAppStore: {
-    getState: vi.fn(),
+const PROXY_BASE_URL = '/api'
+
+vi.mock('@/settings/store', () => ({
+  useSettingsStore: {
+    getState: vi.fn(() => ({
+      settings: {
+        api: {
+          minimaxKey: 'test-key',
+          region: 'cn',
+          mode: 'proxy',
+        },
+      },
+    })),
   },
-  PROXY_BASE_URL: '/api',
 }))
 
 vi.mock('@/types', () => ({
@@ -24,15 +33,14 @@ describe('Config API Module', () => {
 
   describe('getBaseUrl', () => {
     it('should return proxy URL when apiMode is proxy', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'proxy',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'cn',
+            mode: 'proxy',
+          },
+        },
       })
 
       const result = getBaseUrl()
@@ -40,15 +48,14 @@ describe('Config API Module', () => {
     })
 
     it('should return cn API host when apiMode is direct and region is cn', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const result = getBaseUrl()
@@ -56,15 +63,14 @@ describe('Config API Module', () => {
     })
 
     it('should return intl API host when apiMode is direct and region is intl', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'intl',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'intl',
+            mode: 'direct',
+          },
+        },
       })
 
       const result = getBaseUrl()
@@ -74,15 +80,14 @@ describe('Config API Module', () => {
 
   describe('getHeaders', () => {
     it('should return Authorization header in direct mode with valid ASCII key', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'valid-ascii-key-123',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'valid-ascii-key-123',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string> as Record<string, string>
@@ -91,15 +96,14 @@ describe('Config API Module', () => {
     })
 
     it('should return X-API-Key header in proxy mode', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'proxy',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'cn',
+            mode: 'proxy',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -109,15 +113,14 @@ describe('Config API Module', () => {
     })
 
     it('should set X-Region to intl when region is intl', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'intl',
-        theme: 'system',
-        apiMode: 'proxy',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'intl',
+            mode: 'proxy',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -125,15 +128,14 @@ describe('Config API Module', () => {
     })
 
     it('should not set auth header when apiKey is empty', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: '',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: '',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -142,15 +144,14 @@ describe('Config API Module', () => {
     })
 
     it('should not set auth header when apiKey contains non-ASCII characters', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: '中文密钥',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: '中文密钥',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -159,15 +160,14 @@ describe('Config API Module', () => {
     })
 
     it('should handle whitespace-only apiKey', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: '   ',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: '   ',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -175,15 +175,14 @@ describe('Config API Module', () => {
     })
 
     it('should trim apiKey before checking', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: '  valid-key  ',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: '  valid-key  ',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       const headers = getHeaders() as Record<string, string>
@@ -203,30 +202,28 @@ describe('Config API Module', () => {
 
   describe('getApiMode', () => {
     it('should return current apiMode from store', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'proxy',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'cn',
+            mode: 'proxy',
+          },
+        },
       })
 
       expect(getApiMode()).toBe('proxy')
     })
 
     it('should return direct mode from store', () => {
-      vi.mocked(useAppStore.getState).mockReturnValue({
-        apiKey: 'test-key',
-        region: 'cn',
-        theme: 'system',
-        apiMode: 'direct',
-        setApiKey: vi.fn(),
-        setRegion: vi.fn(),
-        setTheme: vi.fn(),
-        setApiMode: vi.fn(),
+      vi.mocked(useSettingsStore.getState).mockReturnValue({
+        settings: {
+          api: {
+            minimaxKey: 'test-key',
+            region: 'cn',
+            mode: 'direct',
+          },
+        },
       })
 
       expect(getApiMode()).toBe('direct')

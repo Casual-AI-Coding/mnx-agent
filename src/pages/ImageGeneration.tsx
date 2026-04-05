@@ -10,7 +10,6 @@ import { generateImage } from '@/lib/api/image'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
-import { useAppStore } from '@/stores/app'
 import { useSettingsStore } from '@/settings/store'
 import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -55,7 +54,8 @@ const imageVariants = {
 
 export default function ImageGeneration() {
   const { t } = useTranslation()
-  const { apiKey } = useAppStore()
+  const { settings } = useSettingsStore()
+  const apiKey = settings.api.minimaxKey
   const imageSettings = useSettingsStore(s => s.settings.generation.image)
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<ImageModel>(imageSettings.model as ImageModel)

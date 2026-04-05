@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { useSettingsStore } from '@/settings/store'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
 import { uploadMedia, uploadMediaFromUrl, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
@@ -266,10 +267,10 @@ export default function VoiceAsync() {
     formData.append('file', file)
 
     try {
-      const { region } = await import('@/stores/app').then(m => m.useAppStore.getState())
+      const { settings } = useSettingsStore.getState()
       const { API_HOSTS } = await import('@/types')
-      const baseUrl = API_HOSTS[region]
-      const { apiKey } = await import('@/stores/app').then(m => m.useAppStore.getState())
+      const baseUrl = API_HOSTS[settings.api.region]
+      const apiKey = settings.api.minimaxKey
 
       const response = await fetch(`${baseUrl}/v1/files`, {
         method: 'POST',

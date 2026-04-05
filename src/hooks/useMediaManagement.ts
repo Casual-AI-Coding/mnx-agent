@@ -8,7 +8,7 @@ import {
   batchDownloadMedia,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
-import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 
 export interface DeleteDialogState {
   isOpen: boolean
@@ -77,7 +77,8 @@ export interface UseMediaManagementReturn {
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
-  const { apiKey } = useAppStore()
+  const { settings } = useSettingsStore()
+  const apiKey = settings.api.minimaxKey
 
   // Core state
   const [records, setRecords] = useState<MediaRecord[]>([])

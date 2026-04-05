@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { getThemeById, getDefaultThemeForCategory } from '@/themes/registry'
 import type { ThemeCategory } from '@/themes/registry'
 
@@ -30,7 +30,7 @@ export function resetMediaQueryCache(): void {
 }
 
 export function useThemeEffect() {
-  const { theme } = useAppStore()
+  const theme = useSettingsStore((s) => s.settings.ui.theme)
 
   useEffect(() => {
     const root = document.documentElement

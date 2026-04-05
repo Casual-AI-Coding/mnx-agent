@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { usePagination } from '@/hooks/usePagination'
 import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
 import { cn } from '@/lib/utils'
@@ -89,7 +89,8 @@ export default function FileManagement() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [page, setPage] = useState(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { apiKey } = useAppStore()
+  const { settings } = useSettingsStore()
+  const apiKey = settings.api.minimaxKey
 
   const ITEMS_PER_PAGE = 20
 

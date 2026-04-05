@@ -2,9 +2,9 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { useCapacityStore, getCapacityByService, hasCapacity } from '../capacity'
 import type { CapacityRecord, ServiceType } from '@/types/cron'
 
-vi.mock('../app', () => ({
-  useAppStore: {
-    getState: () => ({ apiKey: 'test-key', region: 'cn' }),
+vi.mock('@/settings/store', () => ({
+  useSettingsStore: {
+    getState: () => ({ settings: { api: { minimaxKey: 'test-key', region: 'cn' } } }),
   },
 }))
 

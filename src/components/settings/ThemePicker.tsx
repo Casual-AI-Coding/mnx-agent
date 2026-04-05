@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { getThemeById, getThemesByCategory } from '@/themes/registry'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { SystemOption } from './SystemOption'
@@ -22,7 +22,9 @@ const tabLabels = {
 }
 
 export function ThemePicker() {
-  const { theme, setTheme } = useAppStore()
+  const { settings, setCategory } = useSettingsStore()
+  const theme = settings.ui.theme
+  const setTheme = (theme: string) => setCategory('ui', { theme })
 
   const getInitialTab = (): TabValue => {
     if (theme === 'system') return 'system'

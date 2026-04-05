@@ -55,16 +55,6 @@ export const useSettingsStore = create<SettingsState>()(
       initialize: async () => {
         set({ isLoading: true, syncError: null })
         try {
-          // Run legacy migration first
-          const { runLegacyMigration } = await import('../migrate-legacy')
-          const migrated = runLegacyMigration()
-          
-          if (migrated && Object.keys(migrated).length > 0) {
-            set(state => ({
-              settings: { ...state.settings, ...migrated },
-            }))
-          }
-          
           // Load from backend API
           const { getSettings } = await import('@/lib/api/settings')
           const response = await getSettings()

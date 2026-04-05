@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAppStore, type ApiMode } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 
 interface HeaderProps {
@@ -14,7 +14,11 @@ interface HeaderProps {
 export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
-  const { apiKey, region, apiMode, setApiKey, setRegion, setApiMode } = useAppStore()
+  const { settings, setCategory } = useSettingsStore()
+  const { minimaxKey: apiKey, region, mode: apiMode } = settings.api
+  const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
+  const setRegion = (region: 'cn' | 'intl') => setCategory('api', { region })
+  const setApiMode = (mode: 'direct' | 'proxy') => setCategory('api', { mode })
   const { user, logout } = useAuthStore()
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)

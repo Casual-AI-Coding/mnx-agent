@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { API_HOSTS } from '@/types'
 
@@ -28,7 +28,8 @@ class InternalAPIClient {
     })
 
     this.client.interceptors.request.use((config) => {
-      const { apiKey, region } = useAppStore.getState()
+      const { settings } = useSettingsStore.getState()
+      const { minimaxKey: apiKey, region } = settings.api
       const { accessToken } = useAuthStore.getState()
       config.headers['X-API-Key'] = apiKey
       config.headers['X-Region'] = region
