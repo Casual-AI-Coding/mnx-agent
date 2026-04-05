@@ -60,7 +60,6 @@ router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyn
 }))
 
 router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
   const engine = WorkflowEngine.getRunningExecutionEngine(req.params.id)
   if (!engine) {
     errorResponse(res, `Execution ${req.params.id} not found or not running`, 404)

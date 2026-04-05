@@ -63,6 +63,19 @@ import type {
   CreateSystemConfig,
   UpdateSystemConfig,
 } from './types.js'
+import {
+  JobRepository,
+  TaskRepository,
+  LogRepository,
+  MediaRepository,
+  WebhookRepository,
+  WorkflowRepository,
+  CapacityRepository,
+  UserRepository,
+  DeadLetterRepository,
+  PromptTemplateRepository,
+  SystemConfigRepository,
+} from '../repositories/index.js'
 
 function toISODate(): string {
   return new Date().toISOString()
@@ -94,7 +107,6 @@ function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
 }
 
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
-  // Ensure JSONB fields are always strings for consistency
   const nodes_json = typeof row.nodes_json === 'string' 
     ? row.nodes_json 
     : JSON.stringify(row.nodes_json)
@@ -198,8 +210,75 @@ function rowToSystemConfig(row: SystemConfigRow): SystemConfig {
 export class DatabaseService {
   private conn: DatabaseConnection
 
+  private _jobRepo: JobRepository | null = null
+  private _taskRepo: TaskRepository | null = null
+  private _logRepo: LogRepository | null = null
+  private _mediaRepo: MediaRepository | null = null
+  private _webhookRepo: WebhookRepository | null = null
+  private _workflowRepo: WorkflowRepository | null = null
+  private _capacityRepo: CapacityRepository | null = null
+  private _userRepo: UserRepository | null = null
+  private _deadLetterRepo: DeadLetterRepository | null = null
+  private _promptTemplateRepo: PromptTemplateRepository | null = null
+  private _systemConfigRepo: SystemConfigRepository | null = null
+
   constructor(conn: DatabaseConnection) {
     this.conn = conn
+  }
+
+  private get jobRepo(): JobRepository {
+    if (!this._jobRepo) this._jobRepo = new JobRepository(this.conn)
+    return this._jobRepo
+  }
+
+  private get taskRepo(): TaskRepository {
+    if (!this._taskRepo) this._taskRepo = new TaskRepository(this.conn)
+    return this._taskRepo
+  }
+
+  private get logRepo(): LogRepository {
+    if (!this._logRepo) this._logRepo = new LogRepository(this.conn)
+    return this._logRepo
+  }
+
+  private get mediaRepo(): MediaRepository {
+    if (!this._mediaRepo) this._mediaRepo = new MediaRepository(this.conn)
+    return this._mediaRepo
+  }
+
+  private get webhookRepo(): WebhookRepository {
+    if (!this._webhookRepo) this._webhookRepo = new WebhookRepository(this.conn)
+    return this._webhookRepo
+  }
+
+  private get workflowRepo(): WorkflowRepository {
+    if (!this._workflowRepo) this._workflowRepo = new WorkflowRepository(this.conn)
+    return this._workflowRepo
+  }
+
+  private get capacityRepo(): CapacityRepository {
+    if (!this._capacityRepo) this._capacityRepo = new CapacityRepository(this.conn)
+    return this._capacityRepo
+  }
+
+  private get userRepo(): UserRepository {
+    if (!this._userRepo) this._userRepo = new UserRepository(this.conn)
+    return this._userRepo
+  }
+
+  private get deadLetterRepo(): DeadLetterRepository {
+    if (!this._deadLetterRepo) this._deadLetterRepo = new DeadLetterRepository(this.conn)
+    return this._deadLetterRepo
+  }
+
+  private get promptTemplateRepo(): PromptTemplateRepository {
+    if (!this._promptTemplateRepo) this._promptTemplateRepo = new PromptTemplateRepository(this.conn)
+    return this._promptTemplateRepo
+  }
+
+  private get systemConfigRepo(): SystemConfigRepository {
+    if (!this._systemConfigRepo) this._systemConfigRepo = new SystemConfigRepository(this.conn)
+    return this._systemConfigRepo
   }
 
   async init(): Promise<void> {
@@ -237,338 +316,83 @@ export class DatabaseService {
   }
 
   async getAllCronJobs(ownerId?: string): Promise<CronJob[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId])
-      return rows.map(rowToCronJob)
-    }
-    const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs ORDER BY created_at DESC')
-    return rows.map(rowToCronJob)
+    return this.jobRepo.getAll(ownerId)
   }
 
   async getCronJobById(id: string, ownerId?: string): Promise<CronJob | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToCronJob(rows[0]) : null
-    }
-    const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE id = $1', [id])
-    return rows[0] ? rowToCronJob(rows[0]) : null
+    return this.jobRepo.getById(id, ownerId)
   }
 
   async createCronJob(job: CreateCronJob, ownerId?: string): Promise<CronJob> {
-    const id = uuidv4()
-    const now = toISODate()
-    const isActive = job.is_active !== false
-    const timeoutMs = job.timeout_ms ?? 300000
-    const timezone = job.timezone ?? 'UTC'
-    const misfirePolicy = job.misfire_policy ?? MisfirePolicy.FIRE_ONCE
-    
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id, misfire_policy)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null, misfirePolicy]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id, misfire_policy)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive ? 1 : 0, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null, misfirePolicy]
-      )
-    }
-    return (await this.getCronJobById(id))!
+    return this.jobRepo.create(job, ownerId)
   }
 
   async updateCronJob(id: string, updates: UpdateCronJob, ownerId?: string): Promise<CronJob | null> {
-    const existing = await this.getCronJobById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | boolean | null)[] = []
-    let paramIndex = 1
-
-    const addField = (name: string, value: string | number | boolean | null | undefined) => {
-      if (value !== undefined) {
-        fields.push(`${name} = $${paramIndex}`)
-        values.push(value)
-        paramIndex++
-      }
-    }
-
-    addField('name', updates.name)
-    addField('description', updates.description)
-    addField('cron_expression', updates.cron_expression)
-    if (updates.is_active !== undefined) {
-      addField('is_active', this.conn.isPostgres() ? updates.is_active : (updates.is_active ? 1 : 0))
-    }
-    addField('workflow_id', updates.workflow_id)
-    addField('timezone', updates.timezone)
-    addField('last_run_at', updates.last_run_at)
-    addField('next_run_at', updates.next_run_at)
-    addField('total_runs', updates.total_runs)
-    addField('total_failures', updates.total_failures)
-    addField('timeout_ms', updates.timeout_ms)
-    addField('misfire_policy', updates.misfire_policy)
-
-    if (fields.length === 0) return existing
-    
-    fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
-    paramIndex++
-    values.push(id)
-
-    await this.conn.execute(
-      `UPDATE cron_jobs SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    )
-    return this.getCronJobById(id)
+    return this.jobRepo.update(id, updates, ownerId)
   }
 
   async deleteCronJob(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM cron_jobs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM cron_jobs WHERE id = $1', [id])
-    return result.changes > 0
+    return this.jobRepo.delete(id, ownerId)
   }
 
   async toggleCronJobActive(id: string, ownerId?: string): Promise<CronJob | null> {
-    const existing = await this.getCronJobById(id, ownerId)
-    if (!existing) return null
-    
-    const newIsActive = !existing.is_active
-    const now = toISODate()
-    
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET is_active = $1, updated_at = $2 WHERE id = $3',
-        [newIsActive, now, id]
-      )
-    } else {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ?',
-        [newIsActive ? 1 : 0, now, id]
-      )
-    }
-    return this.getCronJobById(id)
+    return this.jobRepo.toggleActive(id, ownerId)
   }
 
   async updateCronJobRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
-    const existing = await this.getCronJobById(id, ownerId)
-    if (!existing) return null
-    
-    const newTotalRuns = existing.total_runs + 1
-    const newTotalFailures = stats.success ? existing.total_failures : existing.total_failures + 1
-    const now = toISODate()
-    
-    await this.conn.execute(
-      'UPDATE cron_jobs SET total_runs = $1, total_failures = $2, last_run_at = $3, updated_at = $4 WHERE id = $5',
-      [newTotalRuns, newTotalFailures, now, now, id]
-    )
-    return this.getCronJobById(id)
+    return this.jobRepo.updateRunStats(id, stats, ownerId)
   }
 
   async updateCronJobLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> {
-    const now = toISODate()
-    if (ownerId) {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET last_run_at = $1, next_run_at = $2, updated_at = $3 WHERE id = $4 AND owner_id = $5',
-        [now, nextRun, now, id, ownerId]
-      )
-    } else {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET last_run_at = $1, next_run_at = $2, updated_at = $3 WHERE id = $4',
-        [now, nextRun, now, id]
-      )
-    }
-    return this.getCronJobById(id, ownerId)
+    return this.jobRepo.updateLastRun(id, nextRun, ownerId)
   }
 
   async getActiveCronJobs(ownerId?: string): Promise<CronJob[]> {
-    if (ownerId) {
-      if (this.conn.isPostgres()) {
-        const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE is_active = true AND owner_id = $1 ORDER BY created_at DESC', [ownerId])
-        return rows.map(rowToCronJob)
-      } else {
-        const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE is_active = 1 AND owner_id = ? ORDER BY created_at DESC', [ownerId])
-        return rows.map(rowToCronJob)
-      }
-    }
-    if (this.conn.isPostgres()) {
-      const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE is_active = true ORDER BY created_at DESC')
-      return rows.map(rowToCronJob)
-    } else {
-      const rows = await this.conn.query<CronJobRow>('SELECT * FROM cron_jobs WHERE is_active = 1 ORDER BY created_at DESC')
-      return rows.map(rowToCronJob)
-    }
+    return this.jobRepo.getActive(ownerId)
   }
 
   async getAllTasks(options?: { status?: TaskStatus; ownerId?: string; jobId?: string; limit?: number; offset?: number }): Promise<{ tasks: TaskQueueItem[]; total: number }> {
-    const { status, ownerId, jobId, limit = 50, offset = 0 } = options ?? {}
-    
-    const conditions: string[] = []
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (ownerId) {
-      conditions.push(`owner_id = $${paramIndex}`)
-      params.push(ownerId)
-      paramIndex++
-    }
-
-    if (status) {
-      conditions.push(`status = $${paramIndex}`)
-      params.push(status)
-      paramIndex++
-    }
-
-    if (jobId) {
-      conditions.push(`job_id = $${paramIndex}`)
-      params.push(jobId)
-      paramIndex++
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM task_queue ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-
-    params.push(limit, offset)
-    const rows = await this.conn.query<TaskQueueRow>(
-      `SELECT * FROM task_queue ${whereClause} ORDER BY priority DESC, created_at ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-
-    return {
-      tasks: rows.map(rowToTaskQueueItem),
-      total,
-    }
+    return this.taskRepo.listTasks(options)
   }
 
   async getTaskById(id: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<TaskQueueRow>('SELECT * FROM task_queue WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToTaskQueueItem(rows[0]) : null
-    }
-    const rows = await this.conn.query<TaskQueueRow>('SELECT * FROM task_queue WHERE id = $1', [id])
-    return rows[0] ? rowToTaskQueueItem(rows[0]) : null
+    return this.taskRepo.getById(id, ownerId)
   }
 
   async getTaskPayload(id: string): Promise<{ payload: string; result: string | null } | null> {
-    const rows = await this.conn.query<{ payload: string; result: string | null }>(
-      'SELECT payload, result FROM task_queue WHERE id = $1',
-      [id]
-    )
-    return rows[0] ?? null
+    return this.taskRepo.getPayload(id)
   }
 
   async createTask(task: CreateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at, owner_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? TaskStatus.PENDING, task.max_retries ?? 3, now, ownerId ?? null]
-    )
-    return (await this.getTaskById(id))!
+    return this.taskRepo.create(task, ownerId)
   }
 
   async updateTask(id: string, updates: UpdateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem | null> {
-    const existing = await this.getTaskById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | null)[] = []
-    let paramIndex = 1
-
-    if (updates.status !== undefined) { fields.push(`status = $${paramIndex}`); values.push(updates.status); paramIndex++ }
-    if (updates.retry_count !== undefined) { fields.push(`retry_count = $${paramIndex}`); values.push(updates.retry_count); paramIndex++ }
-    if (updates.error_message !== undefined) { fields.push(`error_message = $${paramIndex}`); values.push(updates.error_message); paramIndex++ }
-    if (updates.result !== undefined) { fields.push(`result = $${paramIndex}`); values.push(updates.result); paramIndex++ }
-    if (updates.started_at !== undefined) { fields.push(`started_at = $${paramIndex}`); values.push(updates.started_at); paramIndex++ }
-    if (updates.completed_at !== undefined) { fields.push(`completed_at = $${paramIndex}`); values.push(updates.completed_at); paramIndex++ }
-
-    if (fields.length === 0) return existing
-    values.push(id)
-
-    await this.conn.execute(
-      `UPDATE task_queue SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    )
-    return this.getTaskById(id)
+    return this.taskRepo.update(id, updates, ownerId)
   }
 
   async deleteTask(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM task_queue WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM task_queue WHERE id = $1', [id])
-    return result.changes > 0
+    return this.taskRepo.delete(id, ownerId)
   }
 
   async getPendingTasksByJob(jobId: string | null, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> {
-    let rows: TaskQueueRow[]
-    if (jobId) {
-      if (ownerId) {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE job_id = $1 AND status = $2 AND owner_id = $3 ORDER BY priority DESC, created_at ASC LIMIT $4',
-          [jobId, 'pending', ownerId, limit]
-        )
-      } else {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE job_id = $1 AND status = $2 ORDER BY priority DESC, created_at ASC LIMIT $3',
-          [jobId, 'pending', limit]
-        )
-      }
-    } else {
-      if (ownerId) {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE status = $1 AND owner_id = $2 ORDER BY priority DESC, created_at ASC LIMIT $3',
-          ['pending', ownerId, limit]
-        )
-      } else {
-        rows = await this.conn.query<TaskQueueRow>(
-          'SELECT * FROM task_queue WHERE status = $1 ORDER BY priority DESC, created_at ASC LIMIT $2',
-          ['pending', limit]
-        )
-      }
-    }
-    return rows.map(rowToTaskQueueItem)
+    return this.taskRepo.getPendingByJob(jobId, limit, ownerId)
   }
 
   async getPendingTaskCount(): Promise<number> {
-    const rows = await this.conn.query<{ count: string }>('SELECT COUNT(*) as count FROM task_queue WHERE status = $1', ['pending'])
-    return parseInt(rows[0]?.count ?? '0', 10)
+    return this.taskRepo.getPendingCount()
   }
 
   async getPendingTasksByType(taskType: string, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> {
-    let rows: TaskQueueRow[]
-    if (ownerId) {
-      rows = await this.conn.query<TaskQueueRow>(
-        'SELECT * FROM task_queue WHERE task_type = $1 AND status = $2 AND owner_id = $3 ORDER BY priority DESC, created_at ASC LIMIT $4',
-        [taskType, 'pending', ownerId, limit]
-      )
-    } else {
-      rows = await this.conn.query<TaskQueueRow>(
-        'SELECT * FROM task_queue WHERE task_type = $1 AND status = $2 ORDER BY priority DESC, created_at ASC LIMIT $3',
-        [taskType, 'pending', limit]
-      )
-    }
-    return rows.map(rowToTaskQueueItem)
+    return this.taskRepo.getPendingByType(taskType, limit, ownerId)
   }
 
   async getRunningTaskCount(): Promise<number> {
-    const rows = await this.conn.query<{ count: string }>('SELECT COUNT(*) as count FROM task_queue WHERE status = $1', ['running'])
-    return parseInt(rows[0]?.count ?? '0', 10)
+    return this.taskRepo.getRunningCount()
   }
 
   async getFailedTaskCount(): Promise<number> {
-    const rows = await this.conn.query<{ count: string }>('SELECT COUNT(*) as count FROM task_queue WHERE status = $1', ['failed'])
-    return parseInt(rows[0]?.count ?? '0', 10)
+    return this.taskRepo.getFailedCount()
   }
 
   async getTaskCountsByStatus(ownerId?: string): Promise<{
@@ -579,111 +403,27 @@ export class DatabaseService {
     cancelled: number
     total: number
   }> {
-    const sql = ownerId
-      ? `SELECT status, COUNT(*) as count FROM task_queue WHERE owner_id = $1 GROUP BY status`
-      : `SELECT status, COUNT(*) as count FROM task_queue GROUP BY status`
-    const rows = await this.conn.query<{ status: string; count: string }>(
-      ownerId ? sql : sql.replace('WHERE owner_id = $1', ''),
-      ownerId ? [ownerId] : []
-    )
-    const counts = { pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }
-    for (const row of rows) {
-      const count = parseInt(row.count, 10)
-      counts.total += count
-      if (row.status in counts) {
-        (counts as Record<string, number>)[row.status] = count
-      }
-    }
-    return counts
+    return this.taskRepo.getCountsByStatus(ownerId)
   }
 
   async markTaskRunning(id: string): Promise<TaskQueueItem | null> {
-    await this.conn.execute(
-      `UPDATE task_queue SET status = 'running', started_at = $1 WHERE id = $2`,
-      [toISODate(), id]
-    )
-    return this.getTaskById(id)
+    return this.taskRepo.markRunning(id)
   }
 
   async markTaskCompleted(id: string, result?: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    if (ownerId) {
-      await this.conn.execute(
-        `UPDATE task_queue SET status = 'completed', completed_at = $1, result = $2 WHERE id = $3 AND owner_id = $4`,
-        [toISODate(), result ?? null, id, ownerId]
-      )
-    } else {
-      await this.conn.execute(
-        `UPDATE task_queue SET status = 'completed', completed_at = $1, result = $2 WHERE id = $3`,
-        [toISODate(), result ?? null, id]
-      )
-    }
-    return this.getTaskById(id, ownerId)
+    return this.taskRepo.markCompleted(id, result, ownerId)
   }
 
   async markTaskFailed(id: string, error: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    const existing = await this.getTaskById(id, ownerId)
-    if (!existing) return null
-    
-    const newRetryCount = existing.retry_count + 1
-    const newStatus = newRetryCount >= existing.max_retries ? 'failed' : 'pending'
-    
-    if (ownerId) {
-      await this.conn.execute(
-        `UPDATE task_queue SET status = $1, retry_count = $2, error_message = $3, completed_at = $4 WHERE id = $5 AND owner_id = $6`,
-        [newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id, ownerId]
-      )
-    } else {
-      await this.conn.execute(
-        `UPDATE task_queue SET status = $1, retry_count = $2, error_message = $3, completed_at = $4 WHERE id = $5`,
-        [newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id]
-      )
-    }
-    return this.getTaskById(id, ownerId)
+    return this.taskRepo.markFailed(id, error, ownerId)
   }
 
   async getTasksByJobId(jobId: string, ownerId?: string): Promise<TaskQueueItem[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<TaskQueueRow>(
-        'SELECT * FROM task_queue WHERE job_id = $1 AND owner_id = $2 ORDER BY created_at ASC',
-        [jobId, ownerId]
-      )
-      return rows.map(rowToTaskQueueItem)
-    }
-    const rows = await this.conn.query<TaskQueueRow>(
-      'SELECT * FROM task_queue WHERE job_id = $1 ORDER BY created_at ASC',
-      [jobId]
-    )
-    return rows.map(rowToTaskQueueItem)
+    return this.taskRepo.getByJobId(jobId, ownerId)
   }
 
   async getAllExecutionLogs(jobId?: string, limit: number = 100, ownerId?: string): Promise<ExecutionLog[]> {
-    let rows: ExecutionLogRow[]
-    if (ownerId) {
-      if (jobId) {
-        rows = await this.conn.query<ExecutionLogRow>(
-          'SELECT * FROM execution_logs WHERE job_id = $1 AND owner_id = $2 ORDER BY started_at DESC LIMIT $3',
-          [jobId, ownerId, limit]
-        )
-      } else {
-        rows = await this.conn.query<ExecutionLogRow>(
-          'SELECT * FROM execution_logs WHERE owner_id = $1 ORDER BY started_at DESC LIMIT $2',
-          [ownerId, limit]
-        )
-      }
-    } else {
-      if (jobId) {
-        rows = await this.conn.query<ExecutionLogRow>(
-          'SELECT * FROM execution_logs WHERE job_id = $1 ORDER BY started_at DESC LIMIT $2',
-          [jobId, limit]
-        )
-      } else {
-        rows = await this.conn.query<ExecutionLogRow>(
-          'SELECT * FROM execution_logs ORDER BY started_at DESC LIMIT $1',
-          [limit]
-        )
-      }
-    }
-    return rows.map(rowToExecutionLog)
+    return this.logRepo.getAll(jobId, limit, ownerId)
   }
 
   async getExecutionLogsPaginated(options: {
@@ -693,138 +433,31 @@ export class DatabaseService {
     endDate?: string
     ownerId?: string
   }): Promise<{ logs: ExecutionLog[]; total: number }> {
-    const { limit, offset, startDate, endDate, ownerId } = options
-
-    const conditions: string[] = []
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (ownerId) {
-      conditions.push(`owner_id = $${paramIndex}`)
-      params.push(ownerId)
-      paramIndex++
-    }
-
-    if (startDate) {
-      conditions.push(`started_at >= $${paramIndex}`)
-      params.push(startDate)
-      paramIndex++
-    }
-    if (endDate) {
-      conditions.push(`started_at <= $${paramIndex}`)
-      params.push(endDate)
-      paramIndex++
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM execution_logs ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-
-    params.push(limit, offset)
-    const rows = await this.conn.query<ExecutionLogRow>(
-      `SELECT * FROM execution_logs ${whereClause} ORDER BY started_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-
-    return {
-      logs: rows.map(rowToExecutionLog),
-      total,
-    }
+    return this.logRepo.getPaginated(options)
   }
 
   async getExecutionLogById(id: string, ownerId?: string): Promise<ExecutionLog | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<ExecutionLogRow>('SELECT * FROM execution_logs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToExecutionLog(rows[0]) : null
-    }
-    const rows = await this.conn.query<ExecutionLogRow>('SELECT * FROM execution_logs WHERE id = $1', [id])
-    return rows[0] ? rowToExecutionLog(rows[0]) : null
+    return this.logRepo.getById(id, ownerId)
   }
 
   async createExecutionLog(log: CreateExecutionLog, ownerId?: string): Promise<ExecutionLog> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, owner_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [id, log.job_id ?? null, log.trigger_type, log.status, now, log.tasks_executed ?? 0, log.tasks_succeeded ?? 0, log.tasks_failed ?? 0, log.error_summary ?? null, ownerId ?? null]
-    )
-    return (await this.getExecutionLogById(id))!
+    return this.logRepo.create(log, ownerId)
   }
 
   async updateExecutionLog(id: string, updates: UpdateExecutionLog, ownerId?: string): Promise<ExecutionLog | null> {
-    const existing = await this.getExecutionLogById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | null)[] = []
-    let paramIndex = 1
-
-    if (updates.status !== undefined) { fields.push(`status = $${paramIndex}`); values.push(updates.status); paramIndex++ }
-    if (updates.completed_at !== undefined) { fields.push(`completed_at = $${paramIndex}`); values.push(updates.completed_at); paramIndex++ }
-    if (updates.duration_ms !== undefined) { fields.push(`duration_ms = $${paramIndex}`); values.push(updates.duration_ms); paramIndex++ }
-    if (updates.tasks_executed !== undefined) { fields.push(`tasks_executed = $${paramIndex}`); values.push(updates.tasks_executed); paramIndex++ }
-    if (updates.tasks_succeeded !== undefined) { fields.push(`tasks_succeeded = $${paramIndex}`); values.push(updates.tasks_succeeded); paramIndex++ }
-    if (updates.tasks_failed !== undefined) { fields.push(`tasks_failed = $${paramIndex}`); values.push(updates.tasks_failed); paramIndex++ }
-    if (updates.error_summary !== undefined) { fields.push(`error_summary = $${paramIndex}`); values.push(updates.error_summary); paramIndex++ }
-
-    if (fields.length === 0) return existing
-    values.push(id)
-    if (ownerId) values.push(ownerId)
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE execution_logs SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
-    return this.getExecutionLogById(id, ownerId)
+    return this.logRepo.update(id, updates, ownerId)
   }
 
   async completeExecutionLog(id: string, stats: RunStats, ownerId?: string): Promise<ExecutionLog | null> {
-    const status = stats.success ? 'completed' : 'failed'
-    if (ownerId) {
-      await this.conn.execute(
-        `UPDATE execution_logs SET status = $1, completed_at = $2, duration_ms = $3, tasks_executed = $4, tasks_succeeded = $5, tasks_failed = $6, error_summary = $7 WHERE id = $8 AND owner_id = $9`,
-        [status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id, ownerId]
-      )
-    } else {
-      await this.conn.execute(
-        `UPDATE execution_logs SET status = $1, completed_at = $2, duration_ms = $3, tasks_executed = $4, tasks_succeeded = $5, tasks_failed = $6, error_summary = $7 WHERE id = $8`,
-        [status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id]
-      )
-    }
-    return this.getExecutionLogById(id, ownerId)
+    return this.logRepo.complete(id, stats, ownerId)
   }
 
   async getRecentExecutionLogs(limit: number = 20, ownerId?: string): Promise<ExecutionLog[]> {
-    return this.getAllExecutionLogs(undefined, limit, ownerId)
+    return this.logRepo.getRecent(limit, ownerId)
   }
 
   async createExecutionLogDetail(data: CreateExecutionLogDetail): Promise<string> {
-    const id = uuidv4()
-    const now = toISODate()
-    const inputPayload = data.input_payload ?? null
-    const outputResult = data.output_result ?? null
-
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO execution_log_details (id, log_id, node_id, node_type, service_name, method_name, input_payload, output_result, error_message, started_at, completed_at, duration_ms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [id, data.log_id, data.node_id ?? null, data.node_type ?? null, data.service_name ?? null, data.method_name ?? null, inputPayload, outputResult, data.error_message ?? null, data.started_at ?? now, data.completed_at ?? null, data.duration_ms ?? null]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO execution_log_details (id, log_id, node_id, node_type, service_name, method_name, input_payload, output_result, error_message, started_at, completed_at, duration_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.log_id, data.node_id ?? null, data.node_type ?? null, data.service_name ?? null, data.method_name ?? null, inputPayload, outputResult, data.error_message ?? null, data.started_at ?? now, data.completed_at ?? null, data.duration_ms ?? null]
-      )
-    }
-    return id
+    return this.logRepo.createDetail(data)
   }
 
   async updateExecutionLogDetail(
@@ -836,88 +469,27 @@ export class DatabaseService {
       duration_ms?: number
     }
   ): Promise<void> {
-    const updates: string[] = []
-    const values: (string | number | null)[] = []
-    let paramIndex = 1
-
-    if (data.output_result !== undefined) {
-      updates.push(`output_result = $${paramIndex}`)
-      values.push(data.output_result)
-      paramIndex++
-    }
-    if (data.error_message !== undefined) {
-      updates.push(`error_message = $${paramIndex}`)
-      values.push(data.error_message)
-      paramIndex++
-    }
-    if (data.completed_at !== undefined) {
-      updates.push(`completed_at = $${paramIndex}`)
-      values.push(data.completed_at)
-      paramIndex++
-    }
-    if (data.duration_ms !== undefined) {
-      updates.push(`duration_ms = $${paramIndex}`)
-      values.push(data.duration_ms)
-      paramIndex++
-    }
-
-    if (updates.length === 0) return
-
-    values.push(id)
-    await this.conn.execute(
-      `UPDATE execution_log_details SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    )
+    return this.logRepo.updateDetail(id, data)
   }
 
   async getExecutionLogDetailsByLogId(logId: string): Promise<ExecutionLogDetail[]> {
-    const rows = await this.conn.query<ExecutionLogDetailRow>(
-      'SELECT * FROM execution_log_details WHERE log_id = $1 ORDER BY started_at',
-      [logId]
-    )
-    return rows.map(rowToExecutionLogDetail)
+    return this.logRepo.getDetailsByLogId(logId)
   }
 
   async getAllCapacityRecords(): Promise<CapacityRecord[]> {
-    const rows = await this.conn.query<CapacityRecordRow>('SELECT * FROM capacity_tracking ORDER BY service_type')
-    return rows.map(rowToCapacityRecord)
+    return this.capacityRepo.getAll()
   }
 
   async getCapacityByService(serviceType: string): Promise<CapacityRecord | null> {
-    const rows = await this.conn.query<CapacityRecordRow>(
-      'SELECT * FROM capacity_tracking WHERE service_type = $1',
-      [serviceType]
-    )
-    return rows[0] ? rowToCapacityRecord(rows[0]) : null
+    return this.capacityRepo.getByService(serviceType)
   }
 
   async upsertCapacityRecord(serviceType: string, data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }): Promise<CapacityRecord> {
-    const existing = await this.getCapacityByService(serviceType)
-    const now = toISODate()
-
-    if (existing) {
-      await this.conn.execute(
-        'UPDATE capacity_tracking SET remaining_quota = $1, total_quota = $2, reset_at = $3, last_checked_at = $4 WHERE service_type = $5',
-        [data.remaining_quota, data.total_quota, data.reset_at ?? null, now, serviceType]
-      )
-      return (await this.getCapacityByService(serviceType))!
-    }
-
-    const id = uuidv4()
-    await this.conn.execute(
-      'INSERT INTO capacity_tracking (id, service_type, remaining_quota, total_quota, reset_at, last_checked_at) VALUES ($1, $2, $3, $4, $5, $6)',
-      [id, serviceType, data.remaining_quota, data.total_quota, data.reset_at ?? null, now]
-    )
-    return (await this.getCapacityByService(serviceType))!
+    return this.capacityRepo.upsert(serviceType, data)
   }
 
   async getAllWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId])
-      return rows.map(rowToWorkflowTemplate)
-    }
-    const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates ORDER BY created_at DESC')
-    return rows.map(rowToWorkflowTemplate)
+    return this.workflowRepo.getAllTemplates(ownerId)
   }
 
   async getWorkflowTemplatesPaginated(options: {
@@ -926,165 +498,31 @@ export class DatabaseService {
     limit?: number
     offset?: number
   }): Promise<{ templates: WorkflowTemplate[]; total: number }> {
-    const { ownerId, isTemplate, limit = 50, offset = 0 } = options
-
-    const conditions: string[] = []
-    const params: (string | number | boolean)[] = []
-    let paramIndex = 1
-
-    if (ownerId) {
-      conditions.push(`owner_id = $${paramIndex}`)
-      params.push(ownerId)
-      paramIndex++
-    }
-
-    if (isTemplate !== undefined) {
-      conditions.push(`is_public = $${paramIndex}`)
-      params.push(isTemplate)
-      paramIndex++
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM workflow_templates ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-
-    params.push(limit, offset)
-    const rows = await this.conn.query<WorkflowTemplateRow>(
-      `SELECT * FROM workflow_templates ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-
-    return {
-      templates: rows.map(rowToWorkflowTemplate),
-      total,
-    }
+    return this.workflowRepo.getTemplatesPaginated(options)
   }
 
   async getWorkflowTemplateById(id: string, ownerId?: string): Promise<WorkflowTemplate | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<WorkflowTemplateRow>(
-        'SELECT * FROM workflow_templates WHERE id = $1 AND (owner_id = $2 OR is_public = true)',
-        [id, ownerId]
-      )
-      return rows[0] ? rowToWorkflowTemplate(rows[0]) : null
-    }
-    const rows = await this.conn.query<WorkflowTemplateRow>('SELECT * FROM workflow_templates WHERE id = $1', [id])
-    return rows[0] ? rowToWorkflowTemplate(rows[0]) : null
+    return this.workflowRepo.getTemplateById(id, ownerId)
   }
 
   async createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_public?: boolean }, ownerId?: string): Promise<WorkflowTemplate> {
-    const id = uuidv4()
-    const now = toISODate()
-    const isTemplate = template.is_public !== false
-    
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-        [id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, isTemplate, ownerId ?? null]
-      )
-    } else {
-      await this.conn.execute(
-        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, isTemplate ? 1 : 0, ownerId ?? null]
-      )
-    }
-    return (await this.getWorkflowTemplateById(id))!
+    return this.workflowRepo.createTemplate(template, ownerId)
   }
 
   async updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplate, ownerId?: string): Promise<WorkflowTemplate | null> {
-    const existing = await this.getWorkflowTemplateById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | boolean | null)[] = []
-    let paramIndex = 1
-
-    if (updates.name !== undefined) { fields.push(`name = $${paramIndex}`); values.push(updates.name); paramIndex++ }
-    if (updates.description !== undefined) { fields.push(`description = $${paramIndex}`); values.push(updates.description); paramIndex++ }
-    if (updates.nodes_json !== undefined) { fields.push(`nodes_json = $${paramIndex}`); values.push(updates.nodes_json); paramIndex++ }
-    if (updates.edges_json !== undefined) { fields.push(`edges_json = $${paramIndex}`); values.push(updates.edges_json); paramIndex++ }
-    if (updates.is_public !== undefined) {
-      fields.push(`is_public = $${paramIndex}`)
-      values.push(this.conn.isPostgres() ? updates.is_public : (updates.is_public ? 1 : 0))
-      paramIndex++
-    }
-
-    if (fields.length === 0) return existing
-    values.push(id)
-    if (ownerId) values.push(ownerId)
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE workflow_templates SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
-    return this.getWorkflowTemplateById(id, ownerId)
+    return this.workflowRepo.updateTemplate(id, updates, ownerId)
   }
 
   async deleteWorkflowTemplate(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM workflow_templates WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM workflow_templates WHERE id = $1', [id])
-    return result.changes > 0
+    return this.workflowRepo.deleteTemplate(id, ownerId)
   }
 
   async getMarkedWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> {
-    if (ownerId) {
-      if (this.conn.isPostgres()) {
-        const rows = await this.conn.query<WorkflowTemplateRow>(
-          'SELECT * FROM workflow_templates WHERE is_public = true AND owner_id = $1 ORDER BY created_at DESC',
-          [ownerId]
-        )
-        return rows.map(rowToWorkflowTemplate)
-      } else {
-        const rows = await this.conn.query<WorkflowTemplateRow>(
-          'SELECT * FROM workflow_templates WHERE is_public = 1 AND owner_id = ? ORDER BY created_at DESC',
-          [ownerId]
-        )
-        return rows.map(rowToWorkflowTemplate)
-      }
-    }
-    if (this.conn.isPostgres()) {
-      const rows = await this.conn.query<WorkflowTemplateRow>(
-        'SELECT * FROM workflow_templates WHERE is_public = true ORDER BY created_at DESC'
-      )
-      return rows.map(rowToWorkflowTemplate)
-    } else {
-      const rows = await this.conn.query<WorkflowTemplateRow>(
-        'SELECT * FROM workflow_templates WHERE is_public = 1 ORDER BY created_at DESC'
-      )
-      return rows.map(rowToWorkflowTemplate)
-    }
+    return this.workflowRepo.getPublicTemplates(ownerId)
   }
 
   async updateTaskStatus(taskId: string, status: TaskStatus, updates?: { started_at?: string | null; completed_at?: string | null; error_message?: string | null; result?: string | null }, ownerId?: string): Promise<void> {
-    const existing = await this.getTaskById(taskId, ownerId)
-    if (!existing) return
-    
-    const fields: string[] = ['status = $1']
-    const values: (string | number | null)[] = [status]
-    let paramIndex = 2
-    
-    if (updates?.started_at !== undefined) { fields.push(`started_at = $${paramIndex}`); values.push(updates.started_at); paramIndex++ }
-    if (updates?.completed_at !== undefined) { fields.push(`completed_at = $${paramIndex}`); values.push(updates.completed_at); paramIndex++ }
-    if (updates?.error_message !== undefined) { fields.push(`error_message = $${paramIndex}`); values.push(updates.error_message); paramIndex++ }
-    if (updates?.result !== undefined) { fields.push(`result = $${paramIndex}`); values.push(updates.result); paramIndex++ }
-    values.push(taskId)
-    if (ownerId) { values.push(ownerId) }
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE task_queue SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
+    return this.taskRepo.updateStatus(taskId, status, updates, ownerId)
   }
 
   async updateTasksStatusBatch(
@@ -1092,34 +530,11 @@ export class DatabaseService {
     status: TaskStatus,
     ownerId?: string
   ): Promise<number> {
-    if (taskIds.length === 0) {
-      return 0
-    }
-
-    const values: (string | number)[] = [status]
-    let paramIndex = 2
-
-    const idPlaceholders: string[] = []
-    for (let i = 0; i < taskIds.length; i++) {
-      idPlaceholders.push(this.conn.isPostgres() ? `$${paramIndex}` : '?')
-      values.push(taskIds[i])
-      paramIndex++
-    }
-
-    let sql: string
-    if (ownerId) {
-      values.push(ownerId)
-      sql = `UPDATE task_queue SET status = $1 WHERE id IN (${idPlaceholders.join(', ')}) AND owner_id = $${paramIndex}`
-    } else {
-      sql = `UPDATE task_queue SET status = $1 WHERE id IN (${idPlaceholders.join(', ')})`
-    }
-
-    const result = await this.conn.execute(sql, values)
-    return result.changes
+    return this.taskRepo.updateStatusBatch(taskIds, status, ownerId)
   }
 
   async getCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
-    return this.getCapacityByService(serviceType)
+    return this.capacityRepo.getByService(serviceType)
   }
 
   async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> {
@@ -1134,51 +549,7 @@ export class DatabaseService {
     cancelled: number
     total: number
   }> {
-    const stats = {
-      pending: 0,
-      running: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0,
-      total: 0,
-    }
-
-    let rows: { status: string; count: string }[]
-
-    if (jobId) {
-      rows = await this.conn.query<{ status: string; count: string }>(
-        'SELECT status, COUNT(*) as count FROM task_queue WHERE job_id = $1 GROUP BY status',
-        [jobId]
-      )
-    } else {
-      rows = await this.conn.query<{ status: string; count: string }>(
-        'SELECT status, COUNT(*) as count FROM task_queue GROUP BY status'
-      )
-    }
-
-    for (const row of rows) {
-      const count = parseInt(row.count, 10)
-      stats.total += count
-      switch (row.status) {
-        case 'pending':
-          stats.pending = count
-          break
-        case 'running':
-          stats.running = count
-          break
-        case 'completed':
-          stats.completed = count
-          break
-        case 'failed':
-          stats.failed = count
-          break
-        case 'cancelled':
-          stats.cancelled = count
-          break
-      }
-    }
-
-    return stats
+    return this.taskRepo.getQueueStats(jobId)
   }
 
   async createTaskQueueItem(data: { job_id?: string | null; task_type: string; payload: string; priority?: number; status?: string; max_retries?: number }): Promise<string> {
@@ -1194,28 +565,17 @@ export class DatabaseService {
   }
 
   async getCapacity(serviceType: string): Promise<{ remaining: number; total: number } | null> {
-    const record = await this.getCapacityByService(serviceType)
+    const record = await this.capacityRepo.getByService(serviceType)
     if (!record) return null
     return { remaining: record.remaining_quota, total: record.total_quota }
   }
 
   async updateCapacity(serviceType: string, remaining: number): Promise<void> {
-    await this.conn.execute(
-      'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [remaining, toISODate(), serviceType]
-    )
+    await this.capacityRepo.updateCapacity(serviceType, remaining)
   }
 
   async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> {
-    const existing = await this.getCapacityByService(serviceType)
-    if (!existing) return null
-    
-    const newRemaining = Math.max(0, existing.remaining_quota - amount)
-    await this.conn.execute(
-      'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [newRemaining, toISODate(), serviceType]
-    )
-    return this.getCapacityByService(serviceType)
+    return this.capacityRepo.decrementCapacity(serviceType, amount)
   }
 
   async getMediaRecords(options: {
@@ -1226,148 +586,28 @@ export class DatabaseService {
     includeDeleted?: boolean
     ownerId?: string
   }): Promise<{ records: MediaRecord[]; total: number }> {
-    const { type, source, limit, offset, includeDeleted = false, ownerId } = options
-    
-    let whereClause = ''
-    const params: (string | number)[] = []
-    let paramIndex = 1
-    
-    if (ownerId) {
-      whereClause = `owner_id = $${paramIndex}`
-      params.push(ownerId)
-      paramIndex++
-    }
-    
-    if (!includeDeleted) {
-      if (this.conn.isPostgres()) {
-        whereClause += whereClause ? ` AND is_deleted = false` : `is_deleted = false`
-      } else {
-        whereClause += whereClause ? ` AND is_deleted = 0` : `is_deleted = 0`
-      }
-    }
-    
-    if (type) {
-      whereClause += whereClause ? ` AND type = $${paramIndex}` : `type = $${paramIndex}`
-      params.push(type)
-      paramIndex++
-    }
-    
-    if (source) {
-      whereClause += whereClause ? ` AND source = $${paramIndex}` : `source = $${paramIndex}`
-      params.push(source)
-      paramIndex++
-    }
-    
-    if (whereClause) {
-      whereClause = 'WHERE ' + whereClause
-    }
-    
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM media_records ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-    
-    params.push(limit, offset)
-    const rows = await this.conn.query<MediaRecordRow>(
-      `SELECT * FROM media_records ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-    
-    return {
-      records: rows.map(rowToMediaRecord),
-      total,
-    }
+    const result = await this.mediaRepo.list(options)
+    return { records: result.items, total: result.total }
   }
 
   async getMediaRecordById(id: string, ownerId?: string): Promise<MediaRecord | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<MediaRecordRow>('SELECT * FROM media_records WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToMediaRecord(rows[0]) : null
-    }
-    const rows = await this.conn.query<MediaRecordRow>('SELECT * FROM media_records WHERE id = $1', [id])
-    return rows[0] ? rowToMediaRecord(rows[0]) : null
+    return this.mediaRepo.getById(id, ownerId)
   }
 
   async createMediaRecord(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> {
-    const id = uuidv4()
-    const now = toISODate()
-    const metadata = data.metadata ? JSON.stringify(data.metadata) : null
-    
-    await this.conn.execute(
-      `INSERT INTO media_records (id, filename, original_name, filepath, type, mime_type, size_bytes, source, task_id, metadata, created_at, updated_at, owner_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, data.filename, data.original_name ?? null, data.filepath, data.type, data.mime_type ?? null, data.size_bytes, data.source ?? null, data.task_id ?? null, metadata, now, now, ownerId ?? null]
-    )
-    
-    return (await this.getMediaRecordById(id))!
+    return this.mediaRepo.create(data, ownerId)
   }
 
   async updateMediaRecord(id: string, data: { original_name?: string | null; metadata?: Record<string, unknown> | null }, ownerId?: string): Promise<MediaRecord | null> {
-    const existing = await this.getMediaRecordById(id, ownerId)
-    if (!existing) return null
-    
-    const now = toISODate()
-    const metadata = data.metadata !== undefined 
-      ? (data.metadata ? JSON.stringify(data.metadata) : null)
-      : existing.metadata
-    
-    if (ownerId) {
-      await this.conn.execute(
-        'UPDATE media_records SET original_name = $1, metadata = $2, updated_at = $3 WHERE id = $4 AND owner_id = $5',
-        [data.original_name ?? existing.original_name, metadata, now, id, ownerId]
-      )
-    } else {
-      await this.conn.execute(
-        'UPDATE media_records SET original_name = $1, metadata = $2, updated_at = $3 WHERE id = $4',
-        [data.original_name ?? existing.original_name, metadata, now, id]
-      )
-    }
-    
-    return this.getMediaRecordById(id, ownerId)
+    return this.mediaRepo.update(id, data, ownerId)
   }
 
   async softDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> {
-    const existing = await this.getMediaRecordById(id, ownerId)
-    if (!existing) return false
-    
-    const now = toISODate()
-    
-    if (ownerId) {
-      if (this.conn.isPostgres()) {
-        await this.conn.execute(
-          'UPDATE media_records SET is_deleted = true, deleted_at = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4',
-          [now, now, id, ownerId]
-        )
-      } else {
-        await this.conn.execute(
-          'UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ? AND owner_id = ?',
-          [now, now, id, ownerId]
-        )
-      }
-    } else {
-      if (this.conn.isPostgres()) {
-        await this.conn.execute(
-          'UPDATE media_records SET is_deleted = true, deleted_at = $1, updated_at = $2 WHERE id = $3',
-          [now, now, id]
-        )
-      } else {
-        await this.conn.execute(
-          'UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ?',
-          [now, now, id]
-        )
-      }
-    }
-    return true
+    return this.mediaRepo.softDelete(id, ownerId)
   }
 
   async hardDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM media_records WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM media_records WHERE id = $1', [id])
-    return result.changes > 0
+    return this.mediaRepo.hardDelete(id, ownerId)
   }
 
   async getExecutionStatsOverview(ownerId?: string): Promise<{
@@ -1376,146 +616,19 @@ export class DatabaseService {
     avgDuration: number
     errorCount: number
   }> {
-    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
-    const params = ownerId ? [ownerId] : []
-
-    const rows = await this.conn.query<{
-      totalexecutions: string
-      successcount: string
-      avgduration: string
-      errorcount: string
-    }>(`
-      SELECT 
-        COUNT(*) as totalExecutions,
-        COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as successCount,
-        COALESCE(AVG(duration_ms), 0) as avgDuration,
-        COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as errorCount
-      FROM execution_logs
-      ${ownerFilter}
-    `, params)
-
-    const stats = rows[0]
-    const totalExecutions = parseInt(stats?.totalexecutions ?? '0', 10)
-    const successCount = parseInt(stats?.successcount ?? '0', 10)
-    const avgDuration = parseFloat(stats?.avgduration ?? '0')
-    const errorCount = parseInt(stats?.errorcount ?? '0', 10)
-
-    return {
-      totalExecutions,
-      successRate: totalExecutions > 0 ? successCount / totalExecutions : 0,
-      avgDuration: Math.round(avgDuration || 0),
-      errorCount,
-    }
+    return this.logRepo.getStatsOverview(ownerId)
   }
 
   async getExecutionStatsTrend(period: 'day' | 'week' | 'month', ownerId?: string): Promise<{ date: string; total: number; success: number; failed: number }[]> {
-    let dateFormat: string
-    if (this.conn.isPostgres()) {
-      switch (period) {
-        case 'day':
-          dateFormat = 'YYYY-MM-DD'
-          break
-        case 'week':
-          dateFormat = 'IYYY-IW'
-          break
-        case 'month':
-          dateFormat = 'YYYY-MM'
-          break
-      }
-    } else {
-      switch (period) {
-        case 'day':
-          dateFormat = '%Y-%m-%d'
-          break
-        case 'week':
-          dateFormat = '%Y-%W'
-          break
-        case 'month':
-          dateFormat = '%Y-%m'
-          break
-      }
-    }
-
-    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
-    const params = ownerId ? [ownerId] : []
-
-    if (this.conn.isPostgres()) {
-      const rows = await this.conn.query<{ date: string; total: string; success: string; failed: string }>(`
-        SELECT 
-          TO_CHAR(started_at, '${dateFormat}') as date,
-          COUNT(*) as total,
-          COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as success,
-          COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed
-        FROM execution_logs
-        ${ownerFilter}
-        GROUP BY TO_CHAR(started_at, '${dateFormat}')
-        ORDER BY date DESC
-        LIMIT 90
-      `, params)
-      return rows.map(r => ({
-        date: r.date,
-        total: parseInt(r.total, 10),
-        success: parseInt(r.success, 10),
-        failed: parseInt(r.failed, 10),
-      }))
-    } else {
-      const rows = await this.conn.query<{ date: string; total: string; success: string; failed: string }>(`
-        SELECT 
-          strftime('${dateFormat}', started_at) as date,
-          COUNT(*) as total,
-          COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) as success,
-          COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed
-        FROM execution_logs
-        ${ownerFilter}
-        GROUP BY strftime('${dateFormat}', started_at)
-        ORDER BY date DESC
-        LIMIT 90
-      `, params)
-      return rows.map(r => ({
-        date: r.date,
-        total: parseInt(r.total, 10),
-        success: parseInt(r.success, 10),
-        failed: parseInt(r.failed, 10),
-      }))
-    }
+    return this.logRepo.getStatsTrend(period, ownerId)
   }
 
   async getExecutionStatsDistribution(ownerId?: string): Promise<{ type: string; count: number }[]> {
-    const ownerFilter = ownerId ? 'WHERE el.owner_id = $1' : ''
-    const params = ownerId ? [ownerId] : []
-
-    const rows = await this.conn.query<{ type: string; count: string }>(`
-      SELECT 
-        COALESCE(eld.node_type, 'unknown') as type,
-        COUNT(DISTINCT el.id) as count
-      FROM execution_logs el
-      LEFT JOIN execution_log_details eld ON el.id = eld.log_id
-      ${ownerFilter}
-      GROUP BY COALESCE(eld.node_type, 'unknown')
-      ORDER BY count DESC
-    `, params)
-
-    const result = rows.map(r => ({ type: r.type, count: parseInt(r.count, 10) }))
-    return result.length > 0 ? result.filter(r => r.type !== 'unknown') : []
+    return this.logRepo.getStatsDistribution(ownerId)
   }
 
   async getExecutionStatsErrors(limit: number = 10, ownerId?: string): Promise<{ errorSummary: string; count: number }[]> {
-    const ownerFilter = ownerId ? 'WHERE owner_id = $1' : ''
-    const params = ownerId ? [ownerId, limit] : [limit]
-
-    const rows = await this.conn.query<{ errorsummary: string; count: string }>(`
-      SELECT 
-        COALESCE(NULLIF(TRIM(error_summary), ''), 'Unknown error') as errorSummary,
-        COUNT(*) as count
-      FROM execution_logs
-      ${ownerFilter}
-        ${ownerId ? 'AND' : 'WHERE'} error_summary IS NOT NULL AND error_summary != ''
-      GROUP BY error_summary
-      ORDER BY count DESC
-      LIMIT $${ownerId ? 2 : 1}
-    `, params)
-
-    return rows.map(r => ({ errorSummary: r.errorsummary, count: parseInt(r.count, 10) }))
+    return this.logRepo.getStatsErrors(limit, ownerId)
   }
 
   async getPromptTemplates(options: {
@@ -1524,282 +637,48 @@ export class DatabaseService {
     offset: number
     ownerId?: string
   }): Promise<{ templates: PromptTemplate[]; total: number }> {
-    const { category, limit, offset, ownerId } = options
-
-    let whereClause = ''
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (ownerId) {
-      whereClause = `owner_id = $${paramIndex}`
-      params.push(ownerId)
-      paramIndex++
-    }
-
-    if (category) {
-      whereClause += whereClause ? ` AND category = $${paramIndex}` : `category = $${paramIndex}`
-      params.push(category)
-      paramIndex++
-    }
-
-    if (whereClause) {
-      whereClause = 'WHERE ' + whereClause
-    }
-
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM prompt_templates ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-
-    params.push(limit, offset)
-    const rows = await this.conn.query<PromptTemplateRow>(
-      `SELECT * FROM prompt_templates ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-
-    return {
-      templates: rows.map(rowToPromptTemplate),
-      total,
-    }
+    const result = await this.promptTemplateRepo.list(options)
+    return { templates: result.items, total: result.total }
   }
 
   async getPromptTemplateById(id: string, ownerId?: string): Promise<PromptTemplate | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<PromptTemplateRow>('SELECT * FROM prompt_templates WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return rows[0] ? rowToPromptTemplate(rows[0]) : null
-    }
-    const rows = await this.conn.query<PromptTemplateRow>('SELECT * FROM prompt_templates WHERE id = $1', [id])
-    return rows[0] ? rowToPromptTemplate(rows[0]) : null
+    return this.promptTemplateRepo.getById(id, ownerId)
   }
 
   async createPromptTemplate(data: CreatePromptTemplate, ownerId?: string): Promise<PromptTemplate> {
-    const id = uuidv4()
-    const now = toISODate()
-    const variables = data.variables ? JSON.stringify(data.variables) : null
-    const isBuiltin = data.is_builtin === true
-
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO prompt_templates (id, name, description, content, category, variables, is_builtin, created_at, updated_at, owner_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [id, data.name, data.description ?? null, data.content, data.category ?? null, variables, isBuiltin, now, now, ownerId ?? null]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO prompt_templates (id, name, description, content, category, variables, is_builtin, created_at, updated_at, owner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.name, data.description ?? null, data.content, data.category ?? null, variables, isBuiltin ? 1 : 0, now, now, ownerId ?? null]
-      )
-    }
-
-    return (await this.getPromptTemplateById(id))!
+    return this.promptTemplateRepo.create(data, ownerId)
   }
 
   async updatePromptTemplate(id: string, data: UpdatePromptTemplate, ownerId?: string): Promise<PromptTemplate | null> {
-    const existing = await this.getPromptTemplateById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | null)[] = []
-    let paramIndex = 1
-
-    if (data.name !== undefined) { fields.push(`name = $${paramIndex}`); values.push(data.name); paramIndex++ }
-    if (data.description !== undefined) { fields.push(`description = $${paramIndex}`); values.push(data.description); paramIndex++ }
-    if (data.content !== undefined) { fields.push(`content = $${paramIndex}`); values.push(data.content); paramIndex++ }
-    if (data.category !== undefined) { fields.push(`category = $${paramIndex}`); values.push(data.category); paramIndex++ }
-    if (data.variables !== undefined) { fields.push(`variables = $${paramIndex}`); values.push(JSON.stringify(data.variables)); paramIndex++ }
-
-    if (fields.length === 0) return existing
-
-    fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
-    paramIndex++
-    values.push(id)
-    if (ownerId) values.push(ownerId)
-
-    const whereClause = ownerId ? `WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}` : `WHERE id = $${paramIndex}`
-
-    await this.conn.execute(
-      `UPDATE prompt_templates SET ${fields.join(', ')} ${whereClause}`,
-      values
-    )
-    return this.getPromptTemplateById(id, ownerId)
+    return this.promptTemplateRepo.update(id, data, ownerId)
   }
 
   async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM prompt_templates WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM prompt_templates WHERE id = $1', [id])
-    return result.changes > 0
+    return this.promptTemplateRepo.delete(id, ownerId)
   }
 
   async softDeleteMediaRecords(ids: string[]): Promise<{ deleted: number; failed: number }> {
-    if (ids.length === 0) {
-      return { deleted: 0, failed: 0 }
-    }
-
-    const now = toISODate()
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
-    
-    if (this.conn.isPostgres()) {
-      const result = await this.conn.execute(
-        `UPDATE media_records SET is_deleted = true, deleted_at = $${ids.length + 1}, updated_at = $${ids.length + 2} WHERE id IN (${placeholders})`,
-        [...ids, now, now]
-      )
-      return { deleted: result.changes, failed: ids.length - result.changes }
-    } else {
-      const result = await this.conn.execute(
-        `UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`,
-        [now, now, ...ids]
-      )
-      return { deleted: result.changes, failed: ids.length - result.changes }
-    }
+    return this.mediaRepo.softDeleteBatch(ids)
   }
 
   async getMediaRecordsByIds(ids: string[]): Promise<MediaRecord[]> {
-    if (ids.length === 0) return []
-    
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
-    
-    if (this.conn.isPostgres()) {
-      const rows = await this.conn.query<MediaRecordRow>(
-        `SELECT * FROM media_records WHERE id IN (${placeholders}) AND is_deleted = false`,
-        ids
-      )
-      return rows.map(rowToMediaRecord)
-    } else {
-      const rows = await this.conn.query<MediaRecordRow>(
-        `SELECT * FROM media_records WHERE id IN (${placeholders}) AND is_deleted = 0`,
-        ids
-      )
-      return rows.map(rowToMediaRecord)
-    }
+    return this.mediaRepo.getByIds(ids)
   }
 
   async createAuditLog(data: CreateAuditLog): Promise<AuditLog> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, error_message, duration_ms, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-      [id, data.action, data.resource_type, data.resource_id ?? null, data.user_id ?? null, data.ip_address ?? null, data.user_agent ?? null, data.request_method ?? null, data.request_path ?? null, data.request_body ?? null, data.response_status ?? null, data.error_message ?? null, data.duration_ms ?? null, now]
-    )
-    return (await this.getAuditLogById(id))!
+    return this.userRepo.createAuditLog(data)
   }
 
   async getAuditLogById(id: string): Promise<AuditLog | null> {
-    const rows = await this.conn.query<AuditLogRow>('SELECT * FROM audit_logs WHERE id = $1', [id])
-    return rows[0] ? rowToAuditLog(rows[0]) : null
+    return this.userRepo.getAuditLogById(id)
   }
 
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {
-    const { action, resource_type, resource_id, user_id, response_status, start_date, end_date, page = 1, limit = 20 } = query
-    const offset = (page - 1) * limit
-
-    const conditions: string[] = []
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (action) {
-      conditions.push(`action = $${paramIndex}`)
-      params.push(action)
-      paramIndex++
-    }
-    if (resource_type) {
-      conditions.push(`resource_type = $${paramIndex}`)
-      params.push(resource_type)
-      paramIndex++
-    }
-    if (resource_id) {
-      conditions.push(`resource_id = $${paramIndex}`)
-      params.push(resource_id)
-      paramIndex++
-    }
-    if (user_id) {
-      conditions.push(`user_id = $${paramIndex}`)
-      params.push(user_id)
-      paramIndex++
-    }
-    if (response_status !== undefined) {
-      conditions.push(`response_status = $${paramIndex}`)
-      params.push(response_status)
-      paramIndex++
-    }
-    if (start_date) {
-      conditions.push(`created_at >= $${paramIndex}`)
-      params.push(start_date)
-      paramIndex++
-    }
-    if (end_date) {
-      conditions.push(`created_at <= $${paramIndex}`)
-      params.push(end_date)
-      paramIndex++
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM audit_logs ${whereClause}`,
-      params
-    )
-    const total = parseInt(countRows[0]?.count ?? '0', 10)
-
-    params.push(limit, offset)
-    const rows = await this.conn.query<AuditLogRow>(
-      `SELECT * FROM audit_logs ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params
-    )
-
-    return {
-      logs: rows.map(rowToAuditLog),
-      total,
-    }
+    return this.userRepo.getAuditLogs(query)
   }
 
   async getAuditStats(userId?: string): Promise<AuditStats> {
-    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
-    const params = userId ? [userId] : []
-
-    const totalRows = await this.conn.query<{ count: string }>(`SELECT COUNT(*) as count FROM audit_logs ${ownerFilter}`, params)
-    const total_logs = parseInt(totalRows[0]?.count ?? '0', 10)
-
-    const actionRows = await this.conn.query<{ action: string; count: string }>(
-      `SELECT action, COUNT(*) as count FROM audit_logs ${ownerFilter} GROUP BY action`,
-      params
-    )
-    const by_action: Record<string, number> = { create: 0, update: 0, delete: 0, execute: 0 }
-    actionRows.forEach(row => { by_action[row.action] = parseInt(row.count, 10) })
-
-    const resourceRows = await this.conn.query<{ resource_type: string; count: string }>(
-      `SELECT resource_type, COUNT(*) as count FROM audit_logs ${ownerFilter} GROUP BY resource_type`,
-      params
-    )
-    const by_resource_type: Record<string, number> = {}
-    resourceRows.forEach(row => { by_resource_type[row.resource_type] = parseInt(row.count, 10) })
-
-    const statusRows = await this.conn.query<{ response_status: string; count: string }>(
-      `SELECT response_status, COUNT(*) as count FROM audit_logs WHERE response_status IS NOT NULL ${userId ? 'AND user_id = $1' : ''} GROUP BY response_status`,
-      params
-    )
-    const by_response_status: Record<string, number> = {}
-    statusRows.forEach(row => { by_response_status[row.response_status] = parseInt(row.count, 10) })
-
-    const avgDurationRows = await this.conn.query<{ avg_duration: string }>(
-      `SELECT COALESCE(AVG(duration_ms), 0) as avg_duration FROM audit_logs WHERE duration_ms IS NOT NULL ${userId ? 'AND user_id = $1' : ''}`,
-      params
-    )
-    const avg_duration = parseFloat(avgDurationRows[0]?.avg_duration ?? '0')
-
-    return {
-      total_logs,
-      by_action: by_action as Record<'create' | 'update' | 'delete' | 'execute', number>,
-      by_resource_type,
-      by_response_status,
-      avg_duration_ms: Math.round(avg_duration),
-    }
+    return this.userRepo.getAuditStats(userId)
   }
 
   // =====================================================================
@@ -1807,69 +686,21 @@ export class DatabaseService {
   // =====================================================================
 
   async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> {
-    const rows = await this.conn.query<ServiceNodePermissionRow>(
-      'SELECT * FROM service_node_permissions ORDER BY category, display_name'
-    )
-    return rows.map(row => ({
-      id: row.id,
-      service_name: row.service_name,
-      method_name: row.method_name,
-      display_name: row.display_name,
-      category: row.category,
-      min_role: row.min_role,
-      is_enabled: typeof row.is_enabled === 'boolean' ? row.is_enabled : row.is_enabled === 1,
-      created_at: row.created_at,
-    }))
+    return this.userRepo.getAllServiceNodePermissions()
   }
 
   async getServiceNodePermission(
     serviceName: string,
     methodName: string
   ): Promise<ServiceNodePermission | null> {
-    const rows = await this.conn.query<ServiceNodePermissionRow>(
-      'SELECT * FROM service_node_permissions WHERE service_name = $1 AND method_name = $2',
-      [serviceName, methodName]
-    )
-    if (!rows[0]) return null
-    const row = rows[0]
-    return {
-      id: row.id,
-      service_name: row.service_name,
-      method_name: row.method_name,
-      display_name: row.display_name,
-      category: row.category,
-      min_role: row.min_role,
-      is_enabled: typeof row.is_enabled === 'boolean' ? row.is_enabled : row.is_enabled === 1,
-      created_at: row.created_at,
-    }
+    return this.userRepo.getServiceNodePermission(serviceName, methodName)
   }
 
   async updateServiceNodePermission(
     id: string,
     data: { min_role?: string; is_enabled?: boolean }
   ): Promise<void> {
-    const updates: string[] = []
-    const values: (string | number | boolean)[] = []
-    let paramIndex = 1
-
-    if (data.min_role !== undefined) {
-      updates.push(`min_role = $${paramIndex}`)
-      values.push(data.min_role)
-      paramIndex++
-    }
-    if (data.is_enabled !== undefined) {
-      updates.push(`is_enabled = $${paramIndex}`)
-      values.push(this.conn.isPostgres() ? data.is_enabled : (data.is_enabled ? 1 : 0))
-      paramIndex++
-    }
-
-    if (updates.length === 0) return
-
-    values.push(id)
-    await this.conn.execute(
-      `UPDATE service_node_permissions SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    )
+    return this.userRepo.updateServiceNodePermission(id, data)
   }
 
   async upsertServiceNodePermission(data: {
@@ -1880,34 +711,11 @@ export class DatabaseService {
     min_role?: string
     is_enabled?: boolean
   }): Promise<void> {
-    const id = uuidv4()
-    const now = toISODate()
-    const minRole = data.min_role || 'pro'
-    const isEnabled = data.is_enabled !== undefined ? data.is_enabled : true
-
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (service_name, method_name) 
-         DO UPDATE SET display_name = EXCLUDED.display_name, category = EXCLUDED.category, min_role = EXCLUDED.min_role, is_enabled = EXCLUDED.is_enabled`,
-        [id, data.service_name, data.method_name, data.display_name, data.category, minRole, isEnabled, now]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO service_node_permissions (id, service_name, method_name, display_name, category, min_role, is_enabled, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(service_name, method_name) DO UPDATE SET display_name = excluded.display_name, category = excluded.category, min_role = excluded.min_role, is_enabled = excluded.is_enabled`,
-        [id, data.service_name, data.method_name, data.display_name, data.category, minRole, isEnabled ? 1 : 0, now]
-      )
-    }
+    return this.userRepo.upsertServiceNodePermission(data)
   }
 
   async deleteServiceNodePermission(id: string): Promise<void> {
-    await this.conn.execute(
-      `DELETE FROM service_node_permissions WHERE id = $1`,
-      [id]
-    )
+    return this.userRepo.deleteServiceNodePermission(id)
   }
 
   async batchUpsertServiceNodePermissions(
@@ -1920,9 +728,7 @@ export class DatabaseService {
       is_enabled?: boolean
     }>
   ): Promise<void> {
-    for (const node of nodes) {
-      await this.upsertServiceNodePermission(node)
-    }
+    return this.userRepo.batchUpsertServiceNodePermissions(nodes)
   }
 
   // =====================================================================
@@ -1934,28 +740,15 @@ export class DatabaseService {
     user_id: string
     granted_by?: string | null
   }): Promise<void> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO workflow_permissions (id, workflow_id, user_id, granted_by, created_at)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, data.workflow_id, data.user_id, data.granted_by || null, now]
-    )
+    return this.workflowRepo.createPermission(data)
   }
 
   async deleteWorkflowPermission(workflowId: string, userId: string): Promise<void> {
-    await this.conn.execute(
-      `DELETE FROM workflow_permissions WHERE workflow_id = $1 AND user_id = $2`,
-      [workflowId, userId]
-    )
+    return this.workflowRepo.deletePermission(workflowId, userId)
   }
 
   async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> {
-    const rows = await this.conn.query<{ id: string }>(
-      `SELECT id FROM workflow_permissions WHERE workflow_id = $1 AND user_id = $2`,
-      [workflowId, userId]
-    )
-    return rows.length > 0
+    return this.workflowRepo.hasPermission(workflowId, userId)
   }
 
   async getWorkflowPermissions(workflowId: string): Promise<Array<{
@@ -1967,36 +760,11 @@ export class DatabaseService {
     username: string
     email: string | null
   }>> {
-    const rows = await this.conn.query<{
-      id: string
-      workflow_id: string
-      user_id: string
-      granted_by: string | null
-      created_at: string
-      username: string
-      email: string | null
-    }>(
-      `SELECT wp.*, u.username, u.email
-       FROM workflow_permissions wp
-       JOIN users u ON wp.user_id = u.id
-       WHERE wp.workflow_id = $1`,
-      [workflowId]
-    )
-    return rows
+    return this.workflowRepo.getPermissions(workflowId)
   }
 
   async getAvailableWorkflows(userId: string): Promise<WorkflowTemplate[]> {
-    const rows = await this.conn.query<WorkflowTemplateRow>(
-      `SELECT DISTINCT wt.* 
-       FROM workflow_templates wt
-       LEFT JOIN workflow_permissions wp ON wt.id = wp.workflow_id
-       WHERE wt.owner_id = $1
-          OR wp.user_id = $1
-          OR wt.is_public = true
-       ORDER BY wt.created_at DESC`,
-      [userId]
-    )
-    return rows.map(rowToWorkflowTemplate)
+    return this.workflowRepo.getAvailableWorkflows(userId)
   }
 
   // =====================================================================
@@ -2004,118 +772,31 @@ export class DatabaseService {
   // =====================================================================
 
   async createWorkflowVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> {
-    const id = `ver_${uuidv4().replace(/-/g, '')}`
-    const now = toISODate()
-    
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO workflow_versions (
-          id, template_id, version_number, name, description,
-          nodes_json, edges_json, change_summary, created_by, created_at, is_active
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          id,
-          data.template_id,
-          data.version_number,
-          data.name,
-          data.description ?? null,
-          data.nodes_json,
-          data.edges_json,
-          data.change_summary ?? null,
-          data.created_by ?? null,
-          now,
-          data.is_active ?? true,
-        ]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO workflow_versions (
-          id, template_id, version_number, name, description,
-          nodes_json, edges_json, change_summary, created_by, created_at, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          data.template_id,
-          data.version_number,
-          data.name,
-          data.description ?? null,
-          data.nodes_json,
-          data.edges_json,
-          data.change_summary ?? null,
-          data.created_by ?? null,
-          now,
-          data.is_active ?? true ? 1 : 0,
-        ]
-      )
-    }
-    
-    return (await this.getWorkflowVersionById(id))!
+    return this.workflowRepo.createVersion(data)
   }
 
   async getWorkflowVersionById(id: string): Promise<WorkflowVersion | undefined> {
-    const rows = await this.conn.query<WorkflowVersionRow>(
-      'SELECT * FROM workflow_versions WHERE id = ?',
-      [id]
-    )
-    return rows[0] ? rowToWorkflowVersion(rows[0]) : undefined
+    return this.workflowRepo.getVersionById(id)
   }
 
   async getWorkflowVersionsByTemplate(templateId: string): Promise<WorkflowVersion[]> {
-    const rows = await this.conn.query<WorkflowVersionRow>(
-      'SELECT * FROM workflow_versions WHERE template_id = ? ORDER BY version_number DESC',
-      [templateId]
-    )
-    return rows.map(rowToWorkflowVersion)
+    return this.workflowRepo.getVersionsByTemplate(templateId)
   }
 
   async getActiveWorkflowVersion(templateId: string): Promise<WorkflowVersion | undefined> {
-    let rows: WorkflowVersionRow[]
-    if (this.conn.isPostgres()) {
-      rows = await this.conn.query<WorkflowVersionRow>(
-        'SELECT * FROM workflow_versions WHERE template_id = $1 AND is_active = true ORDER BY version_number DESC LIMIT 1',
-        [templateId]
-      )
-    } else {
-      rows = await this.conn.query<WorkflowVersionRow>(
-        'SELECT * FROM workflow_versions WHERE template_id = ? AND is_active = 1 ORDER BY version_number DESC LIMIT 1',
-        [templateId]
-      )
-    }
-    return rows[0] ? rowToWorkflowVersion(rows[0]) : undefined
+    return this.workflowRepo.getActiveVersion(templateId)
   }
 
   async getLatestVersionNumber(templateId: string): Promise<number> {
-    const rows = await this.conn.query<{ max: number | null }>(
-      'SELECT MAX(version_number) as max FROM workflow_versions WHERE template_id = ?',
-      [templateId]
-    )
-    return rows[0]?.max ?? 0
+    return this.workflowRepo.getLatestVersionNumber(templateId)
   }
 
   async activateWorkflowVersion(versionId: string, templateId: string): Promise<void> {
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = false WHERE template_id = $1',
-        [templateId]
-      )
-      await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = true WHERE id = $1',
-        [versionId]
-      )
-    } else {
-      await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = 0 WHERE template_id = ?',
-        [templateId]
-      )
-      await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = 1 WHERE id = ?',
-        [versionId]
-      )
-    }
+    return this.workflowRepo.activateVersion(versionId, templateId)
   }
 
   async deleteWorkflowVersion(id: string): Promise<void> {
-    await this.conn.execute('DELETE FROM workflow_versions WHERE id = ?', [id])
+    return this.workflowRepo.deleteVersion(id)
   }
 
   async saveTemplateVersion(
@@ -2125,22 +806,7 @@ export class DatabaseService {
     changeSummary: string | null,
     userId: string | null
   ): Promise<WorkflowVersion> {
-    const template = await this.getWorkflowTemplateById(templateId)
-    if (!template) throw new Error(`Template ${templateId} not found`)
-    
-    const nextVersion = await this.getLatestVersionNumber(templateId) + 1
-    
-    return this.createWorkflowVersion({
-      template_id: templateId,
-      version_number: nextVersion,
-      name: template.name,
-      description: template.description,
-      nodes_json: nodesJson,
-      edges_json: edgesJson,
-      change_summary: changeSummary,
-      created_by: userId,
-      is_active: true,
-    })
+    return this.workflowRepo.saveTemplateVersion(templateId, nodesJson, edgesJson, changeSummary, userId)
   }
 
   // =====================================================================
@@ -2148,91 +814,19 @@ export class DatabaseService {
   // =====================================================================
 
   async createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> {
-    const id = uuidv4()
-    const now = toISODate()
-    const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
-
-    await this.conn.execute(
-      `INSERT INTO dead_letter_queue (id, original_task_id, job_id, owner_id, task_type, payload, error_message, retry_count, max_retries, failed_at, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, data.original_task_id ?? null, data.job_id ?? null, ownerId ?? null, data.task_type, payload, data.error_message ?? null, data.retry_count ?? 0, data.max_retries ?? 3, now, now]
-    )
-
-    return (await this.getDeadLetterQueueItemById(id))!
+    return this.deadLetterRepo.create(data, ownerId)
   }
 
   async getDeadLetterQueueItems(ownerId?: string, limit: number = 50): Promise<DeadLetterQueueItem[]> {
-    let sql: string
-    let params: (string | number)[]
-
-    if (ownerId) {
-      sql = `SELECT * FROM dead_letter_queue WHERE owner_id = $1 AND resolved_at IS NULL ORDER BY failed_at DESC LIMIT $2`
-      params = [ownerId, limit]
-    } else {
-      sql = `SELECT * FROM dead_letter_queue WHERE resolved_at IS NULL ORDER BY failed_at DESC LIMIT $1`
-      params = [limit]
-    }
-
-    const rows = await this.conn.query<DeadLetterQueueRow>(sql, params)
-    return rows.map(rowToDeadLetterQueueItem)
+    return this.deadLetterRepo.listItems(ownerId, limit)
   }
 
   async getDeadLetterQueueItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<DeadLetterQueueRow>(
-        'SELECT * FROM dead_letter_queue WHERE id = $1 AND owner_id = $2',
-        [id, ownerId]
-      )
-      return rows[0] ? rowToDeadLetterQueueItem(rows[0]) : null
-    }
-    const rows = await this.conn.query<DeadLetterQueueRow>(
-      'SELECT * FROM dead_letter_queue WHERE id = $1',
-      [id]
-    )
-    return rows[0] ? rowToDeadLetterQueueItem(rows[0]) : null
+    return this.deadLetterRepo.getById(id, ownerId)
   }
 
   async updateDeadLetterQueueItem(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null> {
-    const existing = await this.getDeadLetterQueueItemById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number)[] = []
-    let paramIndex = 1
-
-    if (data.resolved_at !== undefined) {
-      fields.push(`resolved_at = $${paramIndex}`)
-      values.push(data.resolved_at)
-      paramIndex++
-    }
-    if (data.resolution !== undefined) {
-      fields.push(`resolution = $${paramIndex}`)
-      values.push(data.resolution)
-      paramIndex++
-    }
-    if (data.retry_count !== undefined) {
-      fields.push(`retry_count = $${paramIndex}`)
-      values.push(data.retry_count)
-      paramIndex++
-    }
-
-    if (fields.length === 0) return existing
-
-    values.push(id)
-    if (ownerId) {
-      values.push(ownerId)
-      await this.conn.execute(
-        `UPDATE dead_letter_queue SET ${fields.join(', ')} WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}`,
-        values
-      )
-    } else {
-      await this.conn.execute(
-        `UPDATE dead_letter_queue SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
-        values
-      )
-    }
-
-    return this.getDeadLetterQueueItemById(id, ownerId)
+    return this.deadLetterRepo.update(id, data, ownerId)
   }
 
   async retryDeadLetterQueueItem(id: string, ownerId?: string): Promise<string> {
@@ -2263,60 +857,23 @@ export class DatabaseService {
   // =====================================================================
 
   async addJobTag(jobId: string, tag: string): Promise<void> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)`,
-      [id, jobId, tag, now]
-    )
+    return this.jobRepo.addTag(jobId, tag)
   }
 
   async removeJobTag(jobId: string, tag: string): Promise<void> {
-    await this.conn.execute(
-      `DELETE FROM job_tags WHERE job_id = $1 AND tag = $2`,
-      [jobId, tag]
-    )
+    return this.jobRepo.removeTag(jobId, tag)
   }
 
   async getJobTags(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ tag: string }>(
-      `SELECT tag FROM job_tags WHERE job_id = $1 ORDER BY tag`,
-      [jobId]
-    )
-    return rows.map(r => r.tag)
+    return this.jobRepo.getTags(jobId)
   }
 
   async getJobsByTag(tag: string, ownerId?: string): Promise<CronJob[]> {
-    let sql: string
-    let params: string[]
-
-    if (ownerId) {
-      sql = `
-        SELECT c.* FROM cron_jobs c
-        INNER JOIN job_tags jt ON c.id = jt.job_id
-        WHERE jt.tag = $1 AND c.owner_id = $2
-        ORDER BY c.created_at DESC
-      `
-      params = [tag, ownerId]
-    } else {
-      sql = `
-        SELECT c.* FROM cron_jobs c
-        INNER JOIN job_tags jt ON c.id = jt.job_id
-        WHERE jt.tag = $1
-        ORDER BY c.created_at DESC
-      `
-      params = [tag]
-    }
-
-    const rows = await this.conn.query<CronJobRow>(sql, params)
-    return rows.map(rowToCronJob)
+    return this.jobRepo.getByTag(tag, ownerId)
   }
 
   async getAllTags(): Promise<{ tag: string; count: number }[]> {
-    const rows = await this.conn.query<{ tag: string; count: string }>(
-      `SELECT tag, COUNT(*) as count FROM job_tags GROUP BY tag ORDER BY tag`
-    )
-    return rows.map(r => ({ tag: r.tag, count: parseInt(r.count, 10) }))
+    return this.jobRepo.getAllTags()
   }
 
   // =====================================================================
@@ -2324,56 +881,23 @@ export class DatabaseService {
   // =====================================================================
 
   async addJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    const id = uuidv4()
-    const now = toISODate()
-    await this.conn.execute(
-      `INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)`,
-      [id, jobId, dependsOnJobId, now]
-    )
+    return this.jobRepo.addDependency(jobId, dependsOnJobId)
   }
 
   async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    await this.conn.execute(
-      `DELETE FROM job_dependencies WHERE job_id = $1 AND depends_on_job_id = $2`,
-      [jobId, dependsOnJobId]
-    )
+    return this.jobRepo.removeDependency(jobId, dependsOnJobId)
   }
 
   async getJobDependencies(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ depends_on_job_id: string }>(
-      `SELECT depends_on_job_id FROM job_dependencies WHERE job_id = $1 ORDER BY created_at`,
-      [jobId]
-    )
-    return rows.map(r => r.depends_on_job_id)
+    return this.jobRepo.getDependencies(jobId)
   }
 
   async getJobDependents(jobId: string): Promise<string[]> {
-    const rows = await this.conn.query<{ job_id: string }>(
-      `SELECT job_id FROM job_dependencies WHERE depends_on_job_id = $1 ORDER BY created_at`,
-      [jobId]
-    )
-    return rows.map(r => r.job_id)
+    return this.jobRepo.getDependents(jobId)
   }
 
   async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    const visited = new Set<string>()
-    const queue = [dependsOnJobId]
-
-    while (queue.length > 0) {
-      const current = queue.shift()!
-      if (current === jobId) {
-        return true
-      }
-      if (visited.has(current)) {
-        continue
-      }
-      visited.add(current)
-
-      const dependencies = await this.getJobDependencies(current)
-      queue.push(...dependencies)
-    }
-
-    return false
+    return this.jobRepo.hasCircularDependency(jobId, dependsOnJobId)
   }
 
   // =====================================================================
@@ -2381,115 +905,31 @@ export class DatabaseService {
   // =====================================================================
 
   async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
-    const id = uuidv4()
-    const now = toISODate()
-    const events = JSON.stringify(data.events)
-    const headers = data.headers ? JSON.stringify(data.headers) : null
-
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, owner_id, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [id, data.job_id ?? null, data.name, data.url, events, headers, data.secret ?? null, data.is_active ?? true, ownerId ?? null, now, now]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO webhook_configs (id, job_id, name, url, events, headers, secret, is_active, owner_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.job_id ?? null, data.name, data.url, events, headers, data.secret ?? null, data.is_active ?? 1, ownerId ?? null, now, now]
-      )
-    }
-    return (await this.getWebhookConfigById(id))!
+    return this.webhookRepo.createConfig(data, ownerId)
   }
 
   async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<WebhookConfigRow>(
-        'SELECT * FROM webhook_configs WHERE id = $1 AND owner_id = $2',
-        [id, ownerId]
-      )
-      return rows[0] ? rowToWebhookConfig(rows[0]) : null
-    }
-    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1', [id])
-    return rows[0] ? rowToWebhookConfig(rows[0]) : null
+    return this.webhookRepo.getConfigById(id, ownerId)
   }
 
   async getWebhookConfigsByJobId(jobId: string): Promise<WebhookConfig[]> {
-    const rows = await this.conn.query<WebhookConfigRow>(
-      'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true',
-      [jobId]
-    )
-    return rows.map(rowToWebhookConfig)
+    return this.webhookRepo.getConfigsByJobId(jobId)
   }
 
   async getWebhookConfigsByOwner(ownerId: string): Promise<WebhookConfig[]> {
-    const rows = await this.conn.query<WebhookConfigRow>(
-      'SELECT * FROM webhook_configs WHERE owner_id = $1 ORDER BY created_at DESC',
-      [ownerId]
-    )
-    return rows.map(rowToWebhookConfig)
+    return this.webhookRepo.getConfigsByOwner(ownerId)
   }
 
   async getAllWebhookConfigs(ownerId?: string): Promise<WebhookConfig[]> {
-    if (ownerId) {
-      const rows = await this.conn.query<WebhookConfigRow>(
-        'SELECT * FROM webhook_configs WHERE owner_id = $1 ORDER BY created_at DESC',
-        [ownerId]
-      )
-      return rows.map(rowToWebhookConfig)
-    }
-    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs ORDER BY created_at DESC')
-    return rows.map(rowToWebhookConfig)
+    return this.webhookRepo.getAllConfigs(ownerId)
   }
 
   async updateWebhookConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> {
-    const existing = await this.getWebhookConfigById(id, ownerId)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | number | boolean | null)[] = []
-    let paramIndex = 1
-
-    if (updates.job_id !== undefined) { fields.push(`job_id = $${paramIndex}`); values.push(updates.job_id); paramIndex++ }
-    if (updates.name !== undefined) { fields.push(`name = $${paramIndex}`); values.push(updates.name); paramIndex++ }
-    if (updates.url !== undefined) { fields.push(`url = $${paramIndex}`); values.push(updates.url); paramIndex++ }
-    if (updates.events !== undefined) { fields.push(`events = $${paramIndex}`); values.push(JSON.stringify(updates.events)); paramIndex++ }
-    if (updates.headers !== undefined) { fields.push(`headers = $${paramIndex}`); values.push(updates.headers ? JSON.stringify(updates.headers) : null); paramIndex++ }
-    if (updates.secret !== undefined) { fields.push(`secret = $${paramIndex}`); values.push(updates.secret); paramIndex++ }
-    if (updates.is_active !== undefined) {
-      fields.push(`is_active = $${paramIndex}`)
-      values.push(this.conn.isPostgres() ? updates.is_active : (updates.is_active ? 1 : 0))
-      paramIndex++
-    }
-
-    if (fields.length === 0) return existing
-
-    fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
-    paramIndex++
-    values.push(id)
-    if (ownerId) {
-      values.push(ownerId)
-      await this.conn.execute(
-        `UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = $${paramIndex} AND owner_id = $${paramIndex + 1}`,
-        values
-      )
-    } else {
-      await this.conn.execute(
-        `UPDATE webhook_configs SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
-        values
-      )
-    }
-    return this.getWebhookConfigById(id, ownerId)
+    return this.webhookRepo.updateConfig(id, updates, ownerId)
   }
 
   async deleteWebhookConfig(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1', [id])
-    return result.changes > 0
+    return this.webhookRepo.deleteConfig(id, ownerId)
   }
 
   // =====================================================================
@@ -2497,61 +937,19 @@ export class DatabaseService {
   // =====================================================================
 
   async createWebhookDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> {
-    const id = uuidv4()
-    const now = toISODate()
-    const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
-
-    if (this.conn.isPostgres()) {
-      await this.conn.execute(
-        `INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, owner_id, delivered_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [id, data.webhook_id, data.execution_log_id ?? null, data.event, payload, data.response_status ?? null, data.response_body ?? null, data.error_message ?? null, ownerId ?? null, now]
-      )
-    } else {
-      await this.conn.execute(
-        `INSERT INTO webhook_deliveries (id, webhook_id, execution_log_id, event, payload, response_status, response_body, error_message, owner_id, delivered_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.webhook_id, data.execution_log_id ?? null, data.event, payload, data.response_status ?? null, data.response_body ?? null, data.error_message ?? null, ownerId ?? null, now]
-      )
-    }
-    return (await this.getWebhookDeliveryById(id))!
+    return this.webhookRepo.createDelivery(data, ownerId)
   }
 
   async getWebhookDeliveryById(id: string): Promise<WebhookDelivery | null> {
-    const rows = await this.conn.query<WebhookDeliveryRow>('SELECT * FROM webhook_deliveries WHERE id = $1', [id])
-    return rows[0] ? rowToWebhookDelivery(rows[0]) : null
+    return this.webhookRepo.getDeliveryById(id)
   }
 
   async getWebhookDeliveriesByWebhook(webhookId: string, limit: number = 50, ownerId?: string): Promise<WebhookDelivery[]> {
-    let sql: string
-    let params: (string | number)[]
-
-    if (ownerId) {
-      sql = 'SELECT * FROM webhook_deliveries WHERE webhook_id = $1 AND owner_id = $2 ORDER BY delivered_at DESC LIMIT $3'
-      params = [webhookId, ownerId, limit]
-    } else {
-      sql = 'SELECT * FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY delivered_at DESC LIMIT $2'
-      params = [webhookId, limit]
-    }
-
-    const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
-    return rows.map(rowToWebhookDelivery)
+    return this.webhookRepo.getDeliveriesByWebhook(webhookId, limit, ownerId)
   }
 
   async getWebhookDeliveryByExecutionLog(executionLogId: string, ownerId?: string): Promise<WebhookDelivery[]> {
-    let sql: string
-    let params: string[]
-
-    if (ownerId) {
-      sql = 'SELECT * FROM webhook_deliveries WHERE execution_log_id = $1 AND owner_id = $2 ORDER BY delivered_at DESC'
-      params = [executionLogId, ownerId]
-    } else {
-      sql = 'SELECT * FROM webhook_deliveries WHERE execution_log_id = $1 ORDER BY delivered_at DESC'
-      params = [executionLogId]
-    }
-
-    const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
-    return rows.map(rowToWebhookDelivery)
+    return this.webhookRepo.getDeliveriesByExecutionLog(executionLogId, ownerId)
   }
 
   // =====================================================================
@@ -2559,76 +957,24 @@ export class DatabaseService {
   // =====================================================================
 
   async getAllSystemConfigs(): Promise<SystemConfig[]> {
-    const rows = await this.conn.query<SystemConfigRow>(
-      'SELECT * FROM system_config ORDER BY key'
-    )
-    return rows.map(rowToSystemConfig)
+    return this.systemConfigRepo.list({})
+      .then(r => r.items)
   }
 
   async getSystemConfigByKey(key: string): Promise<SystemConfig | null> {
-    const rows = await this.conn.query<SystemConfigRow>(
-      'SELECT * FROM system_config WHERE key = $1',
-      [key]
-    )
-    return rows[0] ? rowToSystemConfig(rows[0]) : null
+    return this.systemConfigRepo.getByKey(key)
   }
 
   async createSystemConfig(data: CreateSystemConfig, updatedBy?: string): Promise<SystemConfig> {
-    const id = uuidv4()
-    const now = toISODate()
-
-    await this.conn.execute(
-      `INSERT INTO system_config (id, key, value, description, value_type, updated_at, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, data.key, data.value, data.description, data.value_type, now, updatedBy ?? null]
-    )
-
-    return (await this.getSystemConfigByKey(data.key))!
+    return this.systemConfigRepo.create(data, updatedBy)
   }
 
   async updateSystemConfig(key: string, updates: UpdateSystemConfig, updatedBy?: string): Promise<SystemConfig | null> {
-    const existing = await this.getSystemConfigByKey(key)
-    if (!existing) return null
-
-    const fields: string[] = []
-    const values: (string | null)[] = []
-    let paramIndex = 1
-
-    if (updates.value !== undefined) {
-      fields.push(`value = $${paramIndex}`)
-      values.push(updates.value)
-      paramIndex++
-    }
-    if (updates.description !== undefined) {
-      fields.push(`description = $${paramIndex}`)
-      values.push(updates.description)
-      paramIndex++
-    }
-
-    if (fields.length === 0) return existing
-
-    fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
-    paramIndex++
-    fields.push(`updated_by = $${paramIndex}`)
-    values.push(updatedBy ?? null)
-    paramIndex++
-    values.push(key)
-
-    await this.conn.execute(
-      `UPDATE system_config SET ${fields.join(', ')} WHERE key = $${paramIndex}`,
-      values
-    )
-
-    return this.getSystemConfigByKey(key)
+    return this.systemConfigRepo.update(key, updates, updatedBy)
   }
 
   async deleteSystemConfig(key: string): Promise<boolean> {
-    const result = await this.conn.execute(
-      'DELETE FROM system_config WHERE key = $1',
-      [key]
-    )
-    return result.changes > 0
+    return this.systemConfigRepo.delete(key)
   }
 
   // =====================================================================

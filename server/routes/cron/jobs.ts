@@ -333,7 +333,7 @@ router.get('/tags/:tag/jobs', validateParams(jobsByTagParamsSchema), asyncHandle
   res.json({ success: true, data: { jobs, total: jobs.length } })
 }))
 
-router.get('/tags', asyncHandler(async (req, res) => {
+router.get('/tags', asyncHandler(async (_req, res) => {
   const db = await getDatabase()
   const tags = await db.getAllTags()
   res.json({ success: true, data: { tags } })

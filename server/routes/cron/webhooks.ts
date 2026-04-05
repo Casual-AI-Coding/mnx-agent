@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
-import { successResponse, errorResponse } from '../../middleware/api-response'
 import { getDatabase } from '../../database/service-async.js'
 import { getNotificationService } from '../../services/notification-service'
 import {

@@ -30,6 +30,7 @@ function transformJobResponse(job: BackendJob): CronJob {
     timezone: job.timezone ?? 'Asia/Shanghai',
     isActive: Boolean(job.is_active),
     workflowId: job.workflow_id,
+    timeoutMs: job.timeout_ms,
     createdAt: job.created_at,
     updatedAt: job.updated_at,
     lastRunAt: job.last_run_at,

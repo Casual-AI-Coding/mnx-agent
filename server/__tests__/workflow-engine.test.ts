@@ -3,50 +3,49 @@ import {
   WorkflowNode, 
   WorkflowEdge, 
   WorkflowGraph,
-  TaskResult
+  TaskResult,
+  resolveTemplateString,
+  resolveNodeConfig,
+  parseWorkflowJson,
+  validateWorkflow,
+  buildExecutionLayers,
+  buildExecutionOrder,
 } from '../services/workflow-engine'
+import { evaluateCondition } from '../services/workflow/executors/condition-executor'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
 import type { DatabaseService } from '../database/service-async'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 class TestableWorkflowEngine extends WorkflowEngine {
   testBuildExecutionOrder(workflow: WorkflowGraph): string[] {
-    return (this as unknown as { buildExecutionOrder(w: WorkflowGraph): string[] })
-      .buildExecutionOrder(workflow)
+    return buildExecutionOrder(workflow)
   }
 
   testBuildExecutionLayers(workflow: WorkflowGraph): string[][] {
-    return (this as unknown as { buildExecutionLayers(w: WorkflowGraph): string[][] })
-      .buildExecutionLayers(workflow)
+    return buildExecutionLayers(workflow)
   }
 
   testResolveTemplateString(template: string, nodeOutputs: Map<string, unknown>): string {
-    return (this as unknown as { resolveTemplateString(t: string, n: Map<string, unknown>): string })
-      .resolveTemplateString(template, nodeOutputs)
+    return resolveTemplateString(template, nodeOutputs)
   }
 
   testEvaluateCondition(condition: string): boolean {
-    return (this as unknown as { evaluateCondition(c: string): boolean })
-      .evaluateCondition(condition)
+    return evaluateCondition(condition)
   }
 
   testResolveNodeConfig(
     config: Record<string, unknown>, 
     nodeOutputs: Map<string, unknown>
   ): Record<string, unknown> {
-    return (this as unknown as { 
-      resolveNodeConfig(c: Record<string, unknown>, n: Map<string, unknown>): Record<string, unknown> 
-    }).resolveNodeConfig(config, nodeOutputs)
+    return resolveNodeConfig(config, nodeOutputs)
   }
 
   testValidateWorkflow(workflow: WorkflowGraph): void {
-    return (this as unknown as { validateWorkflow(w: WorkflowGraph): void })
-      .validateWorkflow(workflow)
+    validateWorkflow(workflow)
   }
 
   testParseWorkflowJson(workflowJson: string): WorkflowGraph {
-    return (this as unknown as { parseWorkflowJson(j: string): WorkflowGraph })
-      .parseWorkflowJson(workflowJson)
+    return parseWorkflowJson(workflowJson)
   }
 }
 

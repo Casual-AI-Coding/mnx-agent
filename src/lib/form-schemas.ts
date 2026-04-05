@@ -76,3 +76,15 @@ export type VoiceAsyncFormData = z.infer<typeof voiceAsyncSchema>
 export type MusicGenFormData = z.infer<typeof musicGenSchema>
 export type VideoGenFormData = z.infer<typeof videoGenSchema>
 export type SettingsFormData = z.infer<typeof settingsSchema>
+
+export const cronJobSchema = z.object({
+  name: z.string().min(1, '名称不能为空').max(255),
+  description: z.string().optional(),
+  cron_expression: z.string().min(1, 'Cron表达式不能为空'),
+  timezone: z.string().min(1, '请选择时区'),
+  workflow_id: z.string().min(1, '请选择工作流'),
+  timeout_ms: z.number().min(1000, '最小超时时间为 1 秒').max(600000, '最大超时时间为 10 分钟').optional(),
+  is_active: z.boolean(),
+})
+
+export type CronJobFormData = z.infer<typeof cronJobSchema>

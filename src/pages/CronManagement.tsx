@@ -510,6 +510,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
     cronExpression: '',
     timezone: localTimezone,
     workflowId: '',
+    timeoutMs: 300000, // 5 minutes default
     isActive: true,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -523,6 +524,7 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
         cronExpression: '',
         timezone: localTimezone,
         workflowId: '',
+        timeoutMs: 300000, // 5 minutes default
         isActive: true,
       })
       setErrors({})
@@ -681,6 +683,26 @@ function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
             )}
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Execution Timeout (seconds)
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={600}
+              step={1}
+              value={formData.timeoutMs ? Math.floor(formData.timeoutMs / 1000) : 300}
+              onChange={(e) => {
+                const seconds = Math.max(1, Math.min(600, Number(e.target.value) || 1))
+                setFormData({ ...formData, timeoutMs: seconds * 1000 })
+              }}
+            />
+            <p className="text-xs text-muted-foreground/50">
+              Range: 1-600 seconds (1 second to 10 minutes). Default: 300 seconds (5 minutes).
+            </p>
+          </div>
+
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-3">
               <Switch
@@ -728,6 +750,7 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
         cronExpression: job.cronExpression,
         timezone: job.timezone || getLocalTimezone(),
         workflowId: job.workflowId ?? undefined,
+        timeoutMs: job.timeoutMs ?? 300000, // 5 minutes default
         isActive: job.isActive,
       })
       setErrors({})
@@ -871,6 +894,26 @@ function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Execution Timeout (seconds)
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={600}
+              step={1}
+              value={formData.timeoutMs ? Math.floor(formData.timeoutMs / 1000) : 300}
+              onChange={(e) => {
+                const seconds = Math.max(1, Math.min(600, Number(e.target.value) || 1))
+                setFormData({ ...formData, timeoutMs: seconds * 1000 })
+              }}
+            />
+            <p className="text-xs text-muted-foreground/50">
+              Range: 1-600 seconds (1 second to 10 minutes). Default: 300 seconds (5 minutes).
+            </p>
           </div>
 
           <div className="flex items-center justify-between pt-2">
