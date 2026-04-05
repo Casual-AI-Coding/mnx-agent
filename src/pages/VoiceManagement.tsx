@@ -10,6 +10,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { VOICE_OPTIONS } from '@/types'
 import { createSyncVoice } from '@/lib/api/voice'
 import { cn } from '@/lib/utils'
+import { services } from '@/themes/tokens'
+
+// Helper for gender tokens (not in standard token set)
+const genderTokens = {
+  male: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
+  female: { bg: 'bg-secondary/10', text: 'text-secondary-foreground', border: 'border-secondary/20' },
+}
 
 const RECENT_VOICES_KEY = 'minimax-recent-voices'
 const FAVORITE_VOICES_KEY = 'minimax-favorite-voices'
@@ -126,7 +133,8 @@ export default function VoiceManagement() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 'w-10 h-10 rounded-full flex items-center justify-center',
-                voice.gender === 'male' ? 'bg-blue-950/50 text-primary-400' : 'bg-pink-950/50 text-pink-400'
+                voice.gender === 'male' ? genderTokens.male.bg : genderTokens.female.bg,
+                voice.gender === 'male' ? genderTokens.male.text : genderTokens.female.text
               )}>
                 <User className="w-5 h-5" />
               </div>
@@ -199,19 +207,19 @@ export default function VoiceManagement() {
           title="系统音色"
           value={VOICE_OPTIONS.length}
           icon={Sparkles}
-          color="text-purple-400"
+          color={services.image.icon}
         />
         <StatCard
           title="男声"
           value={maleCount}
           icon={User}
-          color="text-primary-400"
+          color="text-primary"
         />
         <StatCard
           title="女声"
           value={femaleCount}
           icon={User}
-          color="text-pink-400"
+          color="text-secondary-foreground"
         />
       </div>
 

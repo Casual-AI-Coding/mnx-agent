@@ -16,6 +16,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
 
+// Helper for gender tokens (not in standard token set)
+const genderTokens = {
+  male: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
+  female: { bg: 'bg-secondary/10', text: 'text-secondary-foreground', border: 'border-secondary/20' },
+}
+
 const MAX_CHARS = 10000
 
 const containerVariants = {
@@ -154,8 +160,8 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
           >
             {isPlaying ? (
               <div className="flex gap-0.5">
-                <div className="w-1 h-4 bg-white rounded-full animate-pulse" />
-                <div className="w-1 h-4 bg-white rounded-full animate-pulse delay-75" />
+                <div className={cn('w-1 h-4 rounded-full animate-pulse', services.voice.bg)} />
+                <div className={cn('w-1 h-4 rounded-full animate-pulse delay-75', services.voice.bg)} />
               </div>
             ) : (
               <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
@@ -402,8 +408,8 @@ export default function VoiceSync() {
                 exit={{ opacity: 0, y: -10 }}
                 className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive flex items-center gap-3"
               >
-                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-lg">!</span>
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', status.error.bgSubtle)}>
+                  <span className={cn('text-lg', status.error.icon)}>!</span>
                 </div>
                 <span>{error}</span>
               </motion.div>
@@ -476,7 +482,7 @@ export default function VoiceSync() {
                 <div className="space-y-2.5">
                   <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.modelLabel')}</Label>
                   <Select value={model} onValueChange={(v) => setModel(v as SpeechModel)}>
-                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className={cn('bg-background/50 border-border/60 text-foreground hover:border-secondary/40 transition-colors')}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -491,13 +497,14 @@ export default function VoiceSync() {
                               <span>{m.name}</span>
                               <Badge
                                 variant={m.tier === 'latest' ? 'default' : 'secondary'}
-                                className={`text-xs ${
-                                  m.tier === 'latest'
-                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                    : m.tier === 'recommended'
-                                      ? 'bg-teal-500/20 text-teal-400 border-teal-500/30'
-                                      : 'bg-secondary/50 text-zinc-400'
-                                }`}
+                              className={cn(
+                                'text-xs',
+                                m.tier === 'latest'
+                                  ? cn(status.success.bgSubtle, status.success.text, status.success.border)
+                                  : m.tier === 'recommended'
+                                    ? cn(status.info.bgSubtle, status.info.text, status.info.border)
+                                    : 'bg-muted/50 text-muted-foreground'
+                              )}
                               >
                                 {m.tier === 'latest'
                                   ? t('voiceSync.latest')
@@ -522,7 +529,7 @@ export default function VoiceSync() {
                 <div className="space-y-2.5">
                   <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.voiceLabel')}</Label>
                   <Select value={voiceId} onValueChange={setVoiceId}>
-                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className={cn('bg-background/50 border-border/60 text-foreground hover:border-secondary/40 transition-colors')}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border max-h-64">
@@ -534,11 +541,11 @@ export default function VoiceSync() {
                         >
                           <div className="flex items-center gap-3 py-1">
                             <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                voice.gender === 'male'
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : 'bg-pink-500/20 text-pink-400'
-                              }`}
+                              className={cn(
+                                'w-6 h-6 rounded-full flex items-center justify-center text-xs',
+                                voice.gender === 'male' ? genderTokens.male.bg : genderTokens.female.bg,
+                                voice.gender === 'male' ? genderTokens.male.text : genderTokens.female.text
+                              )}
                             >
                               {voice.gender === 'male' ? '♂' : '♀'}
                             </div>
@@ -554,7 +561,7 @@ export default function VoiceSync() {
                 <div className="space-y-2.5">
                   <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.emotionLabel')}</Label>
                   <Select value={emotion} onValueChange={(v) => setEmotion(v as Emotion)}>
-                    <SelectTrigger className="bg-background/50 border-border/60 text-foreground hover:border-emerald-500/40 transition-colors">
+                    <SelectTrigger className={cn('bg-background/50 border-border/60 text-foreground hover:border-secondary/40 transition-colors')}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -581,7 +588,7 @@ export default function VoiceSync() {
                         <Gauge className="w-4 h-4 text-muted-foreground" />
                         <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.speedLabel')}</Label>
                       </div>
-                      <span className="text-sm font-medium text-emerald-400">
+                      <span className={cn('text-sm font-medium', services.voice.text)}>
                         {speed.toFixed(1)}x
                       </span>
                     </div>
@@ -602,7 +609,7 @@ export default function VoiceSync() {
                         <Volume2 className="w-4 h-4 text-muted-foreground" />
                         <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.volumeLabel')}</Label>
                       </div>
-                      <span className="text-sm font-medium text-emerald-400">
+                      <span className={cn('text-sm font-medium', services.voice.text)}>
                         {Math.round(volume * 100)}%
                       </span>
                     </div>
@@ -623,7 +630,7 @@ export default function VoiceSync() {
                         <Music2 className="w-4 h-4 text-muted-foreground" />
                         <Label className="text-muted-foreground/70 text-sm">{t('voiceSync.pitchLabel')}</Label>
                       </div>
-                      <span className="text-sm font-medium text-emerald-400">
+                      <span className={cn('text-sm font-medium', services.voice.text)}>
                         {pitch > 0 ? `+${pitch}` : pitch}
                       </span>
                     </div>
@@ -644,11 +651,12 @@ export default function VoiceSync() {
                   disabled={!text.trim() || isOverLimit || isGenerating}
                   whileHover={{ scale: text.trim() && !isOverLimit && !isGenerating ? 1.02 : 1 }}
                   whileTap={{ scale: text.trim() && !isOverLimit && !isGenerating ? 0.98 : 1 }}
-                  className={`w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 ${
+                  className={cn(
+                    'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300',
                     text.trim() && !isOverLimit && !isGenerating
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 cursor-pointer'
+                      ? cn('bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 cursor-pointer')
                       : 'bg-secondary/50 text-muted-foreground/50 cursor-not-allowed'
-                  }`}
+                  )}
                 >
                   {isGenerating ? (
                     <>
@@ -670,7 +678,7 @@ export default function VoiceSync() {
           <motion.div variants={itemVariants}>
             <div className="bg-card/40 backdrop-blur-sm border border-border/40 rounded-xl p-5">
               <h3 className="text-sm font-medium text-muted-foreground/70 mb-4 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <div className={cn('w-1.5 h-1.5 rounded-full', services.voice.bg)} />
                 {t('voiceSync.currentConfig')}
               </h3>
               <div className="space-y-3 text-sm">
@@ -682,9 +690,10 @@ export default function VoiceSync() {
                   <span className="text-muted-foreground">{t('voiceSync.voiceLabel')}</span>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        selectedVoice?.gender === 'male' ? 'bg-blue-400' : 'bg-pink-400'
-                      }`}
+                      className={cn(
+                        'w-2 h-2 rounded-full',
+                        selectedVoice?.gender === 'male' ? 'bg-primary' : 'bg-secondary'
+                      )}
                     />
                     <span className="text-foreground">{selectedVoice?.name}</span>
                   </div>
@@ -698,19 +707,19 @@ export default function VoiceSync() {
                 <div className="h-px bg-secondary/60 my-3" />
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('voiceSync.speedLabel')}</span>
-                  <span className="text-emerald-400/80 font-mono text-xs">
+                  <span className={cn('font-mono text-xs', services.voice.text)}>
                     {speed.toFixed(1)}x
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('voiceSync.volumeLabel')}</span>
-                  <span className="text-emerald-400/80 font-mono text-xs">
+                  <span className={cn('font-mono text-xs', services.voice.text)}>
                     {Math.round(volume * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('voiceSync.pitchLabel')}</span>
-                  <span className="text-emerald-400/80 font-mono text-xs">{pitch}</span>
+                  <span className={cn('font-mono text-xs', services.voice.text)}>{pitch}</span>
                 </div>
               </div>
             </div>
