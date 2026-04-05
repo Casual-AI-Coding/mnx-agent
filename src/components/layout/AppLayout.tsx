@@ -7,12 +7,13 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import HistoryPanel from './HistoryPanel'
 import { useSettingsStore } from '@/settings/store'
+import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
   const { t, i18n } = useTranslation()
   const { settings, setCategory } = useSettingsStore()
-  const apiKey = settings.api.minimaxKey
+  const apiKey = settings?.api?.minimaxKey ?? DEFAULT_SETTINGS.api.minimaxKey
   const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [showKeyModal, setShowKeyModal] = useState(false)

@@ -165,6 +165,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: safeSettings as Partial<AllSettings>,
         }
       },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.settings = {
+            ...DEFAULT_SETTINGS,
+            ...state.settings,
+            api: DEFAULT_SETTINGS.api,
+          }
+        }
+      },
     }
   )
 )
