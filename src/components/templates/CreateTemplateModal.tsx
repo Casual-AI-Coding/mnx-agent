@@ -33,11 +33,11 @@ interface CreateTemplateModalProps {
 }
 
 const CATEGORY_CONFIG: { value: TemplateCategory; label: string; icon: typeof FileText; color: string }[] = [
-  { value: 'text', label: '文本', icon: FileText, color: 'text-primary-400 bg-primary-500/10 border-primary-500/30' },
-  { value: 'image', label: '图像', icon: Image, color: 'text-purple-400 bg-purple-500/10 border-purple-500/30' },
-  { value: 'music', label: '音乐', icon: Music, color: 'text-pink-400 bg-pink-500/10 border-pink-500/30' },
-  { value: 'video', label: '视频', icon: Video, color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
-  { value: 'general', label: '通用', icon: Package, color: 'text-gray-400 bg-gray-500/10 border-gray-500/30' },
+  { value: 'text', label: '文本', icon: FileText, color: cn(services.text.icon, services.text.bg, 'border-primary-500/30') },
+  { value: 'image', label: '图像', icon: Image, color: cn(services.image.icon, services.image.bg, 'border-purple-500/30') },
+  { value: 'music', label: '音乐', icon: Music, color: cn(services.music.icon, services.music.bg, 'border-pink-500/30') },
+  { value: 'video', label: '视频', icon: Video, color: cn(services.video.icon, services.video.bg, 'border-orange-500/30') },
+  { value: 'general', label: '通用', icon: Package, color: 'text-muted-foreground bg-muted/10 border-muted/30' },
 ]
 
 export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps) {
