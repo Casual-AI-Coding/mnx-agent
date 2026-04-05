@@ -83,10 +83,11 @@ export class WorkflowEngine {
           status: 'running',
         })
         if (!executionState.id) throw new Error('Failed to create execution state')
-        executionStateId = executionState.id
+        const stateId = executionState.id
+        executionStateId = stateId
         abortController = new AbortController()
-        this.pauseSignals.set(executionStateId, abortController)
-        WorkflowEngine.setRunningExecution(executionStateId, this)
+        this.pauseSignals.set(stateId, abortController)
+        WorkflowEngine.setRunningExecution(stateId, this)
       }
 
       const executionLayers = buildExecutionLayers(workflow)

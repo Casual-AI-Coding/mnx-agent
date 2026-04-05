@@ -40,6 +40,17 @@ export interface UpdateUser {
   is_active?: boolean
 }
 
+export interface UserRow {
+  id: string
+  username: string
+  email: string
+  password_hash: string
+  role: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface AuditLog {
   id: string
   user_id: string | null

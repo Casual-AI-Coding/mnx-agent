@@ -59,24 +59,30 @@ export interface TaskQueueRow {
 export interface DeadLetterQueueItem {
   id: string
   original_task_id: string
+  job_id: string | null
   task_type: string
   payload: string
   error_message: string | null
   retry_count: number
   moved_at: string
+  resolved_at: string | null
+  failed_at: string | null
   owner_id: string | null
 }
 
 export interface CreateDeadLetterQueueItem {
   original_task_id: string
+  job_id?: string | null
   task_type: string
   payload: string
   error_message?: string | null
   retry_count: number
+  max_retries?: number
   owner_id?: string | null
 }
 
 export interface UpdateDeadLetterQueueItem {
   error_message?: string | null
   retry_count?: number
+  resolved_at?: string | null
 }
