@@ -119,12 +119,12 @@ export function QuickStartGuide({
             <div
               className={cn(
                 'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-                'bg-dark-800 group-hover:scale-110 transition-transform',
-                step.completed ? 'bg-green-500/20' : ''
+                'bg-muted group-hover:scale-110 transition-transform',
+                step.completed ? 'bg-success/20' : ''
               )}
             >
               {step.completed ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className="w-5 h-5 text-success" />
               ) : (
                 <step.icon className={cn('w-5 h-5', step.color)} />
               )}
@@ -136,7 +136,7 @@ export function QuickStartGuide({
                   {step.title}
                 </h4>
                 {step.completed && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-success/20 text-success">
                     {t('onboarding.completed', '已完成')}
                   </span>
                 )}

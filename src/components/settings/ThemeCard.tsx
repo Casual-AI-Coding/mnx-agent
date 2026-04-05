@@ -56,7 +56,7 @@ export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
           )}
         >
           <Check 
-            className="w-4 h-4 text-white" 
+            className="w-4 h-4 text-primary-foreground" 
           />
         </div>
       </div>

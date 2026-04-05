@@ -52,7 +52,7 @@ export function ThemePicker() {
                 className={`
                   flex items-center justify-center gap-2 py-2 px-4 rounded-lg h-10
                   transition-all duration-200
-                  data-[state=active]:bg-primary-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/25
+                  data-[state=active]:bg-primary-500 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary-500/25
                   data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-secondary/80
                 `}
               >

@@ -28,7 +28,7 @@ export function SystemOption({ selected, onSelect }: SystemOptionProps) {
       >
         <Monitor className={cn(
           'w-7 h-7 transition-all duration-300',
-          selected ? 'text-white scale-110' : 'text-muted-foreground group-hover:text-foreground'
+          selected ? 'text-primary-foreground scale-110' : 'text-muted-foreground group-hover:text-foreground'
         )} />
       </div>
 
@@ -52,7 +52,7 @@ export function SystemOption({ selected, onSelect }: SystemOptionProps) {
         <Check 
           className={cn(
             'w-5 h-5 transition-all duration-300',
-            selected ? 'text-white scale-100' : 'text-muted-foreground/50 scale-75'
+            selected ? 'text-primary-foreground scale-100' : 'text-muted-foreground/50 scale-75'
           )} 
         />
       </div>

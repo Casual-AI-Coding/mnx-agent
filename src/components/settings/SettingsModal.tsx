@@ -137,7 +137,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
     >
       <div
         className={`
-          absolute inset-0 bg-black/60 backdrop-blur-md
+          absolute inset-0 bg-foreground/10 backdrop-blur-md
           transition-opacity duration-300
           ${isAnimating ? 'opacity-100' : 'opacity-0'}
         `}
@@ -160,7 +160,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
         <div className="relative flex items-center justify-between px-6 py-4 border-b border-border/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
-              <Settings className="w-5 h-5 text-white" />
+              <Settings className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground">Settings</h2>

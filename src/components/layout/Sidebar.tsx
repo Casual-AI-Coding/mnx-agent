@@ -347,7 +347,7 @@ const toggleSection = (sectionId: string) => {
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
             <div className="w-7 h-7 rounded bg-primary-600 flex items-center justify-center">
-              <span className="text-white font-bold text-[10px]">M</span>
+              <span className="text-primary-foreground font-bold text-[10px]">M</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <button

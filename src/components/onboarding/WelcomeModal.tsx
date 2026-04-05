@@ -120,7 +120,7 @@ export function WelcomeModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-dark-400 hover:text-white"
+            className="text-dark-400 hover:text-foreground"
           >
             {t('common.close', '关闭')}
           </Button>
