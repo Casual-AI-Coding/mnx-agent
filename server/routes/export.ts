@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getExportService } from '../services/export-service'
-import { buildOwnerFilter } from '../middleware/data-isolation.js'
+import { getOwnerId } from '../middleware/data-isolation.js'
 import {
   executionLogsExportQuerySchema,
   mediaRecordsExportQuerySchema,
@@ -19,7 +19,7 @@ router.get('/execution-logs', validateQuery(executionLogsExportQuerySchema), asy
     limit?: number
   }
 
-  const ownerId = buildOwnerFilter(req).params[0]
+  const ownerId = getOwnerId(req)
 
   const exportService = await getExportService()
   const result = await exportService.exportExecutionLogs({
@@ -44,7 +44,7 @@ router.get('/media-records', validateQuery(mediaRecordsExportQuerySchema), async
     limit?: number
   }
 
-  const ownerId = buildOwnerFilter(req).params[0]
+  const ownerId = getOwnerId(req)
 
   const exportService = await getExportService()
   const result = await exportService.exportMediaRecords({

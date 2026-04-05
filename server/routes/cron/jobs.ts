@@ -164,7 +164,7 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   
@@ -178,7 +178,7 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
     timeout_ms: job.timeout_ms ?? undefined,
   }, ownerId)
   
-  res.json({ success: true, data: clonedJob })
+  successResponse(res, clonedJob)
 }))
 
 router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -186,7 +186,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   
@@ -210,14 +210,11 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
     ? recentLogs.reduce((sum: number, log) => sum + (log.duration_ms || 0), 0) / recentLogs.length
     : null
   
-  res.json({
-    success: true,
-    data: {
-      validation,
-      nextRuns,
-      estimatedDurationMs: avgDuration,
-      estimatedDurationFormatted: avgDuration ? formatDuration(avgDuration) : null,
-    },
+  successResponse(res, {
+    validation,
+    nextRuns,
+    estimatedDurationMs: avgDuration,
+    estimatedDurationFormatted: avgDuration ? formatDuration(avgDuration) : null,
   })
 }))
 
@@ -228,7 +225,7 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
-    res.status(400).json({ success: false, error: 'ids must be an array' })
+    errorResponse(res, 'ids must be an array', 400)
     return
   }
   let updated = 0
@@ -242,7 +239,7 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
       updated++
     }
   }
-  res.json({ success: true, data: { updated } })
+  successResponse(res, { updated })
 }))
 
 router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
@@ -252,7 +249,7 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
-    res.status(400).json({ success: false, error: 'ids must be an array' })
+    errorResponse(res, 'ids must be an array', 400)
     return
   }
   let updated = 0
@@ -264,7 +261,7 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
       updated++
     }
   }
-  res.json({ success: true, data: { updated } })
+  successResponse(res, { updated })
 }))
 
 router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
@@ -274,7 +271,7 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
-    res.status(400).json({ success: false, error: 'ids must be an array' })
+    errorResponse(res, 'ids must be an array', 400)
     return
   }
   let deleted = 0
@@ -284,7 +281,7 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
       deleted++
     }
   }
-  res.json({ success: true, data: { deleted } })
+  successResponse(res, { deleted })
 }))
 
 router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(addJobTagSchema), asyncHandler(async (req, res) => {
@@ -292,13 +289,13 @@ router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(ad
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const { tag } = req.body
   await db.addJobTag(req.params.id, tag)
   const tags = await db.getJobTags(req.params.id)
-  res.json({ success: true, data: { tags } })
+  successResponse(res, { tags })
 }))
 
 router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHandler(async (req, res) => {
@@ -306,12 +303,12 @@ router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHa
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   await db.removeJobTag(req.params.id, req.params.tag)
   const tags = await db.getJobTags(req.params.id)
-  res.json({ success: true, data: { tags } })
+  successResponse(res, { tags })
 }))
 
 router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -319,24 +316,24 @@ router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const tags = await db.getJobTags(req.params.id)
-  res.json({ success: true, data: { tags } })
+  successResponse(res, { tags })
 }))
 
 router.get('/tags/:tag/jobs', validateParams(jobsByTagParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const jobs = await db.getJobsByTag(req.params.tag, ownerId)
-  res.json({ success: true, data: { jobs, total: jobs.length } })
+  successResponse(res, { jobs, total: jobs.length })
 }))
 
 router.get('/tags', asyncHandler(async (_req, res) => {
   const db = await getDatabase()
   const tags = await db.getAllTags()
-  res.json({ success: true, data: { tags } })
+  successResponse(res, { tags })
 }))
 
 router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), validate(addJobDependencySchema), asyncHandler(async (req, res) => {
@@ -344,31 +341,31 @@ router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), val
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const { depends_on_job_id } = req.body
 
   if (req.params.id === depends_on_job_id) {
-    res.status(400).json({ success: false, error: 'A job cannot depend on itself' })
+    errorResponse(res, 'A job cannot depend on itself', 400)
     return
   }
 
   const dependsOnJob = await db.getCronJobById(depends_on_job_id, ownerId)
   if (!dependsOnJob) {
-    res.status(404).json({ success: false, error: 'Dependent job not found' })
+    errorResponse(res, 'Dependent job not found', 404)
     return
   }
 
   const hasCircular = await db.hasCircularDependency(req.params.id, depends_on_job_id)
   if (hasCircular) {
-    res.status(400).json({ success: false, error: 'Adding this dependency would create a circular dependency' })
+    errorResponse(res, 'Adding this dependency would create a circular dependency', 400)
     return
   }
 
   await db.addJobDependency(req.params.id, depends_on_job_id)
   const dependencies = await db.getJobDependencies(req.params.id)
-  res.json({ success: true, data: { dependencies } })
+  successResponse(res, { dependencies })
 }))
 
 router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParamsSchema), asyncHandler(async (req, res) => {
@@ -376,12 +373,12 @@ router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParam
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   await db.removeJobDependency(req.params.id, req.params.depId)
   const dependencies = await db.getJobDependencies(req.params.id)
-  res.json({ success: true, data: { dependencies } })
+  successResponse(res, { dependencies })
 }))
 
 router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -389,11 +386,11 @@ router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyn
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const dependencies = await db.getJobDependencies(req.params.id)
-  res.json({ success: true, data: { dependencies } })
+  successResponse(res, { dependencies })
 }))
 
 router.get('/jobs/:id/dependents', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
@@ -401,11 +398,11 @@ router.get('/jobs/:id/dependents', validateParams(cronJobIdParamsSchema), asyncH
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await db.getCronJobById(req.params.id, ownerId)
   if (!job) {
-    res.status(404).json({ success: false, error: 'Job not found' })
+    errorResponse(res, 'Job not found', 404)
     return
   }
   const dependents = await db.getJobDependents(req.params.id)
-  res.json({ success: true, data: { dependents } })
+  successResponse(res, { dependents })
 }))
 
 export default router

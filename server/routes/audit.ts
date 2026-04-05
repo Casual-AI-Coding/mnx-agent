@@ -4,6 +4,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service-async.js'
 import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
 import type { AuditAction } from '../database/types'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -39,16 +40,13 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
   })
 
   const currentLimit = Number(limit)
-  res.json({
-    success: true,
-    data: {
-      logs: result.logs,
-      pagination: {
-        page: Number(page),
-        limit: currentLimit,
-        total: result.total,
-        totalPages: Math.ceil(result.total / currentLimit),
-      },
+  successResponse(res, {
+    logs: result.logs,
+    pagination: {
+      page: Number(page),
+      limit: currentLimit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / currentLimit),
     },
   })
 }))
@@ -62,20 +60,17 @@ router.get('/stats', asyncHandler(async (req, res) => {
     : req.user?.userId
 
   const stats = await db.getAuditStats(userId)
-  res.json({
-    success: true,
-    data: stats,
-  })
+  successResponse(res, stats)
 }))
 
 router.get('/:id', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const log = await db.getAuditLogById(req.params.id)
   if (!log) {
-    res.status(404).json({ success: false, error: 'Audit log not found' })
+    errorResponse(res, 'Audit log not found', 404)
     return
   }
-  res.json({ success: true, data: log })
+  successResponse(res, log)
 }))
 
 export default router

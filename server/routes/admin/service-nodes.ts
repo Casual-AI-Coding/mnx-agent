@@ -3,13 +3,14 @@ import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
 import { getDatabase } from '../../database/service-async'
 import { VALID_ROLES } from '../../types/workflow'
+import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super']), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const nodes = await db.getAllServiceNodePermissions()
-  res.json({ success: true, data: nodes })
+  successResponse(res, nodes)
 }))
 
 router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -17,7 +18,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { min_role, is_enabled } = req.body
 
   if (min_role && !VALID_ROLES.includes(min_role as typeof VALID_ROLES[number])) {
-    res.status(400).json({ success: false, error: 'Invalid min_role' })
+    errorResponse(res, 'Invalid min_role', 400)
     return
   }
 
@@ -26,7 +27,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const node = existing.find(n => n.id === id)
   
   if (!node) {
-    res.status(404).json({ success: false, error: 'Service node not found' })
+    errorResponse(res, 'Service node not found', 404)
     return
   }
 
@@ -35,7 +36,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const updatedNodes = await db.getAllServiceNodePermissions()
   const updated = updatedNodes.find(n => n.id === id)
 
-  res.json({ success: true, data: updated })
+  successResponse(res, updated)
 }))
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -46,13 +47,13 @@ router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const node = existing.find(n => n.id === id)
   
   if (!node) {
-    res.status(404).json({ success: false, error: 'Service node not found' })
+    errorResponse(res, 'Service node not found', 404)
     return
   }
 
   await db.deleteServiceNodePermission(id)
 
-  res.json({ success: true, message: 'Service node deleted' })
+  successResponse(res, { message: 'Service node deleted' })
 }))
 
 export default router

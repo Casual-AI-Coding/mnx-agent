@@ -25,7 +25,7 @@ router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (
   const { job_id, status, limit } = query
   let logs: ExecutionLog[] = await db.getAllExecutionLogs(job_id, limit, ownerId)
   if (status) logs = logs.filter((l: ExecutionLog) => l.status === status)
-  res.json({ success: true, data: { logs, total: logs.length } })
+  successResponse(res, { logs, total: logs.length })
 }))
 
 router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
@@ -33,7 +33,7 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await db.getExecutionLogById(req.params.id, ownerId)
   if (!log) {
-    res.status(404).json({ success: false, error: 'Log not found' })
+    errorResponse(res, 'Log not found', 404)
     return
   }
   let tasks: { id: string; status: string; created_at: string }[] = []
@@ -44,7 +44,7 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
       created_at: t.created_at,
     }))
   }
-  res.json({ success: true, data: { log, tasks } })
+  successResponse(res, { log, tasks })
 }))
 
 router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
@@ -52,11 +52,11 @@ router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyn
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await db.getExecutionLogById(req.params.id, ownerId)
   if (!log) {
-    res.status(404).json({ success: false, error: 'Log not found' })
+    errorResponse(res, 'Log not found', 404)
     return
   }
   const details = await db.getExecutionLogDetailsByLogId(req.params.id)
-  res.json({ success: true, data: { log, details } })
+  successResponse(res, { log, details })
 }))
 
 router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
@@ -158,14 +158,14 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
     if (edge.target && !parsedNodes.find(n => n.id === edge.target)) errors.push(`Edge target ${edge.target} does not exist in nodes`)
   }
   const valid = errors.length === 0
-  res.json({ success: true, data: { valid, errors, nodes: parsedNodes.length, edges: parsedEdges.length } })
+  successResponse(res, { valid, errors, nodes: parsedNodes.length, edges: parsedEdges.length })
 }))
 
 router.get('/workflow/templates', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const templates: WorkflowTemplate[] = await db.getMarkedWorkflowTemplates(ownerId)
-  res.json({ success: true, data: { templates, total: templates.length } })
+  successResponse(res, { templates, total: templates.length })
 }))
 
 router.post('/workflow/templates', validate(createWorkflowTemplateSchema), asyncHandler(async (req, res) => {
@@ -175,7 +175,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
     JSON.parse(req.body.nodes_json)
     JSON.parse(req.body.edges_json)
   } catch {
-    res.status(400).json({ success: false, error: 'nodes_json and edges_json must be valid JSON' })
+    errorResponse(res, 'nodes_json and edges_json must be valid JSON', 400)
     return
   }
   const template = await db.createWorkflowTemplate({
@@ -185,7 +185,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
     edges_json: req.body.edges_json,
     is_public: req.body.is_template,
   }, ownerId)
-  res.json({ success: true, data: template })
+  successResponse(res, template)
 }))
 
 router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), validate(updateWorkflowTemplateSchema), asyncHandler(async (req, res) => {
@@ -193,23 +193,23 @@ router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSch
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
   if (!template) {
-    res.status(404).json({ success: false, error: 'Template not found' })
+    errorResponse(res, 'Template not found', 404)
     return
   }
   if (req.body.nodes_json) {
     try { JSON.parse(req.body.nodes_json) } catch {
-      res.status(400).json({ success: false, error: 'nodes_json must be valid JSON' })
+      errorResponse(res, 'nodes_json must be valid JSON', 400)
       return
     }
   }
   if (req.body.edges_json) {
     try { JSON.parse(req.body.edges_json) } catch {
-      res.status(400).json({ success: false, error: 'edges_json must be valid JSON' })
+      errorResponse(res, 'edges_json must be valid JSON', 400)
       return
     }
   }
   const updatedTemplate = await db.updateWorkflowTemplate(req.params.id, req.body, ownerId)
-  res.json({ success: true, data: updatedTemplate })
+  successResponse(res, updatedTemplate)
 }))
 
 router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), asyncHandler(async (req, res) => {
@@ -217,11 +217,11 @@ router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParams
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
   if (!template) {
-    res.status(404).json({ success: false, error: 'Template not found' })
+    errorResponse(res, 'Template not found', 404)
     return
   }
   await db.deleteWorkflowTemplate(req.params.id, ownerId)
-  res.json({ success: true, data: { deleted: true } })
+  successResponse(res, { deleted: true })
 }))
 
 export default router

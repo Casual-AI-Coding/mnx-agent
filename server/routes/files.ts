@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 import multer from 'multer'
 
 const router = Router()
@@ -22,7 +23,7 @@ router.get('/list', async (req: Request, res: Response) => {
     const client = getClient(req)
     const { purpose } = req.query
     const result = await client.fileList(purpose as string)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -33,13 +34,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const client = getClient(req)
     
     if (!req.file) {
-      res.status(400).json({ success: false, error: 'file is required' })
+      errorResponse(res, 'file is required', 400)
       return
     }
 
     const { purpose } = req.body
     if (!purpose) {
-      res.status(400).json({ success: false, error: 'purpose is required (voice_clone, prompt_audio, t2a_async_input)' })
+      errorResponse(res, 'purpose is required (voice_clone, prompt_audio, t2a_async_input)', 400)
       return
     }
 
@@ -48,7 +49,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     formData.append('purpose', purpose)
 
     const result = await client.fileUpload(formData)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -60,12 +61,12 @@ router.get('/retrieve', async (req: Request, res: Response) => {
     const { file_id } = req.query
 
     if (!file_id) {
-      res.status(400).json({ success: false, error: 'file_id is required' })
+      errorResponse(res, 'file_id is required', 400)
       return
     }
 
     const result = await client.fileRetrieve(Number(file_id))
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -77,12 +78,12 @@ router.post('/delete', async (req: Request, res: Response) => {
     const { file_id, purpose } = req.body
 
     if (!file_id || !purpose) {
-      res.status(400).json({ success: false, error: 'file_id and purpose are required' })
+      errorResponse(res, 'file_id and purpose are required', 400)
       return
     }
 
     const result = await client.fileDelete(Number(file_id), purpose)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }

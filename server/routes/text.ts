@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders, MiniMaxClient } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -34,7 +35,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     const { model, messages, temperature, top_p, max_completion_tokens } = req.body as ChatRequestBody
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      res.status(400).json({ success: false, error: 'messages is required and must be a non-empty array' })
+      errorResponse(res, 'messages is required and must be a non-empty array', 400)
       return
     }
 
@@ -48,7 +49,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     if (max_completion_tokens !== undefined) body.max_completion_tokens = max_completion_tokens
 
     const result = await client.chatCompletion(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -61,7 +62,7 @@ router.post('/chat/stream', async (req: Request, res: Response) => {
     const { model, messages, temperature, top_p, max_completion_tokens } = req.body as ChatRequestBody
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      res.status(400).json({ success: false, error: 'messages is required and must be a non-empty array' })
+      errorResponse(res, 'messages is required and must be a non-empty array', 400)
       return
     }
 

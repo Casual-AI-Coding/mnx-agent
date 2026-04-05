@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/Select'
 import { useExecutionLogsStore } from '@/stores/executionLogs'
 import type { TaskStatus } from '@/types/cron'
-import { StatusBadge, formatDate, formatDuration } from './shared'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { formatDate, formatDuration } from '@/components/shared/dateUtils'
 import { ExecutionLogPanel } from './ExecutionLogPanel'
 
 export const ExecutionLogsTab = memo(function ExecutionLogsTab() {

@@ -5,6 +5,7 @@ import { getDatabase } from '../database/service-async.js'
 import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
 import { v4 as uuidv4 } from 'uuid'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -27,7 +28,7 @@ const createConfigSchema = z.object({
 router.get('/', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const configs = await db.getAllSystemConfigs()
-  res.json({ success: true, data: configs })
+  successResponse(res, configs)
 }))
 
 // GET /api/system-config/:key - Get a single config by key
@@ -37,11 +38,11 @@ router.get('/:key', asyncHandler(async (req, res) => {
   const config = await db.getSystemConfigByKey(key)
   
   if (!config) {
-    res.status(404).json({ success: false, error: 'Configuration not found' })
+    errorResponse(res, 'Configuration not found', 404)
     return
   }
   
-  res.json({ success: true, data: config })
+  successResponse(res, config)
 }))
 
 // POST /api/system-config - Create a new config
@@ -51,7 +52,7 @@ router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => 
   
   const existing = await db.getSystemConfigByKey(key)
   if (existing) {
-    res.status(400).json({ success: false, error: 'Configuration key already exists' })
+    errorResponse(res, 'Configuration key already exists', 400)
     return
   }
   
@@ -77,11 +78,11 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
   }, req.user?.userId)
   
   if (!config) {
-    res.status(404).json({ success: false, error: 'Configuration not found' })
+    errorResponse(res, 'Configuration not found', 404)
     return
   }
   
-  res.json({ success: true, data: config })
+  successResponse(res, config)
 }))
 
 // DELETE /api/system-config/:key - Delete a config
@@ -91,11 +92,11 @@ router.delete('/:key', asyncHandler(async (req, res) => {
   
   const deleted = await db.deleteSystemConfig(key)
   if (!deleted) {
-    res.status(404).json({ success: false, error: 'Configuration not found' })
+    errorResponse(res, 'Configuration not found', 404)
     return
   }
   
-  res.json({ success: true, message: 'Configuration deleted' })
+  successResponse(res, { message: 'Configuration deleted' })
 }))
 
 export default router

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -16,7 +17,7 @@ router.post('/list', async (req: Request, res: Response) => {
     const client = getClient(req)
     const { voice_type } = req.body
     const result = await client.voiceList(voice_type || 'all')
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -29,12 +30,12 @@ router.post('/clone', async (req: Request, res: Response) => {
     const { voice_id, file_id, clone_prompt, text, model, language_boost } = req.body
 
     if (!file_id) {
-      res.status(400).json({ success: false, error: 'file_id is required (upload file first via /api/files/upload)' })
+      errorResponse(res, 'file_id is required (upload file first via /api/files/upload)', 400)
       return
     }
 
     if (!voice_id) {
-      res.status(400).json({ success: false, error: 'voice_id is required (8-256 chars, starts with letter)' })
+      errorResponse(res, 'voice_id is required (8-256 chars, starts with letter)', 400)
       return
     }
 
@@ -47,7 +48,7 @@ router.post('/clone', async (req: Request, res: Response) => {
       try {
         body.clone_prompt = typeof clone_prompt === 'string' ? JSON.parse(clone_prompt) : clone_prompt
       } catch {
-        res.status(400).json({ success: false, error: 'clone_prompt must be valid JSON string' })
+        errorResponse(res, 'clone_prompt must be valid JSON string', 400)
         return
       }
     }
@@ -56,7 +57,7 @@ router.post('/clone', async (req: Request, res: Response) => {
     if (language_boost) body.language_boost = language_boost
 
     const result = await client.voiceClone(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -68,7 +69,7 @@ router.post('/design', async (req: Request, res: Response) => {
     const { prompt, preview_text, voice_id } = req.body
 
     if (!prompt || !preview_text) {
-      res.status(400).json({ success: false, error: 'prompt and preview_text are required' })
+      errorResponse(res, 'prompt and preview_text are required', 400)
       return
     }
 
@@ -76,7 +77,7 @@ router.post('/design', async (req: Request, res: Response) => {
     if (voice_id) body.voice_id = voice_id
 
     const result = await client.voiceDesign(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -88,12 +89,12 @@ router.post('/delete', async (req: Request, res: Response) => {
     const { voice_id, voice_type } = req.body
 
     if (!voice_id || !voice_type) {
-      res.status(400).json({ success: false, error: 'voice_id and voice_type are required' })
+      errorResponse(res, 'voice_id and voice_type are required', 400)
       return
     }
 
     const result = await client.voiceDelete(voice_id, voice_type)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }

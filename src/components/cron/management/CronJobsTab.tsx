@@ -28,7 +28,8 @@ import { getCronDescription } from '@/lib/cron-utils'
 import { CreateJobModal } from './CreateJobModal'
 import { EditJobModal } from './EditJobModal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
-import { StatusBadge, formatDate } from './shared'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { formatDate } from '@/components/shared/dateUtils'
 
 export const CronJobsTab = memo(function CronJobsTab() {
   const { jobs, loading, fetchJobs, createJob, updateJob, deleteJob, toggleJob, runJobManually } =

@@ -30,8 +30,8 @@ import {
 import { useExecutionLogsStore } from '@/stores/executionLogs'
 import { TaskStatus } from '@/types/cron'
 import type { ExecutionLog, ExecutionLogDetail } from '@/types/cron'
-import { StatusBadge } from './shared'
-import { formatDate, formatDuration } from './shared'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { formatDate, formatDuration } from '@/components/shared/dateUtils'
 import { JsonViewer } from './JsonViewer'
 
 interface ExecutionLogPanelProps {

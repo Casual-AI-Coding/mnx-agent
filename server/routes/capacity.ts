@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service-async.js'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { getLogger } from '../lib/logger'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const logger = getLogger()
 
@@ -21,7 +22,7 @@ router.get('/', asyncHandler(async (req, res) => {
     const db = await getDatabase()
     const codingPlan = await client.getCodingPlanRemains()
     const records = await db.getAllCapacityRecords()
-    res.json({ success: true, data: { codingPlan, records } })
+    successResponse(res, { codingPlan, records })
   } catch (error) {
     const db = await getDatabase()
     const records = await db.getAllCapacityRecords()
@@ -68,9 +69,9 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       })
     }
     const records = await db.getAllCapacityRecords()
-    res.json({ success: true, data: { codingPlan, records } })
+    successResponse(res, { codingPlan, records })
   } catch (error) {
-    res.status(503).json({ success: false, error: (error as Error).message })
+    errorResponse(res, (error as Error).message, 503)
   }
 }))
 

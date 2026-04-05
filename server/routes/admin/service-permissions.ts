@@ -3,13 +3,14 @@ import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
 import { getDatabase } from '../../database/service-async'
 import { VALID_ROLES } from '../../types/workflow'
+import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const permissions = await db.getAllServiceNodePermissions()
-  res.json({ success: true, data: { permissions, total: permissions.length } })
+  successResponse(res, { permissions, total: permissions.length })
 }))
 
 router.get('/:service/:method', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
@@ -18,23 +19,23 @@ router.get('/:service/:method', requireRole(['super', 'admin']), asyncHandler(as
   const permission = await db.getServiceNodePermission(service, method)
   
   if (!permission) {
-    res.status(404).json({ success: false, error: 'Permission not found' })
+    errorResponse(res, 'Permission not found', 404)
     return
   }
   
-  res.json({ success: true, data: permission })
+  successResponse(res, permission)
 }))
 
 router.post('/', requireRole(['super']), asyncHandler(async (req, res) => {
   const { service_name, method_name, display_name, category, min_role = 'pro', is_enabled = true } = req.body
   
   if (!service_name || !method_name || !display_name || !category) {
-    res.status(400).json({ success: false, error: 'service_name, method_name, display_name, and category are required' })
+    errorResponse(res, 'service_name, method_name, display_name, and category are required', 400)
     return
   }
   
   if (min_role && !VALID_ROLES.includes(min_role as typeof VALID_ROLES[number])) {
-    res.status(400).json({ success: false, error: 'Invalid min_role' })
+    errorResponse(res, 'Invalid min_role', 400)
     return
   }
   
@@ -57,7 +58,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
   const { display_name, category, min_role, is_enabled } = req.body
   
   if (min_role && !VALID_ROLES.includes(min_role as typeof VALID_ROLES[number])) {
-    res.status(400).json({ success: false, error: 'Invalid min_role' })
+    errorResponse(res, 'Invalid min_role', 400)
     return
   }
   
@@ -66,7 +67,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
   const existing = allPermissions.find(p => p.id === id)
   
   if (!existing) {
-    res.status(404).json({ success: false, error: 'Permission not found' })
+    errorResponse(res, 'Permission not found', 404)
     return
   }
   
@@ -101,7 +102,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
   const updatedPermissions = await db.getAllServiceNodePermissions()
   const updated = updatedPermissions.find(p => p.id === id)
   
-  res.json({ success: true, data: updated })
+  successResponse(res, updated)
 }))
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -112,12 +113,12 @@ router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const existing = allPermissions.find(p => p.id === id)
   
   if (!existing) {
-    res.status(404).json({ success: false, error: 'Permission not found' })
+    errorResponse(res, 'Permission not found', 404)
     return
   }
   
   await db.deleteServiceNodePermission(id)
-  res.json({ success: true, data: { deleted: true } })
+  successResponse(res, { deleted: true })
 }))
 
 export default router

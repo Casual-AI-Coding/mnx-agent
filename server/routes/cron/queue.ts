@@ -93,7 +93,7 @@ router.get('/dlq', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
   const items = await db.getDeadLetterQueueItems(ownerId, limit)
-  res.json({ success: true, data: { items, total: items.length } })
+  successResponse(res, { items, total: items.length })
 }))
 
 router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
@@ -101,11 +101,11 @@ router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
   if (!item) {
-    res.status(404).json({ success: false, error: 'DLQ item not found' })
+    errorResponse(res, 'DLQ item not found', 404)
     return
   }
   const taskId = await db.retryDeadLetterQueueItem(req.params.id, ownerId)
-  res.json({ success: true, data: { taskId, message: 'Task retried successfully' } })
+  successResponse(res, { taskId, message: 'Task retried successfully' })
 }))
 
 router.delete('/dlq/:id', asyncHandler(async (req, res) => {
@@ -113,14 +113,14 @@ router.delete('/dlq/:id', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
   const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
   if (!item) {
-    res.status(404).json({ success: false, error: 'DLQ item not found' })
+    errorResponse(res, 'DLQ item not found', 404)
     return
   }
   await db.updateDeadLetterQueueItem(req.params.id, {
     resolved_at: new Date().toISOString(),
     resolution: 'deleted',
   }, ownerId)
-  res.json({ success: true, data: { deleted: true } })
+  successResponse(res, { deleted: true })
 }))
 
 export default router

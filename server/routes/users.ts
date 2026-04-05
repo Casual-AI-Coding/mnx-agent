@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -66,8 +67,7 @@ router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, re
     [limit, offset]
   )
 
-  res.json({
-    success: true,
+  successResponse(res, {
     data: rows,
     pagination: {
       page,
@@ -93,7 +93,7 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
 
   const userService = new UserService(conn)
   const user = await userService.getUserById(id)
-  res.status(201).json({ success: true, data: user })
+  successResponse(res, user, 201)
 }))
 
 router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) => {
@@ -112,7 +112,7 @@ router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) =
   if (updates.minimax_region !== undefined) { fields.push(`minimax_region = $${idx++}`); values.push(updates.minimax_region) }
 
   if (fields.length === 0) {
-    res.json({ success: true, message: 'No changes' })
+    successResponse(res, { message: 'No changes' })
     return
   }
 
@@ -124,7 +124,7 @@ router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) =
 
   const userService = new UserService(conn)
   const user = await userService.getUserById(id)
-  res.json({ success: true, data: user })
+  successResponse(res, user)
 }))
 
 router.delete('/:id', asyncHandler(async (req, res) => {
@@ -132,17 +132,17 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const conn = getConnection()
 
   if (id === req.user?.userId) {
-    res.status(400).json({ success: false, error: '不能删除自己的账户' })
+    errorResponse(res, '不能删除自己的账户', 400)
     return
   }
 
   const result = await conn.execute('DELETE FROM users WHERE id = $1', [id])
   if (result.changes === 0) {
-    res.status(404).json({ success: false, error: '用户不存在' })
+    errorResponse(res, '用户不存在', 404)
     return
   }
 
-  res.json({ success: true, message: '用户已删除' })
+  successResponse(res, { message: '用户已删除' })
 }))
 
 const batchOperationSchema = z.object({
@@ -156,7 +156,7 @@ router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, r
   const currentUserId = req.user?.userId
 
   if (action === 'delete' && userIds.includes(currentUserId)) {
-    res.status(400).json({ success: false, error: '不能删除自己的账户' })
+    errorResponse(res, '不能删除自己的账户', 400)
     return
   }
 
@@ -207,8 +207,7 @@ router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, r
       break
   }
 
-  res.json({
-    success: true,
+  successResponse(res, {
     data: {
       action,
       successCount,
@@ -225,7 +224,7 @@ router.post('/:id/reset-password', asyncHandler(async (req, res) => {
 
   const user = await conn.query('SELECT id, username FROM users WHERE id = $1', [id])
   if (user.length === 0) {
-    res.status(404).json({ success: false, error: '用户不存在' })
+    errorResponse(res, '用户不存在', 404)
     return
   }
 
@@ -237,12 +236,9 @@ router.post('/:id/reset-password', asyncHandler(async (req, res) => {
     [passwordHash, new Date().toISOString(), id]
   )
 
-  res.json({
-    success: true,
-    data: {
-      newPassword,
-      message: '密码已重置',
-    },
+  successResponse(res, {
+    newPassword,
+    message: '密码已重置',
   })
 }))
 

@@ -4,6 +4,7 @@ import { requireRole } from '../../middleware/auth-middleware'
 import { getDatabase } from '../../database/service-async'
 import { UserService } from '../../services/user-service'
 import { getConnection } from '../../database/connection'
+import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
@@ -13,7 +14,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
   const grantedBy = req.user!.userId
 
   if (!userId) {
-    res.status(400).json({ success: false, error: 'userId is required' })
+    errorResponse(res, 'userId is required', 400)
     return
   }
 
@@ -21,7 +22,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
@@ -30,7 +31,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
   const user = await userService.getUserById(userId)
 
   if (!user) {
-    res.status(404).json({ success: false, error: 'User not found' })
+    errorResponse(res, 'User not found', 404)
     return
   }
 
@@ -40,7 +41,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
     granted_by: grantedBy,
   })
 
-  res.json({ success: true })
+  successResponse(res, null)
 }))
 
 router.delete('/:id/revoke', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -48,7 +49,7 @@ router.delete('/:id/revoke', requireRole(['super']), asyncHandler(async (req, re
   const { userId } = req.body
 
   if (!userId) {
-    res.status(400).json({ success: false, error: 'userId is required' })
+    errorResponse(res, 'userId is required', 400)
     return
   }
 
@@ -56,12 +57,12 @@ router.delete('/:id/revoke', requireRole(['super']), asyncHandler(async (req, re
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
   await db.deleteWorkflowPermission(id, userId)
-  res.json({ success: true })
+  successResponse(res, null)
 }))
 
 router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -69,7 +70,7 @@ router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req,
   const { isPublic } = req.body
 
   if (typeof isPublic !== 'boolean') {
-    res.status(400).json({ success: false, error: 'isPublic must be a boolean' })
+    errorResponse(res, 'isPublic must be a boolean', 400)
     return
   }
 
@@ -77,12 +78,12 @@ router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req,
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
   await db.updateWorkflowTemplate(id, { is_public: isPublic })
-  res.json({ success: true })
+  successResponse(res, null)
 }))
 
 router.get('/:id/permissions', requireRole(['super']), asyncHandler(async (req, res) => {
@@ -92,12 +93,12 @@ router.get('/:id/permissions', requireRole(['super']), asyncHandler(async (req, 
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
-    res.status(404).json({ success: false, error: 'Workflow not found' })
+    errorResponse(res, 'Workflow not found', 404)
     return
   }
 
   const permissions = await db.getWorkflowPermissions(id)
-  res.json({ success: true, data: permissions })
+  successResponse(res, permissions)
 }))
 
 export default router

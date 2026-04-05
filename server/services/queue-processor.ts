@@ -476,3 +476,21 @@ export function createQueueProcessor(
 ): QueueProcessor {
   return new QueueProcessor(db, taskExecutor, capacityChecker, autoRetryConfig)
 }
+
+let queueProcessorInstance: QueueProcessor | null = null
+
+export function getQueueProcessor(
+  db: DatabaseService,
+  taskExecutor: TaskExecutor,
+  capacityChecker: CapacityChecker,
+  autoRetryConfig?: Partial<AutoRetryConfig>
+): QueueProcessor {
+  if (!queueProcessorInstance) {
+    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, autoRetryConfig)
+  }
+  return queueProcessorInstance
+}
+
+export function resetQueueProcessor(): void {
+  queueProcessorInstance = null
+}

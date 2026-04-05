@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -30,7 +31,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     const { model, lyrics, style_prompt, optimize_lyrics, audio_setting, output_format } = req.body as MusicGenerateBody
 
     if (!lyrics) {
-      res.status(400).json({ success: false, error: 'lyrics is required' })
+      errorResponse(res, 'lyrics is required', 400)
       return
     }
 
@@ -45,7 +46,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (audio_setting) body.audio_setting = audio_setting
 
     const result = await client.musicGeneration(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }

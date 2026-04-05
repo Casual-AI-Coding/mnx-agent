@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
 import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -31,7 +32,7 @@ router.get('/', asyncHandler(async (req, res) => {
     LEFT JOIN users u ON ic.created_by = u.id
     ORDER BY ic.created_at DESC
   `)
-  res.json({ success: true, data: rows })
+  successResponse(res, rows)
 }))
 
 router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, res) => {
@@ -53,7 +54,7 @@ router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, re
     codes.push({ code, max_uses, expires_at })
   }
 
-  res.status(201).json({ success: true, data: { count: codes.length, codes } })
+  successResponse(res, { count: codes.length, codes }, 201)
 }))
 
 router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (req, res) => {
@@ -63,7 +64,7 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
 
   const existing = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
   if (existing.length === 0) {
-    res.status(404).json({ success: false, error: '邀请码不存在' })
+    errorResponse(res, '邀请码不存在', 404)
     return
   }
 
@@ -85,7 +86,7 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
   }
 
   if (fields.length === 0) {
-    res.json({ success: true, message: '无更新内容', data: existing[0] })
+    successResponse(res, { message: '无更新内容', data: existing[0] })
     return
   }
 
@@ -96,7 +97,7 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
   )
 
   const updated = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
-  res.json({ success: true, data: updated[0] })
+  successResponse(res, updated[0])
 }))
 
 router.delete('/:id', asyncHandler(async (req, res) => {
@@ -109,11 +110,11 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   )
 
   if (result.changes === 0) {
-    res.status(404).json({ success: false, error: '邀请码不存在' })
+    errorResponse(res, '邀请码不存在', 404)
     return
   }
 
-  res.json({ success: true, message: '邀请码已失效' })
+  successResponse(res, { message: '邀请码已失效' })
 }))
 
 export default router

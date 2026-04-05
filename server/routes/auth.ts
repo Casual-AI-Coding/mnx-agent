@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { UserService } from '../services/user-service.js'
 import { getConnection } from '../database/connection.js'
 import { authenticateJWT } from '../middleware/auth-middleware.js'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -39,17 +40,14 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
   const result = await userService.login(username, password)
 
   if (!result.success) {
-    res.status(401).json({ success: false, error: result.error })
+    errorResponse(res, result.error ?? 'Login failed', 401)
     return
   }
 
-  res.json({
-    success: true,
-    data: {
-      user: result.user,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-    },
+  successResponse(res, {
+    user: result.user,
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
   })
 }))
 
@@ -61,20 +59,17 @@ router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler
   const result = await userService.register({ username, password, invitationCode, email })
 
   if (!result.success) {
-    res.status(400).json({ success: false, error: result.error })
+    errorResponse(res, result.error ?? 'Registration failed', 400)
     return
   }
 
   const loginResult = await userService.login(username, password)
 
-  res.status(201).json({
-    success: true,
-    data: {
-      user: result.user,
-      accessToken: loginResult.accessToken,
-      refreshToken: loginResult.refreshToken,
-    },
-  })
+  successResponse(res, {
+    user: result.user,
+    accessToken: loginResult.accessToken,
+    refreshToken: loginResult.refreshToken,
+  }, 201)
 }))
 
 router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {
@@ -84,11 +79,11 @@ router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {
   const user = await userService.getUserById(req.user!.userId)
 
   if (!user) {
-    res.status(404).json({ success: false, error: '用户不存在' })
+    errorResponse(res, '用户不存在', 404)
     return
   }
 
-  res.json({ success: true, data: user })
+  successResponse(res, user)
 }))
 
 router.post('/change-password', authRateLimiter, authenticateJWT, validate(changePasswordSchema), asyncHandler(async (req: Request, res) => {
@@ -99,11 +94,11 @@ router.post('/change-password', authRateLimiter, authenticateJWT, validate(chang
   const result = await userService.changePassword(req.user!.userId, oldPassword, newPassword)
 
   if (!result.success) {
-    res.status(400).json({ success: false, error: result.error })
+    errorResponse(res, result.error ?? 'Password change failed', 400)
     return
   }
 
-  res.json({ success: true, message: '密码已修改' })
+  successResponse(res, { message: '密码已修改' })
 }))
 
 router.patch('/me', authenticateJWT, validate(updateProfileSchema), asyncHandler(async (req: Request, res) => {
@@ -117,11 +112,11 @@ router.patch('/me', authenticateJWT, validate(updateProfileSchema), asyncHandler
   })
 
   if (!user) {
-    res.status(404).json({ success: false, error: '用户不存在' })
+    errorResponse(res, '用户不存在', 404)
     return
   }
 
-  res.json({ success: true, data: user })
+  successResponse(res, user)
 }))
 
 export default router

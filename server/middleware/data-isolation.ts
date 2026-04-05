@@ -26,3 +26,29 @@ export function getOwnerIdForInsert(req: Request): string | null {
 
   return user.userId
 }
+
+/**
+ * Get owner ID from request (returns undefined if no user or admin/super role)
+ */
+export function getOwnerId(req: Request): string | undefined {
+  const user = req.user
+  if (!user) return undefined
+
+  if (user.role === 'admin' || user.role === 'super') {
+    return undefined
+  }
+
+  return user.userId
+}
+
+/**
+ * Get owner ID from request, throws if not available
+ * Use this when the owner ID is required for the operation
+ */
+export function requireOwnerId(req: Request): string {
+  const ownerId = getOwnerId(req)
+  if (!ownerId) {
+    throw new Error('Owner ID is required but not available')
+  }
+  return ownerId
+}

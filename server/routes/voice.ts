@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -28,7 +29,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     const { model, text, stream } = req.body as VoiceSyncBody
 
     if (!text) {
-      res.status(400).json({ success: false, error: 'text is required' })
+      errorResponse(res, 'text is required', 400)
       return
     }
 
@@ -40,7 +41,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     if (stream !== undefined) body.stream = stream
 
     const result = await client.textToAudioSync(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -52,7 +53,7 @@ router.post('/async', async (req: Request, res: Response) => {
     const { model, text } = req.body as VoiceAsyncBody
 
     if (!text) {
-      res.status(400).json({ success: false, error: 'text is required' })
+      errorResponse(res, 'text is required', 400)
       return
     }
 
@@ -62,7 +63,7 @@ router.post('/async', async (req: Request, res: Response) => {
     }
 
     const result = await client.textToAudioAsync(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -74,12 +75,12 @@ router.get('/async/:taskId', async (req: Request, res: Response) => {
     const { taskId } = req.params
 
     if (!taskId) {
-      res.status(400).json({ success: false, error: 'taskId is required' })
+      errorResponse(res, 'taskId is required', 400)
       return
     }
 
     const result = await client.textToAudioAsyncStatus(taskId)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }

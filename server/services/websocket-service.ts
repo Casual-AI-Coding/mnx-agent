@@ -275,3 +275,50 @@ export function closeCronWebSocket(): void {
 export function getWebSocketClientCount(): number {
   return clients.size
 }
+
+export class WebSocketService {
+  private static instance: WebSocketService | null = null
+  private initialized = false
+
+  static getInstance(): WebSocketService {
+    if (!WebSocketService.instance) {
+      WebSocketService.instance = new WebSocketService()
+    }
+    return WebSocketService.instance
+  }
+
+  initialize(server: Server): void {
+    if (this.initialized) return
+    initCronWebSocket(server)
+    this.initialized = true
+  }
+
+  close(): void {
+    closeCronWebSocket()
+    this.initialized = false
+  }
+
+  getClientCount(): number {
+    return getWebSocketClientCount()
+  }
+
+  getEvents(): CronEventEmitter {
+    return cronEvents
+  }
+}
+
+let wsServiceInstance: WebSocketService | null = null
+
+export function getWebSocketService(): WebSocketService {
+  if (!wsServiceInstance) {
+    wsServiceInstance = WebSocketService.getInstance()
+  }
+  return wsServiceInstance
+}
+
+export function resetWebSocketService(): void {
+  if (wsServiceInstance) {
+    wsServiceInstance.close()
+    wsServiceInstance = null
+  }
+}

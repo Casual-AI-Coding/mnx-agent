@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -29,7 +30,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     const { model, prompt, first_frame_image, last_frame_image, subject_reference, callback_url } = req.body as VideoGenerateBody
 
     if (!prompt) {
-      res.status(400).json({ success: false, error: 'prompt is required' })
+      errorResponse(res, 'prompt is required', 400)
       return
     }
 
@@ -44,7 +45,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (callback_url) body.callback_url = callback_url
 
     const result = await client.videoGeneration(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -56,12 +57,12 @@ router.get('/status/:taskId', async (req: Request, res: Response) => {
     const { taskId } = req.params
 
     if (!taskId) {
-      res.status(400).json({ success: false, error: 'taskId is required' })
+      errorResponse(res, 'taskId is required', 400)
       return
     }
 
     const result = await client.videoGenerationStatus(taskId)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }

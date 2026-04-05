@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
 import { handleApiError } from '../middleware/errorHandler'
+import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -28,7 +29,7 @@ const VIDEO_AGENT_TEMPLATES = [
 ]
 
 router.get('/templates', async (_req: Request, res: Response) => {
-  res.json({ success: true, data: VIDEO_AGENT_TEMPLATES })
+  successResponse(res, VIDEO_AGENT_TEMPLATES)
 })
 
 router.post('/generate', async (req: Request, res: Response) => {
@@ -37,7 +38,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     const { template_id, text_inputs, media_inputs, callback_url } = req.body as VideoAgentGenerateBody
 
     if (!template_id) {
-      res.status(400).json({ success: false, error: 'template_id is required' })
+      errorResponse(res, 'template_id is required', 400)
       return
     }
 
@@ -48,7 +49,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (callback_url) body.callback_url = callback_url
 
     const result = await client.videoAgentGenerate(body)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
@@ -60,12 +61,12 @@ router.get('/status/:taskId', async (req: Request, res: Response) => {
     const { taskId } = req.params
 
     if (!taskId) {
-      res.status(400).json({ success: false, error: 'taskId is required' })
+      errorResponse(res, 'taskId is required', 400)
       return
     }
 
     const result = await client.videoAgentStatus(taskId)
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
     handleApiError(res, error)
   }
