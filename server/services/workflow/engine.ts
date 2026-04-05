@@ -6,22 +6,13 @@ import { getExecutionStateManager } from '../execution-state-manager.js'
 import { parseWorkflowJson, validateWorkflow } from './parser.js'
 import { buildExecutionLayers } from './topological-sort.js'
 import { resolveNodeConfig } from './template-resolver.js'
+import { executeNode, type NodeExecutorDeps } from './node-executor.js'
 import {
-  executeActionNode,
-  executeConditionNode,
-  executeLoopNode,
-  executeTransformNode,
-  executeQueueNode,
-  executeDelayNode,
-  executeErrorBoundaryNode,
-  type ActionExecutorDeps,
-  type ConditionExecutorDeps,
-  type LoopExecutorDeps,
-  type TransformExecutorDeps,
-  type QueueExecutorDeps,
-  type DelayExecutorDeps,
-  type ErrorBoundaryExecutorDeps,
-} from './executors/index.js'
+  updateExcludedNodes,
+  addLoopBodyNodesToExcluded,
+  addErrorBoundarySuccessNodesToExcluded,
+  queueErrorBoundaryErrorNodes,
+} from './exclusion-utils.js'
 
 export { parseWorkflowJson, validateWorkflow } from './parser.js'
 export { buildExecutionLayers, buildExecutionOrder } from './topological-sort.js'
@@ -102,11 +93,8 @@ export class WorkflowEngine {
       const nodeOutputs = new Map<string, unknown>()
       const excludedNodes = new Set<string>()
 
-      this.addLoopBodyNodesToExcluded(excludedNodes)
-      this.addErrorBoundarySuccessNodesToExcluded(excludedNodes)
-
-      const conditionResults = new Map<string, boolean>()
-      const errorBoundaryErrors = new Map<string, { message: string; stack?: string }>()
+      addLoopBodyNodesToExcluded(this.workflowNodes, this.workflowEdges, excludedNodes)
+      addErrorBoundarySuccessNodesToExcluded(this.workflowNodes, this.workflowEdges, excludedNodes)
 
       for (let layerIndex = 0; layerIndex < executionLayers.length; layerIndex++) {
         if (abortController?.signal.aborted) {
@@ -121,6 +109,18 @@ export class WorkflowEngine {
 
         if (nodesInLayer.length === 0) continue
 
+        const nodeExecutorDeps: NodeExecutorDeps = {
+          db: this.db,
+          serviceRegistry: this.serviceRegistry,
+          taskExecutor: this.taskExecutor,
+          executionLogId: this.executionLogId,
+          workflowId: this.workflowId,
+          workflowNodes: this.workflowNodes,
+          workflowEdges: this.workflowEdges,
+          dryRun: this.dryRun,
+          testData: this.testData,
+        }
+
         const layerResults = await Promise.all(
           nodesInLayer.map(async (nodeId) => {
             const node = workflow.nodes.find((n) => n.id === nodeId)
@@ -131,7 +131,7 @@ export class WorkflowEngine {
               }
             }
             const resolvedConfig = resolveNodeConfig(node.data.config, nodeOutputs)
-            const result = await this.executeNode(node, resolvedConfig, nodeOutputs)
+            const result = await executeNode(node, resolvedConfig, nodeOutputs, nodeExecutorDeps)
             return { nodeId, result }
           })
         )
@@ -145,8 +145,7 @@ export class WorkflowEngine {
             const node = workflow.nodes.find((n) => n.id === nodeId)
             if (node?.type === 'condition') {
               const conditionResult = result.data as boolean
-              conditionResults.set(nodeId, conditionResult)
-              this.updateExcludedNodes(nodeId, conditionResult, workflow.edges, excludedNodes)
+              updateExcludedNodes(nodeId, conditionResult, workflow.edges, excludedNodes)
             }
 
             if (node?.type === 'errorBoundary') {
@@ -155,8 +154,7 @@ export class WorkflowEngine {
                 error?: { message: string; stack?: string }
               }
               if (!boundaryResult.success && boundaryResult.error) {
-                errorBoundaryErrors.set(nodeId, boundaryResult.error)
-                this.queueErrorBoundaryErrorNodes(nodeId, excludedNodes)
+                queueErrorBoundaryErrorNodes(nodeId, this.workflowEdges, excludedNodes)
               }
             }
           }
@@ -230,240 +228,5 @@ export class WorkflowEngine {
       const newController = new AbortController()
       this.pauseSignals.set(executionId, newController)
     }
-  }
-
-  private updateExcludedNodes(
-    conditionNodeId: string,
-    conditionResult: boolean,
-    edges: WorkflowEdge[],
-    excludedNodes: Set<string>
-  ): void {
-    const targetHandle = conditionResult ? 'false' : 'true'
-
-    for (const edge of edges) {
-      if (edge.source !== conditionNodeId) continue
-
-      if (edge.sourceHandle === targetHandle) {
-        this.excludeBranchNodes(edge.target, edges, excludedNodes)
-      }
-    }
-  }
-
-  private excludeBranchNodes(startNodeId: string, edges: WorkflowEdge[], excludedNodes: Set<string>): void {
-    const toExclude = new Set<string>([startNodeId])
-    const queue = [startNodeId]
-
-    while (queue.length > 0) {
-      const currentId = queue.shift()!
-
-      for (const edge of edges) {
-        if (edge.source === currentId && !toExclude.has(edge.target)) {
-          toExclude.add(edge.target)
-          queue.push(edge.target)
-        }
-      }
-    }
-
-    for (const nodeId of toExclude) {
-      excludedNodes.add(nodeId)
-    }
-  }
-
-  private addLoopBodyNodesToExcluded(excludedNodes: Set<string>): void {
-    for (const edge of this.workflowEdges) {
-      if (edge.sourceHandle === 'body') {
-        this.excludeBranchNodes(edge.target, this.workflowEdges, excludedNodes)
-      }
-    }
-  }
-
-  private addErrorBoundarySuccessNodesToExcluded(excludedNodes: Set<string>): void {
-    for (const edge of this.workflowEdges) {
-      if (edge.sourceHandle === 'success') {
-        const sourceNode = this.workflowNodes.find((n) => n.id === edge.source)
-        if (sourceNode?.type === 'errorBoundary') {
-          this.excludeBranchNodes(edge.target, this.workflowEdges, excludedNodes)
-        }
-      }
-    }
-  }
-
-  private queueErrorBoundaryErrorNodes(errorBoundaryNodeId: string, excludedNodes: Set<string>): void {
-    for (const edge of this.workflowEdges) {
-      if (edge.source === errorBoundaryNodeId && edge.sourceHandle === 'error') {
-        excludedNodes.delete(edge.target)
-        for (const downstreamEdge of this.workflowEdges) {
-          if (downstreamEdge.source === edge.target) {
-            excludedNodes.delete(downstreamEdge.target)
-          }
-        }
-      }
-    }
-  }
-
-  private async executeNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>,
-    nodeOutputs: Map<string, unknown>
-  ): Promise<TaskResult> {
-    const startTime = Date.now()
-    const timeoutMs = (node.timeout as number) ?? (config.timeoutMs as number) ?? 300000
-    const retryPolicy = node.retryPolicy
-
-    const executeOnce = async (): Promise<TaskResult> => {
-      try {
-        let result: unknown
-
-        const executionPromise = (async () => {
-          switch (node.type) {
-            case 'action':
-              return await this.executeActionNode(node, config)
-            case 'condition':
-              return await this.executeConditionNode(node, config, nodeOutputs)
-            case 'loop':
-              return await this.executeLoopNode(node, config, nodeOutputs)
-            case 'transform':
-              return await this.executeTransformNode(node, config, nodeOutputs)
-            case 'queue':
-              return await this.executeQueueNode(node, config)
-            case 'delay':
-              return await this.executeDelayNode(node, config)
-            case 'errorBoundary':
-              return await this.executeErrorBoundaryNode(node, config, nodeOutputs)
-            default:
-              throw new Error(`Unknown node type: ${node.type}`)
-          }
-        })()
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(`Execution timed out after ${timeoutMs}ms`))
-          }, timeoutMs)
-        })
-
-        result = await Promise.race([executionPromise, timeoutPromise])
-
-        return {
-          success: true,
-          data: result,
-          durationMs: Date.now() - startTime,
-        }
-      } catch (error) {
-        return {
-          success: false,
-          error: (error as Error).message,
-          durationMs: Date.now() - startTime,
-        }
-      }
-    }
-
-    if (!retryPolicy) {
-      return executeOnce()
-    }
-
-    let lastResult: TaskResult
-    let attempt = 0
-    const maxAttempts = retryPolicy.maxRetries + 1
-
-    while (attempt < maxAttempts) {
-      lastResult = await executeOnce()
-      if (lastResult.success) {
-        return lastResult
-      }
-      attempt++
-      if (attempt < maxAttempts) {
-        const backoffDelay = Math.pow(retryPolicy.backoffMultiplier, attempt - 1)
-        await new Promise((resolve) => setTimeout(resolve, backoffDelay * 1000))
-      }
-    }
-
-    return lastResult!
-  }
-
-  private async executeActionNode(node: WorkflowNode, config: Record<string, unknown>): Promise<unknown> {
-    const deps: ActionExecutorDeps = {
-      db: this.db,
-      serviceRegistry: this.serviceRegistry,
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-      dryRun: this.dryRun,
-      testData: this.testData,
-    }
-    return executeActionNode(node, config, deps)
-  }
-
-  private async executeConditionNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>,
-    nodeOutputs: Map<string, unknown>
-  ): Promise<boolean> {
-    const deps: ConditionExecutorDeps = {
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-    }
-    return executeConditionNode(node, config, nodeOutputs, deps)
-  }
-
-  private async executeLoopNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>,
-    nodeOutputs: Map<string, unknown>
-  ): Promise<unknown> {
-    const deps: LoopExecutorDeps = {
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-      workflowNodes: this.workflowNodes,
-      workflowEdges: this.workflowEdges,
-      resolveNodeConfig,
-      executeNode: this.executeNode.bind(this),
-    }
-    return executeLoopNode(node, config, nodeOutputs, deps)
-  }
-
-  private async executeTransformNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>,
-    nodeOutputs: Map<string, unknown>
-  ): Promise<unknown> {
-    const deps: TransformExecutorDeps = {
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-    }
-    return executeTransformNode(node, config, nodeOutputs, deps)
-  }
-
-  private async executeQueueNode(node: WorkflowNode, config: Record<string, unknown>): Promise<unknown> {
-    const deps: QueueExecutorDeps = {
-      db: this.db,
-      taskExecutor: this.taskExecutor,
-      serviceRegistry: this.serviceRegistry,
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-    }
-    return executeQueueNode(node, config, deps)
-  }
-
-  private async executeDelayNode(node: WorkflowNode, config: Record<string, unknown>): Promise<unknown> {
-    const deps: DelayExecutorDeps = {
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-    }
-    return executeDelayNode(node, config, deps)
-  }
-
-  private async executeErrorBoundaryNode(
-    node: WorkflowNode,
-    config: Record<string, unknown>,
-    nodeOutputs: Map<string, unknown>
-  ): Promise<unknown> {
-    const deps: ErrorBoundaryExecutorDeps = {
-      executionLogId: this.executionLogId,
-      workflowId: this.workflowId,
-      workflowNodes: this.workflowNodes,
-      workflowEdges: this.workflowEdges,
-      resolveNodeConfig,
-      executeNode: this.executeNode.bind(this),
-    }
-    return executeErrorBoundaryNode(node, config, nodeOutputs, deps)
   }
 }

@@ -27,12 +27,12 @@ import { cronJobSchema, type CronJobFormData } from '@/lib/form-schemas'
 import type { CreateCronJobDTO } from '@/types/cron'
 
 interface CreateJobModalProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
-  onSuccess: (data: CreateCronJobDTO) => void
+  onSubmit: (data: CreateCronJobDTO) => void
 }
 
-export function CreateJobModal({ open, onClose, onSuccess }: CreateJobModalProps) {
+export function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
   const localTimezone = getLocalTimezone()
   const { templates, fetchTemplates } = useWorkflowTemplatesStore()
 
@@ -51,6 +51,7 @@ export function CreateJobModal({ open, onClose, onSuccess }: CreateJobModalProps
       cron_expression: '',
       timezone: localTimezone,
       workflow_id: '',
+      timeout_ms: 300000, // 5 minutes default
       is_active: true,
     },
   })
@@ -60,26 +61,28 @@ export function CreateJobModal({ open, onClose, onSuccess }: CreateJobModalProps
   const workflowId = watch('workflow_id')
 
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       reset({
         name: '',
         description: '',
         cron_expression: '',
         timezone: localTimezone,
         workflow_id: '',
+        timeout_ms: 300000, // 5 minutes default
         is_active: true,
       })
       fetchTemplates()
     }
-  }, [open, fetchTemplates, localTimezone, reset])
+  }, [isOpen, fetchTemplates, localTimezone, reset])
 
   const handleFormSubmit = (data: CronJobFormData) => {
-    onSuccess({
+    onSubmit({
       name: data.name,
       description: data.description ?? '',
       cronExpression: data.cron_expression,
       timezone: data.timezone,
       workflowId: data.workflow_id,
+      timeoutMs: data.timeout_ms,
       isActive: data.is_active,
     })
     onClose()
@@ -87,7 +90,7 @@ export function CreateJobModal({ open, onClose, onSuccess }: CreateJobModalProps
 
   return (
     <Dialog
-      open={open}
+      open={isOpen}
       onClose={onClose}
       title="Create New Cron Job"
       description="Schedule automated workflow executions"
@@ -178,6 +181,27 @@ export function CreateJobModal({ open, onClose, onSuccess }: CreateJobModalProps
               ))}
             </div>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Execution Timeout (seconds)
+          </label>
+          <Input
+            type="number"
+            min={1}
+            max={600}
+            step={1}
+            value={watch('timeout_ms') ? Math.floor(watch('timeout_ms')! / 1000) : 300}
+            onChange={(e) => {
+              const seconds = Math.max(1, Math.min(600, Number(e.target.value) || 1))
+              setValue('timeout_ms', seconds * 1000)
+            }}
+          />
+          <p className="text-xs text-muted-foreground/50">
+            Range: 1-600 seconds (1 second to 10 minutes). Default: 300 seconds (5 minutes).
+          </p>
+          <FormError message={errors.timeout_ms?.message} />
         </div>
 
         <div className="flex items-center justify-between pt-2">

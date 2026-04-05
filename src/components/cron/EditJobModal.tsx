@@ -26,13 +26,13 @@ import { cronJobSchema, type CronJobFormData } from '@/lib/form-schemas'
 import type { CronJob, UpdateCronJobDTO } from '@/types/cron'
 
 interface EditJobModalProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
-  onSuccess: (data: UpdateCronJobDTO) => void
+  onSubmit: (data: UpdateCronJobDTO) => void
   job: CronJob | null
 }
 
-export function EditJobModal({ open, onClose, onSuccess, job }: EditJobModalProps) {
+export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
   const { templates, fetchTemplates } = useWorkflowTemplatesStore()
 
   const {
@@ -60,7 +60,7 @@ export function EditJobModal({ open, onClose, onSuccess, job }: EditJobModalProp
   const workflowId = watch('workflow_id')
 
   useEffect(() => {
-    if (open && job) {
+    if (isOpen && job) {
       reset({
         name: job.name,
         description: job.description || '',
@@ -72,10 +72,10 @@ export function EditJobModal({ open, onClose, onSuccess, job }: EditJobModalProp
       })
       fetchTemplates()
     }
-  }, [open, job, fetchTemplates, reset])
+  }, [isOpen, job, fetchTemplates, reset])
 
   const handleFormSubmit = (data: CronJobFormData) => {
-    onSuccess({
+    onSubmit({
       name: data.name,
       description: data.description,
       cronExpression: data.cron_expression,
@@ -89,7 +89,7 @@ export function EditJobModal({ open, onClose, onSuccess, job }: EditJobModalProp
 
   return (
     <Dialog
-      open={open}
+      open={isOpen}
       onClose={onClose}
       title="Edit Cron Job"
       description="Modify job configuration"

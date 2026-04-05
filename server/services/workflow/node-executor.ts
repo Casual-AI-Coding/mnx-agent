@@ -1,4 +1,4 @@
-import type { TaskResult, WorkflowNode } from './types.js'
+import type { TaskResult, WorkflowNode, WorkflowEdge } from './types.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { TaskExecutor } from '../queue-processor.js'
@@ -27,7 +27,7 @@ export interface NodeExecutorDeps {
   executionLogId: string | null
   workflowId: string | null
   workflowNodes: WorkflowNode[]
-  workflowEdges: { source: string; target: string; sourceHandle?: string }[]
+  workflowEdges: WorkflowEdge[]
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
 }
