@@ -4,30 +4,33 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useUsageStore } from '@/stores/usage'
+import { services } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 interface UsageBarProps {
   label: string
   value: number
   max: number
-  color: string
+  colorClass: string
+  iconClass: string
   icon: React.ReactNode
 }
 
-function UsageBar({ label, value, max, color, icon }: UsageBarProps) {
+function UsageBar({ label, value, max, colorClass, iconClass, icon }: UsageBarProps) {
   const percentage = max > 0 ? (value / max) * 100 : 0
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {icon}
+          <span className={iconClass}>{icon}</span>
           <span className="text-sm font-medium">{label}</span>
         </div>
         <span className="text-sm text-muted-foreground">{value.toLocaleString()}</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
+          className={cn('h-full rounded-full transition-all duration-500', colorClass)}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
@@ -146,7 +149,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">文本 Token</p>
                 <p className="text-2xl font-bold">{usage.textTokens.toLocaleString()}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-primary-100 text-primary-600 flex items-center justify-center">
+              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', services.text.bg, services.text.icon)}>
                 <MessageSquare className="w-5 h-5" />
               </div>
             </div>
@@ -160,7 +163,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">语音字符</p>
                 <p className="text-2xl font-bold">{usage.voiceCharacters.toLocaleString()}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', services.voice.bg, services.voice.icon)}>
                 <Mic className="w-5 h-5" />
               </div>
             </div>
@@ -174,7 +177,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">图片请求</p>
                 <p className="text-2xl font-bold">{usage.imageRequests.toLocaleString()}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', services.image.bg, services.image.icon)}>
                 <Image className="w-5 h-5" />
               </div>
             </div>
@@ -188,7 +191,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">总请求数</p>
                 <p className="text-2xl font-bold">{totalRequests.toLocaleString()}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', services.cron.bg, services.cron.icon)}>
                 <BarChart3 className="w-5 h-5" />
               </div>
             </div>
@@ -204,7 +207,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">账户余额</p>
                 <p className="text-3xl font-bold">¥{usage.manualBalance.toFixed(2)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+              <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', services.text.bg, services.text.icon)}>
                 <Coins className="w-6 h-6" />
               </div>
             </div>
@@ -225,36 +228,41 @@ export default function TokenMonitor() {
               label="文本 Token"
               value={usage.textTokens}
               max={maxValue}
-              color="bg-primary-500"
-              icon={<MessageSquare className="w-4 h-4 text-primary-500" />}
+              colorClass={services.text.bg}
+              iconClass={services.text.icon}
+              icon={<MessageSquare className="w-4 h-4" />}
             />
             <UsageBar
               label="语音字符"
               value={usage.voiceCharacters}
               max={maxValue}
-              color="bg-green-500"
-              icon={<Mic className="w-4 h-4 text-green-500" />}
+              colorClass={services.voice.bg}
+              iconClass={services.voice.icon}
+              icon={<Mic className="w-4 h-4" />}
             />
             <UsageBar
               label="图片请求"
               value={usage.imageRequests}
               max={maxValue}
-              color="bg-purple-500"
-              icon={<Image className="w-4 h-4 text-purple-500" />}
+              colorClass={services.image.bg}
+              iconClass={services.image.icon}
+              icon={<Image className="w-4 h-4" />}
             />
             <UsageBar
               label="音乐请求"
               value={usage.musicRequests}
               max={maxValue}
-              color="bg-pink-500"
-              icon={<Music className="w-4 h-4 text-pink-500" />}
+              colorClass={services.music.bg}
+              iconClass={services.music.icon}
+              icon={<Music className="w-4 h-4" />}
             />
             <UsageBar
               label="视频请求"
               value={usage.videoRequests}
               max={maxValue}
-              color="bg-orange-500"
-              icon={<Video className="w-4 h-4 text-orange-500" />}
+              colorClass={services.video.bg}
+              iconClass={services.video.icon}
+              icon={<Video className="w-4 h-4" />}
             />
           </CardContent>
         </Card>

@@ -20,6 +20,7 @@ import { apiClient } from '@/lib/api/client'
 import { toast } from 'sonner'
 import { useWorkflowUpdates, type WorkflowNodeStatus } from '@/hooks/useWorkflowUpdates'
 import { cancelExecution } from '@/lib/api/cron'
+import { status, taskStatus } from '@/themes/tokens'
 
 interface TestRunNodeResult {
   id: string
@@ -118,13 +119,13 @@ function ProgressBar({
   const getStatusColor = () => {
     switch (status) {
       case 'completed':
-        return 'bg-green-500'
+        return taskStatus.completed.dot
       case 'failed':
-        return 'bg-destructive'
+        return taskStatus.failed.dot
       case 'cancelled':
-        return 'bg-gray-400'
+        return taskStatus.cancelled.dot
       case 'running':
-        return 'bg-blue-500'
+        return taskStatus.running.dot
       default:
         return 'bg-primary'
     }
@@ -175,16 +176,16 @@ function ExecutionSummary({
   }
 
   const getStatusConfig = () => {
-    const status = result?.status || (runningNodes > 0 ? 'running' : 'idle')
-    switch (status) {
+    const statusKey = result?.status || (runningNodes > 0 ? 'running' : 'idle')
+    switch (statusKey) {
       case 'completed':
-        return { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', label: '执行成功' }
+        return { icon: CheckCircle, color: taskStatus.completed.text, bg: taskStatus.completed.bg, label: '执行成功' }
       case 'failed':
-        return { icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10', label: '执行失败' }
+        return { icon: XCircle, color: taskStatus.failed.text, bg: taskStatus.failed.bg, label: '执行失败' }
       case 'cancelled':
-        return { icon: X, color: 'text-gray-400', bg: 'bg-gray-500/10', label: '已取消' }
+        return { icon: X, color: taskStatus.cancelled.text, bg: taskStatus.cancelled.bg, label: '已取消' }
       case 'running':
-        return { icon: Activity, color: 'text-blue-400', bg: 'bg-blue-500/10', label: '执行中' }
+        return { icon: Activity, color: taskStatus.running.text, bg: taskStatus.running.bg, label: '执行中' }
       default:
         return { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', label: '准备就绪' }
     }
@@ -219,21 +220,21 @@ function ExecutionSummary({
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center p-2 rounded bg-background/50">
             <div className="flex items-center justify-center gap-1">
-              <Activity className="w-3 h-3 text-blue-500" />
+              <Activity className={cn('w-3 h-3', taskStatus.running.dot)} />
               <span className="text-sm font-semibold">{runningNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">运行中</span>
           </div>
           <div className="text-center p-2 rounded bg-background/50">
             <div className="flex items-center justify-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
+              <CheckCircle className={cn('w-3 h-3', taskStatus.completed.dot)} />
               <span className="text-sm font-semibold">{completedNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">已完成</span>
           </div>
           <div className="text-center p-2 rounded bg-background/50">
             <div className="flex items-center justify-center gap-1">
-              <XCircle className="w-3 h-3 text-destructive" />
+              <XCircle className={cn('w-3 h-3', taskStatus.failed.dot)} />
               <span className="text-sm font-semibold">{failedNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">失败</span>
@@ -272,33 +273,33 @@ function NodeResultItem({
       case 'completed':
         return {
           icon: CheckCircle,
-          color: 'text-green-500',
-          bg: 'bg-green-500/10',
-          border: 'border-green-500/30',
+          color: taskStatus.completed.text,
+          bg: taskStatus.completed.bg,
+          border: taskStatus.completed.border,
           label: '成功',
         }
       case 'failed':
         return {
           icon: XCircle,
-          color: 'text-destructive',
-          bg: 'bg-destructive/10',
-          border: 'border-destructive/30',
+          color: taskStatus.failed.text,
+          bg: taskStatus.failed.bg,
+          border: taskStatus.failed.border,
           label: '失败',
         }
       case 'running':
         return {
           icon: Loader2,
-          color: 'text-blue-500',
-          bg: 'bg-blue-500/10',
-          border: 'border-blue-500/30',
+          color: taskStatus.running.text,
+          bg: taskStatus.running.bg,
+          border: taskStatus.running.border,
           label: '运行中',
         }
       case 'cancelled':
         return {
           icon: X,
-          color: 'text-gray-400',
-          bg: 'bg-gray-500/10',
-          border: 'border-gray-500/30',
+          color: taskStatus.cancelled.text,
+          bg: taskStatus.cancelled.bg,
+          border: taskStatus.cancelled.border,
           label: '已取消',
         }
       default:
@@ -327,8 +328,8 @@ function NodeResultItem({
       layout
       className={cn(
         'border rounded-lg overflow-hidden transition-colors',
-        result?.status === 'running' ? 'border-blue-500/50 bg-blue-500/5' : 'border-border',
-        result?.status === 'failed' && 'border-destructive/50 bg-destructive/5'
+        result?.status === 'running' ? cn('border-blue-500/50', taskStatus.running.bg) : 'border-border',
+        result?.status === 'failed' && cn('border-red-500/50', taskStatus.failed.bg)
       )}
     >
       <div

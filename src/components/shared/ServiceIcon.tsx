@@ -7,6 +7,8 @@ import {
   Video,
 } from 'lucide-react'
 import type { ServiceType } from '@/types/cron'
+import { services } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 interface ServiceIconProps {
   type: ServiceType
@@ -22,17 +24,17 @@ export const ServiceIcon = memo(function ServiceIcon({ type }: ServiceIconProps)
     video: <Video className="w-5 h-5" />,
   }
 
-  const colors: Record<ServiceType, string> = {
-    text: 'text-primary-400 bg-primary-500/10',
-    voice_sync: 'text-green-400 bg-green-500/10',
-    voice_async: 'text-teal-400 bg-teal-500/10',
-    image: 'text-purple-400 bg-purple-500/10',
-    music: 'text-pink-400 bg-pink-500/10',
-    video: 'text-orange-400 bg-orange-500/10',
+  const colors: Record<ServiceType, { bg: string; text: string }> = {
+    text: { bg: services.text.bg, text: services.text.icon },
+    voice_sync: { bg: services.voice.bg, text: services.voice.icon },
+    voice_async: { bg: services.voice.bg, text: services.voice.icon },
+    image: { bg: services.image.bg, text: services.image.icon },
+    music: { bg: services.music.bg, text: services.music.icon },
+    video: { bg: services.video.bg, text: services.video.icon },
   }
 
   return (
-    <div className={`p-2 rounded-lg ${colors[type]}`}>
+    <div className={cn('p-2 rounded-lg', colors[type].bg, colors[type].text)}>
       {icons[type]}
     </div>
   )
