@@ -29,7 +29,7 @@ export function CopyButton({ text, size = 'sm', className, label }: CopyButtonPr
       title={copied ? '已复制' : '复制'}
     >
       {copied ? (
-        <Check className={cn('text-green-500', size === 'sm' ? 'w-4 h-4' : 'w-5 h-5')} />
+        <Check className={cn('text-success', size === 'sm' ? 'w-4 h-4' : 'w-5 h-5')} />
       ) : (
         <Copy className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} />
       )}

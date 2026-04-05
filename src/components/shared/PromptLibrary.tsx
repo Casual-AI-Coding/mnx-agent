@@ -24,11 +24,13 @@ const categoryLabels: Record<PromptCategory | 'all', string> = {
   video: '视频',
 }
 
+import { services } from '@/themes/tokens'
+
 const categoryColors: Record<PromptCategory, string> = {
-  text: 'bg-primary-500/20 text-primary-400 border-primary-500/30',
-  image: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  music: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  video: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  text: `${services.text.bg} ${services.text.text} border-primary/30`,
+  image: `${services.image.bg} ${services.image.text} border-accent/30`,
+  music: `${services.music.bg} ${services.music.text} border-secondary/30`,
+  video: `${services.video.bg} ${services.video.text} border-destructive/30`,
 }
 
 export function PromptLibrary({
@@ -85,7 +87,7 @@ export function PromptLibrary({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/10 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 

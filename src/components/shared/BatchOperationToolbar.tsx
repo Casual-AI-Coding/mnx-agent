@@ -77,7 +77,7 @@ export function BatchOperationToolbar({
                 size="sm"
                 onClick={onActivate}
                 disabled={loading}
-                className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                className="border-success/30 text-success hover:bg-success/10"
               >
                 <Power className="w-4 h-4 mr-1.5" />
                 启用
@@ -90,7 +90,7 @@ export function BatchOperationToolbar({
                 size="sm"
                 onClick={onDeactivate}
                 disabled={loading}
-                className="border-slate-500/30 text-slate-600 hover:bg-slate-500/10 hover:text-slate-700"
+                className="border-muted-foreground/30 text-muted-foreground hover:bg-muted/10"
               >
                 <PowerOff className="w-4 h-4 mr-1.5" />
                 禁用

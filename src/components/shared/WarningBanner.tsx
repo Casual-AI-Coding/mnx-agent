@@ -29,7 +29,7 @@ export default function WarningBanner({
   return (
     <div
       className={cn(
-        'bg-yellow-600/20 text-yellow-400 p-4 rounded-lg flex items-center gap-3 mb-6',
+        'bg-warning/20 text-warning p-4 rounded-lg flex items-center gap-3 mb-6',
         className
       )}
     >
@@ -38,7 +38,7 @@ export default function WarningBanner({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className="text-sm font-medium hover:text-yellow-300 transition-colors"
+          className="text-sm font-medium hover:text-warning/80 transition-colors"
         >
           {actionLabel}
         </button>
@@ -46,7 +46,7 @@ export default function WarningBanner({
       {onDismiss && (
         <button
           onClick={handleDismiss}
-          className="p-1 hover:bg-yellow-600/20 rounded transition-colors"
+          className="p-1 hover:bg-warning/20 rounded transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

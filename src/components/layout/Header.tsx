@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
+import { status, roles } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 interface HeaderProps {
   onHistoryClick?: () => void
@@ -60,9 +62,9 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 <circle cx="16" cy="16" r="14" stroke="url(#minimaxGradient)" strokeWidth="2" fill="none" />
                 <circle cx="16" cy="16" r="6" fill="url(#minimaxGradient)" />
               </svg>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Mnx-Agent 工作台
-              </span>
+                <span className="text-xl font-bold bg-gradient-to-r from-primary-400 via-secondary-400 to-rose-400 bg-clip-text text-transparent">
+                  Mnx-Agent 工作台
+                </span>
             </div>
           </div>
 
@@ -228,10 +230,10 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 <User className="w-[18px] h-[18px]" />
                 <span className="max-w-[80px] truncate hidden sm:inline">{user?.username || '用户'}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  user?.role === 'super' ? 'bg-warning/20 text-warning' :
-                  user?.role === 'admin' ? 'bg-primary/20 text-primary' :
-                  user?.role === 'pro' ? 'bg-secondary/20 text-secondary-foreground' :
-                  'bg-success/20 text-success'
+                  user?.role === 'super' ? cn(roles.super.bgLight, roles.super.text) :
+                  user?.role === 'admin' ? cn(roles.admin.bgLight, roles.admin.text) :
+                  user?.role === 'pro' ? cn(roles.pro.bgLight, roles.pro.text) :
+                  cn(roles.user.bgLight, roles.user.text)
                 }`}>
                   {user?.role || 'user'}
                 </span>
@@ -285,7 +287,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           onClick={onHistoryClick}
-          className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-11 h-11 bg-card/90 backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-primary/20 hover:border-primary/30 transition-all group"
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-11 h-11 bg-card/90 backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-background/20 hover:shadow-xl hover:shadow-primary/20 hover:border-primary/30 transition-all group"
         >
           <History className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
           <motion.div
