@@ -10,14 +10,16 @@ import { generateMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { useSettingsStore } from '@/settings/store'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel } from '@/types'
 
 export default function MusicGeneration() {
   const { t } = useTranslation()
+  const musicSettings = useSettingsStore(s => s.settings.generation.music)
   const [lyrics, setLyrics] = useState('')
   const [stylePrompt, setStylePrompt] = useState('')
-  const [model, setModel] = useState<MusicModel>('music-2.5')
-  const [optimizeLyrics, setOptimizeLyrics] = useState(false)
+  const [model, setModel] = useState<MusicModel>(musicSettings.model as MusicModel)
+  const [optimizeLyrics, setOptimizeLyrics] = useState(musicSettings.optimizeLyrics)
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)

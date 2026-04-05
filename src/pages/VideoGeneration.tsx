@@ -10,6 +10,7 @@ import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { useSettingsStore } from '@/settings/store'
 import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } from '@/types'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
@@ -27,8 +28,9 @@ interface VideoTask {
 
 export default function VideoGeneration() {
   const { t } = useTranslation()
+  const videoSettings = useSettingsStore(s => s.settings.generation.video)
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState<VideoModel>('video-01')
+  const [model, setModel] = useState<VideoModel>(videoSettings.model as VideoModel)
   const [cameraCommand, setCameraCommand] = useState<CameraCommand>('static')
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<VideoTask[]>([])

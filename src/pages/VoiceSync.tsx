@@ -10,6 +10,7 @@ import { createSyncVoice } from '@/lib/api/voice'
 import { uploadMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { useSettingsStore } from '@/settings/store'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -194,13 +195,14 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
 
 export default function VoiceSync() {
   const { t } = useTranslation()
+  const voiceSettings = useSettingsStore(s => s.settings.generation.voice)
   const [text, setText] = useState('')
-  const [model, setModel] = useState<SpeechModel>('speech-2.6-hd')
-  const [voiceId, setVoiceId] = useState(VOICE_OPTIONS[0].id)
-  const [emotion, setEmotion] = useState<Emotion>('auto')
-  const [speed, setSpeed] = useState(1.0)
-  const [volume, setVolume] = useState(1.0)
-  const [pitch, setPitch] = useState(0)
+  const [model, setModel] = useState<SpeechModel>(voiceSettings.model as SpeechModel)
+  const [voiceId, setVoiceId] = useState(voiceSettings.voiceId)
+  const [emotion, setEmotion] = useState<Emotion>(voiceSettings.emotion as Emotion)
+  const [speed, setSpeed] = useState(voiceSettings.speed)
+  const [volume, setVolume] = useState(voiceSettings.volume)
+  const [pitch, setPitch] = useState(voiceSettings.pitch)
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

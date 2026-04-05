@@ -11,6 +11,7 @@ import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useAppStore } from '@/stores/app'
+import { useSettingsStore } from '@/settings/store'
 import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type AspectRatio } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
@@ -55,10 +56,11 @@ const imageVariants = {
 export default function ImageGeneration() {
   const { t } = useTranslation()
   const { apiKey } = useAppStore()
+  const imageSettings = useSettingsStore(s => s.settings.generation.image)
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState<ImageModel>('image-01')
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
-  const [numImages, setNumImages] = useState(1)
+  const [model, setModel] = useState<ImageModel>(imageSettings.model as ImageModel)
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(imageSettings.aspectRatio as AspectRatio)
+  const [numImages, setNumImages] = useState(imageSettings.numImages)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/Label'
 import { streamChatCompletion } from '@/lib/api/text'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { useSettingsStore } from '@/settings/store'
 import { TEXT_MODELS, SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
@@ -24,12 +25,13 @@ interface Message {
 
 export default function TextGeneration() {
   const { t } = useTranslation()
+  const textSettings = useSettingsStore(s => s.settings.generation.text)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<string>(TEXT_MODELS[0].id)
+  const [selectedModel, setSelectedModel] = useState<string>(textSettings.model)
   const [selectedTemplate, setSelectedTemplate] = useState('general')
-  const [promptCaching, setPromptCaching] = useState(false)
+  const [promptCaching, setPromptCaching] = useState(textSettings.promptCaching)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
