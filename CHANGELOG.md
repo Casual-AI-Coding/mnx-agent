@@ -2,6 +2,68 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2] - 2026-04-05
+
+### Added
+
+**领域驱动架构升级**
+
+- **Domain Services 层** - 业务逻辑与数据访问分离
+  - `server/services/domain/job.service.ts` - Cron任务业务逻辑
+  - `server/services/domain/task.service.ts` - 任务队列业务逻辑
+  - `server/services/domain/log.service.ts` - 执行日志业务逻辑
+  - `server/services/domain/interfaces.ts` - ITaskExecutor, TaskResult 接口定义
+
+- **配置常量模块** - 消除硬编码魔法数字
+  - `server/config/timeouts.ts` - 统一超时常量
+  - `server/config/rate-limits.ts` - 限流配置
+  - `server/config/limits.ts` - 并发限制
+
+- **共享验证Schema** - `server/validation/common.ts`
+  - `paginationSchema`, `idParamSchema`, `taskStatusEnum`, `mediaTypeEnum`
+
+- **前端Hooks拆分**
+  - `useWorkflowBuilder.ts` (623行) - WorkflowBuilder核心状态管理
+  - `useWorkflowDragDrop.ts` (64行) - 拖拽逻辑
+  - `useWorkflowExecution.ts` (160行) - 执行控制
+  - `useWorkflowValidation.ts` (90行) - 验证逻辑
+  - `useWorkflowVersions.ts` (149行) - 版本管理
+  - `useMediaManagement.ts` (500行) - MediaManagement Hook抽取
+
+- **前端组件拆分**
+  - `MediaCard.tsx`, `MediaTableView.tsx`, `TimelineItem.tsx` - Media组件
+  - `lib/constants/media.tsx`, `lib/utils/media.tsx` - 常量和工具
+
+- **单元测试** - 48个新测试
+  - `job.service.test.ts` (204行)
+  - `task.service.test.ts` (212行)
+  - `log.service.test.ts` (148行)
+
+### Changed
+
+- **依赖倒置原则 (DIP)** - Routes调用Domain Services
+  - `routes/cron/jobs.ts` → JobService
+  - `routes/cron/logs.ts` → LogService
+  - `routes/cron/queue.ts` → TaskService
+
+- **WorkflowBuilder 瘦身** - ~1000行 → 493行 (~50%减少)
+- **MediaManagement 瘦身** - ~985行 → 351行 (~65%减少)
+
+### Fixed
+
+- 包名修正: `mnx-agent` (原 `minimax-toolset`)
+- Vitest 配置: 解析 `@mnx/shared-types` 别名
+
+### Performance
+
+- 类型统一: ITaskExecutor/TaskResult 跨模块共享
+- 消除 JsonViewer 重复组件
+
+### Documentation
+
+- 新增架构升级设计文档 `docs/superpowers/specs/2026-04-05-architecture-upgrade-design.md`
+- 新增架构升级实施计划 `docs/superpowers/plans/2026-04-05-architecture-upgrade.md`
+
 ## [1.5.1] - 2026-04-05
 
 ### Changed
