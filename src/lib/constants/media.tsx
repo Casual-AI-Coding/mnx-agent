@@ -1,5 +1,6 @@
 import { Image, Music, Video, FileAudio, RefreshCw } from 'lucide-react'
 import type { MediaType, MediaSource } from '@/types/media'
+import { services } from '@/themes/tokens'
 
 export const MEDIA_TABS: { value: string; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: '全部', icon: <RefreshCw className="w-4 h-4" /> },
@@ -33,7 +34,7 @@ export const SOURCE_LABELS: Record<MediaSource, string> = {
 
 export const TYPE_GRADIENTS: Record<MediaType, string> = {
   image: 'bg-muted/50',
-  audio: 'bg-blue-950/50',
+  audio: services.voice.bg,
   video: 'bg-destructive-950/50',
-  music: 'bg-purple-950/50',
+  music: services.music.bg,
 }

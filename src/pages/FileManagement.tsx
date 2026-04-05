@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/settings/store'
 import { usePagination } from '@/hooks/usePagination'
 import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
 import { cn } from '@/lib/utils'
+import { services, status } from '@/themes/tokens'
 
 interface FileItem {
   file_id: string
@@ -20,10 +21,10 @@ interface FileItem {
 }
 
 const FILE_TYPE_CONFIG: Record<string, { icon: typeof File; color: string }> = {
-  image: { icon: Image, color: 'text-purple-400' },
-  audio: { icon: Music, color: 'text-primary-400' },
-  video: { icon: Video, color: 'text-destructive' },
-  text: { icon: FileText, color: 'text-green-400' },
+  image: { icon: Image, color: services.image.icon },
+  audio: { icon: Music, color: services.music.icon },
+  video: { icon: Video, color: services.video.icon },
+  text: { icon: FileText, color: status.success.icon },
   default: { icon: File, color: 'text-muted-foreground' },
 }
 
@@ -194,25 +195,25 @@ export default function FileManagement() {
           title="文件总数"
           value={files.length}
           icon={File}
-          color="text-primary-400"
+          color={services.text.icon}
         />
         <StatCard
           title="文本文件"
           value={textCount}
           icon={FileText}
-          color="text-green-400"
+          color={status.success.icon}
         />
         <StatCard
           title="图片文件"
           value={imageCount}
           icon={Image}
-          color="text-purple-400"
+          color={services.image.icon}
         />
         <StatCard
           title="总大小"
           value={formatFileSize(totalSize)}
           icon={FolderOpen}
-          color="text-yellow-400"
+          color={status.warning.icon}
         />
       </div>
 
