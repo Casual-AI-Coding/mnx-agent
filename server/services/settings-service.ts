@@ -147,20 +147,13 @@ export class SettingsService {
   async getAllSettings(userId: string): Promise<GetSettingsResult | SettingsError> {
     const rows = await this.settingsRepo.getAllSettings(userId)
     
-    const settings: Partial<AllSettings> = {}
+    const settings: Record<string, Record<string, unknown>> = { ...DEFAULT_SETTINGS }
+    
     for (const row of rows) {
-      const category = row.category as SettingsCategory
-      settings[category] = row.settings_json as AllSettings[SettingsCategory]
+      settings[row.category] = row.settings_json as Record<string, unknown>
     }
 
-    // Merge with defaults for missing categories
-    for (const [category, defaults] of Object.entries(DEFAULT_SETTINGS)) {
-      if (!settings[category as SettingsCategory]) {
-        settings[category as SettingsCategory] = defaults as AllSettings[SettingsCategory]
-      }
-    }
-
-    return { success: true, settings }
+    return { success: true, settings: settings as Partial<AllSettings> }
   }
 
   // Get settings for a specific category
