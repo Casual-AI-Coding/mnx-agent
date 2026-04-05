@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { DatabaseConnection, createConnection, getConnection, closeConnection, QueryResultRow } from './connection.js'
-import { TaskStatus, TriggerType, ExecutionStatus } from './types.js'
+import { TaskStatus, TriggerType, ExecutionStatus, MisfirePolicy } from './types.js'
 import type {
   CronJob,
   TaskQueueItem,
@@ -73,6 +73,7 @@ function rowToCronJob(row: CronJobRow): CronJob {
     ...row, 
     is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
     timeout_ms: row.timeout_ms ?? 300000,
+    misfire_policy: (row.misfire_policy as MisfirePolicy) ?? MisfirePolicy.FIRE_ONCE,
   }
 }
 
@@ -259,18 +260,19 @@ export class DatabaseService {
     const isActive = job.is_active !== false
     const timeoutMs = job.timeout_ms ?? 300000
     const timezone = job.timezone ?? 'UTC'
+    const misfirePolicy = job.misfire_policy ?? MisfirePolicy.FIRE_ONCE
     
     if (this.conn.isPostgres()) {
       await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null]
+        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id, misfire_policy)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [id, job.name, job.description ?? null, job.cron_expression, isActive, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null, misfirePolicy]
       )
     } else {
       await this.conn.execute(
-        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, job.name, job.description ?? null, job.cron_expression, isActive ? 1 : 0, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null]
+        `INSERT INTO cron_jobs (id, name, description, cron_expression, is_active, workflow_id, timezone, created_at, updated_at, timeout_ms, owner_id, misfire_policy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, job.name, job.description ?? null, job.cron_expression, isActive ? 1 : 0, job.workflow_id ?? null, timezone, now, now, timeoutMs, ownerId ?? null, misfirePolicy]
       )
     }
     return (await this.getCronJobById(id))!
@@ -305,6 +307,7 @@ export class DatabaseService {
     addField('total_runs', updates.total_runs)
     addField('total_failures', updates.total_failures)
     addField('timeout_ms', updates.timeout_ms)
+    addField('misfire_policy', updates.misfire_policy)
 
     if (fields.length === 0) return existing
     

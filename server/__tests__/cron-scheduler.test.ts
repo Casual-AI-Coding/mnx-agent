@@ -1,5 +1,5 @@
 import { CronScheduler, getCronScheduler, resetCronScheduler } from '../services/cron-scheduler'
-import { CronJob, ExecutionStatus, TriggerType } from '../database/types'
+import { CronJob, ExecutionStatus, TriggerType, MisfirePolicy } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest'
 
 vi.mock('node-cron', () => {
@@ -46,6 +46,7 @@ describe('CronScheduler', () => {
     total_runs: 0,
     total_failures: 0,
     timeout_ms: 300000,
+    misfire_policy: MisfirePolicy.FIRE_ONCE,
     ...overrides,
   })
 
@@ -58,6 +59,8 @@ describe('CronScheduler', () => {
       updateCronJob: vi.fn().mockResolvedValue(undefined),
       createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
       updateExecutionLog: vi.fn().mockResolvedValue(undefined),
+      getWorkflowTemplateById: vi.fn().mockResolvedValue(null),
+      getWebhookConfigsByJobId: vi.fn().mockResolvedValue([]),
     }
 
     mockWorkflowEngine = {
@@ -370,6 +373,75 @@ describe('CronScheduler', () => {
   })
 
   // ============================================================================
+  // Job-Level Timeout
+  // ============================================================================
+
+  describe('Job-Level Timeout', () => {
+    it('should respect job.timeout_ms instead of defaultTimeoutMs', async () => {
+      // Create a job with a short timeout (500ms)
+      const job = createMockJob('job-1', {
+        timeout_ms: 500, // 500ms timeout
+        workflow_id: 'workflow-1',
+      })
+      
+      // Mock workflow engine to take longer than job's timeout (1000ms)
+      mockWorkflowEngine.executeWorkflow.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Takes 1000ms
+        return {
+          success: true,
+          nodeResults: new Map([['node-1', { success: true }]]),
+          error: null,
+        }
+      })
+      
+      // Mock getWorkflowTemplateById for workflow_id lookup
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'workflow-1',
+        nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
+        edges_json: JSON.stringify([]),
+      })
+      
+      // Execute the job
+      await scheduler.executeJobTick(job)
+      
+      // Should timeout after ~500ms (job.timeout_ms), not after 5000ms (default)
+      // The execution log should show failure due to timeout
+      expect(mockDb.updateExecutionLog).toHaveBeenCalledWith('log-1', expect.objectContaining({
+        status: ExecutionStatus.FAILED,
+        error_summary: expect.stringContaining('timed out'),
+      }))
+    })
+
+    it('should use defaultTimeoutMs when job.timeout_ms is 0', async () => {
+      // Create a job with timeout_ms: 0 (fallback to default)
+      const job = createMockJob('job-1', {
+        timeout_ms: 0,
+        workflow_id: 'workflow-1',
+      })
+      
+      // Mock workflow engine to complete in less than default timeout
+      mockWorkflowEngine.executeWorkflow.mockResolvedValue({
+        success: true,
+        nodeResults: new Map([['node-1', { success: true }]]),
+        error: null,
+      })
+      
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'workflow-1',
+        nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
+        edges_json: JSON.stringify([]),
+      })
+      
+      await scheduler.executeJobTick(job)
+      
+      // Should succeed (no timeout) using defaultTimeoutMs (5000ms in test setup)
+      expect(mockDb.updateExecutionLog).toHaveBeenCalledWith('log-1', expect.objectContaining({
+        status: ExecutionStatus.COMPLETED,
+      }))
+    })
+  })
+
+  // ============================================================================
   // Utility Methods
   // ============================================================================
 
@@ -426,6 +498,154 @@ describe('CronScheduler', () => {
       expect(instance1).not.toBe(instance2)
       
       resetCronScheduler()
+    })
+  })
+
+  // ============================================================================
+  // Misfire Handling
+  // ============================================================================
+
+  describe('Misfire Handling', () => {
+    it('should detect job with past next_run_at as misfire', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const misfiredJob = createMockJob('job-misfire', {
+        next_run_at: pastTime,
+        misfire_policy: MisfirePolicy.FIRE_ONCE,
+        workflow_id: 'wf-001',
+      })
+      
+      mockDb.getActiveCronJobs.mockResolvedValue([misfiredJob])
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'wf-001',
+        name: 'Test Workflow',
+        nodes_json: '[]',
+        edges_json: '[]',
+        owner_id: null,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      mockWorkflowEngine.executeWorkflow.mockResolvedValue({
+        success: true,
+        nodeResults: new Map(),
+        error: null,
+      })
+      
+      await scheduler.init()
+      
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      expect(mockWorkflowEngine.executeWorkflow).toHaveBeenCalled()
+    })
+
+    it('should skip misfire when policy is ignore', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const ignoredMisfireJob = createMockJob('job-ignored', {
+        next_run_at: pastTime,
+        misfire_policy: MisfirePolicy.IGNORE,
+        workflow_id: 'wf-001',
+      })
+      
+      mockDb.getActiveCronJobs.mockResolvedValue([ignoredMisfireJob])
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'wf-001',
+        name: 'Test Workflow',
+        nodes_json: '[]',
+        edges_json: '[]',
+        owner_id: null,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      
+      await scheduler.init()
+      
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      expect(mockWorkflowEngine.executeWorkflow).not.toHaveBeenCalled()
+    })
+
+    it('should not handle misfire for job with future next_run_at', async () => {
+      const futureTime = new Date(Date.now() + 3600000).toISOString()
+      const futureJob = createMockJob('job-future', {
+        next_run_at: futureTime,
+        workflow_id: 'wf-001',
+      })
+      
+      mockDb.getActiveCronJobs.mockResolvedValue([futureJob])
+      
+      await scheduler.init()
+      
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      expect(mockWorkflowEngine.executeWorkflow).not.toHaveBeenCalled()
+    })
+
+    it('should handle multiple misfired jobs with rate limiting', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const jobs = [
+        createMockJob('job-1', { next_run_at: pastTime, workflow_id: 'wf-001' }),
+        createMockJob('job-2', { next_run_at: pastTime, workflow_id: 'wf-001' }),
+        createMockJob('job-3', { next_run_at: pastTime, workflow_id: 'wf-001' }),
+      ]
+      
+      mockDb.getActiveCronJobs.mockResolvedValue(jobs)
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'wf-001',
+        name: 'Test Workflow',
+        nodes_json: '[]',
+        edges_json: '[]',
+        owner_id: null,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      mockWorkflowEngine.executeWorkflow.mockResolvedValue({
+        success: true,
+        nodeResults: new Map(),
+        error: null,
+      })
+      
+      await scheduler.init()
+      
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      expect(mockWorkflowEngine.executeWorkflow).toHaveBeenCalledTimes(3)
+    })
+
+    it('should log misfire handling appropriately', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const misfiredJob = createMockJob('job-log', {
+        next_run_at: pastTime,
+        misfire_policy: MisfirePolicy.FIRE_ONCE,
+        workflow_id: 'wf-001',
+      })
+      
+      mockDb.getActiveCronJobs.mockResolvedValue([misfiredJob])
+      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+        id: 'wf-001',
+        name: 'Test Workflow',
+        nodes_json: '[]',
+        edges_json: '[]',
+        owner_id: null,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      mockWorkflowEngine.executeWorkflow.mockResolvedValue({
+        success: true,
+        nodeResults: new Map(),
+        error: null,
+      })
+      
+      const consoleSpy = vi.spyOn(console, 'info')
+      
+      await scheduler.init()
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Misfire detected'))
+      
+      consoleSpy.mockRestore()
     })
   })
 })

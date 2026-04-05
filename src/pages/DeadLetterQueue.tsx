@@ -38,7 +38,6 @@ import {
 import { Switch } from '@/components/ui/Switch'
 import {
   Dialog,
-  DialogHeader,
   DialogFooter,
 } from '@/components/ui/Dialog'
 import {
@@ -56,6 +55,7 @@ import {
 } from '@/lib/api/cron'
 import type { DeadLetterQueueItem } from '@/types/cron'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 // ============================================
 // Helper Functions
@@ -417,6 +417,12 @@ export default function DeadLetterQueue() {
   const [autoRetryStats, setAutoRetryStats] = useState<AutoRetryStats | null>(null)
   const [showAutoRetryConfig, setShowAutoRetryConfig] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useState<DeadLetterQueueItem | null>(null)
+
+  // Open delete confirmation dialog
+  const openDeleteDialog = (item: DeadLetterQueueItem) => {
+    setItemToDelete(item)
+  }
 
   // Fetch DLQ items and auto-retry stats
   const fetchItems = useCallback(async () => {
@@ -522,21 +528,22 @@ export default function DeadLetterQueue() {
   }
 
   // Delete single item
-  const handleDelete = async (item: DeadLetterQueueItem) => {
-    if (!confirm('Are you sure you want to delete this item?')) return
+  const handleDelete = async () => {
+    if (!itemToDelete) return
 
-    const response = await deleteDeadLetterQueueItem(item.id)
+    const response = await deleteDeadLetterQueueItem(itemToDelete.id)
     if (response.success) {
       toast.success('Item deleted successfully')
       fetchItems()
       setSelectedItems((prev) => {
         const newSet = new Set(prev)
-        newSet.delete(item.id)
+        newSet.delete(itemToDelete.id)
         return newSet
       })
     } else {
       toast.error(response.error || 'Failed to delete item')
     }
+    setItemToDelete(null)
   }
 
   // Bulk retry
@@ -874,7 +881,7 @@ export default function DeadLetterQueue() {
                                 <RotateCcw className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(item)}
+                                onClick={() => openDeleteDialog(item)}
                                 className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-destructive transition-colors"
                                 title="Delete"
                               >
@@ -912,6 +919,17 @@ export default function DeadLetterQueue() {
         selectedItems={items.filter((item) => selectedItems.has(item.id))}
         onConfirm={handleBulkRetry}
         isProcessing={isProcessing}
+      />
+
+      <ConfirmDialog
+        open={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Item"
+        description="Are you sure you want to permanently delete this item from the dead letter queue? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        requireInput="DELETE"
       />
     </div>
   )

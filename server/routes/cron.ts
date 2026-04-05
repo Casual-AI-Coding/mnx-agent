@@ -299,6 +299,8 @@ function formatDuration(ms: number): string {
 // ============================================
 router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
@@ -309,7 +311,11 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
   for (const id of ids) {
     const job = await db.getCronJobById(id, ownerId)
     if (job && !job.is_active) {
-      await db.toggleCronJobActive(id, ownerId)
+      const updatedJob = await db.toggleCronJobActive(id, ownerId)
+      if (updatedJob) {
+        // Schedule job in node-cron after enabling in DB
+        await scheduler.scheduleJob(updatedJob)
+      }
       updated++
     }
   }
@@ -318,6 +324,8 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
 
 router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
@@ -328,6 +336,8 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
   for (const id of ids) {
     const job = await db.getCronJobById(id, ownerId)
     if (job && job.is_active) {
+      // Unschedule job from node-cron before disabling in DB
+      scheduler.unscheduleJob(id)
       await db.toggleCronJobActive(id, ownerId)
       updated++
     }
@@ -337,6 +347,8 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
 
 router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const serviceRegistry = getServiceNodeRegistry(db)
+  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
@@ -345,6 +357,8 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
   }
   let deleted = 0
   for (const id of ids) {
+    // Unschedule job from node-cron before deleting from DB
+    scheduler.unscheduleJob(id)
     if (await db.deleteCronJob(id, ownerId)) {
       deleted++
     }

@@ -83,6 +83,7 @@ import {
   formatDateWithTimezone,
 } from '@/lib/cron-utils'
 import { CronExpressionBuilder } from '@/components/cron/CronExpressionBuilder'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 // ============================================
 // Helper Components
@@ -598,6 +599,7 @@ const JobsListTab = memo(function JobsListTab() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [jobToEdit, setJobToEdit] = useState<CronJob | null>(null)
+  const [jobToDelete, setJobToDelete] = useState<CronJob | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -633,9 +635,14 @@ const JobsListTab = memo(function JobsListTab() {
     setIsEditModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this job?')) {
-      await deleteJob(id)
+  const openDeleteDialog = (job: CronJob) => {
+    setJobToDelete(job)
+  }
+
+  const handleDelete = async () => {
+    if (jobToDelete) {
+      await deleteJob(jobToDelete.id)
+      setJobToDelete(null)
     }
   }
 
@@ -775,7 +782,7 @@ const JobsListTab = memo(function JobsListTab() {
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(job.id)}
+                    onClick={() => openDeleteDialog(job)}
                     className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-destructive transition-colors"
                     title="Delete"
                   >
@@ -803,6 +810,17 @@ const JobsListTab = memo(function JobsListTab() {
         onSubmit={handleEditJob}
         job={jobToEdit}
       />
+
+      <ConfirmDialog
+        open={!!jobToDelete}
+        onClose={() => setJobToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Cron Job"
+        description={`Are you sure you want to delete "${jobToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        requireInput="DELETE"
+      />
     </div>
   )
 })
@@ -814,6 +832,7 @@ const JobsListTab = memo(function JobsListTab() {
 const TaskQueueTab = memo(function TaskQueueTab() {
   const { tasks, loading, filter, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const [taskToDelete, setTaskToDelete] = useState<TaskQueueItem | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -824,9 +843,14 @@ const TaskQueueTab = memo(function TaskQueueTab() {
     await updateTask(task.id, { status: TaskStatus.Pending, retryCount: task.retryCount + 1 })
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      await deleteTask(id)
+  const openDeleteDialog = (task: TaskQueueItem) => {
+    setTaskToDelete(task)
+  }
+
+  const handleDelete = async () => {
+    if (taskToDelete) {
+      await deleteTask(taskToDelete.id)
+      setTaskToDelete(null)
     }
   }
 
@@ -1017,7 +1041,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(task.id)}
+                          onClick={() => openDeleteDialog(task)}
                           className="p-2 rounded-lg hover:bg-card/800 text-muted-foreground/70 hover:text-destructive transition-colors"
                           title="Delete"
                         >
@@ -1032,6 +1056,17 @@ const TaskQueueTab = memo(function TaskQueueTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Task"
+        description={`Are you sure you want to delete this ${taskToDelete?.taskType} task?`}
+        confirmText="Delete"
+        variant="destructive"
+        requireInput="DELETE"
+      />
     </div>
   )
 })

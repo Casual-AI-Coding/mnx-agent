@@ -45,6 +45,7 @@ import { useWebhooksStore } from '@/stores/webhooks'
 import { useCronJobsStore } from '@/stores/cronJobs'
 import type { WebhookConfig, WebhookDelivery, WebhookEvent, CreateWebhookConfig, UpdateWebhookConfig } from '@/types/cron'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 const WEBHOOK_EVENTS: { value: WebhookEvent; label: string; description: string }[] = [
   { value: 'on_start', label: 'On Start', description: 'Triggered when job execution starts' },
@@ -511,6 +512,7 @@ const WebhooksListTab = memo(function WebhooksListTab() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [webhookToEdit, setWebhookToEdit] = useState<WebhookConfig | null>(null)
+  const [webhookToDelete, setWebhookToDelete] = useState<WebhookConfig | null>(null)
   const [deliveryModalWebhook, setDeliveryModalWebhook] = useState<WebhookConfig | null>(null)
 
   useEffect(() => {
@@ -537,10 +539,15 @@ const WebhooksListTab = memo(function WebhooksListTab() {
     setIsEditModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this webhook?')) {
-      await removeWebhook(id)
+  const openDeleteDialog = (webhook: WebhookConfig) => {
+    setWebhookToDelete(webhook)
+  }
+
+  const handleDelete = async () => {
+    if (webhookToDelete) {
+      await removeWebhook(webhookToDelete.id)
       toast.success('Webhook deleted successfully')
+      setWebhookToDelete(null)
     }
   }
 
@@ -665,7 +672,7 @@ const WebhooksListTab = memo(function WebhooksListTab() {
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(webhook.id)}
+                      onClick={() => openDeleteDialog(webhook)}
                       className="p-2 rounded-lg hover:bg-muted text-muted-foreground/70 hover:text-destructive transition-colors"
                       title="Delete"
                     >
@@ -699,6 +706,17 @@ const WebhooksListTab = memo(function WebhooksListTab() {
         webhook={deliveryModalWebhook}
         isOpen={!!deliveryModalWebhook}
         onClose={() => setDeliveryModalWebhook(null)}
+      />
+
+      <ConfirmDialog
+        open={!!webhookToDelete}
+        onClose={() => setWebhookToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Webhook"
+        description={`Are you sure you want to delete "${webhookToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        requireInput="DELETE"
       />
     </div>
   )

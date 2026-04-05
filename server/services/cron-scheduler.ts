@@ -9,7 +9,8 @@ import {
   CronJob, 
   CreateExecutionLog, 
   ExecutionStatus,
-  TriggerType 
+  TriggerType,
+  MisfirePolicy
 } from '../database/types'
 import { cronEvents } from './websocket-service'
 
@@ -64,6 +65,8 @@ export class CronScheduler {
         console.error(`[CronScheduler] Failed to schedule job "${job.name}" (${job.id}):`, error)
       }
     }
+
+    await this.checkAndHandleMisfires(activeJobs)
   }
 
   calculateNextRun(expression: string): Date | null {
@@ -179,7 +182,7 @@ export class CronScheduler {
       
       const result = await this.executeWithTimeout(
         () => this.workflowEngine.executeWorkflow(workflowJson, log?.id, this.taskExecutor || undefined),
-        this.defaultTimeoutMs
+        job.timeout_ms || this.defaultTimeoutMs
       )
       
       const endTime = Date.now()
@@ -274,6 +277,55 @@ export class CronScheduler {
         setTimeout(() => reject(new Error(`Execution timed out after ${timeoutMs}ms`)), timeoutMs)
       ),
     ])
+  }
+
+  private async handleMisfire(job: CronJob): Promise<void> {
+    if (job.misfire_policy === MisfirePolicy.IGNORE) {
+      console.info(`[CronScheduler] Job "${job.name}" (${job.id}) misfire ignored per policy`)
+      return
+    }
+
+    console.info(`[CronScheduler] Misfire detected for job "${job.name}" (${job.id}), executing catch-up...`)
+
+    try {
+      await this.executeJobTick(job)
+      console.info(`[CronScheduler] Catch-up execution completed for job "${job.name}" (${job.id})`)
+    } catch (error) {
+      console.error(`[CronScheduler] Catch-up execution failed for job "${job.name}" (${job.id}):`, error)
+    }
+
+    if (job.misfire_policy === MisfirePolicy.FIRE_ALL) {
+      console.warn(`[CronScheduler] Job "${job.name}" (${job.id}) has 'fire_all' policy but only single catch-up executed to prevent startup storm`)
+    }
+  }
+
+  private async checkAndHandleMisfires(jobs: CronJob[]): Promise<void> {
+    const now = new Date()
+    const misfiredJobs: CronJob[] = []
+
+    for (const job of jobs) {
+      if (job.is_active && job.next_run_at) {
+        const nextRun = new Date(job.next_run_at)
+        if (nextRun < now) {
+          misfiredJobs.push(job)
+        }
+      }
+    }
+
+    if (misfiredJobs.length === 0) {
+      return
+    }
+
+    console.info(`[CronScheduler] Detected ${misfiredJobs.length} misfired jobs, handling asynchronously...`)
+
+    const delayBetweenJobs = 500
+    
+    for (let i = 0; i < misfiredJobs.length; i++) {
+      const job = misfiredJobs[i]
+      setTimeout(async () => {
+        await this.handleMisfire(job)
+      }, i * delayBetweenJobs)
+    }
   }
 
   unscheduleJob(jobId: string): boolean {

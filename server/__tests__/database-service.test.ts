@@ -21,6 +21,7 @@ describe('DatabaseService', () => {
       pgDatabase: process.env.DB_NAME || 'minimax_agent',
     })
     db = new DatabaseService(getConnection())
+    await db.init()
   })
 
   beforeEach(async () => {

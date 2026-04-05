@@ -28,6 +28,12 @@ export enum ExecutionStatus {
   PARTIAL = 'partial',
 }
 
+export enum MisfirePolicy {
+  IGNORE = 'ignore',     // Skip missed executions
+  FIRE_ONCE = 'fire_once', // Execute once catch-up (default)
+  FIRE_ALL = 'fire_all',   // Execute all missed runs (not recommended)
+}
+
 // ============================================================================
 // Media Types
 // ============================================================================
@@ -183,6 +189,7 @@ export interface CronJob {
   total_runs: number
   total_failures: number
   timeout_ms: number
+  misfire_policy: MisfirePolicy
   created_at: string
   updated_at: string
 }
@@ -233,6 +240,7 @@ export interface CreateCronJob {
   owner_id?: string | null
   is_active?: boolean
   timeout_ms?: number
+  misfire_policy?: MisfirePolicy
 }
 
 export interface CreateTaskQueueItem {
@@ -328,6 +336,7 @@ export interface UpdateCronJob {
   total_runs?: number
   total_failures?: number
   timeout_ms?: number
+  misfire_policy?: MisfirePolicy
 }
 
 export interface UpdateTaskQueueItem {
@@ -397,6 +406,7 @@ export interface CronJobRow {
   total_runs: number
   total_failures: number
   timeout_ms: number
+  misfire_policy: string
 }
 
 export interface TaskQueueRow {

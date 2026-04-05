@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types'
+import { TaskStatus, TriggerType, ExecutionStatus, MisfirePolicy } from '../database/types'
 
 // ============================================================================
 // Cron Job Schemas
@@ -13,6 +13,7 @@ export const createCronJobSchema = z.object({
   timezone: z.string().default('Asia/Shanghai'),
   is_active: z.boolean().default(true),
   timeout_ms: z.number().int().min(1000).max(3600000).optional(),
+  misfire_policy: z.enum(['ignore', 'fire_once', 'fire_all']).default('fire_once'),
 })
 
 export const updateCronJobSchema = createCronJobSchema.partial()
