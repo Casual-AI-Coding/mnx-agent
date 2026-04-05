@@ -304,8 +304,8 @@ export default function InvitationCodes() {
       >
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className={cn('p-2 rounded-xl bg-gradient-to-br border', status.warning.iconBg, status.warning.border)}>
-              <Key className={cn('w-6 h-6', status.warning.icon)} />
+            <div className={cn('p-2 rounded-xl bg-gradient-to-br border', status.warning.bgSubtle, status.warning.border)}>
+              <Key className={cn('w-6 h-6', status.warning.text)} />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               邀请码管理
@@ -322,7 +322,7 @@ export default function InvitationCodes() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={() => setGenerateDialogOpen(true)}
-              className={cn('bg-gradient-to-r shadow-lg', status.warning.bg, status.warning.hover, status.warning.shadow)}
+              className={cn('bg-gradient-to-r shadow-lg shadow-warning/20', status.warning.bg, 'hover:opacity-90')}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               批量生成
@@ -363,7 +363,7 @@ export default function InvitationCodes() {
                     placeholder="搜索邀请码或创建者..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className={cn('pl-10 pr-10 h-10 bg-background/50 border-border/50 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all', status.warning.focusRing, status.warning.focusBorder)}
+                    className="pl-10 pr-10 h-10 bg-background/50 border-border/50 focus:border-warning/50 focus:ring-2 focus:ring-warning/10 transition-all"
                   />
                   {searchQuery && (
                     <motion.button
@@ -642,7 +642,7 @@ export default function InvitationCodes() {
                           </td>
                           <td className="py-3 px-4">
                             {usable ? (
-                              <Badge className={cn(status.success.bg, status.success.text, status.success.border, status.success.hover)}>
+                              <Badge className={cn(status.success.bgSubtle, status.success.text, status.success.border, 'hover:bg-success/20')}>
                                 可用
                               </Badge>
                             ) : expired ? (
@@ -728,7 +728,7 @@ export default function InvitationCodes() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>取消</Button>
-          <Button onClick={handleGenerate} disabled={actionLoading} className="bg-amber-500 hover:bg-amber-600">
+          <Button onClick={handleGenerate} disabled={actionLoading} className={cn('bg-warning hover:bg-warning/90', status.warning.bg, status.warning.text)}>
             {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             <Sparkles className="w-4 h-4 mr-2" />
             生成
