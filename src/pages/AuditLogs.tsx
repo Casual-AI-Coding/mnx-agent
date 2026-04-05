@@ -137,19 +137,19 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             title={t('audit.totalLogs', '总记录数')}
             value={stats.total}
             icon={Shield}
-            color="text-blue-400"
+            color={status.info.icon}
           />
           <StatCard
             title={t('audit.avgDuration', '平均耗时')}
             value={formatDuration(stats.avgDuration)}
             icon={Clock}
-            color="text-yellow-400"
+            color={status.warning.icon}
           />
           <StatCard
             title={t('audit.successRate', '成功率')}
             value={`${((stats.byResponseStatus.filter(s => s.response_status >= 200 && s.response_status < 300).reduce((sum, s) => sum + s.count, 0) / Math.max(stats.total, 1)) * 100).toFixed(1)}%`}
             icon={CheckCircle2}
-            color="text-green-400"
+            color={status.success.icon}
           />
           <StatCard
             title={t('audit.errorCount', '错误数')}
@@ -310,7 +310,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             {selectedLog.error_message && (
               <div>
                 <label className="text-destructive">{t('audit.errorMessage', '错误信息')}</label>
-                <pre className="text-red-300 bg-red-950/20 border border-red-900/50 p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
+                <pre className={cn('p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all', status.error.text, status.error.bgSubtle, 'border', status.error.border)}>
                   {selectedLog.error_message}
                 </pre>
               </div>

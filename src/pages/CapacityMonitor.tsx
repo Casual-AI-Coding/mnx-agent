@@ -126,12 +126,12 @@ export default function CapacityMonitor() {
       )}
 
       {hasError && (
-        <Card className="border-yellow-500/50 bg-yellow-500/10">
+        <Card className={cn(status.warning.border, status.warning.bgSubtle)}>
           <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-500" />
+            <AlertCircle className={cn('w-5 h-5', status.warning.icon)} />
             <div>
-              <p className="font-medium text-yellow-500">API Warning</p>
-              <p className="text-sm text-yellow-500/80">{(codingPlan as { error: string }).error}</p>
+              <p className={cn('font-medium', status.warning.text)}>API Warning</p>
+              <p className={cn('text-sm', status.warning.text, 'opacity-80')}>{(codingPlan as { error: string }).error}</p>
             </div>
           </CardContent>
         </Card>
@@ -181,7 +181,7 @@ export default function CapacityMonitor() {
               const remaining = model.current_interval_usage_count
               const used = total - remaining
               const percentage = total > 0 ? Math.round((used / total) * 100) : 0
-              const statusColor = percentage < 50 ? 'bg-green-500' : percentage < 80 ? 'bg-yellow-500' : 'bg-red-500'
+              const statusColor = percentage < 50 ? status.success.bg : percentage < 80 ? status.warning.bg : status.error.bg
 
               return (
                 <motion.div
@@ -194,8 +194,8 @@ export default function CapacityMonitor() {
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-purple-500/10">
-                            <FileText className="w-5 h-5 text-purple-400" />
+                          <div className={cn('p-2 rounded-lg', services.text.bg)}>
+                            <FileText className={cn('w-5 h-5', services.text.icon)} />
                           </div>
                           <div>
                             <h4 className="font-semibold text-foreground">
@@ -218,7 +218,7 @@ export default function CapacityMonitor() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground/70">Used</span>
-                          <span className="text-green-400 font-medium">
+                          <span className={cn('font-medium', status.success.text)}>
                             {used.toLocaleString()}
                           </span>
                         </div>
