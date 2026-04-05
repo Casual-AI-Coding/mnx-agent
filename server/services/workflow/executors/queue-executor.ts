@@ -1,12 +1,12 @@
 import type { WorkflowNode, TaskResult } from '../types.js'
 import type { DatabaseService } from '../../../database/service-async.js'
-import type { TaskExecutor } from '../../queue-processor.js'
+import type { ITaskExecutor } from '../../../types/task.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import { cronEvents } from '../../websocket-service.js'
 
 export interface QueueExecutorDeps {
   db: DatabaseService
-  taskExecutor: TaskExecutor | null
+  taskExecutor: ITaskExecutor | null
   serviceRegistry: ServiceNodeRegistry
   executionLogId: string | null
   workflowId: string | null

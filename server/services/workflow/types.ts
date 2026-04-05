@@ -1,15 +1,10 @@
 import { WorkflowNodeType } from '../../types/workflow.js'
+import type { TaskResult } from '../../types/task.js'
 
 // Re-export workflow types for convenience
 export { WorkflowNodeType }
 export type { WorkflowNode, WorkflowEdge, WorkflowGraph } from '../../types/workflow.js'
-
-export interface TaskResult {
-  success: boolean
-  data?: unknown
-  error?: string
-  durationMs: number
-}
+export type { TaskResult }
 
 export interface WorkflowResult {
   success: boolean

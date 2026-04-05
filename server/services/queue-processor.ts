@@ -1,10 +1,11 @@
 import type { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TaskQueueItem } from '../database/types'
-import type { TaskResult } from './workflow-engine'
+import type { TaskResult, ITaskExecutor } from '../types/task.js'
 import { cronEvents } from './websocket-service'
 import { RETRY_TIMEOUTS } from '../config/timeouts.js'
 
 export type { DatabaseService }
+export type { ITaskExecutor }
 
 export interface AutoRetryConfig {
   enabled: boolean
@@ -28,10 +29,6 @@ export interface QueueResult {
   error?: string
 }
 
-export interface TaskExecutor {
-  executeTask(taskType: string, payload: Record<string, unknown>): Promise<TaskResult>
-}
-
 export interface CapacityChecker {
   hasCapacity(serviceType: string): Promise<boolean>
   decrementCapacity(serviceType: string): Promise<void>
@@ -40,7 +37,7 @@ export interface CapacityChecker {
 
 export class QueueProcessor {
   private db: DatabaseService
-  private taskExecutor: TaskExecutor
+  private taskExecutor: ITaskExecutor
   private capacityChecker: CapacityChecker
   private readonly maxRetryDelayMs = RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS
   private autoRetryConfig: AutoRetryConfig
@@ -48,7 +45,7 @@ export class QueueProcessor {
 
   constructor(
     db: DatabaseService,
-    taskExecutor: TaskExecutor,
+    taskExecutor: ITaskExecutor,
     capacityChecker: CapacityChecker,
     autoRetryConfig?: Partial<AutoRetryConfig>
   ) {
@@ -471,7 +468,7 @@ export class QueueProcessor {
 
 export function createQueueProcessor(
   db: DatabaseService,
-  taskExecutor: TaskExecutor,
+  taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   autoRetryConfig?: Partial<AutoRetryConfig>
 ): QueueProcessor {
@@ -482,7 +479,7 @@ let queueProcessorInstance: QueueProcessor | null = null
 
 export function getQueueProcessor(
   db: DatabaseService,
-  taskExecutor: TaskExecutor,
+  taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   autoRetryConfig?: Partial<AutoRetryConfig>
 ): QueueProcessor {

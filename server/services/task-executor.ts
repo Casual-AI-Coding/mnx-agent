@@ -1,14 +1,10 @@
 import type { DatabaseService } from '../database/service-async.js'
 import { MiniMaxClient } from '../lib/minimax'
+import { TASK_TIMEOUTS, POLLING_CONFIG as SHARED_POLLING_CONFIG } from '../config/timeouts.js'
+import type { TaskResult, ITaskExecutor } from '../types/task.js'
 
 export type { DatabaseService }
-
-export interface TaskResult {
-  success: boolean
-  data?: unknown
-  error?: string
-  durationMs: number
-}
+export type { TaskResult }
 
 const TASK_TYPE_MAP: Record<string, string> = {
   text: 'chatCompletion',
@@ -20,14 +16,14 @@ const TASK_TYPE_MAP: Record<string, string> = {
 }
 
 const POLLING_CONFIG = {
-  maxDurationMs: 10 * 60 * 1000,
-  initialIntervalMs: 3 * 1000,
-  maxIntervalMs: 30 * 1000,
-  backoffMultiplier: 1.5,
+  maxDurationMs: SHARED_POLLING_CONFIG.MAX_DURATION_MS,
+  initialIntervalMs: SHARED_POLLING_CONFIG.INITIAL_INTERVAL_MS,
+  maxIntervalMs: SHARED_POLLING_CONFIG.MAX_INTERVAL_MS,
+  backoffMultiplier: SHARED_POLLING_CONFIG.BACKOFF_MULTIPLIER,
 }
 
-const DEFAULT_TIMEOUT = 5 * 60 * 1000
-const ASYNC_TIMEOUT = 10 * 60 * 1000
+const DEFAULT_TIMEOUT = TASK_TIMEOUTS.SYNC_TASK_MS
+const ASYNC_TIMEOUT = TASK_TIMEOUTS.ASYNC_TASK_MS
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, taskType: string): Promise<T> {
   return Promise.race([
@@ -38,7 +34,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, taskType: string
   ])
 }
 
-export class TaskExecutor {
+export class TaskExecutor implements ITaskExecutor {
   private client: MiniMaxClient
   private db: DatabaseService
 

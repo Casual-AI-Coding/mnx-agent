@@ -499,6 +499,32 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_i
       ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS misfire_policy VARCHAR(20) DEFAULT 'fire_once';
     `,
   },
+  {
+    id: 23,
+    name: 'migration_023_execution_states',
+    sql: `
+      CREATE TABLE IF NOT EXISTS execution_states (
+        id TEXT PRIMARY KEY,
+        execution_log_id TEXT NOT NULL,
+        workflow_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        current_layer INTEGER DEFAULT 0,
+        completed_nodes TEXT NOT NULL DEFAULT '[]',
+        failed_nodes TEXT NOT NULL DEFAULT '[]',
+        node_outputs TEXT NOT NULL DEFAULT '{}',
+        context TEXT NOT NULL DEFAULT '{}',
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        paused_at TIMESTAMP,
+        resumed_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_by TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_execution_states_status ON execution_states(status);
+      CREATE INDEX IF NOT EXISTS idx_execution_states_log_id ON execution_states(execution_log_id);
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

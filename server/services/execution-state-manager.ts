@@ -22,13 +22,14 @@ export class ExecutionStateManager {
     const failedNodes = JSON.stringify(data.failed_nodes ?? [])
     const nodeOutputs = JSON.stringify(data.node_outputs ?? {})
     const context = JSON.stringify(data.context ?? {})
+    const createdBy = data.created_by ?? null
 
     await this.db.run(
       `INSERT INTO execution_states (
         id, execution_log_id, workflow_id, status, current_layer,
         completed_nodes, failed_nodes, node_outputs, context, created_by,
         started_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         id,
         data.execution_log_id,
@@ -39,7 +40,7 @@ export class ExecutionStateManager {
         failedNodes,
         nodeOutputs,
         context,
-        data.created_by ?? null,
+        createdBy,
         now,
         now,
       ]
@@ -50,7 +51,7 @@ export class ExecutionStateManager {
 
   async getById(id: string): Promise<ExecutionState | undefined> {
     const row = await this.db.get<ExecutionStateRow>(
-      'SELECT * FROM execution_states WHERE id = ?',
+      'SELECT * FROM execution_states WHERE id = $1',
       [id]
     )
     return row ? rowToExecutionState(row) : undefined
@@ -58,26 +59,28 @@ export class ExecutionStateManager {
 
   async getByExecutionLogId(logId: string): Promise<ExecutionState | undefined> {
     const row = await this.db.get<ExecutionStateRow>(
-      'SELECT * FROM execution_states WHERE execution_log_id = ?',
+      'SELECT * FROM execution_states WHERE execution_log_id = $1',
       [logId]
     )
     return row ? rowToExecutionState(row) : undefined
   }
 
   async update(id: string, data: UpdateExecutionState): Promise<void> {
-    const sets: string[] = ['updated_at = ?']
+    const sets: string[] = ['updated_at = $1']
     const values: unknown[] = [new Date().toISOString()]
+    let paramIndex = 2
     
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined) {
-        sets.push(`${key} = ?`)
+        sets.push(`${key} = $${paramIndex}`)
         values.push(value)
+        paramIndex++
       }
     }
     values.push(id)
     
     await this.db.run(
-      `UPDATE execution_states SET ${sets.join(', ')} WHERE id = ?`,
+      `UPDATE execution_states SET ${sets.join(', ')} WHERE id = $${paramIndex}`,
       values
     )
   }
@@ -155,7 +158,7 @@ export class ExecutionStateManager {
   }
 
   async delete(id: string): Promise<void> {
-    await this.db.run('DELETE FROM execution_states WHERE id = ?', [id])
+    await this.db.run('DELETE FROM execution_states WHERE id = $1', [id])
   }
 }
 

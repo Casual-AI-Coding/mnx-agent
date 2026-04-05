@@ -1,6 +1,6 @@
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
-import type { TaskExecutor } from '../queue-processor.js'
+import type { ITaskExecutor } from '../../types/task.js'
 import type { WorkflowResult, TaskResult, TestExecutionOptions, WorkflowNode, WorkflowEdge } from './types.js'
 import { getExecutionStateManager } from '../execution-state-manager.js'
 import { parseWorkflowJson, validateWorkflow } from './parser.js'
@@ -21,7 +21,7 @@ export { resolveNodeConfig, resolveValue, resolveTemplateString, getValueAtPath 
 export class WorkflowEngine {
   private db: DatabaseService
   private serviceRegistry: ServiceNodeRegistry
-  private taskExecutor: TaskExecutor | null = null
+  private taskExecutor: ITaskExecutor | null = null
   private executionLogId: string | null = null
   private workflowId: string | null = null
   private workflowNodes: WorkflowNode[] = []
@@ -43,7 +43,7 @@ export class WorkflowEngine {
     return this.runningExecutions.get(executionId)
   }
 
-  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor?: TaskExecutor) {
+  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor?: ITaskExecutor) {
     this.db = db
     this.serviceRegistry = serviceRegistry
     this.taskExecutor = taskExecutor || null
@@ -52,7 +52,7 @@ export class WorkflowEngine {
   async executeWorkflow(
     workflowJson: string,
     executionLogId?: string,
-    taskExecutor?: TaskExecutor,
+    taskExecutor?: ITaskExecutor,
     options?: TestExecutionOptions
   ): Promise<WorkflowResult> {
     const startTime = Date.now()

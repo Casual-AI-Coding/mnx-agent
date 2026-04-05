@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge, TaskResult } from './types.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
-import type { TaskExecutor } from '../queue-processor.js'
+import type { ITaskExecutor } from '../../types/task.js'
 import {
   executeActionNode,
   executeConditionNode,
@@ -18,7 +18,7 @@ export type NodeType = 'action' | 'condition' | 'loop' | 'transform' | 'queue' |
 export interface NodeExecutionContext {
   db: DatabaseService
   serviceRegistry: ServiceNodeRegistry
-  taskExecutor: TaskExecutor | null
+  taskExecutor: ITaskExecutor | null
   executionLogId: string | null
   workflowId: string | null
   workflowNodes: WorkflowNode[]
