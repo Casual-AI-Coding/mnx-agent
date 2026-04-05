@@ -1,8 +1,19 @@
 /// <reference types="vitest" />
-import { defineConfig, mergeConfig } from 'vitest/config'
-import viteConfig from './vite.config.ts'
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-export default mergeConfig(viteConfig, defineConfig({
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@mnx/shared-types/entities': path.resolve(__dirname, './packages/shared-types/entities/index.ts'),
+      '@mnx/shared-types/validation': path.resolve(__dirname, './packages/shared-types/validation/index.ts'),
+      '@mnx/shared-types/api': path.resolve(__dirname, './packages/shared-types/api/index.ts'),
+      '@mnx/shared-types': path.resolve(__dirname, './packages/shared-types/index.ts'),
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: [
@@ -15,4 +26,4 @@ export default mergeConfig(viteConfig, defineConfig({
     singleThread: true,
     fileParallelism: false,
   },
-}))
+})

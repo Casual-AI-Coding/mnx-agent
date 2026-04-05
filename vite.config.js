@@ -6,6 +6,10 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
+            '@mnx/shared-types': path.resolve(__dirname, './packages/shared-types/dist/index.js'),
+            '@mnx/shared-types/entities': path.resolve(__dirname, './packages/shared-types/dist/entities/index.js'),
+            '@mnx/shared-types/validation': path.resolve(__dirname, './packages/shared-types/dist/validation/index.js'),
+            '@mnx/shared-types/api': path.resolve(__dirname, './packages/shared-types/dist/api/index.js'),
         },
     },
     build: {
