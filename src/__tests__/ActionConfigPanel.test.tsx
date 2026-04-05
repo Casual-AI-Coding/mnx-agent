@@ -41,7 +41,7 @@ describe('ActionConfigPanel', () => {
   })
 
   it('renders arguments input with JSON editor', async () => {
-    render(<ActionConfigPanel config={{ service: '', method: '', args: ['test'] }} onChange={mockOnChange} />)
+    render(<ActionConfigPanel config={{ service: 'dbService', method: 'query', args: ['test'] }} onChange={mockOnChange} />)
 
     await waitFor(() => {
       expect(screen.getByText('Arguments (JSON)')).toBeInTheDocument()
@@ -52,7 +52,7 @@ describe('ActionConfigPanel', () => {
   })
 
   it('displays arguments correctly when empty', async () => {
-    render(<ActionConfigPanel config={{ service: '', method: '' }} onChange={mockOnChange} />)
+    render(<ActionConfigPanel config={{ service: 'dbService', method: 'query' }} onChange={mockOnChange} />)
 
     await waitFor(() => {
       expect(screen.getByText('Arguments (JSON)')).toBeInTheDocument()
