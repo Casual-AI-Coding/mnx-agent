@@ -41,7 +41,7 @@ export default function AppLayout() {
 
       {showKeyModal && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] overflow-y-auto py-10"
+          className="fixed inset-0 bg-foreground/10 backdrop-blur-sm z-[60] overflow-y-auto py-10"
           onClick={() => setShowKeyModal(false)}
         >
           <div className="min-h-full flex items-center justify-center p-4">

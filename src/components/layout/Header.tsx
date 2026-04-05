@@ -209,7 +209,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 title={apiKey ? t('header.apiKeyConfigured') : t('header.configKey')}
               >
                 <Key className="w-[18px] h-[18px]" />
-                {apiKey && <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500" />}
+                {apiKey && <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-success" />}
               </motion.button>
             </div>
 
@@ -228,10 +228,10 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 <User className="w-[18px] h-[18px]" />
                 <span className="max-w-[80px] truncate hidden sm:inline">{user?.username || '用户'}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  user?.role === 'super' ? 'bg-destructive/20 text-destructive' :
-                  user?.role === 'admin' ? 'bg-orange-500/20 text-orange-400' :
-                  user?.role === 'pro' ? 'bg-purple-500/20 text-purple-400' :
-                  'bg-primary-500/20 text-primary-400'
+                  user?.role === 'super' ? 'bg-warning/20 text-warning' :
+                  user?.role === 'admin' ? 'bg-primary/20 text-primary' :
+                  user?.role === 'pro' ? 'bg-secondary/20 text-secondary-foreground' :
+                  'bg-success/20 text-success'
                 }`}>
                   {user?.role || 'user'}
                 </span>
