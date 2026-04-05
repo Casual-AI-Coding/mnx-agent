@@ -161,11 +161,11 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
         <div className="absolute -top-4 -left-4 w-32 h-32 bg-gradient-to-br from-primary-500/20 via-purple-500/10 to-transparent rounded-full blur-2xl" />
         <div className="relative">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 shadow-lg shadow-primary-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/20">
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-primary-foreground">
                 {t('templates.createTitle', '创建模板')}
               </h2>
               <p className="text-sm text-dark-400">
@@ -230,7 +230,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
             >
               <div className="flex items-center gap-2">
                 <selectedCategory.icon className={cn("w-4 h-4", selectedCategory.color.split(' ')[0])} />
-                <span className="text-white">{selectedCategory.label}</span>
+                <span className="text-foreground">{selectedCategory.label}</span>
               </div>
               <ChevronDown className={cn("w-4 h-4 text-dark-400 transition-transform", showCategoryDropdown && "rotate-180")} />
             </button>
@@ -252,7 +252,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
                     )}
                   >
                     <cat.icon className={cn("w-4 h-4", cat.color.split(' ')[0])} />
-                    <span className="text-white flex-1">{cat.label}</span>
+                    <span className="text-foreground flex-1">{cat.label}</span>
                     {formData.category === cat.value && (
                       <Check className="w-4 h-4 text-primary-400" />
                     )}
@@ -344,14 +344,14 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
             variant="ghost"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="text-dark-400 hover:text-white hover:bg-dark-800"
+            className="text-dark-400 hover:text-foreground hover:bg-dark-800"
           >
             {t('common.cancel', '取消')}
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="bg-gradient-to-r from-primary-500 to-purple-600 hover:from-primary-600 hover:to-purple-700 border-0"
+            className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 border-0"
           >
             {isSubmitting ? t('common.creating', '创建中...') : t('common.create', '创建')}
           </Button>
