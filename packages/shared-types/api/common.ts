@@ -11,12 +11,3 @@ export interface PaginatedResponse<T> {
   limit: number
   hasMore: boolean
 }
-
-export interface RunStats {
-  success: boolean
-  tasksExecuted: number
-  tasksSucceeded: number
-  tasksFailed: number
-  durationMs: number
-  errorSummary?: string | null
-}

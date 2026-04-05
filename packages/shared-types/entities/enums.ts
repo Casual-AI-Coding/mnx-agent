@@ -38,6 +38,8 @@ export enum UserRole {
   SUPER = 'super',
 }
 
+export type AuditAction = 'create' | 'update' | 'delete' | 'execute'
+
 export type MediaType = 'audio' | 'image' | 'video' | 'music'
 
 export type MediaSource = 

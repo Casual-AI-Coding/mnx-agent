@@ -77,7 +77,21 @@ export interface JobTag {
   created_at: string
 }
 
+export interface JobTagRow {
+  id: string
+  job_id: string
+  tag: string
+  created_at: string
+}
+
 export interface JobDependency {
+  id: string
+  job_id: string
+  depends_on_job_id: string
+  created_at: string
+}
+
+export interface JobDependencyRow {
   id: string
   job_id: string
   depends_on_job_id: string

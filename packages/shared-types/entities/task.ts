@@ -1,7 +1,3 @@
-/**
- * Task Queue Entity Types
- */
-
 import { TaskStatus } from './enums.js'
 
 export interface TaskQueueItem {
@@ -58,31 +54,64 @@ export interface TaskQueueRow {
 
 export interface DeadLetterQueueItem {
   id: string
-  original_task_id: string
+  original_task_id: string | null
   job_id: string | null
+  owner_id: string | null
+  task_type: string
+  payload: Record<string, unknown>
+  error_message: string | null
+  retry_count: number
+  max_retries: number
+  failed_at: string
+  resolved_at: string | null
+  resolution: string | null
+  created_at: string
+}
+
+export interface DeadLetterQueueRow {
+  id: string
+  original_task_id: string | null
+  job_id: string | null
+  owner_id: string | null
   task_type: string
   payload: string
   error_message: string | null
   retry_count: number
-  moved_at: string
+  max_retries: number
+  failed_at: string
   resolved_at: string | null
-  failed_at: string | null
-  owner_id: string | null
+  resolution: string | null
+  created_at: string
 }
 
 export interface CreateDeadLetterQueueItem {
-  original_task_id: string
-  job_id?: string | null
+  original_task_id?: string
+  job_id?: string
   task_type: string
-  payload: string
-  error_message?: string | null
-  retry_count: number
+  payload: Record<string, unknown>
+  error_message?: string
+  retry_count?: number
   max_retries?: number
   owner_id?: string | null
 }
 
 export interface UpdateDeadLetterQueueItem {
-  error_message?: string | null
+  resolved_at?: string
+  resolution?: string
   retry_count?: number
-  resolved_at?: string | null
+}
+
+export interface RunStats {
+  success: boolean
+  tasksExecuted: number
+  tasksSucceeded: number
+  tasksFailed: number
+  durationMs: number
+  errorSummary?: string | null
+}
+
+export interface MigrationRow {
+  id: number
+  name: string
+  executed_at: string
 }

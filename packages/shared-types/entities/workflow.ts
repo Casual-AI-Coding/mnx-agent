@@ -96,6 +96,20 @@ export interface WorkflowPermission {
   created_at: string
 }
 
+export interface WorkflowPermissionRow {
+  id: string
+  workflow_id: string
+  user_id: string
+  granted_by: string | null
+  created_at: string
+}
+
+export interface CreateWorkflowPermission {
+  workflow_id: string
+  user_id: string
+  granted_by?: string | null
+}
+
 export interface ServiceNodePermission {
   id: string
   service_name: string
@@ -105,4 +119,24 @@ export interface ServiceNodePermission {
   min_role: string
   is_enabled: boolean
   created_at: string
+}
+
+export interface ServiceNodePermissionRow {
+  id: string
+  service_name: string
+  method_name: string
+  display_name: string
+  category: string
+  min_role: string
+  is_enabled: boolean
+  created_at: string
+}
+
+export interface CreateServiceNodePermission {
+  service_name: string
+  method_name: string
+  display_name: string
+  category: string
+  min_role?: string
+  is_enabled?: boolean
 }
