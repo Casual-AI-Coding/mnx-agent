@@ -20,36 +20,15 @@ import {
 import '@xyflow/react/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap,
-  GitBranch,
-  Repeat,
-  MessageSquare,
-  Layers,
-  Save,
-  Upload,
-  Download,
-  CheckCircle,
-  Trash2,
   X,
-  Settings,
+  CheckCircle,
   AlertCircle,
-  Wrench,
-  Server,
-  Loader2,
-  ChevronDown,
-  Undo,
-  Redo,
-  Play,
-  Pause,
-  Activity,
-  Clock,
-  XCircle,
   History,
-  Tag,
   GitCommit,
   Bug,
-  Shield,
+  Loader2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
 import { DelayNode } from '@/components/workflow/nodes/DelayNode'
@@ -57,39 +36,41 @@ import { ErrorBoundaryNode } from '@/components/workflow/nodes/ErrorBoundaryNode
 import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
-import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
+import {
+  WorkflowToolbar,
+  WorkflowNodePalette,
+  WorkflowConfigPanel,
+  WorkflowVersionPanel,
+  ExecutionStatusPanel,
+} from '@/components/workflow/builder'
+import type { AvailableActionItem } from '@/components/workflow/builder'
+import type { WorkflowVersion } from '@/lib/api/workflows'
 import { SaveWorkflowModal } from '@/components/workflow/SaveWorkflowModal'
 import { WorkflowSelectorModal } from '@/components/workflow/TemplateSelectorModal'
 import { TestRunPanel } from '@/components/workflow/TestRunPanel'
 import { NodeOutputPanel } from '@/components/workflow/NodeOutputPanel'
-import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
-import { useWorkflowStore, isValidWorkflow, hasActionNode, serializeWorkflow, deserializeWorkflow } from '@/stores/workflow'
+import { useWorkflowStore, isValidWorkflow, hasActionNode } from '@/stores/workflow'
 import { useWorkflowUpdates } from '@/hooks/useWorkflowUpdates'
-import { NodeStatusIndicator } from '@/components/workflow/NodeStatusIndicator'
 import { getWebSocketClient } from '@/lib/websocket-client'
 import type { WebSocketEvent, WorkflowTestEventPayload, WorkflowNodeOutputPayload } from '@/lib/websocket-client'
-import type { WorkflowNode, WorkflowEdge, GroupedActionNodes } from '@/types/cron'
+import type { WorkflowNode, WorkflowEdge } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
-import { validateWorkflow, getNodeErrors, type ValidationError } from '@/lib/workflow-validation'
-import { getErrorHelp } from '@/lib/workflow-error-messages'
+import { validateWorkflow } from '@/lib/workflow-validation'
 import {
   getWorkflowVersions,
   getActiveVersion,
   activateVersion,
   createVersion,
-  type WorkflowVersion,
 } from '@/lib/api/workflows'
 import {
   pauseExecution,
   resumeExecution,
   cancelExecution,
 } from '@/lib/api/cron'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
-import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
+import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
-import { toast } from 'sonner'
 
 interface WorkflowTemplate {
   id: string
@@ -112,59 +93,6 @@ const nodeTypes: NodeTypes = {
   delay: DelayNode,
   errorBoundary: ErrorBoundaryNode,
 }
-
-// Node Palette Configuration
-interface NodePaletteItem {
-  type: string
-  label: string
-  icon: React.ElementType
-  category: 'logic' | 'action'
-  description: string
-}
-
-interface AvailableActionItem {
-  service: string
-  method: string
-  label: string
-}
-
-const logicNodes: NodePaletteItem[] = [
-  {
-    type: 'condition',
-    label: 'Condition',
-    icon: GitBranch,
-    category: 'logic',
-    description: 'Conditional branching logic',
-  },
-  {
-    type: 'loop',
-    label: 'Loop',
-    icon: Repeat,
-    category: 'logic',
-    description: 'Iterate over data',
-  },
-  {
-    type: 'transform',
-    label: 'Transform',
-    icon: Zap,
-    category: 'logic',
-    description: 'Data transformation',
-  },
-  {
-    type: 'delay',
-    label: 'Delay',
-    icon: Clock,
-    category: 'logic',
-    description: 'Pause execution',
-  },
-  {
-    type: 'errorBoundary',
-    label: 'Error Boundary',
-    icon: Shield,
-    category: 'logic',
-    description: 'Catch errors from downstream nodes',
-  },
-]
 
 // Default configurations for each node type
 const getDefaultConfig = (type: string, actionData?: AvailableActionItem): Record<string, unknown> => {
@@ -237,837 +165,10 @@ const rfNodeToStoreNode = (node: Node): WorkflowNode => ({
   },
 })
 
-// Toolbar Component
-function Toolbar({
-  onSave,
-  onSaveToServer,
-  onLoad,
-  onLoadFromServer,
-  onValidate,
-  onClear,
-  onUndo,
-  onRedo,
-  onSaveVersion,
-  onToggleVersionPanel,
-  onTestRun,
-  canUndo,
-  canRedo,
-  isValid,
-  nodeCount,
-  edgeCount,
-  isSaving,
-  validationSummary,
-  currentTemplateId,
-  versions,
-  activeVersion,
-  onVersionChange,
-  isLoadingVersions,
-  hasWorkflowId,
-}: {
-  onSave: () => void
-  onSaveToServer: () => void
-  onLoad: () => void
-  onLoadFromServer: () => void
-  onValidate: () => void
-  onClear: () => void
-  onUndo: () => void
-  onRedo: () => void
-  onSaveVersion: () => void
-  onToggleVersionPanel: () => void
-  onTestRun?: () => void
-  canUndo: boolean
-  canRedo: boolean
-  isValid: boolean
-  nodeCount: number
-  edgeCount: number
-  isSaving: boolean
-  validationSummary?: { total: number; errors: number; warnings: number }
-  currentTemplateId?: string
-  versions: WorkflowVersion[]
-  activeVersion: WorkflowVersion | null
-  onVersionChange: (versionId: string) => void
-  isLoadingVersions: boolean
-  hasWorkflowId: boolean
-}) {
-  return (
-    <div className="h-14 bg-muted/30 border-b border-border flex items-center justify-between px-4">
-      <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Wrench className="w-5 h-5 text-primary" />
-          Workflow Builder
-        </h2>
-        <span className="text-xs text-muted-foreground/70">
-          {nodeCount} nodes, {edgeCount} edges
-        </span>
-        {validationSummary && validationSummary.total > 0 && (
-          <span className={cn(
-            'text-xs px-2 py-0.5 rounded-full font-medium',
-            validationSummary.errors > 0
-              ? 'bg-destructive/20 text-destructive'
-              : 'bg-yellow-500/20 text-yellow-400'
-          )}>
-            {validationSummary.errors > 0 && `${validationSummary.errors} error${validationSummary.errors !== 1 ? 's' : ''}`}
-            {validationSummary.errors > 0 && validationSummary.warnings > 0 && ', '}
-            {validationSummary.warnings > 0 && `${validationSummary.warnings} warning${validationSummary.warnings !== 1 ? 's' : ''}`}
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Undo (Ctrl+Z)"
-          className={cn(
-            'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
-            canUndo
-              ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
-              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-          )}
-        >
-          <Undo className="w-4 h-4" />
-          <span className="hidden sm:inline">Undo</span>
-        </button>
-
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Redo (Ctrl+Y)"
-          className={cn(
-            'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
-            canRedo
-              ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
-              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-          )}
-        >
-          <Redo className="w-4 h-4" />
-          <span className="hidden sm:inline">Redo</span>
-        </button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* Version Selector - only show when a workflow is loaded */}
-        {currentTemplateId && (
-          <>
-            <Select 
-              value={activeVersion?.id || ''} 
-              onValueChange={onVersionChange}
-            >
-              <SelectTrigger className="w-48 h-8 text-xs">
-                <SelectValue placeholder={isLoadingVersions ? 'Loading...' : 'Select version'} />
-              </SelectTrigger>
-              <SelectContent>
-                {versions.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    <div className="flex items-center gap-2">
-                      <span>v{v.version_number}</span>
-                      {v.is_active && (
-                        <span className="text-[10px] bg-green-500/20 text-green-400 px-1 rounded">
-                          active
-                        </span>
-                      )}
-                    </div>
-                    {v.change_summary && (
-                      <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                        {v.change_summary}
-                      </div>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <button
-              onClick={onSaveVersion}
-              disabled={!isValid}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
-                isValid
-                  ? 'bg-secondary text-foreground/80 hover:bg-secondary/80'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-              )}
-            >
-              <Tag className="w-4 h-4" />
-              <span className="hidden sm:inline">Save Version</span>
-            </button>
-
-            <button
-              onClick={onToggleVersionPanel}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium bg-secondary text-foreground/80 hover:bg-secondary/80 transition-colors"
-            >
-              <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
-            </button>
-
-            <div className="w-px h-6 bg-border mx-1" />
-          </>
-        )}
-
-        <button
-          onClick={onValidate}
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            isValid
-              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-              : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-          )}
-        >
-          <CheckCircle className="w-4 h-4" />
-          Validate
-        </button>
-
-        <button
-          onClick={onTestRun}
-          disabled={!hasWorkflowId}
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            hasWorkflowId
-              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-              : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-          )}
-          title={hasWorkflowId ? '运行测试' : '请先保存工作流'}
-        >
-          <Bug className="w-4 h-4" />
-          测试运行
-        </button>
-
-        <button
-          onClick={onSaveToServer}
-          disabled={isSaving || !isValid}
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            isValid
-              ? 'bg-primary text-white hover:bg-primary/90'
-              : 'bg-muted text-muted-foreground cursor-not-allowed'
-          )}
-        >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
-          Save to Server
-        </button>
-
-        <button
-          onClick={onLoadFromServer}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Load from Server
-        </button>
-
-        <button
-          onClick={onSave}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-        >
-          <Save className="w-4 h-4" />
-          Export
-        </button>
-
-        <button
-          onClick={onLoad}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-secondary text-foreground/80 hover:bg-secondary/80 transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          Import
-        </button>
-
-        <button
-          onClick={onClear}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-          Clear
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// Node Palette Sidebar
-function NodePalette({ onDragStart }: { onDragStart: (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => void }) {
-  const [availableActions, setAvailableActions] = React.useState<GroupedActionNodes>({})
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
-  const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    apiClient.get<{ success: boolean; data: GroupedActionNodes }>('/workflows/available-actions')
-      .then(data => {
-        if (data.success && data.data) {
-          setAvailableActions(data.data)
-        } else {
-          setError('Failed to load actions')
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load available actions:', err)
-        setError('Failed to load actions')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategory(prev => prev === category ? null : category)
-  }
-
-  const categoryIcons: Record<string, React.ElementType> = {
-    'MiniMax API': MessageSquare,
-    'Database': Layers,
-    'Logic': GitBranch,
-    'default': Wrench,
-  }
-
-  return (
-    <div className="w-56 bg-muted/30 border-r border-border flex flex-col h-full">
-      <div className="p-3 border-b border-border">
-        <h3 className="text-sm font-semibold text-foreground">节点面板</h3>
-        <p className="text-xs text-muted-foreground/70 mt-0.5">拖拽节点到画布</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="p-2 space-y-3">
-          <div>
-            <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-purple-400 px-1">
-              逻辑节点
-            </h4>
-            <div className="space-y-1">
-              {logicNodes.map((item) => {
-                const Icon = item.icon
-                return (
-                  <div
-                    key={item.type}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, item.type)}
-                    className="flex items-center gap-2 p-2 rounded-md cursor-grab hover:bg-muted/50 transition-colors group"
-                  >
-                    <div className="p-1.5 rounded bg-muted/50 group-hover:bg-muted">
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{item.label}</p>
-                      <p className="text-[10px] text-muted-foreground/50 truncate">{item.description}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-blue-400 px-1">
-              动作节点
-            </h4>
-            {loading ? (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : error ? (
-              <div className="text-xs text-destructive/70 p-2">
-                {error}
-              </div>
-            ) : Object.keys(availableActions).length === 0 ? (
-              <div className="text-xs text-muted-foreground/50 p-2">
-                暂无可用动作
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {Object.entries(availableActions).map(([category, actions]) => {
-                  const Icon = categoryIcons[category] || categoryIcons.default
-                  const isExpanded = expandedCategory === category
-                  return (
-                    <div key={category} className="border border-border/50 rounded-md overflow-hidden">
-                      <button
-                        onClick={() => toggleCategory(category)}
-                        className="w-full flex items-center gap-2 p-2 bg-muted/20 hover:bg-muted/40 transition-colors"
-                      >
-                        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="flex-1 text-left text-sm font-medium text-foreground truncate">{category}</span>
-                        <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground/50 transition-transform', isExpanded && 'rotate-180')} />
-                        <span className="text-[10px] text-muted-foreground/50">{actions.length}</span>
-                      </button>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: 'easeInOut' }}
-                          className="border-t border-border/30 bg-background/50 overflow-hidden"
-                        >
-                          {actions.map((action) => (
-                            <div
-                              key={`${action.service}.${action.method}`}
-                              draggable
-                              onDragStart={(e: React.DragEvent<HTMLDivElement>) => onDragStart(e, 'action', {
-                                service: action.service,
-                                method: action.method,
-                                label: action.label,
-                              })}
-                              className="flex items-center gap-2 p-2 cursor-grab hover:bg-muted/30 transition-colors border-b border-border/20 last:border-0"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm truncate text-foreground">{action.label}</p>
-                                <p className="text-[10px] text-muted-foreground/50 truncate font-mono">{action.service}.{action.method}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </motion.div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Configuration Panel
-function ConfigPanel({
-  node,
-  onClose,
-  onSave,
-  onDelete,
-  validationErrors = [],
-}: {
-  node: Node | null
-  onClose: () => void
-  onSave: (id: string, data: Record<string, unknown>) => void
-  onDelete: (id: string) => void
-  validationErrors?: ValidationError[]
-}) {
-  const [config, setConfig] = React.useState<Record<string, unknown>>({})
-
-  React.useEffect(() => {
-    if (node) {
-      setConfig(node.data as Record<string, unknown>)
-    }
-  }, [node])
-
-  if (!node) return null
-
-  const handleSave = () => {
-    onSave(node.id, config)
-    onClose()
-  }
-
-  const updateConfig = (key: string, value: unknown) => {
-    setConfig((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const nodeType = node.type as string
-  const Icon = logicNodes.find((n) => n.type === nodeType)?.icon || Settings
-
-  return (
-    <motion.div
-      initial={{ x: 320 }}
-      animate={{ x: 0 }}
-      exit={{ x: 320 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="w-80 bg-background border-l border-border flex flex-col h-full"
-    >
-      {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-muted">
-              <Icon className="w-4 h-4 text-primary" />
-            </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {(config.label as string) || nodeType}
-            </h3>
-            <p className="text-xs text-muted-foreground/70 capitalize">{nodeType} Configuration</p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-        >
-          <X className="w-4 h-4 text-muted-foreground/70" />
-        </button>
-      </div>
-
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <div className="px-4 pt-4">
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-2">
-            <div className="flex items-center gap-2 text-destructive text-xs font-medium">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>配置问题</span>
-            </div>
-            {validationErrors.map((error, idx) => {
-              const help = getErrorHelp(error.code)
-              return (
-                <div key={idx} className="text-xs">
-                  <div className="text-red-300 font-medium">{help.title}</div>
-                  <div className="text-red-400/70 mt-0.5">{help.description}</div>
-                  <div className="text-primary-foreground/60 mt-1 flex items-start gap-1.5">
-                    <span className="text-[10px] text-primary">💡</span>
-                    <span>{help.suggestion}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Config Fields */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Label Field - Common to all */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">Label</label>
-          <input
-            type="text"
-            value={(config.label as string) || ''}
-            onChange={(e) => updateConfig('label', e.target.value)}
-            className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            placeholder="Node label"
-          />
-        </div>
-
-        {nodeType === 'action' && (
-          <ActionConfigPanel
-            config={(config.config as { service: string; method: string; args?: unknown[] }) || { service: '', method: '' }}
-            onChange={(newConfig) => updateConfig('config', newConfig)}
-          />
-        )}
-
-        {nodeType === 'condition' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Condition Type</label>
-              <select
-                value={(config.conditionType as string) || 'equals'}
-                onChange={(e) => updateConfig('conditionType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="equals">Equals</option>
-                <option value="not_equals">Not Equals</option>
-                <option value="greater_than">Greater Than</option>
-                <option value="less_than">Less Than</option>
-                <option value="contains">Contains</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Service Type</label>
-              <select
-                value={(config.serviceType as string) || 'text'}
-                onChange={(e) => updateConfig('serviceType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="text">Text</option>
-                <option value="voice_sync">Voice Sync</option>
-                <option value="voice_async">Voice Async</option>
-                <option value="image">Image</option>
-                <option value="music">Music</option>
-                <option value="video">Video</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Threshold</label>
-              <input
-                type="number"
-                value={(config.threshold as number) || 0}
-                onChange={(e) => updateConfig('threshold', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-          </>
-        )}
-
-        {nodeType === 'loop' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Condition</label>
-              <input
-                type="text"
-                value={(config.condition as string) || ''}
-                onChange={(e) => updateConfig('condition', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="While condition is true"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Max Iterations</label>
-              <input
-                type="number"
-                min="1"
-                value={(config.maxIterations as number) || 100}
-                onChange={(e) => updateConfig('maxIterations', parseInt(e.target.value))}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-          </>
-        )}
-
-        {nodeType === 'transform' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Transform Type</label>
-              <select
-                value={(config.transformType as string) || 'map'}
-                onChange={(e) => updateConfig('transformType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="map">Map Fields</option>
-                <option value="filter">Filter</option>
-                <option value="merge">Merge</option>
-                <option value="split">Split</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Input Type</label>
-              <input
-                type="text"
-                value={(config.inputType as string) || ''}
-                onChange={(e) => updateConfig('inputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="e.g., JSON"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Output Type</label>
-              <input
-                type="text"
-                value={(config.outputType as string) || ''}
-                onChange={(e) => updateConfig('outputType', e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="e.g., JSON"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Mapping (JSON)</label>
-              <textarea
-                value={JSON.stringify((config.mapping as Record<string, string>) || {}, null, 2)}
-                onChange={(e) => {
-                  try {
-                    updateConfig('mapping', JSON.parse(e.target.value))
-                  } catch {}
-                }}
-                rows={4}
-                className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                placeholder='{"key": "value"}'
-              />
-            </div>
-          </>
-        )}
-
-        {nodeType === 'errorBoundary' && (
-          <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/30">
-            <p className="text-xs text-teal-400">
-              Error Boundary wraps downstream nodes to catch errors.
-              Connect nodes to the "Success" handle for normal flow,
-              and to the "Error" handle for error recovery.
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-2">
-              On error, the error context will be available via:
-            </p>
-            <code className="text-xs text-teal-300 font-mono block mt-1">
-              {'{{'}nodeId.error.message{'}}'}
-            </code>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 border-t border-border flex gap-2">
-        <button
-          onClick={handleSave}
-          className="flex-1 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          Save Changes
-        </button>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-md bg-secondary text-foreground/80 text-sm font-medium hover:bg-secondary/80 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={() => {
-            onDelete(node.id)
-            onClose()
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/30 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete Node
-        </button>
-      </div>
-    </motion.div>
-  )
-}
-
-// Execution Status Panel Component
-function ExecutionStatusPanel({
-  executionId,
-  status,
-  nodeStatuses,
-  startTime,
-  isSubscribed,
-  onPause,
-  onResume,
-  onCancel,
-}: {
-  executionId: string | null
-  status: 'idle' | 'running' | 'completed' | 'paused'
-  nodeStatuses: Map<string, { status: string }>
-  startTime: Date | null
-  isSubscribed: boolean
-  onPause?: () => void
-  onResume?: () => void
-  onCancel?: () => void
-}) {
-  if (!executionId && status === 'idle') return null
-
-  const totalNodes = nodeStatuses.size
-  const completedNodes = Array.from(nodeStatuses.values()).filter(
-    (s) => s.status === 'completed'
-  ).length
-  const runningNodes = Array.from(nodeStatuses.values()).filter(
-    (s) => s.status === 'running'
-  ).length
-  const errorNodes = Array.from(nodeStatuses.values()).filter(
-    (s) => s.status === 'error'
-  ).length
-
-  const elapsed = startTime ? Date.now() - startTime.getTime() : 0
-  const elapsedSeconds = Math.floor(elapsed / 1000)
-  const elapsedMinutes = Math.floor(elapsedSeconds / 60)
-  const elapsedFormatted = `${elapsedMinutes}:${(elapsedSeconds % 60).toString().padStart(2, '0')}`
-
-  const progress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0
-
-  const statusConfig = {
-    idle: { color: 'bg-gray-500', text: 'Idle', icon: Clock },
-    running: { color: 'bg-blue-500', text: 'Running', icon: Play },
-    completed: { color: 'bg-green-500', text: 'Completed', icon: CheckCircle },
-    paused: { color: 'bg-amber-500', text: 'Paused', icon: Pause },
-  }
-
-  const StatusIcon = statusConfig[status].icon
-
-  return (
-    <Panel position="bottom-left" className="m-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 min-w-[280px]"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">Execution Status</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className={cn('w-2 h-2 rounded-full', statusConfig[status].color, status === 'running' && 'animate-pulse')} />
-            <span className="text-xs font-medium text-muted-foreground">{statusConfig[status].text}</span>
-          </div>
-        </div>
-
-        {executionId && (
-          <div className="mb-3">
-            <span className="text-xs text-muted-foreground">ID:</span>
-            <code className="text-xs font-mono text-foreground ml-2">{executionId.slice(0, 8)}...</code>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium text-foreground">{completedNodes}/{totalNodes} ({progress}%)</span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <motion.div
-              className={cn('h-full rounded-full', statusConfig[status].color)}
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3 }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Loader2 className="w-3 h-3 text-blue-500" />
-              <span className="text-sm font-semibold text-foreground">{runningNodes}</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground">Running</span>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
-              <span className="text-sm font-semibold text-foreground">{completedNodes}</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground">Completed</span>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1">
-              <XCircle className="w-3 h-3 text-destructive" />
-              <span className="text-sm font-semibold text-foreground">{errorNodes}</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground">Errors</span>
-          </div>
-        </div>
-
-        {startTime && (
-          <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Elapsed Time</span>
-            <span className="font-mono text-foreground">{elapsedFormatted}</span>
-          </div>
-        )}
-
-        {!isSubscribed && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-500">
-            <AlertCircle className="w-3 h-3" />
-            <span>Not connected to updates</span>
-          </div>
-        )}
-
-        {(status === 'running' || status === 'paused') && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
-            {status === 'running' && (
-              <button
-                onClick={onPause}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-              >
-                <Pause className="w-3 h-3" />
-                Pause
-              </button>
-            )}
-            {status === 'paused' && (
-              <button
-                onClick={onResume}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400 hover:bg-green-500/30"
-              >
-                <Play className="w-3 h-3" />
-                Resume
-              </button>
-            )}
-            <button
-              onClick={onCancel}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-destructive/20 text-destructive hover:bg-destructive/30"
-            >
-              <X className="w-3 h-3" />
-              Cancel
-            </button>
-          </div>
-        )}
-      </motion.div>
-    </Panel>
-  )
-}
-
 // Main Workflow Builder Component
 function WorkflowBuilderInner() {
   const [searchParams] = useSearchParams()
-  const { setViewport, screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition } = useReactFlow()
   const store = useWorkflowStore()
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -1080,7 +181,7 @@ function WorkflowBuilderInner() {
   const [showSaveModal, setShowSaveModal] = React.useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = React.useState(false)
   const [showWorkflowSelector, setShowWorkflowSelector] = React.useState(false)
-  
+
   // Version management state
   const [versions, setVersions] = React.useState<WorkflowVersion[]>([])
   const [activeVersion, setActiveVersion] = React.useState<WorkflowVersion | null>(null)
@@ -1090,22 +191,22 @@ function WorkflowBuilderInner() {
   const [versionChangeSummary, setVersionChangeSummary] = React.useState('')
   const [versionName, setVersionName] = React.useState('')
   const [isSavingVersion, setIsSavingVersion] = React.useState(false)
-  
+
   // Execution state
   const [currentExecutionId, setCurrentExecutionId] = React.useState<string | null>(null)
   const [executionStartTime, setExecutionStartTime] = React.useState<Date | null>(null)
   const [executionStatus, setExecutionStatus] = React.useState<'idle' | 'running' | 'completed' | 'paused'>('idle')
-  
+
   const [history, setHistory] = React.useState<{ past: { nodes: Node[], edges: Edge[] }[], future: { nodes: Node[], edges: Edge[] }[] }>({ past: [], future: [] })
 
-  const [validationErrors, setValidationErrors] = React.useState<ValidationError[]>([])
+  const [validationErrors, setValidationErrors] = React.useState<ReturnType<typeof validateWorkflow>>([])
   const [validationSummary, setValidationSummary] = React.useState<{ total: number; errors: number; warnings: number }>({ total: 0, errors: 0, warnings: 0 })
 
   const [showTestPanel, setShowTestPanel] = React.useState(false)
   const [testNodeResults, setTestNodeResults] = React.useState<Map<string, { input?: unknown; output?: unknown; error?: string; duration?: number }>>(new Map())
   const [selectedTestNode, setSelectedTestNode] = React.useState<string | null>(null)
   const [showNodeOutputPanel, setShowNodeOutputPanel] = React.useState(false)
-  
+
   React.useEffect(() => {
     const client = getWebSocketClient()
     if (!client) return
@@ -1152,10 +253,10 @@ function WorkflowBuilderInner() {
       sourceHandle: e.sourceHandle,
       targetHandle: e.targetHandle,
     }))
-    
+
     const errors = validateWorkflow(storeNodes as WorkflowNode[], storeEdges as WorkflowEdge[])
     setValidationErrors(errors)
-    
+
     const errorCount = errors.filter(e => e.severity === 'error').length
     const warningCount = errors.filter(e => e.severity === 'warning').length
     setValidationSummary({
@@ -1163,7 +264,7 @@ function WorkflowBuilderInner() {
       errors: errorCount,
       warnings: warningCount,
     })
-    
+
     // Update nodes with validation status for visual indicators
     if (errors.length > 0) {
       setNodes((prevNodes) =>
@@ -1171,8 +272,7 @@ function WorkflowBuilderInner() {
           const nodeErrors = errors.filter(e => e.nodeId === node.id)
           const hasError = nodeErrors.some(e => e.severity === 'error')
           const hasWarning = nodeErrors.some(e => e.severity === 'warning')
-          
-          // Only update if validation status changed
+
           if (
             node.data.hasValidationError !== hasError ||
             node.data.hasValidationWarning !== hasWarning
@@ -1190,7 +290,6 @@ function WorkflowBuilderInner() {
         })
       )
     } else {
-      // Clear validation status from all nodes
       setNodes((prevNodes) =>
         prevNodes.map((node) => {
           if (node.data.hasValidationError || node.data.hasValidationWarning) {
@@ -1320,7 +419,6 @@ function WorkflowBuilderInner() {
   React.useEffect(() => {
     if (nodeStatuses.size === 0) return
 
-    // Check if any nodes are running
     const statusArray = Array.from(nodeStatuses.values())
     const hasRunning = statusArray.some((s) => s.status === 'running')
     const hasError = statusArray.some((s) => s.status === 'error')
@@ -1351,10 +449,10 @@ function WorkflowBuilderInner() {
       })
     )
   }, [nodeStatuses])
-  
+
   const canUndo = history.past.length > 0
   const canRedo = history.future.length > 0
-  
+
   const handleUndo = React.useCallback(() => {
     if (history.past.length === 0) return
     const previous = history.past[history.past.length - 1]
@@ -1362,7 +460,7 @@ function WorkflowBuilderInner() {
     setNodes(previous.nodes)
     setEdges(previous.edges)
   }, [history, nodes, edges, setNodes, setEdges])
-  
+
   const handleRedo = React.useCallback(() => {
     if (history.future.length === 0) return
     const next = history.future[0]
@@ -1370,16 +468,6 @@ function WorkflowBuilderInner() {
     setNodes(next.nodes)
     setEdges(next.edges)
   }, [history, nodes, edges, setNodes, setEdges])
-  
-  const trackHistory = React.useCallback(() => {
-    setHistory(h => ({ past: [...h.past, { nodes, edges }].slice(-50), future: [] }))
-  }, [nodes, edges])
-
-  const generateId = (type: string) => {
-    const timestamp = Date.now().toString(36)
-    const random = Math.random().toString(36).substr(2, 4)
-    return `${type}-${timestamp}-${random}`
-  }
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1405,13 +493,13 @@ function WorkflowBuilderInner() {
       setHistory(h => {
         if (h.past.length > 0) {
           const last = h.past[h.past.length - 1]
-          const isSame = JSON.stringify(last.nodes) === JSON.stringify(nodes) && 
+          const isSame = JSON.stringify(last.nodes) === JSON.stringify(nodes) &&
                         JSON.stringify(last.edges) === JSON.stringify(edges)
           if (isSame) return h
         }
-        return { 
-          past: [...h.past, { nodes, edges }].slice(-50), 
-          future: [] 
+        return {
+          past: [...h.past, { nodes, edges }].slice(-50),
+          future: []
         }
       })
     }, 300)
@@ -1426,23 +514,23 @@ function WorkflowBuilderInner() {
         try {
           const result = await apiClient.get(`/workflows/${workflowId}`) as { data: WorkflowTemplate }
           const workflow = result.data
-          
+
           if (workflow) {
             const nodesRaw = workflow.nodes_json
             const edgesRaw = workflow.edges_json
-            
+
             if (!nodesRaw) {
               console.error('No nodes_json in workflow')
               return
             }
-            
-            const nodesData = typeof nodesRaw === 'string' 
-              ? JSON.parse(nodesRaw) 
+
+            const nodesData = typeof nodesRaw === 'string'
+              ? JSON.parse(nodesRaw)
               : nodesRaw
-            const edgesData = edgesRaw 
+            const edgesData = edgesRaw
               ? (typeof edgesRaw === 'string' ? JSON.parse(edgesRaw) : edgesRaw)
               : []
-            
+
             setNodes(nodesData.map(storeNodeToRFNode))
             setEdges(edgesData as Edge[])
             store.setCurrentWorkflow(workflowId, workflow.name)
@@ -1453,9 +541,7 @@ function WorkflowBuilderInner() {
       }
       loadWorkflow()
     }
-  }, [searchParams])
-
-
+  }, [searchParams, store])
 
   // Drag handlers
   const onDragStart = (event: React.DragEvent, nodeType: string, actionData?: AvailableActionItem) => {
@@ -1492,7 +578,7 @@ function WorkflowBuilderInner() {
     })
 
     const newNode: Node = {
-      id: generateId(nodeType),
+      id: `${nodeType}-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`,
       type: nodeType,
       position,
       data: getDefaultConfig(nodeType, actionData),
@@ -1504,7 +590,7 @@ function WorkflowBuilderInner() {
 
   const onConnect = (connection: Connection) => {
     const newEdge: Edge = {
-      id: generateId('edge'),
+      id: `edge-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`,
       source: connection.source!,
       target: connection.target!,
       sourceHandle: connection.sourceHandle || undefined,
@@ -1550,8 +636,8 @@ function WorkflowBuilderInner() {
   }
 
   const handleSave = () => {
-    const json = JSON.stringify({ 
-      nodes: nodes.map(rfNodeToStoreNode), 
+    const json = JSON.stringify({
+      nodes: nodes.map(rfNodeToStoreNode),
       edges: edges.map((e) => ({
         id: e.id,
         source: e.source,
@@ -1714,7 +800,7 @@ function WorkflowBuilderInner() {
 
   return (
     <div className="-m-8 h-[calc(100vh-60px-2rem)] flex flex-col bg-background overflow-hidden">
-      <Toolbar
+      <WorkflowToolbar
         onSave={handleSave}
         onSaveToServer={handleSaveToServer}
         onLoad={handleLoad}
@@ -1751,7 +837,7 @@ function WorkflowBuilderInner() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <NodePalette onDragStart={onDragStart} />
+        <WorkflowNodePalette onDragStart={onDragStart} />
 
         <div className="flex-1 relative">
           <ReactFlow
@@ -1881,7 +967,7 @@ function WorkflowBuilderInner() {
 
         <AnimatePresence>
           {showConfigPanel && (
-            <ConfigPanel
+            <WorkflowConfigPanel
               node={selectedNode}
               onClose={() => {
                 setShowConfigPanel(false)
@@ -1982,93 +1068,19 @@ function WorkflowBuilderInner() {
         title="Load Workflow"
       />
 
-      {/* Version History Panel */}
-      <AnimatePresence>
-        {showVersionPanel && (
-          <motion.div
-            initial={{ x: 320, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 320, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed right-0 top-14 bottom-0 w-80 bg-background border-l border-border shadow-xl z-40 flex flex-col"
-          >
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Version History</h3>
-              </div>
-              <button
-                onClick={() => setShowVersionPanel(false)}
-                className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-              >
-                <X className="w-4 h-4 text-muted-foreground/70" />
-              </button>
-            </div>
+        <AnimatePresence>
+          {showVersionPanel && (
+            <WorkflowVersionPanel
+              versions={versions}
+              activeVersion={activeVersion}
+              isLoading={isLoadingVersions}
+              onClose={() => setShowVersionPanel(false)}
+              onVersionChange={handleVersionChange}
+              onActivateVersion={handleActivateVersion}
+            />
+          )}
+        </AnimatePresence>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {isLoadingVersions ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : versions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No versions yet
-                </div>
-              ) : (
-                versions.map((version) => (
-                  <div
-                    key={version.id}
-                    className={cn(
-                      'p-3 rounded-lg border transition-colors',
-                      activeVersion?.id === version.id
-                        ? 'bg-primary/10 border-primary/30'
-                        : 'bg-card border-border hover:border-border/80'
-                    )}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <GitCommit className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium text-sm">v{version.version_number}</span>
-                        {version.is_active && (
-                          <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
-                            active
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(version.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {version.change_summary && (
-                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                        {version.change_summary}
-                      </p>
-                    )}
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => handleVersionChange(version.id)}
-                        className="flex-1 px-2 py-1.5 text-xs font-medium bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors"
-                      >
-                        Load
-                      </button>
-                      {!version.is_active && (
-                        <button
-                          onClick={() => handleActivateVersion(version.id)}
-                          className="flex-1 px-2 py-1.5 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 transition-colors"
-                        >
-                          Activate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Save Version Dialog */}
       <Dialog
         open={showSaveVersionModal}
         onClose={() => setShowSaveVersionModal(false)}
