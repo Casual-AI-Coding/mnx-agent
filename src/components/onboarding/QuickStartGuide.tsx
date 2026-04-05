@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Key, MessageSquare, Calendar, FolderOpen, CheckCircle2, Circle, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { status, services } from '@/themes/tokens'
 
 export interface QuickStartStep {
   id: string
@@ -37,7 +38,7 @@ export function QuickStartGuide({
       description: t('onboarding.stepApiKeyDesc', '设置 MiniMax API 密钥以访问所有 AI 功能'),
       icon: Key,
       path: '/settings',
-      color: 'text-yellow-400',
+      color: status.warning.icon,
       completed: completedSteps.includes('api-key'),
     },
     {
@@ -46,7 +47,7 @@ export function QuickStartGuide({
       description: t('onboarding.stepTextGenDesc', '尝试与 AI 对话，生成创意内容'),
       icon: MessageSquare,
       path: '/text',
-      color: 'text-blue-400',
+      color: status.info.icon,
       completed: completedSteps.includes('text-gen'),
     },
     {
@@ -55,7 +56,7 @@ export function QuickStartGuide({
       description: t('onboarding.stepCronDesc', '创建工作流，让 AI 任务自动运行'),
       icon: Calendar,
       path: '/cron',
-      color: 'text-purple-400',
+      color: services.cron.icon,
       completed: completedSteps.includes('cron-schedule'),
     },
     {
@@ -64,7 +65,7 @@ export function QuickStartGuide({
       description: t('onboarding.stepMediaDesc', '查看、下载和管理所有生成的媒体文件'),
       icon: FolderOpen,
       path: '/media',
-      color: 'text-green-400',
+      color: status.success.icon,
       completed: completedSteps.includes('media-manage'),
     },
   ]
@@ -83,7 +84,7 @@ export function QuickStartGuide({
     <div className={cn('space-y-6', className)}>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-lg font-semibold text-foreground">
             {t('onboarding.quickStartGuide', '快速入门指南')}
           </h3>
           <span className="text-sm text-dark-400">
@@ -131,7 +132,7 @@ export function QuickStartGuide({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium text-white group-hover:text-primary-400 transition-colors">
+                <h4 className="font-medium text-foreground group-hover:text-primary-400 transition-colors">
                   {step.title}
                 </h4>
                 {step.completed && (
@@ -172,7 +173,7 @@ export function QuickStartGuideCompact({ onDismiss, className }: QuickStartGuide
   return (
     <div className={cn('p-4 rounded-lg border border-dark-700 bg-dark-800/50', className)}>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-medium text-white">
+        <h4 className="font-medium text-foreground">
           {t('onboarding.quickStart', '快速开始')}
         </h4>
         {onDismiss && (
@@ -186,7 +187,7 @@ export function QuickStartGuideCompact({ onDismiss, className }: QuickStartGuide
           <button
             key={step.id}
             onClick={() => navigate(step.path)}
-            className="px-3 py-1.5 text-sm rounded-md bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-colors"
+            className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
           >
             {step.title}
           </button>

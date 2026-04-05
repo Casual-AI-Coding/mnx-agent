@@ -44,7 +44,7 @@ export function WelcomeModal({
           <DialogHeader className="relative">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600">
-                <Sparkles className="w-6 h-6 text-white" />
+                <Sparkles className="w-6 h-6 text-primary-foreground" />
               </div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-dark-200 bg-clip-text text-transparent">
                 {t('onboarding.welcomeTitle', '欢迎使用 MiniMax AI 工具集')}
@@ -68,7 +68,7 @@ export function WelcomeModal({
           >
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary-400 group-hover:rotate-12 transition-transform" />
-              <span className="font-medium text-white">
+              <span className="font-medium text-primary-foreground">
                 {t('onboarding.setApiKey', '设置 API Key')}
               </span>
             </div>
@@ -82,13 +82,13 @@ export function WelcomeModal({
             className={cn(
               'group relative flex flex-col items-start gap-2 p-4 rounded-lg',
               'border border-dark-700 bg-dark-800/50',
-              'hover:border-green-500/50 hover:bg-dark-800',
+              'hover:border-success/50 hover:bg-dark-800',
               'transition-all duration-200 text-left'
             )}
           >
             <div className="flex items-center gap-2">
-              <Rocket className="w-5 h-5 text-green-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              <span className="font-medium text-white">
+              <Rocket className="w-5 h-5 text-success group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <span className="font-medium text-primary-foreground">
                 {t('onboarding.startExploring', '开始使用')}
               </span>
             </div>
