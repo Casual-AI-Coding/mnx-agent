@@ -74,11 +74,26 @@ function triggerDownload(content: string, filename: string, mimeType: string): v
 }
 
 /**
+ * Generates timestamp string for filename
+ * Format: YYYY-MM-DD_HH-MM-SS
+ */
+function generateTimestamp(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`
+}
+
+/**
  * Exports an array of objects to a CSV file and triggers download
  */
 export function exportToCSV(data: object[], filename: string): void {
   const csv = toCSV(data as Record<string, unknown>[])
-  const timestamp = new Date().toISOString().slice(0, 10)
+  const timestamp = generateTimestamp()
   triggerDownload(csv, `${filename}_${timestamp}.csv`, 'text/csv;charset=utf-8')
 }
 
@@ -87,6 +102,6 @@ export function exportToCSV(data: object[], filename: string): void {
  */
 export function exportToJSON(data: object, filename: string): void {
   const json = JSON.stringify(data, null, 2)
-  const timestamp = new Date().toISOString().slice(0, 10)
+  const timestamp = generateTimestamp()
   triggerDownload(json, `${filename}_${timestamp}.json`, 'application/json')
 }

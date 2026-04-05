@@ -4,3 +4,4 @@ export { default as ComponentErrorBoundary, withErrorBoundary } from './Componen
 export { default as WarningBanner } from './WarningBanner'
 export { APIReference } from './APIReference'
 export { default as AnalyticsPanel } from './AnalyticsPanel'
+export { ConfirmDialog } from './ConfirmDialog'
