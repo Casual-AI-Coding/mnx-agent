@@ -17,10 +17,15 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@mnx/shared-types": ["./packages/shared-types"],
+      "@mnx/shared-types/*": ["./packages/shared-types/*"]
     }
   },
   "include": ["src", "server"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/__tests__/**"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./packages/shared-types" }
+  ]
 }
