@@ -30,3 +30,17 @@ export {
   getExecutionStateManager,
   resetExecutionStateManager
 } from './execution-state-manager.js'
+
+// Domain Services
+export {
+  JobService,
+  TaskService,
+  LogService,
+} from './domain/index.js'
+export type {
+  IJobService,
+  ITaskService,
+  ILogService,
+  LogFilter,
+  LogStats,
+} from './domain/index.js'
