@@ -137,7 +137,7 @@ export function ExecutionStatusPanel({
         )}
 
         {!isSubscribed && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-500">
+          <div className={cn('mt-3 flex items-center gap-1.5 text-xs', statusTokens.warning.text)}>
             <AlertCircle className="w-3 h-3" />
             <span>Not connected to updates</span>
           </div>
@@ -148,7 +148,7 @@ export function ExecutionStatusPanel({
             {status === 'running' && (
               <button
                 onClick={onPause}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                className={cn('flex items-center gap-1 px-2 py-1 text-xs font-medium rounded', statusTokens.warning.bgSubtle, statusTokens.warning.text, 'hover:bg-warning/30')}
               >
                 <Pause className="w-3 h-3" />
                 Pause
@@ -157,7 +157,7 @@ export function ExecutionStatusPanel({
             {status === 'paused' && (
               <button
                 onClick={onResume}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                className={cn('flex items-center gap-1 px-2 py-1 text-xs font-medium rounded', statusTokens.success.bgSubtle, statusTokens.success.text, 'hover:bg-success/30')}
               >
                 <Play className="w-3 h-3" />
                 Resume

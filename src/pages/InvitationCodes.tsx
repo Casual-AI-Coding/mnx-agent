@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ExportButton } from '@/components/shared/ExportButton'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { status, roles } from '@/themes/tokens'
 
 interface InvitationCode {
   id: string
@@ -281,7 +282,7 @@ export default function InvitationCodes() {
         className={cn(
           'px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1',
           isActive
-            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+            ? cn(status.warning.bg, status.warning.text, status.warning.border)
             : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
         )}
       >
@@ -303,8 +304,8 @@ export default function InvitationCodes() {
       >
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20">
-              <Key className="w-6 h-6 text-amber-500" />
+            <div className={cn('p-2 rounded-xl bg-gradient-to-br border', status.warning.iconBg, status.warning.border)}>
+              <Key className={cn('w-6 h-6', status.warning.icon)} />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               邀请码管理
@@ -321,7 +322,7 @@ export default function InvitationCodes() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={() => setGenerateDialogOpen(true)}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500/90 hover:to-amber-600/90 shadow-lg shadow-amber-500/20"
+              className={cn('bg-gradient-to-r shadow-lg', status.warning.bg, status.warning.hover, status.warning.shadow)}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               批量生成
@@ -337,9 +338,9 @@ export default function InvitationCodes() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-4"
       >
-        <StatCard title="总邀请码" value={totalCodes} icon={Key} color="from-amber-500 to-amber-400" />
-        <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color="from-emerald-500 to-emerald-400" />
-        <StatCard title="已用完" value={usedCodes} icon={Users} color="from-blue-500 to-blue-400" />
+        <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} />
+        <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} />
+        <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} />
         <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-slate-500 to-slate-400" />
       </motion.div>
 
@@ -356,13 +357,13 @@ export default function InvitationCodes() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative w-[280px] group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-muted-foreground/60 group-focus-within:text-amber-500 transition-colors" />
+                    <Search className={cn('h-4 w-4 text-muted-foreground/60 group-focus-within:text-amber-500 transition-colors', status.warning.icon)} />
                   </div>
                   <Input
                     placeholder="搜索邀请码或创建者..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-10 h-10 bg-background/50 border-border/50 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                    className={cn('pl-10 pr-10 h-10 bg-background/50 border-border/50 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all', status.warning.focusRing, status.warning.focusBorder)}
                   />
                   {searchQuery && (
                     <motion.button
@@ -408,13 +409,13 @@ export default function InvitationCodes() {
                     </SelectItem>
                     <SelectItem value="active">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <div className={cn('w-2 h-2 rounded-full', status.success.bg)} />
                         可用
                       </div>
                     </SelectItem>
                     <SelectItem value="used">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <div className={cn('w-2 h-2 rounded-full', status.info.bg)} />
                         已用完
                       </div>
                     </SelectItem>
@@ -450,9 +451,9 @@ export default function InvitationCodes() {
                             transition={{ duration: 0.15, delay: index * 0.03 }}
                             className={cn(
                               'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
-                              chip.type === 'search' && 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-                              chip.type === 'status' && statusFilter === 'active' && 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-                              chip.type === 'status' && statusFilter === 'used' && 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+                              chip.type === 'search' && cn(status.warning.bg, status.warning.text, status.warning.border),
+                              chip.type === 'status' && statusFilter === 'active' && cn(status.success.bg, status.success.text, status.success.border),
+                              chip.type === 'status' && statusFilter === 'used' && cn(status.info.bg, status.info.text, status.info.border),
                               chip.type === 'status' && statusFilter === 'expired' && 'bg-slate-500/10 text-slate-600 border-slate-500/20',
                               chip.type === 'status' && statusFilter === 'inactive' && 'bg-destructive/10 text-destructive border-destructive/20'
                             )}
@@ -529,8 +530,8 @@ export default function InvitationCodes() {
                 className="flex flex-col items-center justify-center py-12"
               >
                 <div className="relative">
-                  <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                  <div className="absolute inset-0 w-8 h-8 border-2 border-amber-500/20 rounded-full animate-ping" />
+                  <Loader2 className={cn('w-8 h-8 animate-spin', status.warning.icon)} />
+                  <div className={cn('absolute inset-0 w-8 h-8 border-2 rounded-full animate-ping', status.warning.border)} />
                 </div>
                 <p className="text-sm text-muted-foreground/70 mt-3">加载中...</p>
               </motion.div>
@@ -575,7 +576,7 @@ export default function InvitationCodes() {
                               <code className={cn(
                                 'px-3 py-1.5 rounded-lg font-mono text-sm font-medium border',
                                 usable
-                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                  ? cn(status.warning.bg, status.warning.text, status.warning.border)
                                   : 'bg-muted text-muted-foreground border-border'
                               )}>
                                 {code.code}
@@ -587,7 +588,7 @@ export default function InvitationCodes() {
                                 className={cn(
                                   'p-1.5 rounded-lg transition-colors',
                                   copiedCode === code.code
-                                    ? 'text-emerald-500 bg-emerald-500/10'
+                                    ? cn(status.success.bg, status.success.icon)
                                     : 'text-muted-foreground/60 hover:text-amber-500 hover:bg-amber-500/10'
                                 )}
                                 title="复制"
@@ -614,13 +615,13 @@ export default function InvitationCodes() {
                                   transition={{ duration: 0.5, delay: index * 0.05 }}
                                   className={cn(
                                     'h-full rounded-full',
-                                    usagePercent >= 100 ? 'bg-slate-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'
+                                    usagePercent >= 100 ? 'bg-slate-400' : cn(status.warning.gradient)
                                   )}
                                 />
                               </div>
                               <span className={cn(
                                 'text-xs font-medium',
-                                usagePercent >= 100 ? 'text-slate-400' : 'text-amber-600'
+                                usagePercent >= 100 ? 'text-slate-400' : status.warning.text
                               )}>
                                 {code.used_count}/{code.max_uses}
                               </span>
@@ -641,7 +642,7 @@ export default function InvitationCodes() {
                           </td>
                           <td className="py-3 px-4">
                             {usable ? (
-                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
+                              <Badge className={cn(status.success.bg, status.success.text, status.success.border, status.success.hover)}>
                                 可用
                               </Badge>
                             ) : expired ? (

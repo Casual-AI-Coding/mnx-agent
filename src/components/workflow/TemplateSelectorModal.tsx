@@ -294,7 +294,7 @@ export function WorkflowSelectorModal({
                           <Calendar className="w-3 h-3" />
                           <span>{formatDate(template.created_at)}</span>
                           {template.is_public && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px]">
+                            <span className={cn('px-1.5 py-0.5 rounded text-[10px]', status.info.bgSubtle, status.info.text)}>
                               Public
                             </span>
                           )}
@@ -341,11 +341,11 @@ export function WorkflowSelectorModal({
                     )}
                     <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span className={cn('w-1.5 h-1.5 rounded-full', status.info.bg)} />
                         {previewNodes.length} nodes
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        <span className={cn('w-1.5 h-1.5 rounded-full', status.success.bg)} />
                         {previewEdges.length} edges
                       </span>
                     </div>
