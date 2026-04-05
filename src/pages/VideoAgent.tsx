@@ -8,6 +8,8 @@ import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { VIDEO_AGENT_TEMPLATES, type VideoAgentTemplate } from '@/types'
+import { cn } from '@/lib/utils'
+import { status as statusTokens } from '@/themes/tokens'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -196,7 +198,7 @@ export default function VideoAgent() {
       case 'processing':
         return <Loader2 className="w-5 h-5 animate-spin text-primary" />
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
+        return <CheckCircle className={cn('w-5 h-5', statusTokens.success.icon)} />
       case 'failed':
         return <XCircle className="w-5 h-5 text-destructive" />
       default:
@@ -211,7 +213,7 @@ export default function VideoAgent() {
       case 'processing':
         return <Badge variant="default">处理中</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">已完成</Badge>
+        return <Badge variant="secondary" className={cn(statusTokens.success.bgSubtle, statusTokens.success.text)}>已完成</Badge>
       case 'failed':
         return <Badge variant="destructive">失败</Badge>
       default:

@@ -12,6 +12,8 @@ import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
 import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } from '@/types'
+import { cn } from '@/lib/utils'
+import { status as statusTokens } from '@/themes/tokens'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -145,7 +147,7 @@ export default function VideoGeneration() {
       case 'processing':
         return <Loader2 className="w-5 h-5 animate-spin text-primary" />
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
+        return <CheckCircle className={cn('w-5 h-5', statusTokens.success.icon)} />
       case 'failed':
         return <XCircle className="w-5 h-5 text-destructive" />
       default:
@@ -160,7 +162,7 @@ export default function VideoGeneration() {
       case 'processing':
         return <Badge variant="default">{t('videoGeneration.processing')}</Badge>
       case 'completed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">{t('videoGeneration.completed')}</Badge>
+        return <Badge variant="secondary" className={cn(statusTokens.success.bgSubtle, statusTokens.success.text)}>{t('videoGeneration.completed')}</Badge>
       case 'failed':
         return <Badge variant="destructive">{t('videoGeneration.failed')}</Badge>
       default:

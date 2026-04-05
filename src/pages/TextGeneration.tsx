@@ -312,8 +312,8 @@ export default function TextGeneration() {
                 <div className="px-4 py-3">
                   <div className="flex items-center gap-2 mb-2">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-white/20' 
+                      message.role === 'user'
+                        ? 'bg-foreground/20'
                         : 'bg-gradient-to-br from-primary to-accent'
                     }`}>
                       {message.role === 'user' ? (
@@ -323,7 +323,7 @@ export default function TextGeneration() {
                       )}
                     </div>
                     <span className={`text-xs font-medium ${
-                      message.role === 'user' ? 'text-white/80' : 'text-muted-foreground'
+                      message.role === 'user' ? 'text-foreground/80' : 'text-muted-foreground'
                     }`}>
                       {message.role === 'user' ? t('textGeneration.you') : t('textGeneration.aiAssistant')}
                     </span>
@@ -341,8 +341,8 @@ export default function TextGeneration() {
                     <button
                       onClick={() => copyToClipboard(message.content, message.id)}
                       className={`absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
-                        message.role === 'user' 
-                          ? 'hover:bg-white/20 text-white/70 hover:text-white' 
+                        message.role === 'user'
+                          ? 'hover:bg-foreground/20 text-foreground/70 hover:text-foreground'
                           : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
                       }`}
                     >
