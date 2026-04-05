@@ -2,6 +2,91 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-05
+
+### Added
+
+**系统管理模块优化**
+
+- **邀请码PATCH接口** - 支持修改过期时间、使用次数、启用状态
+  - `PATCH /api/invitation-codes/:id` - 更新邀请码配置
+  - 权限控制: requireRole(['super'])
+
+- **服务节点DELETE接口** - 支持删除废弃的服务节点配置
+  - `DELETE /api/admin/service-nodes/:id` - 删除服务节点
+  - 权限控制: requireRole(['super'])
+
+- **用户批量操作** - 提升管理员效率
+  - `POST /api/users/batch` - 批量启用/禁用/删除用户
+  - BatchOperationToolbar组件 - 复选框选择和批量操作工具栏
+  - 权限控制: requireRole(['super'])
+
+- **密码重置功能** - 管理员帮助用户重置密码
+  - `POST /api/users/:id/reset-password` - 重置用户密码
+  - 生成随机密码或自定义新密码
+  - 权限控制: requireRole(['super'])
+
+- **全局配置管理** - 动态配置系统参数
+  - 新增 `SystemConfig` 页面 (`/system-config`)
+  - `system_config` 数据库表
+  - `GET /api/system-config` - 获取配置列表
+  - `PATCH /api/system-config/:key` - 更新配置项
+  - 权限控制: admin查看, super修改
+
+- **CSV导出功能** - 数据导出支持
+  - ExportButton组件 - 通用导出按钮
+  - UserManagement导出用户列表
+  - InvitationCodes导出邀请码列表
+
+- **ConfirmDialog组件** - 可复用的确认对话框
+  - 支持普通确认和输入验证确认
+  - 删除用户时要求输入"DELETE"确认
+
+- **Pagination组件** - 表格分页
+  - 页码选择器
+  - 每页条数选择 (10/20/50/100)
+  - 快速跳转输入框
+
+- **Checkbox组件** - 表单复选框
+
+### Changed
+
+- **Toast通知统一** - 所有页面替换 `alert()` 为 `toast.success()`/`toast.error()`
+  - UserManagement, InvitationCodes, ServiceNodeManagement
+  - WorkflowBuilder, CronManagement, MediaManagement 等30+页面
+
+- **设计Token迁移** - 硬编码颜色替换为CSS变量
+  - 节点组件: ConditionNode, LoopNode, TransformNode, ActionNode
+  - 工作流组件: NodeOutputPanel, NodeStatusIndicator, TestRunPanel
+  - 页面组件: Dashboard, AuditLogs, DeadLetterQueue 等
+
+- **UI一致性优化**
+  - FormError组件样式更新
+  - HistoryPanel样式调整
+  - Header布局优化
+
+### API
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| PATCH | /api/invitation-codes/:id | 更新邀请码 |
+| DELETE | /api/admin/service-nodes/:id | 删除服务节点 |
+| POST | /api/users/batch | 批量操作用户 |
+| POST | /api/users/:id/reset-password | 重置用户密码 |
+| GET | /api/system-config | 获取系统配置 |
+| PATCH | /api/system-config/:key | 更新配置项 |
+
+### Database
+
+- `system_config` 表 - 系统配置存储
+
+### Documentation
+
+- `docs/superpowers/specs/system-management-optimization-design.md` - 设计文档
+- `docs/superpowers/plans/2026-04-04-system-management-optimization.md` - 实施计划
+- `docs/superpowers/plans/2026-04-04-system-management-optimization-summary.md` - 工作总结
+- `scripts/verify-system-management.sh` - 验证脚本
+
 ## [1.3.7] - 2026-04-04
 
 ### Added
