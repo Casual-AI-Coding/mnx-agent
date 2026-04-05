@@ -6,7 +6,8 @@ export {
 } from './registry'
 export type { ThemeMeta, ThemeCategory } from './registry'
 
-// Design Tokens
+// Design Tokens (Legacy - hardcoded Tailwind classes)
+// @deprecated Use semantic tokens from './tokens/index' instead
 export {
   primary,
   primaryText,
@@ -15,10 +16,10 @@ export {
   neutral,
   neutralText,
   neutralBorder,
-  status,
-  roles,
-  taskStatus,
-  services,
+  status as legacyStatus,
+  roles as legacyRoles,
+  taskStatus as legacyTaskStatus,
+  services as legacyServices,
   spacing,
   padding,
   margin,
@@ -34,3 +35,6 @@ export {
   getServiceColors,
 } from './tokens'
 export type { StatusColorSet, RoleColorSet } from './tokens'
+
+// Semantic Tokens (Theme-Aware) - RECOMMENDED
+export * from './tokens/index'
