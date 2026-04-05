@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { createConnection, getConnection } from '../database/connection.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
 import { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types.js'
 import type {
@@ -9,19 +9,11 @@ import type {
   CreateExecutionLogDetail,
 } from '../database/types.js'
 
-const testDbName = process.env.DB_TEST_NAME || `${process.env.DB_NAME || 'mnx_agent'}_test`
-
 describe('DatabaseService', () => {
   let db: DatabaseService
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: testDbName,
-    })
+    await setupTestDatabase()
     db = new DatabaseService(getConnection())
     await db.init()
   })
@@ -46,6 +38,7 @@ describe('DatabaseService', () => {
   })
 
   afterAll(async () => {
+    await teardownTestDatabase()
   })
 
   describe('Connection & Initialization', () => {
