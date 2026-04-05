@@ -3,6 +3,7 @@ import { validate, validateQuery, validateParams } from '../../middleware/valida
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse } from '../../middleware/api-response'
 import { getDatabase } from '../../database/service-async.js'
+import { TaskService } from '../../services/domain/task.service.js'
 import {
   createTaskSchema,
   updateTaskSchema,
@@ -17,19 +18,21 @@ const router = Router()
 
 router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { status?: TaskStatus; job_id?: string; page: number; limit: number }
   const { status, job_id, page, limit } = query
   const offset = (page - 1) * limit
-  const result = await db.getAllTasks({ status, ownerId, jobId: job_id, limit, offset })
+  const result = await taskService.getAll({ status, ownerId, jobId: job_id, limit, offset })
   successResponse(res, { tasks: result.tasks, total: result.total, page, limit })
 }))
 
 router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const taskData = req.body
-  const task = await db.createTask({
+  const task = await taskService.create({
     job_id: taskData.job_id,
     task_type: taskData.task_type,
     payload: parsePayload(taskData.payload),
@@ -42,8 +45,9 @@ router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) 
 
 router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTaskSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const task = await db.getTaskById(req.params.id, ownerId)
+  const task = await taskService.getById(req.params.id, ownerId)
   if (!task) {
     errorResponse(res, 'Task not found', 404)
     return
@@ -52,26 +56,28 @@ router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTask
   if (req.body.status) updates.status = req.body.status as TaskStatus
   if (req.body.error_message) updates.error_message = req.body.error_message
   if (req.body.result) updates.result = req.body.result
-  const updatedTask = await db.updateTask(req.params.id, updates, ownerId)
+  const updatedTask = await taskService.update(req.params.id, updates, ownerId)
   successResponse(res, updatedTask)
 }))
 
 router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const task = await db.getTaskById(req.params.id, ownerId)
+  const task = await taskService.getById(req.params.id, ownerId)
   if (!task) {
     errorResponse(res, 'Task not found', 404)
     return
   }
-  await db.deleteTask(req.params.id, ownerId)
+  await taskService.delete(req.params.id, ownerId)
   deletedResponse(res)
 }))
 
 router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const task = await db.getTaskById(req.params.id, ownerId)
+  const task = await taskService.getById(req.params.id, ownerId)
   if (!task) {
     errorResponse(res, 'Task not found', 404)
     return
@@ -80,7 +86,7 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
     errorResponse(res, 'Only failed tasks can be retried', 400)
     return
   }
-  const updatedTask = await db.updateTask(req.params.id, {
+  const updatedTask = await taskService.update(req.params.id, {
     status: TaskStatus.PENDING,
     retry_count: 0,
     error_message: null,
@@ -90,36 +96,36 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
 
 router.get('/dlq', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
-  const items = await db.getDeadLetterQueueItems(ownerId, limit)
+  const items = await taskService.getDeadLetterQueue(ownerId, limit)
   successResponse(res, { items, total: items.length })
 }))
 
 router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
+  const item = await taskService.getDeadLetterItemById(req.params.id, ownerId)
   if (!item) {
     errorResponse(res, 'DLQ item not found', 404)
     return
   }
-  const taskId = await db.retryDeadLetterQueueItem(req.params.id, ownerId)
-  successResponse(res, { taskId, message: 'Task retried successfully' })
+  const taskId = await taskService.retryFromDeadLetter(req.params.id, ownerId)
+  successResponse(res, { taskId: taskId.id, message: 'Task retried successfully' })
 }))
 
 router.delete('/dlq/:id', asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const item = await db.getDeadLetterQueueItemById(req.params.id, ownerId)
+  const item = await taskService.getDeadLetterItemById(req.params.id, ownerId)
   if (!item) {
     errorResponse(res, 'DLQ item not found', 404)
     return
   }
-  await db.updateDeadLetterQueueItem(req.params.id, {
-    resolved_at: new Date().toISOString(),
-    resolution: 'deleted',
-  }, ownerId)
+  await taskService.resolveDeadLetterItem(req.params.id, 'deleted', ownerId)
   successResponse(res, { deleted: true })
 }))
 

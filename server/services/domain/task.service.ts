@@ -8,7 +8,7 @@
 import type { DatabaseService } from '../../database/service-async.js'
 import type { TaskQueueItem, CreateTaskQueueItem, UpdateTaskQueueItem, DeadLetterQueueItem } from '../../database/types.js'
 import type { TaskStatus } from '../../database/types.js'
-import type { ITaskService } from './interfaces.js'
+import type { ITaskService, TaskQueryFilter, TaskQueryResult } from './interfaces.js'
 
 export class TaskService implements ITaskService {
   constructor(private readonly db: DatabaseService) {}
@@ -34,6 +34,16 @@ export class TaskService implements ITaskService {
     if (!deleted) {
       throw new Error(`Task not found: ${id}`)
     }
+  }
+
+  async getAll(filter: TaskQueryFilter): Promise<TaskQueryResult> {
+    return this.db.getAllTasks({
+      status: filter.status,
+      ownerId: filter.ownerId,
+      jobId: filter.jobId,
+      limit: filter.limit ?? 100,
+      offset: filter.offset ?? 0,
+    })
   }
 
   async getPending(limit?: number): Promise<TaskQueueItem[]> {
@@ -74,8 +84,19 @@ export class TaskService implements ITaskService {
     return newTask
   }
 
-  async getDeadLetterQueue(ownerId?: string): Promise<DeadLetterQueueItem[]> {
-    return this.db.getDeadLetterQueueItems(ownerId)
+  async getDeadLetterQueue(ownerId?: string, limit?: number): Promise<DeadLetterQueueItem[]> {
+    return this.db.getDeadLetterQueueItems(ownerId, limit ?? 50)
+  }
+
+  async getDeadLetterItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
+    return this.db.getDeadLetterQueueItemById(id, ownerId)
+  }
+
+  async resolveDeadLetterItem(id: string, resolution: string, ownerId?: string): Promise<void> {
+    await this.db.updateDeadLetterQueueItem(id, {
+      resolved_at: new Date().toISOString(),
+      resolution,
+    }, ownerId)
   }
 
   async incrementRetryCount(id: string): Promise<void> {

@@ -3,6 +3,8 @@ import { validate, validateQuery, validateParams } from '../../middleware/valida
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { getDatabase } from '../../database/service-async.js'
+import { LogService } from '../../services/domain/log.service.js'
+import { TaskService } from '../../services/domain/task.service.js'
 import { WorkflowEngine } from '../../services/workflow-engine'
 import { getExecutionStateManager } from '../../services/execution-state-manager'
 import {
@@ -20,25 +22,28 @@ const router = Router()
 
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const logService = new LogService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { job_id?: string; status?: string; limit: number }
   const { job_id, status, limit } = query
-  let logs: ExecutionLog[] = await db.getAllExecutionLogs(job_id, limit, ownerId)
+  let logs: ExecutionLog[] = await logService.getAll({ jobId: job_id, ownerId, limit })
   if (status) logs = logs.filter((l: ExecutionLog) => l.status === status)
   successResponse(res, { logs, total: logs.length })
 }))
 
 router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const logService = new LogService(db)
+  const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const log = await db.getExecutionLogById(req.params.id, ownerId)
+  const log = await logService.getById(req.params.id, ownerId)
   if (!log) {
     errorResponse(res, 'Log not found', 404)
     return
   }
   let tasks: { id: string; status: string; created_at: string }[] = []
   if (log.job_id) {
-    tasks = (await db.getTasksByJobId(log.job_id, ownerId)).map((t: TaskQueueItem) => ({
+    tasks = (await taskService.getByJobId(log.job_id, ownerId)).map((t: TaskQueueItem) => ({
       id: t.id,
       status: t.status,
       created_at: t.created_at,
@@ -49,13 +54,14 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 
 router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
+  const logService = new LogService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const log = await db.getExecutionLogById(req.params.id, ownerId)
+  const log = await logService.getById(req.params.id, ownerId)
   if (!log) {
     errorResponse(res, 'Log not found', 404)
     return
   }
-  const details = await db.getExecutionLogDetailsByLogId(req.params.id)
+  const details = await logService.getDetails(req.params.id)
   successResponse(res, { log, details })
 }))
 

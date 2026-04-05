@@ -112,6 +112,19 @@ export interface IJobService {
 import type { TaskQueueItem, CreateTaskQueueItem, UpdateTaskQueueItem, DeadLetterQueueItem } from '../../database/types.js'
 import type { TaskStatus } from '../../database/types.js'
 
+export interface TaskQueryFilter {
+  status?: TaskStatus
+  ownerId?: string
+  jobId?: string
+  limit?: number
+  offset?: number
+}
+
+export interface TaskQueryResult {
+  tasks: TaskQueueItem[]
+  total: number
+}
+
 export interface ITaskService {
   /**
    * Create a new task
@@ -132,6 +145,11 @@ export interface ITaskService {
    * Delete a task
    */
   delete(id: string, ownerId?: string): Promise<void>
+
+  /**
+   * Get all tasks with pagination and filtering
+   */
+  getAll(filter: TaskQueryFilter): Promise<TaskQueryResult>
 
   /**
    * Get pending tasks, optionally limited
@@ -156,7 +174,17 @@ export interface ITaskService {
   /**
    * Get all items in the dead letter queue
    */
-  getDeadLetterQueue(ownerId?: string): Promise<DeadLetterQueueItem[]>
+  getDeadLetterQueue(ownerId?: string, limit?: number): Promise<DeadLetterQueueItem[]>
+
+  /**
+   * Get a single dead letter queue item by ID
+   */
+  getDeadLetterItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null>
+
+  /**
+   * Resolve a dead letter queue item (mark as deleted or resolved)
+   */
+  resolveDeadLetterItem(id: string, resolution: string, ownerId?: string): Promise<void>
 
   /**
    * Increment the retry count for a task
