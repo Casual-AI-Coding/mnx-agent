@@ -8,7 +8,6 @@ import {
   batchDownloadMedia,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
-import { useSettingsStore } from '@/settings/store'
 
 export interface DeleteDialogState {
   isOpen: boolean
@@ -77,8 +76,6 @@ export interface UseMediaManagementReturn {
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
-  const { settings } = useSettingsStore()
-  const apiKey = settings.api.minimaxKey
 
   // Core state
   const [records, setRecords] = useState<MediaRecord[]>([])
@@ -181,8 +178,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Fetch media records
   const fetchMedia = useCallback(async (isInitial = false) => {
-    if (!apiKey) return
-
     setIsLoading(true)
     if (isInitial) setIsInitialLoad(true)
     setError(null)
@@ -205,11 +200,11 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [apiKey, activeTab, pagination.page, pagination.limit])
+  }, [activeTab, pagination.page, pagination.limit])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
-    if (!apiKey || isLoadingMore) return
+    if (isLoadingMore) return
 
     setIsLoadingMore(true)
     try {
@@ -235,7 +230,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [apiKey, activeTab, isLoadingMore])
+  }, [activeTab, isLoadingMore])
 
   // Handle single delete
   const handleDelete = useCallback(async () => {
