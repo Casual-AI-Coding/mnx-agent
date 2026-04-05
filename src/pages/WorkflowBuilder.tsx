@@ -48,9 +48,11 @@ import {
   Tag,
   GitCommit,
   Bug,
+  Shield,
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
+import { ErrorBoundaryNode } from '@/components/workflow/nodes/ErrorBoundaryNode'
 import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
@@ -106,6 +108,7 @@ const nodeTypes: NodeTypes = {
   condition: ConditionNode,
   loop: LoopNode,
   transform: TransformNode,
+  errorBoundary: ErrorBoundaryNode,
 }
 
 // Node Palette Configuration
@@ -145,6 +148,13 @@ const logicNodes: NodePaletteItem[] = [
     category: 'logic',
     description: 'Data transformation',
   },
+  {
+    type: 'errorBoundary',
+    label: 'Error Boundary',
+    icon: Shield,
+    category: 'logic',
+    description: 'Catch errors from downstream nodes',
+  },
 ]
 
 // Default configurations for each node type
@@ -179,6 +189,10 @@ const getDefaultConfig = (type: string, actionData?: AvailableActionItem): Recor
         inputType: '',
         outputType: '',
         label: 'Transform',
+      }
+    case 'errorBoundary':
+      return {
+        label: 'Error Boundary',
       }
     default:
       return { label: type }
@@ -825,6 +839,22 @@ function ConfigPanel({
               />
             </div>
           </>
+        )}
+
+        {nodeType === 'errorBoundary' && (
+          <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/30">
+            <p className="text-xs text-teal-400">
+              Error Boundary wraps downstream nodes to catch errors.
+              Connect nodes to the "Success" handle for normal flow,
+              and to the "Error" handle for error recovery.
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-2">
+              On error, the error context will be available via:
+            </p>
+            <code className="text-xs text-teal-300 font-mono block mt-1">
+              {'{{'}nodeId.error.message{'}}'}
+            </code>
+          </div>
         )}
       </div>
 
@@ -1755,6 +1785,8 @@ function WorkflowBuilderInner() {
                     return '#f59e0b'
                   case 'transform':
                     return '#6366f1'
+                  case 'errorBoundary':
+                    return '#14b8a6'
                   default:
                     return '#71717a'
                 }

@@ -14,6 +14,7 @@ export enum WorkflowNodeType {
   Loop = 'loop',
   Transform = 'transform',
   Queue = 'queue',
+  ErrorBoundary = 'errorBoundary',
 }
 
 export interface RetryPolicy {

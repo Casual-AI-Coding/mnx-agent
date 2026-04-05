@@ -50,6 +50,7 @@ export enum WorkflowNodeType {
   Condition = 'condition',
   Loop = 'loop',
   Transform = 'transform',
+  ErrorBoundary = 'errorBoundary',
 }
 
 // ============================================
@@ -101,6 +102,21 @@ export interface ExecutionLog {
   tasksFailed: number
   errorSummary: string | null
   logDetail: string | null
+}
+
+export interface ExecutionLogDetail {
+  id: string
+  logId: string
+  nodeId: string | null
+  nodeType: string | null
+  serviceName: string | null
+  methodName: string | null
+  inputPayload: string | null
+  outputResult: string | null
+  errorMessage: string | null
+  startedAt: string | null
+  completedAt: string | null
+  durationMs: number | null
 }
 
 export interface CapacityRecord {

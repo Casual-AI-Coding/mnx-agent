@@ -34,6 +34,12 @@ import {
   RotateCcw,
   X,
   Terminal,
+  Code2,
+  Clock3,
+  ChevronRight,
+  Copy,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
@@ -70,6 +76,7 @@ import type {
   CronJob,
   TaskQueueItem,
   ExecutionLog,
+  ExecutionLogDetail,
   CapacityRecord,
   ServiceType,
   CreateCronJobDTO,
@@ -156,6 +163,334 @@ function formatDuration(ms: number | null): string {
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
+
+// ============================================
+// JSON Viewer Component
+// ============================================
+
+interface JsonViewerProps {
+  data: string | object | null
+  maxHeight?: string
+  initiallyExpanded?: boolean
+}
+
+const JsonViewer = memo(function JsonViewer({ 
+  data, 
+  maxHeight = '300px',
+  initiallyExpanded = false 
+}: JsonViewerProps) {
+  const [isExpanded, setIsExpanded] = useState(initiallyExpanded)
+  const [copied, setCopied] = useState(false)
+  
+  const parsedData = useMemo(() => {
+    if (!data) return null
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data)
+      } catch {
+        return data
+      }
+    }
+    return data
+  }, [data])
+  
+  const formattedJson = useMemo(() => {
+    if (!parsedData) return ''
+    try {
+      return JSON.stringify(parsedData, null, 2)
+    } catch {
+      return String(parsedData)
+    }
+  }, [parsedData])
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(formattedJson)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // ignore
+    }
+  }
+  
+  if (!data) return <span className="text-muted-foreground/50 italic">No data</span>
+  
+  return (
+    <div className="relative">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground transition-colors"
+        >
+          {isExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+          {isExpanded ? 'Collapse' : 'Expand'}
+        </button>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-primary transition-colors"
+        >
+          {copied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+      <pre 
+        className={`bg-card/950 rounded-lg p-3 text-xs text-muted-foreground/70 font-mono overflow-auto transition-all ${
+          isExpanded ? '' : `max-h-[${maxHeight}]`
+        }`}
+        style={{ maxHeight: isExpanded ? 'none' : maxHeight }}
+      >
+        {formattedJson}
+      </pre>
+    </div>
+  )
+})
+
+// ============================================
+// Execution Log Detail Panel Component
+// ============================================
+
+interface ExecutionLogPanelProps {
+  log: ExecutionLog
+  details: ExecutionLogDetail[]
+  isLoading: boolean
+}
+
+const ExecutionLogPanel = memo(function ExecutionLogPanel({ 
+  log, 
+  details, 
+  isLoading 
+}: ExecutionLogPanelProps) {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev)
+      if (next.has(nodeId)) {
+        next.delete(nodeId)
+      } else {
+        next.add(nodeId)
+      }
+      return next
+    })
+  }
+  
+  // Sort details by started_at
+  const sortedDetails = useMemo(() => {
+    return [...details].sort((a, b) => {
+      if (!a.startedAt) return 1
+      if (!b.startedAt) return -1
+      return new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
+    })
+  }, [details])
+  
+  // Calculate timeline stats
+  const timelineStats = useMemo(() => {
+    if (details.length === 0) return null
+    const totalDuration = details.reduce((sum, d) => sum + (d.durationMs || 0), 0)
+    const avgDuration = totalDuration / details.length
+    const maxDuration = Math.max(...details.map(d => d.durationMs || 0))
+    return { totalDuration, avgDuration, maxDuration }
+  }, [details])
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading execution details...</span>
+      </div>
+    )
+  }
+  
+  if (details.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground/50">No detailed execution data available</p>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Timeline Overview */}
+      {timelineStats && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-card/950 rounded-lg p-3 border border-border/50">
+            <p className="text-lg font-semibold text-foreground">{formatDuration(timelineStats.totalDuration)}</p>
+            <p className="text-xs text-muted-foreground/60">Total Duration</p>
+          </div>
+          <div className="bg-card/950 rounded-lg p-3 border border-border/50">
+            <p className="text-lg font-semibold text-foreground">{formatDuration(timelineStats.avgDuration)}</p>
+            <p className="text-xs text-muted-foreground/60">Avg. per Node</p>
+          </div>
+          <div className="bg-card/950 rounded-lg p-3 border border-border/50">
+            <p className="text-lg font-semibold text-foreground">{formatDuration(timelineStats.maxDuration)}</p>
+            <p className="text-xs text-muted-foreground/60">Slowest Node</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Node Timeline */}
+      <div className="space-y-2">
+        <h5 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <Clock3 className="w-4 h-4" />
+          Node Execution Timeline
+        </h5>
+        <div className="space-y-2">
+          {sortedDetails.map((detail, index) => {
+            const isExpanded = expandedNodes.has(detail.id)
+            const hasError = !!detail.errorMessage
+            const hasOutput = !!detail.outputResult
+            const nodeStatus = detail.errorMessage ? 'failed' : detail.completedAt ? 'completed' : 'running'
+            
+            return (
+              <div 
+                key={detail.id}
+                className={`border rounded-lg overflow-hidden transition-all ${
+                  hasError ? 'border-destructive/30 bg-destructive/5' : 'border-border/50 bg-card/30'
+                }`}
+              >
+                {/* Node Header */}
+                <button
+                  onClick={() => toggleNode(detail.id)}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-card/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1">
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground/70" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
+                    )}
+                  </div>
+                  
+                  {/* Node Status Icon */}
+                  <div className={`p-1.5 rounded ${
+                    nodeStatus === 'completed' ? 'bg-green-500/10 text-green-400' :
+                    nodeStatus === 'failed' ? 'bg-destructive/10 text-destructive' :
+                    'bg-blue-500/10 text-blue-400'
+                  }`}>
+                    {nodeStatus === 'completed' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {nodeStatus === 'failed' && <XCircle className="w-3.5 h-3.5" />}
+                    {nodeStatus === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  </div>
+                  
+                  {/* Node Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {detail.nodeId || `Node ${index + 1}`}
+                      </span>
+                      {detail.nodeType && (
+                        <Badge variant="outline" className="text-xs">
+                          {detail.nodeType}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground/60">
+                      {detail.serviceName && (
+                        <span className="truncate">{detail.serviceName}</span>
+                      )}
+                      {detail.methodName && (
+                        <span className="truncate font-mono">{detail.methodName}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Duration */}
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-foreground">
+                      {formatDuration(detail.durationMs)}
+                    </p>
+                    <p className="text-xs text-muted-foreground/50">
+                      {detail.startedAt ? formatDate(detail.startedAt) : '-'}
+                    </p>
+                  </div>
+                </button>
+                
+                {/* Expanded Node Details */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 pt-2 border-t border-border/30 space-y-4">
+                        {/* Error Message */}
+                        {hasError && (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                              <span className="text-sm font-medium text-destructive">Error</span>
+                            </div>
+                            <pre className="text-xs text-destructive/80 font-mono whitespace-pre-wrap">
+                              {detail.errorMessage}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        {/* Input Payload */}
+                        <div>
+                          <h6 className="text-xs font-medium text-muted-foreground/70 mb-2 flex items-center gap-2">
+                            <Code2 className="w-3.5 h-3.5" />
+                            Input Payload
+                          </h6>
+                          <JsonViewer data={detail.inputPayload} maxHeight="150px" />
+                        </div>
+                        
+                        {/* Output Result */}
+                        {hasOutput && (
+                          <div>
+                            <h6 className="text-xs font-medium text-muted-foreground/70 mb-2 flex items-center gap-2">
+                              <Terminal className="w-3.5 h-3.5" />
+                              Output Result
+                            </h6>
+                            <JsonViewer data={detail.outputResult} maxHeight="200px" />
+                          </div>
+                        )}
+                        
+                        {/* Timing Details */}
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="bg-card/950 rounded p-2">
+                            <span className="text-muted-foreground/50">Started:</span>
+                            <span className="text-foreground ml-2">
+                              {detail.startedAt ? formatDate(detail.startedAt) : '-'}
+                            </span>
+                          </div>
+                          <div className="bg-card/950 rounded p-2">
+                            <span className="text-muted-foreground/50">Completed:</span>
+                            <span className="text-foreground ml-2">
+                              {detail.completedAt ? formatDate(detail.completedAt) : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      
+      {/* Legacy Log Detail */}
+      {log.logDetail && (
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <h5 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+            <Terminal className="w-4 h-4" />
+            Legacy Log Details
+          </h5>
+          <pre className="bg-card/950 rounded-lg p-3 text-xs text-muted-foreground/70 font-mono overflow-x-auto max-h-40">
+            {log.logDetail}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
+})
 
 // ============================================
 // Create Job Modal
@@ -1076,7 +1411,7 @@ const TaskQueueTab = memo(function TaskQueueTab() {
 // ============================================
 
 const ExecutionLogsTab = memo(function ExecutionLogsTab() {
-  const { logs, loading, fetchLogs } = useExecutionLogsStore()
+  const { logs, logDetails, loading, detailsLoading, fetchLogs, fetchLogDetails } = useExecutionLogsStore()
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const parentRef = useRef<HTMLDivElement>(null)
@@ -1085,9 +1420,15 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
     fetchLogs()
   }, [fetchLogs])
 
-  const toggleExpand = (logId: string) => {
-    setExpandedLogId(expandedLogId === logId ? null : logId)
-  }
+  const toggleExpand = useCallback(async (logId: string) => {
+    const newExpandedId = expandedLogId === logId ? null : logId
+    setExpandedLogId(newExpandedId)
+    
+    // Fetch details when expanding
+    if (newExpandedId && !logDetails.has(logId)) {
+      await fetchLogDetails(logId)
+    }
+  }, [expandedLogId, logDetails, fetchLogDetails])
 
   const filteredLogs = statusFilter === 'all' 
     ? logs 
@@ -1108,7 +1449,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Execution Logs</h3>
-          <p className="text-sm text-muted-foreground/70">View historical execution data and task breakdowns</p>
+          <p className="text-sm text-muted-foreground/70">View detailed execution data with node-level insights</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -1157,6 +1498,10 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
           >
             {virtualItems.map((virtualRow) => {
               const log = filteredLogs[virtualRow.index]
+              const isExpanded = expandedLogId === log.id
+              const isLoadingDetails = detailsLoading.has(log.id)
+              const details = logDetails.get(log.id) || []
+              
               return (
                 <motion.div
                   key={log.id}
@@ -1175,7 +1520,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                 >
                   <Card
                     className={`cursor-pointer transition-colors ${
-                      expandedLogId === log.id ? 'bg-card/800/50' : 'hover:bg-card/800/30'
+                      isExpanded ? 'bg-card/800/50' : 'hover:bg-card/800/30'
                     }`}
                     onClick={() => toggleExpand(log.id)}
                   >
@@ -1210,7 +1555,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                           </div>
                         </div>
                         <button className="p-1 rounded hover:bg-card/700">
-                          {expandedLogId === log.id ? (
+                          {isExpanded ? (
                             <ChevronUp className="w-5 h-5 text-muted-foreground/70" />
                           ) : (
                             <ChevronDown className="w-5 h-5 text-muted-foreground/70" />
@@ -1219,7 +1564,7 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                       </div>
 
                       <AnimatePresence>
-                        {expandedLogId === log.id && (
+                        {isExpanded && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
@@ -1227,25 +1572,9 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                             className="overflow-hidden"
                           >
                             <div className="pt-4 mt-4 border-t border-border">
-                              <h4 className="text-sm font-medium text-muted-foreground mb-3">Task Breakdown</h4>
-                              <div className="grid grid-cols-3 gap-4 mb-4">
-                                <div className="bg-card/950 rounded-lg p-3">
-                                  <p className="text-2xl font-bold text-foreground">{log.tasksExecuted}</p>
-                                  <p className="text-xs text-muted-foreground/50">Total Tasks</p>
-                                </div>
-                                <div className="bg-card/950 rounded-lg p-3">
-                                  <p className="text-2xl font-bold text-green-400">{log.tasksSucceeded}</p>
-                                  <p className="text-xs text-muted-foreground/50">Succeeded</p>
-                                </div>
-                                <div className="bg-card/950 rounded-lg p-3">
-                                  <p className={`text-2xl font-bold ${log.tasksFailed > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                                    {log.tasksFailed}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground/50">Failed</p>
-                                </div>
-                              </div>
+                              {/* Error Summary */}
                               {log.errorSummary && (
-                                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 mb-4">
                                   <div className="flex items-center gap-2 mb-2">
                                     <AlertCircle className="w-4 h-4 text-destructive" />
                                     <span className="text-sm font-medium text-destructive">Error Summary</span>
@@ -1253,17 +1582,13 @@ const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                                   <p className="text-sm text-destructive/80">{log.errorSummary}</p>
                                 </div>
                               )}
-                              {log.logDetail && (
-                                <div className="mt-4">
-                                  <h5 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                                    <Terminal className="w-4 h-4" />
-                                    Log Details
-                                  </h5>
-                                  <pre className="bg-card/950 rounded-lg p-3 text-xs text-muted-foreground/70 font-mono overflow-x-auto">
-                                    {log.logDetail}
-                                  </pre>
-                                </div>
-                              )}
+                              
+                              {/* Execution Log Panel with Node Details */}
+                              <ExecutionLogPanel 
+                                log={log} 
+                                details={details} 
+                                isLoading={isLoadingDetails} 
+                              />
                             </div>
                           </motion.div>
                         )}

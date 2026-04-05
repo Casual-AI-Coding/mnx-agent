@@ -546,6 +546,8 @@ export class WorkflowEngine {
               return await this.executeTransformNode(node, config, nodeOutputs)
             case 'queue':
               return await this.executeQueueNode(node, config)
+            case 'errorBoundary':
+              return await this.executeErrorBoundaryNode(node, config, nodeOutputs)
             default:
               throw new Error(`Unknown node type: ${node.type}`)
           }
@@ -1226,5 +1228,161 @@ export class WorkflowEngine {
       }
       throw error
     }
+  }
+
+  private async executeErrorBoundaryNode(
+    node: WorkflowNode,
+    config: Record<string, unknown>,
+    nodeOutputs: Map<string, unknown>
+  ): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
+    const detailStartTime = Date.now()
+
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'errorBoundary',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
+    }
+
+    try {
+      const successNodes = this.findErrorBoundarySuccessNodes(node.id)
+      
+      if (successNodes.length === 0) {
+        if (this.executionLogId) {
+          cronEvents.emit('workflow_node_complete', {
+            executionId: this.executionLogId,
+            nodeId: node.id,
+            nodeType: 'errorBoundary',
+            nodeLabel: node.data?.label || node.id,
+            startedAt: new Date(detailStartTime).toISOString(),
+            completedAt: new Date().toISOString(),
+            durationMs: Date.now() - detailStartTime,
+            result: { success: true, message: 'No nodes to protect' },
+            workflowId: this.workflowId,
+          })
+        }
+        return { success: true }
+      }
+
+      for (const successNodeId of successNodes) {
+        const successNode = this.workflowNodes.find(n => n.id === successNodeId)
+        if (!successNode) continue
+
+        const resolvedConfig = this.resolveNodeConfig(successNode.data.config, nodeOutputs)
+        const result = await this.executeNode(successNode, resolvedConfig, nodeOutputs)
+
+        if (!result.success) {
+          const errorInfo = {
+            success: false,
+            error: {
+              message: result.error || 'Unknown error',
+            }
+          }
+
+          nodeOutputs.set(node.id, errorInfo)
+
+          if (this.executionLogId) {
+            cronEvents.emit('workflow_node_complete', {
+              executionId: this.executionLogId,
+              nodeId: node.id,
+              nodeType: 'errorBoundary',
+              nodeLabel: node.data?.label || node.id,
+              startedAt: new Date(detailStartTime).toISOString(),
+              completedAt: new Date().toISOString(),
+              durationMs: Date.now() - detailStartTime,
+              result: errorInfo,
+              workflowId: this.workflowId,
+            })
+          }
+
+          return errorInfo
+        }
+
+        if (result.data !== undefined) {
+          nodeOutputs.set(successNodeId, result.data)
+        }
+      }
+
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'errorBoundary',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result: { success: true },
+          workflowId: this.workflowId,
+        })
+      }
+
+      return { success: true }
+    } catch (error) {
+      const errorInfo = {
+        success: false,
+        error: {
+          message: (error as Error).message,
+          stack: (error as Error).stack,
+        }
+      }
+
+      nodeOutputs.set(node.id, errorInfo)
+
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'errorBoundary',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return errorInfo
+    }
+  }
+
+  private findErrorBoundarySuccessNodes(errorBoundaryNodeId: string): string[] {
+    const successNodeIds: string[] = []
+    
+    for (const edge of this.workflowEdges) {
+      if (edge.source === errorBoundaryNodeId && edge.sourceHandle === 'success') {
+        successNodeIds.push(edge.target)
+        const downstreamNodes = this.findAllDownstreamNodes(edge.target)
+        successNodeIds.push(...downstreamNodes)
+      }
+    }
+    
+    return [...new Set(successNodeIds)]
+  }
+
+  private findAllDownstreamNodes(startNodeId: string): string[] {
+    const downstream: string[] = []
+    const visited = new Set<string>()
+    const queue = [startNodeId]
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!
+      if (visited.has(currentId)) continue
+      visited.add(currentId)
+
+      for (const edge of this.workflowEdges) {
+        if (edge.source === currentId && !visited.has(edge.target)) {
+          if (edge.sourceHandle !== 'error') {
+            downstream.push(edge.target)
+            queue.push(edge.target)
+          }
+        }
+      }
+    }
+
+    return downstream
   }
 }

@@ -1,17 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ExecutionLog } from '../types/cron'
+import type { ExecutionLog, ExecutionLogDetail } from '../types/cron'
 import { TaskStatus, TriggerType } from '../types/cron'
-import { getLogs, getLogById } from '@/lib/api/cron'
+import { getLogs, getLogById, getLogDetails } from '@/lib/api/cron'
 import { getWebSocketClient, type LogEventPayload } from '@/lib/websocket-client'
 
 interface ExecutionLogsState {
   logs: ExecutionLog[]
+  logDetails: Map<string, ExecutionLogDetail[]>
   loading: boolean
+  detailsLoading: Set<string>
   error: string | null
   _wsUnsubscribe?: () => void
   fetchLogs: (jobId?: string, limit?: number) => Promise<void>
   fetchLogById: (id: string) => Promise<ExecutionLog | null>
+  fetchLogDetails: (id: string) => Promise<ExecutionLogDetail[] | null>
   subscribeToWebSocket: () => void
   unsubscribeFromWebSocket: () => void
 }
@@ -20,7 +23,9 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
   persist(
     (set, get) => ({
       logs: [],
+      logDetails: new Map(),
       loading: false,
+      detailsLoading: new Set(),
       error: null,
 
       fetchLogs: async (jobId, limit = 50) => {
@@ -61,6 +66,47 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
           set({
             error: err instanceof Error ? err.message : 'Failed to fetch log',
             loading: false,
+          })
+          return null
+        }
+      },
+
+      fetchLogDetails: async (id) => {
+        const cached = get().logDetails.get(id)
+        if (cached) return cached
+
+        set((state) => ({
+          detailsLoading: new Set(state.detailsLoading).add(id),
+          error: null,
+        }))
+
+        try {
+          const response = await getLogDetails(id)
+          if (response.success && response.data) {
+            set((state) => {
+              const newDetails = new Map(state.logDetails)
+              newDetails.set(id, response.data!.details)
+              const newLoading = new Set(state.detailsLoading)
+              newLoading.delete(id)
+              return { logDetails: newDetails, detailsLoading: newLoading }
+            })
+            return response.data.details
+          } else {
+            set((state) => {
+              const newLoading = new Set(state.detailsLoading)
+              newLoading.delete(id)
+              return { error: response.error || 'Failed to fetch log details', detailsLoading: newLoading }
+            })
+            return null
+          }
+        } catch (err) {
+          set((state) => {
+            const newLoading = new Set(state.detailsLoading)
+            newLoading.delete(id)
+            return {
+              error: err instanceof Error ? err.message : 'Failed to fetch log details',
+              detailsLoading: newLoading,
+            }
           })
           return null
         }

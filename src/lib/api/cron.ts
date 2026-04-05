@@ -5,6 +5,7 @@ import type {
   BackendJob,
   TaskQueueItem,
   ExecutionLog,
+  ExecutionLogDetail,
   CapacityRecord,
   WorkflowTemplate,
   CreateCronJobDTO,
@@ -224,6 +225,15 @@ export async function getLogById(id: string): Promise<ApiResponse<ExecutionLog>>
     return { success: true, data: response.data.data }
   } catch (error) {
     return handleApiError(error, 'getLogById')
+  }
+}
+
+export async function getLogDetails(id: string): Promise<ApiResponse<{ log: ExecutionLog; details: ExecutionLogDetail[] }>> {
+  try {
+    const response = await cronClient.get(`/cron/logs/${id}/details`)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    return handleApiError(error, 'getLogDetails')
   }
 }
 
