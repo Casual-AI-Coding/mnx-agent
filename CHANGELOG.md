@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2026-04-05
+
+### Changed
+
+**架构重构完善（Phase 0-2）**
+
+- **类型系统完善** - server/types.ts 迁移到 shared-types
+  - 迁移 1000+ 行类型定义到 @mnx/shared-types
+  - 修复 DeadLetterQueueItem、WebhookDelivery、User 字段不匹配
+  - 新增 AuditLog、ExecutionState、SystemConfig、PromptTemplate 类型
+  - 消除 RunStats 和 AuditAction 重复定义
+
+- **基础设施增强**
+  - WebSocket 订阅 hook 工厂函数 (`useWebSocketSubscription`)
+  - 统一 API 错误处理器 (`src/lib/api/error-handler.ts`)
+  - 设计 Token 系统 (`src/themes/tokens.ts`) - 颜色、间距、排版
+
+- **API 响应标准化**
+  - 84 处 `res.json({ success: true })` → `successResponse()`
+  - 88 处 `res.status().json({ success: false })` → `errorResponse()`
+  - 新增 `getOwnerId`/`requireOwnerId` 数据隔离工具函数
+
+- **服务单例模式**
+  - `services/index.ts` 完整导出单例 getter
+  - `QueueProcessor` 和 `WebSocketService` 单例模式
+
+- **前端组件去重**
+  - 消除 StatusBadge 和 ServiceIcon 重复定义
+  - 创建通用 `createTemplateStore` 工厂函数
+  - 合并 templates.ts 和 workflowTemplates.ts
+
+- **Repository 模式完善**
+  - 4 个 Repository 继承 BaseRepository：
+    - CapacityRepository、WebhookRepository、WorkflowRepository、UserRepository
+  - 移除冗余 `conn` 属性和 `isPostgres`/`toISODate` 方法
+
+- **UserManagement 组件拆分**
+  - 1224 行 → 242 行主文件
+  - 模块化：UserManagement、useUserManagement、UserFilters、UserTable、UserFormDialogs、types
+
+### Performance
+
+- 消除约 200 行重复 store 代码
+- server/types.ts 从 1151 行减少到 57 行（95% 减少）
+
+### Documentation
+
+- 新增架构重构实施计划 `docs/superpowers/plans/2026-04-05-architecture-refactoring-implementation.md`
+
 ## [1.5.0] - 2026-04-05
 
 ### Added
