@@ -11,15 +11,16 @@ import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
 import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
-  create: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: '创建' },
-  update: { color: 'bg-primary-500/20 text-primary-400 border-primary-500/30', label: '更新' },
-  delete: { color: 'bg-destructive/20 text-destructive border-destructive/30', label: '删除' },
-  execute: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: '执行' },
+  create: { color: cn(status.success.bgSubtle, status.success.icon, status.success.border), label: '创建' },
+  update: { color: cn(status.info.bgSubtle, status.info.icon, status.info.border), label: '更新' },
+  delete: { color: cn(status.error.bgSubtle, status.error.icon, status.error.border), label: '删除' },
+  execute: { color: cn(services.image.bg, services.image.icon, 'border-accent/30'), label: '执行' },
 }
 
-const DEFAULT_ACTION_CONFIG = { color: 'bg-gray-500/20 text-muted-foreground/70 border-gray-500/30', label: '未知' }
+const DEFAULT_ACTION_CONFIG = { color: cn(status.pending.bgSubtle, 'text-muted-foreground/70', status.pending.border), label: '未知' }
 
 function getActionConfig(action: string) {
   return (ACTION_CONFIG as Record<string, { color: string; label: string }>)[action] || DEFAULT_ACTION_CONFIG
@@ -27,8 +28,8 @@ function getActionConfig(action: string) {
 
 const STATUS_COLORS: Record<string, string> = {
   '0': 'text-muted-foreground/70',
-  '2': 'text-green-400',
-  '3': 'text-yellow-400',
+  '2': status.success.icon,
+  '3': status.warning.icon,
   '4': 'text-orange-400',
   '5': 'text-destructive',
 }

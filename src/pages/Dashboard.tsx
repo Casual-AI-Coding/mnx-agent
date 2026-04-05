@@ -14,13 +14,13 @@ import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import type { ConnectionStatus } from '@/lib/websocket-client'
-import { services, status } from '@/themes/tokens'
+import { services, status as statusTokens } from '@/themes/tokens'
 
 const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
   const statusConfig: Record<ConnectionStatus, { icon: typeof Wifi; color: string; text: string }> = {
-    connected: { icon: Wifi, color: 'text-green-400', text: '已连接' },
-    connecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '连接中...' },
-    reconnecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '重连中...' },
+    connected: { icon: Wifi, color: statusTokens.success.icon, text: '已连接' },
+    connecting: { icon: Loader2, color: `${statusTokens.warning.icon} animate-spin`, text: '连接中...' },
+    reconnecting: { icon: Loader2, color: `${statusTokens.warning.icon} animate-spin`, text: '重连中...' },
     disconnected: { icon: WifiOff, color: 'text-destructive', text: '未连接' },
   }
 

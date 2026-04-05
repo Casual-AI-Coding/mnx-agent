@@ -16,6 +16,8 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useCapacityStore } from '@/stores/capacity'
 import type { ServiceType } from '@/types/cron'
+import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 function ServiceIcon({ type }: { type: ServiceType }) {
   const icons: Record<ServiceType, React.ReactNode> = {
@@ -28,12 +30,12 @@ function ServiceIcon({ type }: { type: ServiceType }) {
   }
 
   const colors: Record<ServiceType, string> = {
-    text: 'text-primary-400 bg-primary-500/10',
-    voice_sync: 'text-green-400 bg-green-500/10',
-    voice_async: 'text-teal-400 bg-teal-500/10',
-    image: 'text-purple-400 bg-purple-500/10',
-    music: 'text-pink-400 bg-pink-500/10',
-    video: 'text-orange-400 bg-orange-500/10',
+    text: cn(services.text.icon, services.text.bg),
+    voice_sync: cn(status.success.icon, status.success.bgSubtle),
+    voice_async: cn(status.info.icon, status.info.bgSubtle),
+    image: cn(services.image.icon, services.image.bg),
+    music: cn(services.music.icon, services.music.bg),
+    video: cn(services.video.icon, services.video.bg),
   }
 
   return (
