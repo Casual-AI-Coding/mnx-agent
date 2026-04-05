@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import type { DatabaseService } from '../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../database/types.js'
+import { WEBHOOK_RATE_LIMITS } from '../config/rate-limits.js'
 
 export interface WebhookPayload {
   event: string
@@ -8,9 +9,6 @@ export interface WebhookPayload {
   job_id: string | null
   data: unknown
 }
-
-const WEBHOOK_RATE_LIMIT_PER_MINUTE = 100
-const WEBHOOK_RATE_WINDOW_MS = 60000
 
 export class NotificationService {
   private db: DatabaseService
@@ -26,10 +24,10 @@ export class NotificationService {
     const now = Date.now()
     const limiter = this.webhookRateLimiter.get(webhookId)
     if (!limiter || now > limiter.resetAt) {
-      this.webhookRateLimiter.set(webhookId, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS })
+      this.webhookRateLimiter.set(webhookId, { count: 1, resetAt: now + WEBHOOK_RATE_LIMITS.WINDOW_MS })
       return true
     }
-    if (limiter.count >= WEBHOOK_RATE_LIMIT_PER_MINUTE) return false
+    if (limiter.count >= WEBHOOK_RATE_LIMITS.PER_MINUTE) return false
     limiter.count++
     return true
   }

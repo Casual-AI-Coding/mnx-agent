@@ -13,6 +13,7 @@ import {
   MisfirePolicy
 } from '../database/types'
 import { cronEvents } from './websocket-service'
+import { TASK_TIMEOUTS } from '../config/timeouts.js'
 
 export type { DatabaseService }
 
@@ -52,7 +53,7 @@ export class CronScheduler {
     this.notificationService = notificationService ?? getNotificationService(db)
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
     this.maxConcurrent = options?.maxConcurrent ?? 5
-    this.defaultTimeoutMs = options?.defaultTimeoutMs ?? 5 * 60 * 1000 // 5 minutes default
+    this.defaultTimeoutMs = options?.defaultTimeoutMs ?? TASK_TIMEOUTS.DEFAULT_CRON_MS
   }
 
   async init(): Promise<void> {

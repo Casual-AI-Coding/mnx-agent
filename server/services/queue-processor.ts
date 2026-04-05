@@ -2,6 +2,7 @@ import type { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult } from './workflow-engine'
 import { cronEvents } from './websocket-service'
+import { RETRY_TIMEOUTS } from '../config/timeouts.js'
 
 export type { DatabaseService }
 
@@ -41,7 +42,7 @@ export class QueueProcessor {
   private db: DatabaseService
   private taskExecutor: TaskExecutor
   private capacityChecker: CapacityChecker
-  private readonly maxRetryDelayMs = 5 * 60 * 1000
+  private readonly maxRetryDelayMs = RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS
   private autoRetryConfig: AutoRetryConfig
   private autoRetryTimer: NodeJS.Timeout | null = null
 
@@ -56,8 +57,8 @@ export class QueueProcessor {
     this.capacityChecker = capacityChecker
     this.autoRetryConfig = {
       enabled: autoRetryConfig?.enabled ?? true,
-      initialDelayMs: autoRetryConfig?.initialDelayMs ?? 60000,
-      maxDelayMs: autoRetryConfig?.maxDelayMs ?? 300000,
+      initialDelayMs: autoRetryConfig?.initialDelayMs ?? RETRY_TIMEOUTS.BASE_DELAY_MS * 60,
+      maxDelayMs: autoRetryConfig?.maxDelayMs ?? RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS,
       maxAttempts: autoRetryConfig?.maxAttempts ?? 3,
       backoffMultiplier: autoRetryConfig?.backoffMultiplier ?? 2,
     }

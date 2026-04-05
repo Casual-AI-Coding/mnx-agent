@@ -1,3 +1,5 @@
+import { RETRY_TIMEOUTS, POLLING_CONFIG } from '../config/timeouts.js'
+
 export interface BackoffConfig {
   initialDelayMs?: number
   maxDelayMs?: number
@@ -12,10 +14,10 @@ export class BackoffCalculator {
   private readonly jitterMs: number
 
   constructor(config: BackoffConfig = {}) {
-    this.initialDelayMs = config.initialDelayMs ?? 1000
-    this.maxDelayMs = config.maxDelayMs ?? 5 * 60 * 1000
+    this.initialDelayMs = config.initialDelayMs ?? RETRY_TIMEOUTS.BASE_DELAY_MS
+    this.maxDelayMs = config.maxDelayMs ?? RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS
     this.multiplier = config.multiplier ?? 2
-    this.jitterMs = config.jitterMs ?? 1000
+    this.jitterMs = config.jitterMs ?? RETRY_TIMEOUTS.JITTER_MS
   }
 
   calculate(retryCount: number): number {
@@ -37,20 +39,20 @@ export class BackoffCalculator {
 
 export const DEFAULT_BACKOFF_CONFIGS = {
   QUEUE_PROCESSOR: {
-    initialDelayMs: 1000,
-    maxDelayMs: 5 * 60 * 1000,
+    initialDelayMs: RETRY_TIMEOUTS.BASE_DELAY_MS,
+    maxDelayMs: RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS,
     multiplier: 2,
-    jitterMs: 1000,
+    jitterMs: RETRY_TIMEOUTS.JITTER_MS,
   },
   TASK_POLLING: {
-    initialDelayMs: 2000,
-    maxDelayMs: 30 * 1000,
-    multiplier: 1.5,
+    initialDelayMs: POLLING_CONFIG.INITIAL_INTERVAL_MS,
+    maxDelayMs: POLLING_CONFIG.MAX_INTERVAL_MS,
+    multiplier: POLLING_CONFIG.BACKOFF_MULTIPLIER,
     jitterMs: 500,
   },
   WORKFLOW_NODE: {
-    initialDelayMs: 1000,
-    maxDelayMs: 60 * 1000,
+    initialDelayMs: RETRY_TIMEOUTS.BASE_DELAY_MS,
+    maxDelayMs: RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS,
     multiplier: 2,
     jitterMs: 100,
   },
