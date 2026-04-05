@@ -2,6 +2,147 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-04-05
+
+### Added
+
+**架构重构（Phase 0-1）**
+
+- **shared-types共享类型包** - 前后端类型统一
+  - 新增 `packages/shared-types/` 独立包
+  - 提取共享实体类型：CronJob, Task, Media, Workflow, User, Webhook等
+  - 提取Zod验证Schema：cron-schemas, media-schemas
+  - 前后端可导入相同类型定义，消除重复
+
+- **基础设施抽象层** - 统一超时和退避策略
+  - `server/infrastructure/timeout.ts` - 统一超时处理函数
+  - `server/infrastructure/backoff.ts` - 统一指数退避计算器
+  - 替代3处重复的超时/退避实现
+
+- **Repository模式** - 数据访问层抽象
+  - 拆分2668行 `DatabaseService` 为10个领域Repository：
+    - JobRepository (350行) - Cron任务数据访问
+    - TaskRepository (443行) - 任务队列数据访问
+    - LogRepository (440行) - 执行日志数据访问
+    - MediaRepository (248行) - 媒体记录数据访问
+    - WebhookRepository (251行) - Webhook配置数据访问
+    - WorkflowRepository (434行) - 工作流模板数据访问
+    - UserRepository (268行) - 用户数据访问
+    - CapacityRepository (82行) - 容量追踪数据访问
+    - DeadLetterRepository (117行) - 死信队列数据访问
+    - PromptTemplateRepository (164行) - 提示模板数据访问
+  - BaseRepository抽象类 (160行) - 通用CRUD模板
+  - 每个Repository职责单一，平均<300行
+
+- **WorkflowEngine模块化重构** - Strategy模式拆分
+  - 拆分1229行 `workflow-engine.ts` 为模块化结构：
+    - `workflow/engine.ts` (233行) - 核心协调器
+    - `workflow/parser.ts` (71行) - JSON解析验证
+    - `workflow/topological-sort.ts` (99行) - DAG拓扑排序
+    - `workflow/template-resolver.ts` (135行) - 模板变量解析
+    - `workflow/node-executor.ts` (149行) - 节点执行协调
+    - `workflow/executors/*.ts` - 各节点类型独立执行器（Strategy模式）：
+      - ActionExecutor (128行)
+      - ConditionExecutor (104行)
+      - DelayExecutor (72行)
+      - ErrorBoundaryExecutor (173行)
+      - LoopExecutor (218行)
+      - QueueExecutor (126行)
+      - TransformExecutor (174行)
+    - `workflow/exclusion-utils.ts` (82行) - 节点排除逻辑
+    - `workflow/types.ts` (39行) - 类型定义
+
+- **路由模块化拆分** - 按领域分组
+  - 拆分929行 `routes/cron.ts` 为模块化结构：
+    - `routes/cron/index.ts` (50行) - 路由聚合器
+    - `routes/cron/jobs.ts` (411行) - 任务管理路由
+    - `routes/cron/logs.ts` (227行) - 执行日志路由
+    - `routes/cron/queue.ts` (126行) - 任务队列路由
+    - `routes/cron/webhooks.ts` (109行) - Webhook管理路由
+    - `routes/cron/utils.ts` (14行) - 共享工具函数
+
+**新功能**
+
+- **Delay节点类型** - 工作流执行延迟
+  - 新增 `delay` 节点类型，支持工作流执行暂停
+  - 配置选项：`duration`（固定延迟）或 `until`（延迟到指定时间）
+  - 前端组件：`DelayNode.tsx` - Purple主题，Clock图标
+  - 后端执行器：`DelayExecutor.ts` - 支持超时继承
+  - 用途：API限流、等待外部进程、退避策略实现
+
+**前端架构重构（Phase 2）**
+
+- **组件拆分** - 大型组件模块化
+  - WorkflowBuilder (2080行 → 多个小组件)
+    - `builder/WorkflowToolbar.tsx` (267行)
+    - `builder/WorkflowConfigPanel.tsx` (289行)
+    - `builder/WorkflowNodePalette.tsx` (218行)
+    - `builder/WorkflowTestPanel.tsx` (85行)
+    - `builder/WorkflowVersionPanel.tsx` (106行)
+    - `builder/ExecutionStatusPanel.tsx` (177行)
+    - `nodes/DelayNode.tsx` (126行)
+    - `nodes/ErrorBoundaryNode.tsx` (125行)
+  - CronManagement (1314行 → 多个小组件)
+    - `management/CronJobsTab.tsx` (262行)
+    - `management/ExecutionLogsTab.tsx` (217行)
+    - `management/JobsListTab.tsx` (275行)
+    - `management/TaskQueueTab.tsx` (275行)
+    - `management/CreateJobModal.tsx` (229行)
+    - `management/EditJobModal.tsx` (227行)
+    - `management/ExecutionLogPanel.tsx` (263行)
+    - `management/JsonViewer.tsx` (79行)
+
+- **共享组件提取**
+  - `shared/JsonViewer.tsx` (79行) - JSON展示组件
+  - `shared/ServiceIcon.tsx` (39行) - 服务图标组件
+  - `shared/StatusBadge.tsx` (41行) - 状态徽章组件
+  - `shared/dateUtils.ts` (17行) - 日期工具函数
+
+### Changed
+
+- **UI改进**
+  - TestRunPanel增强：实时更新、Abort按钮、改进错误展示
+  - DeadLetterQueue：使用ConfirmDialog替换原生confirm()
+  - 设计Token迁移：硬编码颜色替换为CSS变量
+
+- **测试更新**
+  - 更新ActionConfigPanel测试以匹配新组件路径
+  - 更新workflow-xss-prevention测试以使用新的executor架构
+
+### Performance
+
+- **代码质量指标改进**
+  - 最大文件行数：2668行 → 443行（**83%减少**）
+  - Repository抽象：无 → 10个独立Repository类
+  - 类型共享：前后端重复定义 → shared-types统一包
+  - 超时/退避抽象：3处重复 → 统一infrastructure层
+  - 节点执行模式：单一WorkflowEngine → Strategy模式分离
+
+### Documentation
+
+- 新增设计文档和实施计划
+  - `specs/architecture-refactoring-design.md` (256行) - 架构重构设计方案
+  - `specs/2026-04-05-delay-node-design.md` (156行) - Delay节点设计规格
+  - `plans/2026-04-05-architecture-refactoring.md` (229行) - 架构重构实施计划
+  - `plans/2026-04-05-delay-node.md` (546行) - Delay节点实施计划
+  - `plans/2026-04-05-cron-misfire-handling.md` (838行) - Cron misfire处理方案
+  - `plans/2026-04-05-workflow-cron-scheduling-optimization.md` (130行) - 工作流调度优化
+
+### Technical Debt
+
+- ✅ 消除服务定位器反模式
+- ✅ 统一前后端类型系统
+- ✅ 统一基础设施抽象（timeout/backoff）
+- ✅ 拆分所有千行文件
+- ✅ 引入Repository Pattern和Strategy Pattern
+
+### Backward Compatibility
+
+- ✅ 所有API端点保持不变
+- ✅ 数据库schema无变更（Repository仅封装现有表）
+- ✅ 前端路由和功能无破坏性变更
+- ✅ shared-types包向后兼容（渐进式迁移）
+
 ## [1.4.0] - 2026-04-05
 
 ### Added
