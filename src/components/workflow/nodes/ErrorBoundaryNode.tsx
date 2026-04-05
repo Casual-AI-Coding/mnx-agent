@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
-import { Shield, ShieldAlert, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Shield, AlertCircle, AlertTriangle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { status } from '@/themes/tokens'

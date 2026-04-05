@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { GitBranch, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { status, primary, primaryText } from '@/themes/tokens'
+import { status, primaryText } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface ConditionNodeData extends Record<string, unknown> {

@@ -28,13 +28,13 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3 !h-3 !bg-primary-600 !border-2 !border-border"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-border"
       />
 
       <BaseNodeWrapper
         isSelected={selected}
         borderColor={cn(
-          'border-primary-600/60',
+          'border-primary/60',
           hasValidationError && status.error.border,
           hasValidationWarning && !hasValidationError && status.warning.border
         )}
@@ -108,7 +108,7 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         type="source"
         position={Position.Bottom}
         id="out"
-        className="!w-3 !h-3 !bg-primary-600 !border-2 !border-border"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-border"
       />
     </>
   )
