@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.4] - 2026-04-05
+
+### Fixed
+
+- **Settings Store API Key 持久化** - 修复 API Key 强制覆盖问题
+  - `onRehydrateStorage` 不再强制覆盖已保存的 API 配置
+  - 使用 nullish coalescing (`??`) 仅在首次加载时使用默认值
+  - 保留从 backend 加载的 API Key，防止用户配置丢失
+  
+- **测试数据库示例密码** - 简化 `.env.test.example` 示例
+  - 示例密码从 `passwd_mnx_agent_test_90idas0disa` 简化为 `test_password_123`
+  - 提升示例文件的可读性和用户友好度
+
+### Changed
+
+- **数据库 Schema 重构** - 优化表创建顺序
+  - Phase 1/Phase 2 分层，确保外键依赖正确
+  - 添加注释说明表创建顺序的重要性
+
+### Security
+
+- **测试数据库隔离** - 完善测试数据库安全配置
+  - 所有测试文件迁移到独立测试数据库
+  - 新增 `.env.test` 配置文件
+  - 更新 `TESTING.md` 文档，强调测试数据库安全规则
+
 ## [1.5.3] - 2026-04-05
 
 ### Added
