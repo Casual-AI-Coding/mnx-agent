@@ -30,6 +30,7 @@ import authRouter from './routes/auth.js'
 import usersRouter from './routes/users.js'
 import invitationCodesRouter from './routes/invitation-codes.js'
 import systemConfigRouter from './routes/system-config.js'
+import settingsRouter from './routes/settings/index.js'
 import { authenticateJWT } from './middleware/auth-middleware.js'
 import { getDatabase, closeDatabase } from './database/service-async.js'
 import { getMiniMaxClient } from './lib/minimax'
@@ -108,6 +109,7 @@ app.use('/api/audit', auditRouter)
 app.use('/api/users', authenticateJWT, usersRouter)
 app.use('/api/invitation-codes', authenticateJWT, invitationCodesRouter)
 app.use('/api/system-config', authenticateJWT, systemConfigRouter)
+app.use('/api/settings', settingsRouter)
 
 app.use(errorHandler)
 
