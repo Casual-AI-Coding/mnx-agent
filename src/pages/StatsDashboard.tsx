@@ -69,25 +69,25 @@ export default function StatsDashboard() {
           title={t('stats.totalExecutions', '总执行次数')}
           value={overview?.totalExecutions || 0}
           icon={BarChart3}
-          color="text-primary-400"
+          color={status.info.icon}
         />
         <StatCard
           title={t('stats.successRate', '成功率')}
           value={`${((overview?.successRate || 0) * 100).toFixed(1)}%`}
           icon={CheckCircle2}
-          color="text-green-400"
+          color={status.success.icon}
         />
         <StatCard
           title={t('stats.avgDuration', '平均耗时')}
           value={`${Math.round((overview?.avgDuration || 0) / 1000)}s`}
           icon={Clock}
-          color="text-yellow-400"
+          color={status.warning.icon}
         />
         <StatCard
           title={t('stats.errorCount', '错误次数')}
           value={overview?.errorCount || 0}
           icon={AlertCircle}
-          color="text-red-400"
+          color={status.error.icon}
         />
       </div>
 
@@ -104,7 +104,7 @@ export default function StatsDashboard() {
                     <span className="text-muted-foreground/70 text-sm w-24">{item.date}</span>
                     <div className="flex-1 h-2 bg-card/secondary rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-green-500 rounded-full"
+                        className={cn('h-full rounded-full', status.success.bg)}
                         style={{ width: `${(item.success / item.total) * 100}%` }}
                       />
                     </div>
@@ -130,7 +130,7 @@ export default function StatsDashboard() {
                 {distribution.map((item, idx) => {
                   const total = distribution.reduce((sum, d) => sum + d.count, 0)
                   const percentage = (item.count / total) * 100
-                  const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-green-500']
+                  const colors = [services.text.bgSolid, services.image.bgSolid, services.music.bgSolid, services.video.bgSolid, status.success.bg]
                   return (
                     <div key={item.type} className="flex items-center gap-3">
                       <span className="text-muted-foreground text-sm w-20 capitalize">{item.type}</span>

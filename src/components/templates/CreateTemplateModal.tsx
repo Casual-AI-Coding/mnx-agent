@@ -327,7 +327,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
                   <button
                     type="button"
                     onClick={() => handleRemoveVariable(variable)}
-                    className="text-dark-400 hover:text-red-400 transition-colors"
+                    className={cn('text-dark-400 hover:text-destructive transition-colors')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
