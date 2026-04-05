@@ -497,7 +497,6 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_i
     name: 'migration_022_cron_jobs_misfire_policy',
     sql: `
       ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS misfire_policy VARCHAR(20) DEFAULT 'fire_once';
-      CREATE INDEX IF NOT EXISTS idx_cron_jobs_misfire_check ON cron_jobs(is_active, next_run_at) WHERE is_active = true AND next_run_at < CURRENT_TIMESTAMP;
     `,
   },
 ]
