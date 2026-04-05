@@ -12,6 +12,7 @@ import { useTemplatesStore } from '@/stores/templates'
 import type { PromptTemplate, TemplateCategory } from '@/lib/api/templates'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
+import { services } from '@/themes/tokens'
 
 const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
   text: FileText,
@@ -22,11 +23,11 @@ const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
 }
 
 const CATEGORY_COLORS: Record<TemplateCategory, string> = {
-  text: 'bg-primary-500/20 text-primary-400',
-  image: 'bg-purple-500/20 text-purple-400',
-  music: 'bg-pink-500/20 text-pink-400',
-  video: 'bg-orange-500/20 text-orange-400',
-  general: 'bg-gray-500/20 text-muted-foreground/70',
+  text: cn(services.text.bg, services.text.text),
+  image: cn(services.image.bg, services.image.text),
+  music: cn(services.music.bg, services.music.text),
+  video: cn(services.video.bg, services.video.text),
+  general: 'bg-muted/10 text-muted-foreground',
 }
 
 export default function TemplateLibrary() {

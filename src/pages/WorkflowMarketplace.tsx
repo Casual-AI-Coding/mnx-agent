@@ -465,7 +465,7 @@ function TemplateCard({ template, onPreview, onUse, onCopy, copiedId }: Template
             title="复制工作流配置"
           >
             {copiedId === template.id ? (
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className={cn('w-4 h-4', status.success.icon)} />
             ) : (
               <Copy className="w-4 h-4" />
             )}
@@ -553,11 +553,11 @@ function TemplateListItem({ template, onPreview, onUse, onCopy, copiedId }: Temp
               onClick={() => onCopy(template)}
               title="复制工作流配置"
             >
-              {copiedId === template.id ? (
-                <Check className="w-4 h-4 text-green-500" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
+            {copiedId === template.id ? (
+              <Check className={cn('w-4 h-4', status.success.icon)} />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
             </Button>
           </div>
         </div>

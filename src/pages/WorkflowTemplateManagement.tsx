@@ -25,6 +25,7 @@ import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { WorkflowPreviewWrapper } from '@/components/workflow/WorkflowPreview'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 interface WorkflowTemplate {
   id: string
@@ -227,19 +228,19 @@ export default function WorkflowTemplateManagement() {
           title="流程总数"
           value={workflows.length}
           icon={GitBranch}
-          color="text-blue-400"
+          color={services.text.icon}
         />
         <StatCard
           title="公开流程"
           value={publicCount}
           icon={Globe}
-          color="text-green-400"
+          color={status.success.icon}
         />
         <StatCard
           title="节点总数"
           value={totalNodes}
           icon={Layers}
-          color="text-purple-400"
+          color={services.image.icon}
         />
       </div>
 

@@ -20,6 +20,7 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import type { WorkflowVersion } from '@/lib/api/workflows'
 import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 interface WorkflowToolbarProps {
   onSave: () => void
@@ -89,7 +90,7 @@ export function WorkflowToolbar({
             'text-xs px-2 py-0.5 rounded-full font-medium',
             validationSummary.errors > 0
               ? 'bg-destructive/20 text-destructive'
-              : 'bg-yellow-500/20 text-yellow-400'
+              : cn(status.warning.bgSubtle, status.warning.text)
           )}>
             {validationSummary.errors > 0 && `${validationSummary.errors} error${validationSummary.errors !== 1 ? 's' : ''}`}
             {validationSummary.errors > 0 && validationSummary.warnings > 0 && ', '}
@@ -147,7 +148,7 @@ export function WorkflowToolbar({
                     <div className="flex items-center gap-2">
                       <span>v{v.version_number}</span>
                       {v.is_active && (
-                        <span className="text-[10px] bg-green-500/20 text-green-400 px-1 rounded">
+                        <span className={cn('text-[10px] px-1 rounded', status.success.bgSubtle, status.success.text)}>
                           active
                         </span>
                       )}
@@ -193,8 +194,8 @@ export function WorkflowToolbar({
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
             isValid
-              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-              : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+              ? cn(status.success.bgSubtle, status.success.text, 'hover:bg-success/20')
+              : cn(status.warning.bgSubtle, status.warning.text, 'hover:bg-warning/20')
           )}
         >
           <CheckCircle className="w-4 h-4" />
@@ -207,7 +208,7 @@ export function WorkflowToolbar({
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
             hasWorkflowId
-              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+              ? cn(services.workflow.bg, services.workflow.text, 'hover:bg-primary-600/30')
               : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
           )}
           title={hasWorkflowId ? '运行测试' : '请先保存工作流'}

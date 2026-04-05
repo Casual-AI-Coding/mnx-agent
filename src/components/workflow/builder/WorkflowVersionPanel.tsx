@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, GitCommit, History, Loader2 } from 'lucide-react'
 import type { WorkflowVersion } from '@/lib/api/workflows'
 import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 
 interface WorkflowVersionPanelProps {
   versions: WorkflowVersion[]
@@ -67,7 +68,7 @@ export function WorkflowVersionPanel({
                   <GitCommit className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium text-sm">v{version.version_number}</span>
                   {version.is_active && (
-                    <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
+                    <span className={cn('text-[10px] px-1.5 py-0.5 rounded', status.success.bgSubtle, status.success.text)}>
                       active
                     </span>
                   )}

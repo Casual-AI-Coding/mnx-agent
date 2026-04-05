@@ -15,6 +15,7 @@ import {
 import type { GroupedActionNodes } from '@/types/cron'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 interface AvailableActionItem {
   service: string
@@ -117,7 +118,7 @@ export function WorkflowNodePalette({ onDragStart }: WorkflowNodePaletteProps) {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="p-2 space-y-3">
           <div>
-            <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-purple-400 px-1">
+            <h4 className={cn('text-xs font-medium uppercase tracking-wider mb-2 px-1', services.image.text)}>
               逻辑节点
             </h4>
             <div className="space-y-1">
@@ -144,7 +145,7 @@ export function WorkflowNodePalette({ onDragStart }: WorkflowNodePaletteProps) {
           </div>
 
           <div>
-            <h4 className="text-xs font-medium uppercase tracking-wider mb-2 text-blue-400 px-1">
+            <h4 className={cn('text-xs font-medium uppercase tracking-wider mb-2 px-1', status.info.text)}>
               动作节点
             </h4>
             {loading ? (
