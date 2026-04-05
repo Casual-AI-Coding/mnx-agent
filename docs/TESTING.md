@@ -226,6 +226,75 @@ Tests use the project's logger. Check console output for:
 - Query execution details
 - Error messages with stack traces
 
+## Test Database Configuration
+
+### CRITICAL: Use Separate Test Database
+
+**⚠️ NEVER run tests against the production database!**
+
+Tests that use `beforeEach` to clear data will permanently delete production records.
+
+### Setup Test Database
+
+1. **Create a separate test database:**
+   ```bash
+   # Using createdb
+   createdb -U postgres mnx_agent_test
+   
+   # Or using psql
+   psql -U postgres -c "CREATE DATABASE mnx_agent_test;"
+   ```
+
+2. **Create `.env.test` file (recommended):**
+   ```env
+   # Test database - NEVER use production database!
+   DB_TEST_NAME=mnx_agent_test
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USER=your_database_user
+   DB_PASSWORD=your_database_password
+   ```
+
+3. **Test configuration is automatically loaded:**
+   - Tests use `{DB_NAME}_test` by default
+   - Or `DB_TEST_NAME` if specified in `.env.test`
+   - See `server/__tests__/test-helpers.ts` for implementation
+
+### Database Safety Rules
+
+1. **NEVER use production database for tests**
+   - Tests clear tables in `beforeEach` hooks
+   - This will permanently delete production data
+   
+2. **Always verify test database name**
+   - Check `DB_NAME` ends with `_test`
+   - Or use `DB_TEST_NAME` environment variable
+   
+3. **Tests that modify data must:**
+   - Use test database (automatic with `test-helpers.ts`)
+   - Clean up after themselves
+   - Not rely on production data
+
+### Migrating Existing Tests
+
+If you have tests that hardcode database connections, update them:
+
+```typescript
+// ❌ WRONG - Uses production database
+beforeAll(async () => {
+  await createConnection({
+    pgDatabase: process.env.DB_NAME || 'mnx_agent',  // Production!
+  })
+})
+
+// ✅ CORRECT - Uses test database
+import { getTestDbConfig, setupTestDatabase } from '../test-helpers.js'
+
+beforeAll(async () => {
+  await setupTestDatabase()  // Uses test database
+})
+```
+
 ## Best Practices
 
 1. **Isolation**: Each test should clean up its data
@@ -233,6 +302,7 @@ Tests use the project's logger. Check console output for:
 3. **Mocks**: Use mocks for external services (MiniMax API)
 4. **Fixtures**: Create reusable test fixtures in `__fixtures__/` directories
 5. **Naming**: Use descriptive test names: `should [expected behavior] when [condition]`
+6. **Test Database**: ALWAYS use separate test database - never production
 
 ## Additional Resources
 
