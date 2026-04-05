@@ -52,6 +52,7 @@ import {
 } from 'lucide-react'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
+import { DelayNode } from '@/components/workflow/nodes/DelayNode'
 import { ErrorBoundaryNode } from '@/components/workflow/nodes/ErrorBoundaryNode'
 import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
@@ -108,6 +109,7 @@ const nodeTypes: NodeTypes = {
   condition: ConditionNode,
   loop: LoopNode,
   transform: TransformNode,
+  delay: DelayNode,
   errorBoundary: ErrorBoundaryNode,
 }
 
@@ -147,6 +149,13 @@ const logicNodes: NodePaletteItem[] = [
     icon: Zap,
     category: 'logic',
     description: 'Data transformation',
+  },
+  {
+    type: 'delay',
+    label: 'Delay',
+    icon: Clock,
+    category: 'logic',
+    description: 'Pause execution',
   },
   {
     type: 'errorBoundary',
@@ -189,6 +198,11 @@ const getDefaultConfig = (type: string, actionData?: AvailableActionItem): Recor
         inputType: '',
         outputType: '',
         label: 'Transform',
+      }
+    case 'delay':
+      return {
+        duration: 1000,
+        label: 'Delay',
       }
     case 'errorBoundary':
       return {

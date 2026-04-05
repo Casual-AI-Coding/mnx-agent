@@ -50,6 +50,8 @@ export enum WorkflowNodeType {
   Condition = 'condition',
   Loop = 'loop',
   Transform = 'transform',
+  Queue = 'queue',
+  Delay = 'delay',
   ErrorBoundary = 'errorBoundary',
 }
 

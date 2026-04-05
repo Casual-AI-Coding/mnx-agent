@@ -14,6 +14,7 @@ export enum WorkflowNodeType {
   Loop = 'loop',
   Transform = 'transform',
   Queue = 'queue',
+  Delay = 'delay',
   ErrorBoundary = 'errorBoundary',
 }
 
@@ -76,4 +77,13 @@ export interface QueueNodeConfig {
   jobId?: string
   taskType?: string
   limit?: number
+}
+
+export interface DelayNodeConfig {
+  duration?: number   // milliseconds
+  until?: string      // ISO timestamp to wait until
+}
+
+export interface ErrorBoundaryNodeConfig {
+  label?: string
 }

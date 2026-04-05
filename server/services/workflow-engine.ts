@@ -130,8 +130,10 @@ export class WorkflowEngine {
       const excludedNodes = new Set<string>()
       
       this.addLoopBodyNodesToExcluded(excludedNodes)
+      this.addErrorBoundarySuccessNodesToExcluded(excludedNodes)
       
       const conditionResults = new Map<string, boolean>()
+      const errorBoundaryErrors = new Map<string, { message: string; stack?: string }>()
 
       for (let layerIndex = 0; layerIndex < executionLayers.length; layerIndex++) {
         if (abortController?.signal.aborted) {
@@ -175,10 +177,21 @@ export class WorkflowEngine {
                 excludedNodes
               )
             }
+            
+            if (node?.type === 'errorBoundary') {
+              const boundaryResult = result.data as { success: boolean; error?: { message: string; stack?: string } }
+              if (!boundaryResult.success && boundaryResult.error) {
+                errorBoundaryErrors.set(nodeId, boundaryResult.error)
+                this.queueErrorBoundaryErrorNodes(nodeId, excludedNodes)
+              }
+            }
           }
 
           if (!result.success && !executionError) {
-            executionError = `Node ${nodeId} failed: ${result.error}`
+            const node = workflow.nodes.find(n => n.id === nodeId)
+            if (node?.type !== 'errorBoundary') {
+              executionError = `Node ${nodeId} failed: ${result.error}`
+            }
           }
         }
 
@@ -291,6 +304,30 @@ export class WorkflowEngine {
     for (const edge of this.workflowEdges) {
       if (edge.sourceHandle === 'body') {
         this.excludeBranchNodes(edge.target, this.workflowEdges, excludedNodes)
+      }
+    }
+  }
+
+  private addErrorBoundarySuccessNodesToExcluded(excludedNodes: Set<string>): void {
+    for (const edge of this.workflowEdges) {
+      if (edge.sourceHandle === 'success') {
+        const sourceNode = this.workflowNodes.find(n => n.id === edge.source)
+        if (sourceNode?.type === 'errorBoundary') {
+          this.excludeBranchNodes(edge.target, this.workflowEdges, excludedNodes)
+        }
+      }
+    }
+  }
+
+  private queueErrorBoundaryErrorNodes(errorBoundaryNodeId: string, excludedNodes: Set<string>): void {
+    for (const edge of this.workflowEdges) {
+      if (edge.source === errorBoundaryNodeId && edge.sourceHandle === 'error') {
+        excludedNodes.delete(edge.target)
+        for (const downstreamEdge of this.workflowEdges) {
+          if (downstreamEdge.source === edge.target) {
+            excludedNodes.delete(downstreamEdge.target)
+          }
+        }
       }
     }
   }
@@ -546,6 +583,8 @@ export class WorkflowEngine {
               return await this.executeTransformNode(node, config, nodeOutputs)
             case 'queue':
               return await this.executeQueueNode(node, config)
+            case 'delay':
+              return await this.executeDelayNode(node, config)
             case 'errorBoundary':
               return await this.executeErrorBoundaryNode(node, config, nodeOutputs)
             default:
@@ -1220,6 +1259,69 @@ export class WorkflowEngine {
           executionId: this.executionLogId,
           nodeId: node.id,
           nodeType: 'queue',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          errorMessage: (error as Error).message,
+          workflowId: this.workflowId,
+        })
+      }
+      throw error
+    }
+  }
+
+  private async executeDelayNode(
+    node: WorkflowNode,
+    config: Record<string, unknown>
+  ): Promise<{ delayed: number }> {
+    const detailStartTime = Date.now()
+
+    if (this.executionLogId) {
+      cronEvents.emit('workflow_node_start', {
+        executionId: this.executionLogId,
+        nodeId: node.id,
+        nodeType: 'delay',
+        nodeLabel: node.data?.label || node.id,
+        startedAt: new Date().toISOString(),
+        workflowId: this.workflowId,
+      })
+    }
+
+    try {
+      let delayMs = 0
+      if (config.duration !== undefined) {
+        delayMs = Math.max(0, config.duration as number)
+      } else if (config.until !== undefined) {
+        const targetTime = new Date(config.until as string).getTime()
+        delayMs = Math.max(0, targetTime - Date.now())
+      }
+
+      if (delayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+
+      const result = { delayed: delayMs }
+
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_complete', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'delay',
+          nodeLabel: node.data?.label || node.id,
+          startedAt: new Date(detailStartTime).toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - detailStartTime,
+          result,
+          workflowId: this.workflowId,
+        })
+      }
+
+      return result
+    } catch (error) {
+      if (this.executionLogId) {
+        cronEvents.emit('workflow_node_error', {
+          executionId: this.executionLogId,
+          nodeId: node.id,
+          nodeType: 'delay',
           nodeLabel: node.data?.label || node.id,
           startedAt: new Date(detailStartTime).toISOString(),
           errorMessage: (error as Error).message,
