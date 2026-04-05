@@ -146,7 +146,7 @@ export default function TokenMonitor() {
                 <p className="text-sm text-muted-foreground">文本 Token</p>
                 <p className="text-2xl font-bold">{usage.textTokens.toLocaleString()}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-primary-100 text-primary-600 flex items-center justify-center">
                 <MessageSquare className="w-5 h-5" />
               </div>
             </div>
@@ -225,8 +225,8 @@ export default function TokenMonitor() {
               label="文本 Token"
               value={usage.textTokens}
               max={maxValue}
-              color="bg-blue-500"
-              icon={<MessageSquare className="w-4 h-4 text-blue-500" />}
+              color="bg-primary-500"
+              icon={<MessageSquare className="w-4 h-4 text-primary-500" />}
             />
             <UsageBar
               label="语音字符"

@@ -224,10 +224,10 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 <User className="w-[18px] h-[18px]" />
                 <span className="max-w-[80px] truncate hidden sm:inline">{user?.username || '用户'}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  user?.role === 'super' ? 'bg-red-500/20 text-red-400' :
+                  user?.role === 'super' ? 'bg-destructive/20 text-destructive' :
                   user?.role === 'admin' ? 'bg-orange-500/20 text-orange-400' :
                   user?.role === 'pro' ? 'bg-purple-500/20 text-purple-400' :
-                  'bg-blue-500/20 text-blue-400'
+                  'bg-primary-500/20 text-primary-400'
                 }`}>
                   {user?.role || 'user'}
                 </span>
@@ -248,7 +248,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="w-full px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                      className="w-full px-3 py-2 text-sm text-destructive hover:text-destructive/80 hover:bg-destructive/10 transition-colors flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" />
                       退出登录

@@ -381,7 +381,7 @@ export default function TextGeneration() {
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-center"
           >
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center gap-3">
               <RetryableError
                 error={lastError}
                 onRetry={() => {

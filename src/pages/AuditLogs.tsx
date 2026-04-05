@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils'
 
 const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
   create: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: '创建' },
-  update: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', label: '更新' },
-  delete: { color: 'bg-red-500/20 text-red-400 border-red-500/30', label: '删除' },
+  update: { color: 'bg-primary-500/20 text-primary-400 border-primary-500/30', label: '更新' },
+  delete: { color: 'bg-destructive/20 text-destructive border-destructive/30', label: '删除' },
   execute: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: '执行' },
 }
 
@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
   '2': 'text-green-400',
   '3': 'text-yellow-400',
   '4': 'text-orange-400',
-  '5': 'text-red-400',
+  '5': 'text-destructive',
 }
 
 export default function AuditLogs() {
@@ -154,7 +154,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             title={t('audit.errorCount', '错误数')}
             value={stats.byResponseStatus.filter(s => s.response_status >= 400).reduce((sum, s) => sum + s.count, 0)}
             icon={AlertCircle}
-            color="text-red-400"
+            color="text-destructive"
           />
         </div>
       )}
@@ -308,7 +308,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
             {selectedLog.error_message && (
               <div>
-                <label className="text-red-400">{t('audit.errorMessage', '错误信息')}</label>
+                <label className="text-destructive">{t('audit.errorMessage', '错误信息')}</label>
                 <pre className="text-red-300 bg-red-950/20 border border-red-900/50 p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
                   {selectedLog.error_message}
                 </pre>

@@ -41,15 +41,15 @@ export const ActionNode = React.memo(function ActionNode({ data, selected }: { d
         header={
           <div className="flex items-center gap-2">
             {hasValidationError ? (
-              <AlertCircle className="w-3 h-3 text-red-400" />
+              <AlertCircle className="w-3 h-3 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-3 h-3 text-yellow-400" />
             ) : (
-              <Wrench className="w-3 h-3 text-blue-400" />
+              <Wrench className="w-3 h-3 text-primary-400" />
             )}
             <span className={cn(
               'text-xs font-medium',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-muted-foreground'
+              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-muted-foreground'
             )}>Action</span>
           </div>
         }
@@ -57,20 +57,20 @@ export const ActionNode = React.memo(function ActionNode({ data, selected }: { d
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? 'bg-red-500/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-blue-500/10'
+            hasValidationError ? 'bg-destructive/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-primary-500/10'
           )}>
             {hasValidationError ? (
-              <AlertCircle className="w-5 h-5 text-red-400" />
+              <AlertCircle className="w-5 h-5 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-5 h-5 text-yellow-400" />
             ) : (
-              <Wrench className="w-5 h-5 text-blue-400" />
+              <Wrench className="w-5 h-5 text-primary-400" />
             )}
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
             )}>
               {label || 'Action'}
             </p>
@@ -91,7 +91,7 @@ export const ActionNode = React.memo(function ActionNode({ data, selected }: { d
           <motion.div
             className={cn(
               'absolute bottom-0 left-0 right-0 h-0.5',
-              hasValidationError ? 'bg-red-500/50' : hasValidationWarning ? 'bg-yellow-500/50' : 'bg-blue-500/50'
+              hasValidationError ? 'bg-destructive/50' : hasValidationWarning ? 'bg-yellow-500/50' : 'bg-primary-500/50'
             )}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}

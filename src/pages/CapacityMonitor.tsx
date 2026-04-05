@@ -28,7 +28,7 @@ function ServiceIcon({ type }: { type: ServiceType }) {
   }
 
   const colors: Record<ServiceType, string> = {
-    text: 'text-blue-400 bg-blue-500/10',
+    text: 'text-primary-400 bg-primary-500/10',
     voice_sync: 'text-green-400 bg-green-500/10',
     voice_async: 'text-teal-400 bg-teal-500/10',
     image: 'text-purple-400 bg-purple-500/10',
@@ -222,7 +222,7 @@ export default function CapacityMonitor() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground/70">Remaining</span>
-                          <span className="text-blue-400 font-medium">
+                          <span className="text-primary-400 font-medium">
                             {remaining.toLocaleString()}
                           </span>
                         </div>

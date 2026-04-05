@@ -361,7 +361,7 @@ export default function VoiceSync() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-sm font-medium ${
-                          isOverLimit ? 'text-red-400' : 'text-zinc-400'
+                          isOverLimit ? 'text-destructive' : 'text-zinc-400'
                         }`}
                       >
                         {charCount.toLocaleString()} / {MAX_CHARS.toLocaleString()}
@@ -369,7 +369,7 @@ export default function VoiceSync() {
                       {isOverLimit && (
                         <Badge
                           variant="destructive"
-                          className="bg-red-500/20 text-red-400 border-red-500/30"
+                          className="bg-destructive/20 text-destructive border-destructive/30"
                         >
                           {t('voiceSync.overLimit')}
                         </Badge>
@@ -388,7 +388,7 @@ export default function VoiceSync() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 flex items-center gap-3"
+                className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive flex items-center gap-3"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
                   <span className="text-lg">!</span>

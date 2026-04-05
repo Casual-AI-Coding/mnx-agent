@@ -118,7 +118,7 @@ const SOURCE_LABELS: Record<MediaSource, string> = {
 const TYPE_GRADIENTS: Record<MediaType, string> = {
   image: 'bg-muted/50',
   audio: 'bg-blue-950/50',
-  video: 'bg-red-950/50',
+  video: 'bg-destructive-950/50',
   music: 'bg-purple-950/50',
 }
 

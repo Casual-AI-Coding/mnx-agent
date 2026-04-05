@@ -134,9 +134,9 @@ const handleRun = async (dryRun = false) => {
       case 'completed':
         return <CheckCircle className="w-3.5 h-3.5 text-green-500" />
       case 'failed':
-        return <XCircle className="w-3.5 h-3.5 text-red-500" />
+        return <XCircle className="w-3.5 h-3.5 text-destructive" />
       case 'running':
-        return <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+        return <Loader2 className="w-3.5 h-3.5 text-primary-500 animate-spin" />
       default:
         return <div className="w-3.5 h-3.5 rounded-full bg-muted-foreground/30" />
     }
@@ -225,7 +225,7 @@ const handleRun = async (dryRun = false) => {
           <div
             className={cn(
               'px-3 py-2 flex items-center gap-2 text-sm font-medium',
-              result.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+              result.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
             )}
           >
             {result.status === 'success' ? (
@@ -288,7 +288,7 @@ const handleRun = async (dryRun = false) => {
                   {/* Error message */}
                   {node.error && (
                     <div className="px-3 pb-2">
-                      <div className="text-[10px] text-red-400 bg-red-500/10 p-2 rounded">
+                      <div className="text-[10px] text-destructive bg-destructive/10 p-2 rounded">
                         {node.error}
                       </div>
                     </div>

@@ -67,7 +67,7 @@ export default function StatsDashboard() {
           title={t('stats.totalExecutions', '总执行次数')}
           value={overview?.totalExecutions || 0}
           icon={BarChart3}
-          color="text-blue-400"
+          color="text-primary-400"
         />
         <StatCard
           title={t('stats.successRate', '成功率')}

@@ -9,9 +9,9 @@ interface NodeStatusIndicatorProps {
 export function NodeStatusIndicator({ status, className }: NodeStatusIndicatorProps) {
   const config: Record<string, { icon: typeof Clock; color: string; bg: string; animate?: boolean }> = {
     idle: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-100' },
-    running: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', animate: true },
+    running: { icon: Loader2, color: 'text-primary-500', bg: 'bg-primary-50', animate: true },
     completed: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50' },
-    error: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+    error: { icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10' },
   }
 
   const { icon: Icon, color, bg, animate } = config[status]

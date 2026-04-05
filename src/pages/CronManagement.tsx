@@ -123,7 +123,7 @@ const ServiceIcon = memo(function ServiceIcon({ type }: { type: ServiceType }) {
   }
 
   const colors: Record<ServiceType, string> = {
-    text: 'text-blue-400 bg-blue-500/10',
+    text: 'text-primary-400 bg-primary-500/10',
     voice_sync: 'text-green-400 bg-green-500/10',
     voice_async: 'text-teal-400 bg-teal-500/10',
     image: 'text-purple-400 bg-purple-500/10',
@@ -921,8 +921,8 @@ const TaskQueueTab = memo(function TaskQueueTab() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <XCircle className="w-5 h-5 text-red-400" />
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <XCircle className="w-5 h-5 text-destructive" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">

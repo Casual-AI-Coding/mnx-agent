@@ -275,7 +275,7 @@ function Toolbar({
           <span className={cn(
             'text-xs px-2 py-0.5 rounded-full font-medium',
             validationSummary.errors > 0
-              ? 'bg-red-500/20 text-red-400'
+              ? 'bg-destructive/20 text-destructive'
               : 'bg-yellow-500/20 text-yellow-400'
           )}>
             {validationSummary.errors > 0 && `${validationSummary.errors} error${validationSummary.errors !== 1 ? 's' : ''}`}
@@ -419,7 +419,7 @@ function Toolbar({
 
         <button
           onClick={onLoadFromServer}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
         >
           <Download className="w-4 h-4" />
           Load from Server
@@ -443,7 +443,7 @@ function Toolbar({
 
         <button
           onClick={onClear}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
           Clear
@@ -664,8 +664,8 @@ function ConfigPanel({
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <div className="px-4 pt-4">
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2">
-            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-2">
+            <div className="flex items-center gap-2 text-destructive text-xs font-medium">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>配置问题</span>
             </div>
@@ -849,7 +849,7 @@ function ConfigPanel({
             onDelete(node.id)
             onClose()
           }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/30 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
           Delete Node
@@ -965,7 +965,7 @@ function ExecutionStatusPanel({
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <XCircle className="w-3 h-3 text-red-500" />
+              <XCircle className="w-3 h-3 text-destructive" />
               <span className="text-sm font-semibold text-foreground">{errorNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">Errors</span>
@@ -1008,7 +1008,7 @@ function ExecutionStatusPanel({
             )}
             <button
               onClick={onCancel}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-destructive/20 text-destructive hover:bg-destructive/30"
             >
               <X className="w-3 h-3" />
               Cancel
@@ -1700,7 +1700,7 @@ function WorkflowBuilderInner() {
       {saveMessage && (
         <div className={cn(
           'absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md text-sm font-medium',
-          saveMessage.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'
+          saveMessage.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-destructive/90 text-white'
         )}>
           {saveMessage.text}
         </div>

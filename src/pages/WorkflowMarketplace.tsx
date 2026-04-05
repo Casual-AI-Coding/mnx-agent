@@ -78,7 +78,7 @@ function getDifficultyColor(difficulty: string): string {
   const colors: Record<string, string> = {
     beginner: 'bg-green-500/20 text-green-400',
     intermediate: 'bg-yellow-500/20 text-yellow-400',
-    advanced: 'bg-red-500/20 text-red-400',
+    advanced: 'bg-destructive/20 text-destructive',
   }
   return colors[difficulty] || 'bg-gray-500/20 text-gray-400'
 }

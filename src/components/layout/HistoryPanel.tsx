@@ -11,7 +11,7 @@ const typeConfig: Record<
   HistoryItem['type'],
   { label: string; icon: typeof Image; color: string }
 > = {
-  text: { label: '文本', icon: MessageSquare, color: 'text-blue-400' },
+  text: { label: '文本', icon: MessageSquare, color: 'text-primary-400' },
   voice: { label: '语音', icon: Mic, color: 'text-green-400' },
   image: { label: '图片', icon: Image, color: 'text-purple-400' },
   music: { label: '音乐', icon: Music, color: 'text-pink-400' },

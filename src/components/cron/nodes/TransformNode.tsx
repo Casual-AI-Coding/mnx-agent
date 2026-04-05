@@ -40,7 +40,7 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         header={
           <div className="flex items-center gap-2">
             {hasValidationError ? (
-              <AlertCircle className="w-3 h-3 text-red-400" />
+              <AlertCircle className="w-3 h-3 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-3 h-3 text-yellow-400" />
             ) : (
@@ -56,10 +56,10 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? 'bg-red-500/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-indigo-500/10'
+            hasValidationError ? 'bg-destructive/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-indigo-500/10'
           )}>
             {hasValidationError ? (
-              <AlertCircle className="w-5 h-5 text-red-400" />
+              <AlertCircle className="w-5 h-5 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-5 h-5 text-yellow-400" />
             ) : (
@@ -69,7 +69,7 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
             )}>
               {label || 'Transform'}
             </p>

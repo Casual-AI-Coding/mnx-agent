@@ -79,9 +79,9 @@ const StatusBadge = memo(function StatusBadge({ isActive }: { isActive: boolean 
 
 const EventBadge = memo(function EventBadge({ event }: { event: WebhookEvent }) {
   const colors: Record<WebhookEvent, string> = {
-    on_start: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    on_start: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
     on_success: 'bg-green-500/10 text-green-400 border-green-500/20',
-    on_failure: 'bg-red-500/10 text-red-400 border-red-500/20',
+    on_failure: 'bg-destructive/10 text-destructive border-destructive/20',
   }
 
   const labels: Record<WebhookEvent, string> = {

@@ -21,7 +21,7 @@ const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { stat
     connected: { icon: Wifi, color: 'text-green-400', text: '已连接' },
     connecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '连接中...' },
     reconnecting: { icon: Loader2, color: 'text-yellow-400 animate-spin', text: '重连中...' },
-    disconnected: { icon: WifiOff, color: 'text-red-400', text: '未连接' },
+    disconnected: { icon: WifiOff, color: 'text-destructive', text: '未连接' },
   }
 
   const config = statusConfig[status]
@@ -76,7 +76,7 @@ export default function Dashboard() {
   }), [t])
 
   const typeColors = useMemo(() => ({
-    text: 'bg-blue-500/20 text-blue-400',
+    text: 'bg-primary-500/20 text-primary-400',
     image: 'bg-purple-500/20 text-purple-400',
     voice: 'bg-green-500/20 text-green-400',
     music: 'bg-pink-500/20 text-pink-400',
@@ -112,7 +112,7 @@ export default function Dashboard() {
   // Memoized: only recalculates when usage or t changes
   const stats = useMemo(() => [
     { label: t('dashboard.totalGenerations'), value: usage.textTokens + usage.imageRequests + usage.musicRequests + usage.videoRequests, icon: Zap, color: 'text-yellow-400' },
-    { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: 'text-blue-400' },
+    { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: 'text-primary-400' },
     { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: 'text-purple-400' },
     { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: 'text-orange-400' },
   ], [usage, t])
@@ -210,7 +210,7 @@ export default function Dashboard() {
 
       <div>
         <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-400" />
+          <Clock className="w-5 h-5 text-primary-400" />
           {t('dashboard.recentActivity')}
         </h2>
         <Card>

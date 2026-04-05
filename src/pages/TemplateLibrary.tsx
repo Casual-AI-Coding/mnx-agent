@@ -22,7 +22,7 @@ const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
 }
 
 const CATEGORY_COLORS: Record<TemplateCategory, string> = {
-  text: 'bg-blue-500/20 text-blue-400',
+  text: 'bg-primary-500/20 text-primary-400',
   image: 'bg-purple-500/20 text-purple-400',
   music: 'bg-pink-500/20 text-pink-400',
   video: 'bg-orange-500/20 text-orange-400',

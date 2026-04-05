@@ -16,6 +16,7 @@ import {
   Layers,
   Mic,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { RetryableError } from '@/components/shared/RetryableError'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -297,7 +298,7 @@ export default function VoiceAsync() {
     if (!file) return
 
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
-      alert('仅支持 .txt 和 .zip 文件')
+      toast.error('仅支持 .txt 和 .zip 文件')
       return
     }
 
@@ -311,7 +312,7 @@ export default function VoiceAsync() {
     if (!file) return
 
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
-      alert('仅支持 .txt 和 .zip 文件')
+      toast.error('仅支持 .txt 和 .zip 文件')
       return
     }
 

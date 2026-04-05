@@ -225,8 +225,8 @@ export function NodeOutputPanel({
 
         {/* Error section */}
         {error && (
-          <div className="p-4 bg-red-500/10 border-b border-red-500/20">
-            <div className="text-xs font-medium text-red-400 mb-1">错误</div>
+          <div className="p-4 bg-destructive/10 border-b border-destructive/20">
+            <div className="text-xs font-medium text-destructive mb-1">错误</div>
             <div className="text-xs text-red-300 font-mono break-all">{error}</div>
           </div>
         )}

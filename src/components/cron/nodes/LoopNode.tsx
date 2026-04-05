@@ -37,7 +37,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         header={
           <div className="flex items-center gap-2">
             {hasValidationError ? (
-              <AlertCircle className="w-3 h-3 text-red-400" />
+              <AlertCircle className="w-3 h-3 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-3 h-3 text-yellow-400" />
             ) : (
@@ -53,10 +53,10 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? 'bg-red-500/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-purple-500/10'
+            hasValidationError ? 'bg-destructive/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-purple-500/10'
           )}>
             {hasValidationError ? (
-              <AlertCircle className="w-5 h-5 text-red-400" />
+              <AlertCircle className="w-5 h-5 text-destructive" />
             ) : hasValidationWarning ? (
               <AlertTriangle className="w-5 h-5 text-yellow-400" />
             ) : (
@@ -66,7 +66,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
             )}>
               {label || 'Loop'}
             </p>
@@ -81,7 +81,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
                 <span className="text-xs text-muted-foreground/70">Max:</span>
                 <span className={cn(
                   'text-xs font-mono',
-                  hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-purple-400'
+hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-purple-400'
                 )}>{maxIterations}</span>
                 {currentIteration !== undefined && (
                   <span className="text-xs text-muted-foreground/50">
@@ -108,10 +108,10 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         type="source"
         position={Position.Bottom}
         id="break"
-        className="!w-3 !h-3 !bg-red-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-destructive !border-2 !border-dark-900"
         style={{ left: '70%' }}
       >
-        <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-red-400">Break</span>
+        <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-destructive">Break</span>
       </Handle>
     </>
   )

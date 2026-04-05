@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Settings,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -36,8 +37,8 @@ interface ServiceNodePermission {
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
-  super: { label: 'Super', variant: 'destructive', color: 'text-red-400' },
-  admin: { label: 'Admin', variant: 'default', color: 'text-blue-400' },
+  super: { label: 'Super', variant: 'destructive', color: 'text-destructive' },
+  admin: { label: 'Admin', variant: 'default', color: 'text-primary-400' },
   pro: { label: 'Pro', variant: 'secondary', color: 'text-purple-400' },
   user: { label: 'User', variant: 'outline', color: 'text-emerald-400' },
 }
@@ -121,10 +122,10 @@ export default function ServiceNodeManagement() {
       if (data.success) {
         setNodes(prev => prev.map(n => n.id === id ? data.data : n))
       } else {
-        alert(data.error || '更新失败')
+        toast.error(data.error || '更新失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     } finally {
       setSaving(null)
     }

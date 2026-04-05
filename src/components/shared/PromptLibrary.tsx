@@ -25,7 +25,7 @@ const categoryLabels: Record<PromptCategory | 'all', string> = {
 }
 
 const categoryColors: Record<PromptCategory, string> = {
-  text: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  text: 'bg-primary-500/20 text-primary-400 border-primary-500/30',
   image: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   music: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
   video: 'bg-orange-500/20 text-orange-400 border-orange-500/30',

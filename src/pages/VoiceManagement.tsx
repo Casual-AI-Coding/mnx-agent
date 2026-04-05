@@ -126,7 +126,7 @@ export default function VoiceManagement() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 'w-10 h-10 rounded-full flex items-center justify-center',
-                voice.gender === 'male' ? 'bg-blue-950/50 text-blue-400' : 'bg-pink-950/50 text-pink-400'
+                voice.gender === 'male' ? 'bg-blue-950/50 text-primary-400' : 'bg-pink-950/50 text-pink-400'
               )}>
                 <User className="w-5 h-5" />
               </div>
@@ -205,7 +205,7 @@ export default function VoiceManagement() {
           title="男声"
           value={maleCount}
           icon={User}
-          color="text-blue-400"
+          color="text-primary-400"
         />
         <StatCard
           title="女声"

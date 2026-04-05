@@ -16,6 +16,7 @@ import {
   Layers,
   Edit,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -150,10 +151,10 @@ export default function WorkflowTemplateManagement() {
           )
         )
       } else {
-        alert(data.error || '更新失败')
+        toast.error(data.error || '更新失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     }
   }
 
@@ -168,11 +169,11 @@ export default function WorkflowTemplateManagement() {
         setWorkflows(prev => prev.filter(w => w.id !== deleteDialog.workflow?.id))
         setDeleteDialog({ open: false, workflow: null, loading: false })
       } else {
-        alert(data.error || '删除失败')
+        toast.error(data.error || '删除失败')
         setDeleteDialog(prev => ({ ...prev, loading: false }))
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
       setDeleteDialog(prev => ({ ...prev, loading: false }))
     }
   }

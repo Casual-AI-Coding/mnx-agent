@@ -299,7 +299,7 @@ export default function ImageGeneration() {
                     />
                     <button
                       onClick={removeReferenceImage}
-                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground/70 hover:text-red-400 hover:bg-card transition-colors opacity-0 group-hover/image:opacity-100"
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground/70 hover:text-destructive hover:bg-card transition-colors opacity-0 group-hover/image:opacity-100"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -481,7 +481,7 @@ export default function ImageGeneration() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"
+                className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm"
               >
                 {error}
               </motion.div>

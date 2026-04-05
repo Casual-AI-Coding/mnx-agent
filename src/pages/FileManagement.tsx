@@ -21,8 +21,8 @@ interface FileItem {
 
 const FILE_TYPE_CONFIG: Record<string, { icon: typeof File; color: string }> = {
   image: { icon: Image, color: 'text-purple-400' },
-  audio: { icon: Music, color: 'text-blue-400' },
-  video: { icon: Video, color: 'text-red-400' },
+  audio: { icon: Music, color: 'text-primary-400' },
+  video: { icon: Video, color: 'text-destructive' },
   text: { icon: FileText, color: 'text-green-400' },
   default: { icon: File, color: 'text-muted-foreground' },
 }
@@ -193,7 +193,7 @@ export default function FileManagement() {
           title="文件总数"
           value={files.length}
           icon={File}
-          color="text-blue-400"
+          color="text-primary-400"
         />
         <StatCard
           title="文本文件"

@@ -45,7 +45,7 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
           header={
             <div className="flex items-center gap-2">
               {hasValidationError ? (
-                <AlertCircle className="w-3 h-3 text-red-400" />
+                <AlertCircle className="w-3 h-3 text-destructive" />
               ) : hasValidationWarning ? (
                 <AlertTriangle className="w-3 h-3 text-yellow-400" />
               ) : (
@@ -53,7 +53,7 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
               )}
               <span className={cn(
                 'text-xs font-medium',
-                hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
+hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
               )}>IF</span>
             </div>
           }
@@ -61,7 +61,7 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
           <div className="text-center">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
             )}>
               {label || 'Condition'}
             </p>
@@ -95,10 +95,10 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
         type="source"
         position={Position.Bottom}
         id="false"
-        className="!w-3 !h-3 !bg-red-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-destructive !border-2 !border-dark-900"
         style={{ bottom: -6 }}
       >
-        <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-red-400">False</span>
+        <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-destructive">False</span>
       </Handle>
     </>
   )
