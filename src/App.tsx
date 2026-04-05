@@ -221,7 +221,7 @@ function AppContent() {
           }
         />
         <Route
-          path="settings"
+          path="settings/:category?"
           element={
             <RouteWithErrorBoundary pageName="设置">
               <Settings />
