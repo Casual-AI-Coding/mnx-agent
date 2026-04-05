@@ -31,6 +31,8 @@ import type { TaskQueueItem } from '@/types/cron'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { formatDate } from '@/components/shared/dateUtils'
+import { taskStatus } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 export const TaskQueueTab = memo(function TaskQueueTab() {
   const { tasks, loading, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
@@ -103,8 +105,8 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-yellow-500/10">
-                <Clock className="w-5 h-5 text-yellow-400" />
+              <div className={cn('p-2 rounded-lg', taskStatus.pending.bg)}>
+                <Clock className={cn('w-5 h-5', taskStatus.pending.text)} />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -118,8 +120,8 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              <div className={cn('p-2 rounded-lg', taskStatus.running.bg)}>
+                <Loader2 className={cn('w-5 h-5 animate-spin', taskStatus.running.text)} />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -133,8 +135,8 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <div className={cn('p-2 rounded-lg', taskStatus.completed.bg)}>
+                <CheckCircle2 className={cn('w-5 h-5', taskStatus.completed.text)} />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">

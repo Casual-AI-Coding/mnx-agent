@@ -24,6 +24,7 @@ import type { TaskStatus } from '@/types/cron'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { formatDate, formatDuration } from '@/components/shared/dateUtils'
 import { ExecutionLogPanel } from './ExecutionLogPanel'
+import { status } from '@/themes/tokens'
 
 export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
   const { logs, logDetails, loading, detailsLoading, fetchLogs, fetchLogDetails } = useExecutionLogsStore()
@@ -158,7 +159,7 @@ export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                             <p className="text-xs text-muted-foreground/50">Executed</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-green-400 font-medium">{log.tasksSucceeded}</p>
+                            <p className={status.success.icon + ' font-medium'}>{log.tasksSucceeded}</p>
                             <p className="text-xs text-muted-foreground/50">Succeeded</p>
                           </div>
                           <div className="text-center">

@@ -328,8 +328,8 @@ function NodeResultItem({
       layout
       className={cn(
         'border rounded-lg overflow-hidden transition-colors',
-        result?.status === 'running' ? cn('border-blue-500/50', taskStatus.running.bg) : 'border-border',
-        result?.status === 'failed' && cn('border-red-500/50', taskStatus.failed.bg)
+        result?.status === 'running' ? cn(taskStatus.running.border.replace('/20', '/50'), taskStatus.running.bg) : 'border-border',
+        result?.status === 'failed' && cn(taskStatus.failed.border.replace('/20', '/50'), taskStatus.failed.bg)
       )}
     >
       <div
@@ -669,7 +669,7 @@ export function TestRunPanel({
             'text-sm font-medium transition-colors',
             isRunning && !isDryRun
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
-              : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+              : cn(taskStatus.completed.bg.replace('/10', '/20'), taskStatus.completed.text, 'hover:', taskStatus.completed.bg.replace('/10', '/30'))
           )}
         >
           {isRunning && !isDryRun ? (
@@ -724,19 +724,19 @@ export function TestRunPanel({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg"
+          className={cn('flex items-center justify-between p-3 border rounded-lg', taskStatus.running.bg, taskStatus.running.border)}
         >
           <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-            <span className="text-sm text-blue-400">执行中...</span>
+            <Loader2 className={cn('w-4 h-4 animate-spin', taskStatus.running.dot)} />
+            <span className={cn('text-sm', taskStatus.running.text)}>执行中...</span>
             {isSubscribed ? (
-              <span className="text-[10px] text-green-400 flex items-center gap-1">
-                <Activity className="w-3 h-3" />
+              <span className={cn('text-[10px] flex items-center gap-1', taskStatus.completed.text)}>
+                <Activity className={cn('w-3 h-3', taskStatus.completed.dot)} />
                 实时更新
               </span>
             ) : (
-              <span className="text-[10px] text-amber-400 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
+              <span className={cn('text-[10px] flex items-center gap-1', taskStatus.pending.text)}>
+                <AlertCircle className={cn('w-3 h-3', taskStatus.pending.dot)} />
                 未连接
               </span>
             )}

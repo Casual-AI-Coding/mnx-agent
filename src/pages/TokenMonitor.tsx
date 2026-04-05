@@ -293,35 +293,35 @@ export default function TokenMonitor() {
                       <div className="h-8 flex rounded-md overflow-hidden">
                         {day.textTokens > 0 && (
                           <div
-                            className="bg-blue-500"
+                            className={services.text.bgSolid}
                             style={{ width: `${(day.textTokens / maxChartValue) * 100}%` }}
                             title={`文本: ${day.textTokens}`}
                           />
                         )}
                         {day.voiceCharacters > 0 && (
                           <div
-                            className="bg-green-500"
+                            className={services.voice.bgSolid}
                             style={{ width: `${(day.voiceCharacters / maxChartValue) * 100}%` }}
                             title={`语音: ${day.voiceCharacters}`}
                           />
                         )}
                         {day.imageRequests > 0 && (
                           <div
-                            className="bg-purple-500"
+                            className={services.image.bgSolid}
                             style={{ width: `${(day.imageRequests / maxChartValue) * 100}%` }}
                             title={`图片: ${day.imageRequests}`}
                           />
                         )}
                         {day.musicRequests > 0 && (
                           <div
-                            className="bg-pink-500"
+                            className={services.music.bgSolid}
                             style={{ width: `${(day.musicRequests / maxChartValue) * 100}%` }}
                             title={`音乐: ${day.musicRequests}`}
                           />
                         )}
                         {day.videoRequests > 0 && (
                           <div
-                            className="bg-orange-500"
+                            className={services.video.bgSolid}
                             style={{ width: `${(day.videoRequests / maxChartValue) * 100}%` }}
                             title={`视频: ${day.videoRequests}`}
                           />
@@ -333,23 +333,23 @@ export default function TokenMonitor() {
 
                 <div className="flex items-center gap-4 pt-4 border-t text-sm">
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-blue-500 rounded" />
+                    <div className={cn('w-3 h-3 rounded', services.text.bgSolid)} />
                     <span>文本</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-green-500 rounded" />
+                    <div className={cn('w-3 h-3 rounded', services.voice.bgSolid)} />
                     <span>语音</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-purple-500 rounded" />
+                    <div className={cn('w-3 h-3 rounded', services.image.bgSolid)} />
                     <span>图片</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-pink-500 rounded" />
+                    <div className={cn('w-3 h-3 rounded', services.music.bgSolid)} />
                     <span>音乐</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-orange-500 rounded" />
+                    <div className={cn('w-3 h-3 rounded', services.video.bgSolid)} />
                     <span>视频</span>
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { Repeat, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { status, secondary, secondaryText } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface LoopNodeData extends Record<string, unknown> {
@@ -24,28 +25,28 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3 !h-3 !bg-purple-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-secondary !border-2 !border-border"
       />
 
       <BaseNodeWrapper
         isSelected={selected}
         borderColor={cn(
-          'border-purple-500/60',
-          hasValidationError && 'border-red-500',
-          hasValidationWarning && !hasValidationError && 'border-yellow-500'
+          'border-secondary/60',
+          hasValidationError && status.error.border,
+          hasValidationWarning && !hasValidationError && status.warning.border
         )}
         header={
           <div className="flex items-center gap-2">
             {hasValidationError ? (
-              <AlertCircle className="w-3 h-3 text-destructive" />
+              <AlertCircle className={cn('w-3 h-3', status.error.icon)} />
             ) : hasValidationWarning ? (
-              <AlertTriangle className="w-3 h-3 text-yellow-400" />
+              <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
             ) : (
-              <Repeat className="w-3 h-3 text-purple-400" />
+              <Repeat className={cn('w-3 h-3', secondaryText[400])} />
             )}
             <span className={cn(
               'text-xs font-medium',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-purple-400'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
             )}>Loop</span>
           </div>
         }
@@ -53,26 +54,26 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? 'bg-destructive/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-purple-500/10'
+            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : secondary[100]
           )}>
             {hasValidationError ? (
-              <AlertCircle className="w-5 h-5 text-destructive" />
+              <AlertCircle className={cn('w-5 h-5', status.error.icon)} />
             ) : hasValidationWarning ? (
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              <AlertTriangle className={cn('w-5 h-5', status.warning.icon)} />
             ) : (
-              <RefreshCw className="w-5 h-5 text-purple-400" />
+              <RefreshCw className={cn('w-5 h-5', secondaryText[400])} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-foreground'
             )}>
               {label || 'Loop'}
             </p>
             <p className={cn(
               'text-xs mt-1 truncate',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-purple-400'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
             )}>
               {condition || 'While condition'}
             </p>
@@ -81,7 +82,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
                 <span className="text-xs text-muted-foreground/70">Max:</span>
                 <span className={cn(
                   'text-xs font-mono',
-hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-purple-400'
+                  hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
                 )}>{maxIterations}</span>
                 {currentIteration !== undefined && (
                   <span className="text-xs text-muted-foreground/50">
@@ -98,17 +99,17 @@ hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-40
         type="source"
         position={Position.Bottom}
         id="continue"
-        className="!w-3 !h-3 !bg-purple-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-secondary !border-2 !border-border"
         style={{ left: '30%' }}
       >
-        <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-purple-400">Continue</span>
+        <span className={cn('absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs', secondaryText[400])}>Continue</span>
       </Handle>
 
       <Handle
         type="source"
         position={Position.Bottom}
         id="break"
-        className="!w-3 !h-3 !bg-destructive !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-destructive !border-2 !border-border"
         style={{ left: '70%' }}
       >
         <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-destructive">Break</span>

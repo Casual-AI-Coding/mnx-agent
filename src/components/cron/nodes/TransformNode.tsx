@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { ArrowRightLeft, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { status, primary, primaryText } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface TransformNodeData extends Record<string, unknown> {
@@ -27,28 +28,28 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-primary-600 !border-2 !border-border"
       />
 
       <BaseNodeWrapper
         isSelected={selected}
         borderColor={cn(
-          'border-indigo-500/60',
-          hasValidationError && 'border-red-500',
-          hasValidationWarning && !hasValidationError && 'border-yellow-500'
+          'border-primary-600/60',
+          hasValidationError && status.error.border,
+          hasValidationWarning && !hasValidationError && status.warning.border
         )}
         header={
           <div className="flex items-center gap-2">
             {hasValidationError ? (
-              <AlertCircle className="w-3 h-3 text-destructive" />
+              <AlertCircle className={cn('w-3 h-3', status.error.icon)} />
             ) : hasValidationWarning ? (
-              <AlertTriangle className="w-3 h-3 text-yellow-400" />
+              <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
             ) : (
-              <ArrowRightLeft className="w-3 h-3 text-indigo-400" />
+              <ArrowRightLeft className={cn('w-3 h-3', primaryText[400])} />
             )}
             <span className={cn(
               'text-xs font-medium',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-indigo-400'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
             )}>Transform</span>
           </div>
         }
@@ -56,26 +57,26 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? 'bg-destructive/10' : hasValidationWarning ? 'bg-yellow-500/10' : 'bg-indigo-500/10'
+            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : primary[100]
           )}>
             {hasValidationError ? (
-              <AlertCircle className="w-5 h-5 text-destructive" />
+              <AlertCircle className={cn('w-5 h-5', status.error.icon)} />
             ) : hasValidationWarning ? (
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              <AlertTriangle className={cn('w-5 h-5', status.warning.icon)} />
             ) : (
-              <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+              <ArrowRightLeft className={cn('w-5 h-5', primaryText[400])} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-foreground'
             )}>
               {label || 'Transform'}
             </p>
             <p className={cn(
               'text-xs mt-1',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-indigo-400'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
             )}>
               {transformType || 'Map Fields'}
             </p>
@@ -107,7 +108,7 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         type="source"
         position={Position.Bottom}
         id="out"
-        className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-primary-600 !border-2 !border-border"
       />
     </>
   )

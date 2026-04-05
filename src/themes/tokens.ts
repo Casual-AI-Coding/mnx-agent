@@ -243,36 +243,43 @@ export const taskStatus = {
 export const services = {
   text: {
     bg: 'bg-blue-500/10',
+    bgSolid: 'bg-blue-500',
     text: 'text-blue-600',
     icon: 'text-blue-500',
   },
   voice: {
     bg: 'bg-purple-500/10',
+    bgSolid: 'bg-purple-500',
     text: 'text-purple-600',
     icon: 'text-purple-500',
   },
   image: {
     bg: 'bg-pink-500/10',
+    bgSolid: 'bg-pink-500',
     text: 'text-pink-600',
     icon: 'text-pink-500',
   },
   music: {
     bg: 'bg-emerald-500/10',
+    bgSolid: 'bg-emerald-500',
     text: 'text-emerald-600',
     icon: 'text-emerald-500',
   },
   video: {
     bg: 'bg-red-500/10',
+    bgSolid: 'bg-red-500',
     text: 'text-red-600',
     icon: 'text-red-500',
   },
   cron: {
     bg: 'bg-amber-500/10',
+    bgSolid: 'bg-amber-500',
     text: 'text-amber-600',
     icon: 'text-amber-500',
   },
   workflow: {
     bg: 'bg-cyan-500/10',
+    bgSolid: 'bg-cyan-500',
     text: 'text-cyan-600',
     icon: 'text-cyan-500',
   },

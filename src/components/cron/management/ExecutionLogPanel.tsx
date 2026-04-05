@@ -33,6 +33,8 @@ import type { ExecutionLog, ExecutionLogDetail } from '@/types/cron'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { formatDate, formatDuration } from '@/components/shared/dateUtils'
 import { JsonViewer } from '@/components/shared/JsonViewer'
+import { taskStatus } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 interface ExecutionLogPanelProps {
   log: {
@@ -146,13 +148,14 @@ export const ExecutionLogPanel = memo(function ExecutionLogPanel({
                   </div>
 
                   <div
-                    className={`p-1.5 rounded ${
+                    className={cn(
+                      'p-1.5 rounded',
                       nodeStatus === 'completed'
-                        ? 'bg-green-500/10 text-green-400'
+                        ? cn(taskStatus.completed.bg, taskStatus.completed.text)
                         : nodeStatus === 'failed'
                         ? 'bg-destructive/10 text-destructive'
-                        : 'bg-blue-500/10 text-blue-400'
-                    }`}
+                        : cn(taskStatus.running.bg, taskStatus.running.text)
+                    )}
                   >
                     {nodeStatus === 'completed' && <CheckCircle2 className="w-3.5 h-3.5" />}
                     {nodeStatus === 'failed' && <XCircle className="w-3.5 h-3.5" />}

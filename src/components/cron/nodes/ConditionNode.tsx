@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { GitBranch, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { status, primary, primaryText } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface ConditionNodeData extends Record<string, unknown> {
@@ -24,7 +25,7 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3 !h-3 !bg-amber-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-border"
       />
 
       <div
@@ -37,23 +38,23 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
         <BaseNodeWrapper
           isSelected={selected}
           borderColor={cn(
-            'border-amber-500/60',
-            hasValidationError && 'border-red-500',
-            hasValidationWarning && !hasValidationError && 'border-yellow-500'
+            'border-primary/60',
+            hasValidationError && status.error.border,
+            hasValidationWarning && !hasValidationError && status.warning.border
           )}
           className="transform -rotate-45 w-36"
           header={
             <div className="flex items-center gap-2">
               {hasValidationError ? (
-                <AlertCircle className="w-3 h-3 text-destructive" />
+                <AlertCircle className={cn('w-3 h-3', status.error.icon)} />
               ) : hasValidationWarning ? (
-                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
               ) : (
-                <GitBranch className="w-3 h-3 text-amber-400" />
+                <GitBranch className={cn('w-3 h-3', primaryText[400])} />
               )}
               <span className={cn(
                 'text-xs font-medium',
-hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
+                hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
               )}>IF</span>
             </div>
           }
@@ -61,13 +62,13 @@ hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-40
           <div className="text-center">
             <p className={cn(
               'text-sm font-medium truncate',
-              hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-400' : 'text-foreground'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-foreground'
             )}>
               {label || 'Condition'}
             </p>
             <p className={cn(
               'text-xs mt-1',
-              hasValidationError ? 'text-red-400' : hasValidationWarning ? 'text-yellow-400' : 'text-amber-400'
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
             )}>
               {conditionType || 'Check'}
             </p>
@@ -85,17 +86,17 @@ hasValidationError ? 'text-destructive' : hasValidationWarning ? 'text-yellow-40
         type="source"
         position={Position.Right}
         id="true"
-        className="!w-3 !h-3 !bg-green-500 !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-success !border-2 !border-border"
         style={{ right: -6 }}
       >
-        <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-xs text-green-400">True</span>
+        <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-xs text-success">True</span>
       </Handle>
 
       <Handle
         type="source"
         position={Position.Bottom}
         id="false"
-        className="!w-3 !h-3 !bg-destructive !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-destructive !border-2 !border-border"
         style={{ bottom: -6 }}
       >
         <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs text-destructive">False</span>
