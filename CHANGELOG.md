@@ -2,6 +2,118 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.3] - 2026-04-05
+
+### Added
+
+**Settings System - 全面的配置管理系统 (Phase 1-4)**
+
+**后端实现：**
+- **Settings Service** (`server/services/settings-service.ts`) - 业务逻辑层
+  - 支持 10 个配置类别的 CRUD 操作
+  - 配置验证、加密、变更历史追踪
+- **Settings Repository** (`server/repositories/settings-repository.ts`) - 数据访问层
+- **Settings History Repository** (`server/repositories/settings-history-repository.ts`) - 变更审计日志
+- **Settings REST API** (`server/routes/settings/index.ts`) - 完整的 CRUD 端点
+  - `GET /api/settings` - 获取所有配置
+  - `GET /api/settings/:category` - 获取特定类别配置
+  - `PATCH /api/settings/:category` - 更新类别配置
+  - `DELETE /api/settings/:category` - 重置为默认值
+  - `GET /api/settings/history` - 配置变更历史
+  - `POST /api/settings/sync` - 手动触发同步
+- **数据库迁移** (`migration_024_settings_system.ts`) - 新增 4 张表
+  - `user_settings` - 用户配置存储（key-value per category）
+  - `settings_history` - 配置变更审计日志
+  - `system_settings` - 系统级默认配置
+  - `settings_sync_queue` - 离线同步队列
+- **Zod 验证 Schema** (`server/validation/settings-validation.ts`) - 配置输入验证
+
+**前端类型系统：**
+- **配置类别 TypeScript 接口** (`src/settings/types/`) - 10 个类别
+  - `category-account.ts` - 用户账号、语言、时区、会话超时
+  - `category-api.ts` - MiniMax API 密钥、区域、模式、超时
+  - `category-ui.ts` - 主题、侧边栏、动画、密度、字体大小
+  - `category-generation.ts` - 文本/语音/图像/音乐/视频默认参数
+  - `category-cron.ts` - 定时任务默认配置（时区、超时、重试）
+  - `category-workflow.ts` - 工作流构建器偏好（自动布局、网格、缩放）
+  - `category-notification.ts` - WebSocket/Webhook/邮件/桌面通知
+  - `category-media.ts` - 媒体存储、自动保存、命名模式、缩略图
+  - `category-privacy.ts` - 隐私、审计日志、导出加密、令牌刷新
+  - `category-accessibility.ts` - 高对比度、屏幕阅读器、键盘快捷键
+- **配置验证 Schema** (`src/settings/validation/`) - 10 个 Zod Schema
+- **存储类型定义** (`src/settings/types/storage.ts`) - StorageScope, SettingMetadata, SettingsChangeEvent
+
+**前端 Store：**
+- **Settings Store** (`src/settings/store/index.ts`) - Zustand 状态管理
+  - 支持配置的增删改查、验证、同步
+  - 订阅特定配置路径的变更通知
+- **默认配置值** (`src/settings/store/defaults.ts`) - 所有类别的默认值定义
+- **混合持久化策略** (`src/settings/store/persistence.ts`) - localStorage + Backend
+  - `localKeys` - UI 偏好（主题、布局、动画）
+  - `backendKeys` - 用户数据（API 密钥、Webhook 配置）
+  - `hybridKeys` - 关键配置（双存储，本地缓存 + 远程同步）
+  - `encryptedKeys` - 敏感配置（API 密钥、Webhook 密钥加密存储）
+- **配置迁移脚本** (`src/settings/migrate-legacy.ts`) - 从旧 Store 迁移
+  - 自动迁移 AppStore 和 AuthStore 的配置到新 Settings Store
+- **Settings Hooks** (`src/settings/store/hooks.ts`) - React Hooks 封装
+
+**前端 UI：**
+- **Settings 页面完整实现** (`src/pages/Settings.tsx`) - 重构版本
+- **Settings 布局组件** (`src/components/settings/`)
+  - `SettingsLayout.tsx` - 主布局
+  - `SettingsSidebar.tsx` - 类别导航（10 个类别）
+  - `SettingsContent.tsx` - 内容容器
+- **10 个配置类别面板** (`src/components/settings/categories/`)
+  - `AccountSettingsPanel.tsx` - 用户账号配置面板
+  - `ApiSettingsPanel.tsx` - API 配置面板（密钥、区域）
+  - `UISettingsPanel.tsx` - UI 配置面板（主题、布局）
+  - `GenerationSettingsPanel.tsx` - 生成参数配置面板（5 个子类别）
+  - `CronSettingsPanel.tsx` - Cron 配置面板
+  - `WorkflowSettingsPanel.tsx` - 工作流配置面板
+  - `NotificationSettingsPanel.tsx` - 通知配置面板
+  - `MediaSettingsPanel.tsx` - 媒体配置面板
+  - `PrivacySettingsPanel.tsx` - 隐私配置面板
+  - `AccessibilitySettingsPanel.tsx` - 无障碍配置面板
+- **6 种字段类型组件** (`src/components/settings/fields/`)
+  - `TextSetting.tsx` - 文本输入
+  - `NumberSetting.tsx` - 数字输入
+  - `SelectSetting.tsx` - 下拉选择
+  - `BooleanSetting.tsx` - 开关切换
+  - `RangeSetting.tsx` - 滑块调节
+  - `SettingsField.tsx` - 通用字段包装器
+
+**集成：**
+- **Settings 集成到生成页面**
+  - `ImageGeneration.tsx` - 从 Settings 读取默认图像生成参数
+  - `VideoGeneration.tsx` - 从 Settings 读取默认视频生成参数
+  - `VoiceSync.tsx` - 从 Settings 读取默认语音合成参数
+  - `MusicGeneration.tsx` - 从 Settings 读取默认音乐生成参数
+  - `TextGeneration.tsx` - 从 Settings 读取默认文本生成参数
+- **Sidebar 导航** - 新增 Settings 入口
+- **App 路由** - 添加 `/settings` 路由和带 category 参数的子路由
+
+### Changed
+
+- **Sidebar** - 添加 Settings 导航入口（齿轮图标）
+- **App.tsx** - 添加 Settings 路由配置
+- **Settings Modal** - 移除旧的 SettingsModal，替换为 NavLink 到新 Settings 页面
+
+### Performance
+
+- **混合持久化策略** - localStorage 缓存 UI 偏好，减少 API 调用
+- **Optimistic UI** - 配置更新立即反映，后台异步同步
+
+### Security
+
+- **API 密钥加密存储** - `api.minimaxKey` 加密后存储到 backend
+- **Webhook 密钥加密存储** - `notification.webhookSecret` 加密存储
+- **配置变更审计日志** - `settings_history` 表记录所有变更（用户、时间、旧值、新值）
+
+### Documentation
+
+- 新增 Settings 系统设计文档 `docs/superpowers/specs/2026-04-05-settings-system-design.md` (1039行)
+- 新增 Settings 系统实施计划 `docs/superpowers/plans/2026-04-05-settings-system-implementation.md` (639行)
+
 ## [1.5.2] - 2026-04-05
 
 ### Added
