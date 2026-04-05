@@ -1,6 +1,7 @@
 import { DatabaseConnection } from './connection.js'
 import { PG_SCHEMA_SQL } from './schema-pg.js'
 import { migration_021 } from './migrations/021_performance_indexes.js'
+import { migration_024 } from './migrations/024_settings_system.js'
 
 export interface Migration {
   id: number
@@ -492,6 +493,7 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_i
     `,
   },
   migration_021,
+  migration_024,
   {
     id: 22,
     name: 'migration_022_cron_jobs_misfire_policy',
