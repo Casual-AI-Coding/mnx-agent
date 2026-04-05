@@ -11,10 +11,7 @@ import type {
   CreateServiceNodePermission,
 } from '../database/types.js'
 import { AuditAction } from '../database/types.js'
-
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { BaseRepository } from './base-repository.js'
 
 function rowToAuditLog(row: AuditLogRow): AuditLog {
   return {
@@ -30,31 +27,34 @@ function rowToServiceNodePermission(row: ServiceNodePermissionRow): ServiceNodeP
   }
 }
 
-export class UserRepository {
-  private conn: DatabaseConnection
+export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
+  protected readonly tableName = 'audit_logs'
 
   constructor(conn: DatabaseConnection) {
-    this.conn = conn
+    super({ conn })
   }
 
-  protected isPostgres(): boolean {
-    return this.conn.isPostgres()
+  protected getIdColumn(): string {
+    return 'id'
+  }
+
+  protected rowToEntity(row: unknown): AuditLog {
+    return rowToAuditLog(row as AuditLogRow)
   }
 
   async createAuditLog(data: CreateAuditLog): Promise<AuditLog> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     await this.conn.execute(
       `INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, error_message, duration_ms, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [id, data.action, data.resource_type, data.resource_id ?? null, data.user_id ?? null, data.ip_address ?? null, data.user_agent ?? null, data.request_method ?? null, data.request_path ?? null, data.request_body ?? null, data.response_status ?? null, data.error_message ?? null, data.duration_ms ?? null, now]
     )
-    return (await this.getAuditLogById(id))!
+    return (await this.getById(id))!
   }
 
   async getAuditLogById(id: string): Promise<AuditLog | null> {
-    const rows = await this.conn.query<AuditLogRow>('SELECT * FROM audit_logs WHERE id = $1', [id])
-    return rows[0] ? rowToAuditLog(rows[0]) : null
+    return this.getById(id)
   }
 
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {
@@ -229,7 +229,7 @@ export class UserRepository {
 
   async upsertServiceNodePermission(data: CreateServiceNodePermission): Promise<void> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     const minRole = data.min_role || 'pro'
     const isEnabled = data.is_enabled !== undefined ? data.is_enabled : true
 

@@ -9,10 +9,6 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
-
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
   const nodes_json = typeof row.nodes_json === 'string'
     ? row.nodes_json
@@ -43,15 +39,19 @@ export interface WorkflowListOptions {
   offset?: number
 }
 
-export class WorkflowRepository {
-  private conn: DatabaseConnection
+export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
+  protected readonly tableName = 'workflow_templates'
 
   constructor(conn: DatabaseConnection) {
-    this.conn = conn
+    super({ conn })
   }
 
-  protected isPostgres(): boolean {
-    return this.conn.isPostgres()
+  protected getIdColumn(): string {
+    return 'id'
+  }
+
+  protected rowToEntity(row: unknown): WorkflowTemplate {
+    return rowToWorkflowTemplate(row as WorkflowTemplateRow)
   }
 
   async getAllTemplates(ownerId?: string): Promise<WorkflowTemplate[]> {
@@ -122,7 +122,7 @@ export class WorkflowRepository {
     ownerId?: string
   ): Promise<WorkflowTemplate> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     const isTemplate = template.is_public !== false
 
     if (this.isPostgres()) {
@@ -228,7 +228,7 @@ export class WorkflowRepository {
 
   async createPermission(data: { workflow_id: string; user_id: string; granted_by?: string | null }): Promise<void> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     await this.conn.execute(
       `INSERT INTO workflow_permissions (id, workflow_id, user_id, granted_by, created_at)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -294,7 +294,7 @@ export class WorkflowRepository {
 
   async createVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> {
     const id = `ver_${uuidv4().replace(/-/g, '')}`
-    const now = toISODate()
+    const now = this.toISODate()
 
     if (this.isPostgres()) {
       await this.conn.execute(

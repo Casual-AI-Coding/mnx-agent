@@ -12,10 +12,6 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
-
 function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
   const events = typeof row.events === 'string' ? JSON.parse(row.events) : row.events
   const headers = row.headers ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers) : null
@@ -36,28 +32,24 @@ function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
   }
 }
 
-export class WebhookRepository {
-  private conn: DatabaseConnection
+export class WebhookRepository extends BaseRepository<WebhookConfig, CreateWebhookConfig, UpdateWebhookConfig> {
+  protected readonly tableName = 'webhook_configs'
 
   constructor(conn: DatabaseConnection) {
-    this.conn = conn
+    super({ conn })
   }
 
   protected getIdColumn(): string {
     return 'id'
   }
 
-  protected toISODate(): string {
-    return new Date().toISOString()
-  }
-
-  protected isPostgres(): boolean {
-    return this.conn.isPostgres()
+  protected rowToEntity(row: unknown): WebhookConfig {
+    return rowToWebhookConfig(row as WebhookConfigRow)
   }
 
   async createConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     const events = JSON.stringify(data.events)
     const headers = data.headers ? JSON.stringify(data.headers) : null
 
@@ -74,19 +66,11 @@ export class WebhookRepository {
         [id, data.job_id ?? null, data.name, data.url, events, headers, data.secret ?? null, data.is_active ?? 1, ownerId ?? null, now, now]
       )
     }
-    return (await this.getConfigById(id))!
+    return (await this.getById(id))!
   }
 
   async getConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
-    if (ownerId) {
-      const rows = await this.conn.query<WebhookConfigRow>(
-        'SELECT * FROM webhook_configs WHERE id = $1 AND owner_id = $2',
-        [id, ownerId]
-      )
-      return rows[0] ? rowToWebhookConfig(rows[0]) : null
-    }
-    const rows = await this.conn.query<WebhookConfigRow>('SELECT * FROM webhook_configs WHERE id = $1', [id])
-    return rows[0] ? rowToWebhookConfig(rows[0]) : null
+    return this.getById(id, ownerId)
   }
 
   async getConfigsByJobId(jobId: string): Promise<WebhookConfig[]> {
@@ -118,7 +102,7 @@ export class WebhookRepository {
   }
 
   async updateConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> {
-    const existing = await this.getConfigById(id, ownerId)
+    const existing = await this.getById(id, ownerId)
     if (!existing) return null
 
     const fields: string[] = []
@@ -164,7 +148,7 @@ export class WebhookRepository {
     if (fields.length === 0) return existing
 
     fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
+    values.push(this.toISODate())
     paramIndex++
     values.push(id)
     if (ownerId) {
@@ -179,21 +163,16 @@ export class WebhookRepository {
         values
       )
     }
-    return this.getConfigById(id, ownerId)
+    return this.getById(id, ownerId)
   }
 
   async deleteConfig(id: string, ownerId?: string): Promise<boolean> {
-    if (ownerId) {
-      const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1 AND owner_id = $2', [id, ownerId])
-      return result.changes > 0
-    }
-    const result = await this.conn.execute('DELETE FROM webhook_configs WHERE id = $1', [id])
-    return result.changes > 0
+    return this.delete(id, ownerId)
   }
 
   async createDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = this.toISODate()
     const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
 
     if (this.isPostgres()) {

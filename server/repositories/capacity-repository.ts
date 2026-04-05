@@ -5,24 +5,25 @@ import type {
   CapacityRecordRow,
   UpdateCapacityRecord,
 } from '../database/types.js'
-
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { BaseRepository } from './base-repository.js'
 
 function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
   return row
 }
 
-export class CapacityRepository {
-  private conn: DatabaseConnection
+export class CapacityRepository extends BaseRepository<CapacityRecord> {
+  protected readonly tableName = 'capacity_tracking'
 
   constructor(conn: DatabaseConnection) {
-    this.conn = conn
+    super({ conn })
   }
 
-  protected isPostgres(): boolean {
-    return this.conn.isPostgres()
+  protected getIdColumn(): string {
+    return 'id'
+  }
+
+  protected rowToEntity(row: unknown): CapacityRecord {
+    return rowToCapacityRecord(row as CapacityRecordRow)
   }
 
   async getAll(): Promise<CapacityRecord[]> {
@@ -43,7 +44,7 @@ export class CapacityRepository {
     data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }
   ): Promise<CapacityRecord> {
     const existing = await this.getByService(serviceType)
-    const now = toISODate()
+    const now = this.toISODate()
 
     if (existing) {
       await this.conn.execute(
@@ -64,7 +65,7 @@ export class CapacityRepository {
   async updateCapacity(serviceType: string, remaining: number): Promise<void> {
     await this.conn.execute(
       'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [remaining, toISODate(), serviceType]
+      [remaining, this.toISODate(), serviceType]
     )
   }
 
@@ -75,7 +76,7 @@ export class CapacityRepository {
     const newRemaining = Math.max(0, existing.remaining_quota - amount)
     await this.conn.execute(
       'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [newRemaining, toISODate(), serviceType]
+      [newRemaining, this.toISODate(), serviceType]
     )
     return this.getByService(serviceType)
   }
