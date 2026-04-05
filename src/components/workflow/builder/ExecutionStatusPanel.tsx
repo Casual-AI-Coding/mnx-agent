@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Panel } from '@xyflow/react'
 import { cn } from '@/lib/utils'
+import { status as statusTokens } from '@/themes/tokens'
 
 interface ExecutionStatusPanelProps {
   executionId: string | null
@@ -56,10 +57,10 @@ export function ExecutionStatusPanel({
   const progress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0
 
   const statusConfig = {
-    idle: { color: 'bg-gray-500', text: 'Idle', icon: Clock },
-    running: { color: 'bg-blue-500', text: 'Running', icon: Play },
-    completed: { color: 'bg-green-500', text: 'Completed', icon: CheckCircle },
-    paused: { color: 'bg-amber-500', text: 'Paused', icon: Pause },
+    idle: { color: statusTokens.pending.bg, text: 'Idle', icon: Clock },
+    running: { color: statusTokens.info.bg, text: 'Running', icon: Play },
+    completed: { color: statusTokens.success.bg, text: 'Completed', icon: CheckCircle },
+    paused: { color: statusTokens.warning.bg, text: 'Paused', icon: Pause },
   }
 
   const StatusIcon = statusConfig[status].icon
@@ -107,14 +108,14 @@ export function ExecutionStatusPanel({
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <Loader2 className="w-3 h-3 text-blue-500" />
+              <Loader2 className={cn('w-3 h-3', statusTokens.info.icon)} />
               <span className="text-sm font-semibold text-foreground">{runningNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">Running</span>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
+              <CheckCircle className={cn('w-3 h-3', statusTokens.success.icon)} />
               <span className="text-sm font-semibold text-foreground">{completedNodes}</span>
             </div>
             <span className="text-[10px] text-muted-foreground">Completed</span>

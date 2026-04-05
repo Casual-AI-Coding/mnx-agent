@@ -46,6 +46,8 @@ import { useCronJobsStore } from '@/stores/cronJobs'
 import type { WebhookConfig, WebhookDelivery, WebhookEvent, CreateWebhookConfig, UpdateWebhookConfig } from '@/types/cron'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { status } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 const WEBHOOK_EVENTS: { value: WebhookEvent; label: string; description: string }[] = [
   { value: 'on_start', label: 'On Start', description: 'Triggered when job execution starts' },
@@ -80,9 +82,9 @@ const StatusBadge = memo(function StatusBadge({ isActive }: { isActive: boolean 
 
 const EventBadge = memo(function EventBadge({ event }: { event: WebhookEvent }) {
   const colors: Record<WebhookEvent, string> = {
-    on_start: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-    on_success: 'bg-green-500/10 text-green-400 border-green-500/20',
-    on_failure: 'bg-destructive/10 text-destructive border-destructive/20',
+    on_start: cn('bg-primary/10 text-primary border-primary/20'),
+    on_success: cn(status.success.bgSubtle, status.success.icon, status.success.border),
+    on_failure: cn(status.error.bgSubtle, status.error.icon, status.error.border),
   }
 
   const labels: Record<WebhookEvent, string> = {
@@ -215,7 +217,7 @@ function WebhookFormModal({ isOpen, onClose, onSubmit, webhook }: WebhookFormMod
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -437,7 +439,7 @@ const DeliveryLogModal = memo(function DeliveryLogModal({
   if (!isOpen || !webhook) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

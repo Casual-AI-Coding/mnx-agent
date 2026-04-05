@@ -22,6 +22,7 @@ import { useWorkflowBuilder } from '@/components/workflow/hooks/useWorkflowBuild
 import { storeNodeToRFNode } from '@/components/workflow/utils/workflow-transforms'
 import { useWorkflowStore } from '@/stores/workflow'
 import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 import { apiClient } from '@/lib/api/client'
 import {
   pauseExecution,
@@ -259,7 +260,7 @@ function WorkflowBuilderInner() {
       {builder.saveMessage && (
         <div className={cn(
           'absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md text-sm font-medium',
-          builder.saveMessage.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-destructive/90 text-white'
+          builder.saveMessage.type === 'success' ? cn(status.success.bg, status.success.foreground) : cn(status.error.bg, status.error.foreground)
         )}>
           {builder.saveMessage.text}
         </div>

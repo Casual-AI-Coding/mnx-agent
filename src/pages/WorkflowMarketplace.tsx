@@ -34,6 +34,7 @@ import {
   type TemplateCategory,
 } from '@/data/workflow-templates'
 import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 import { toast } from 'sonner'
 
 const containerVariants = {
@@ -76,9 +77,9 @@ function getDifficultyLabel(difficulty: string): string {
 
 function getDifficultyColor(difficulty: string): string {
   const colors: Record<string, string> = {
-    beginner: 'bg-green-500/20 text-green-400',
-    intermediate: 'bg-yellow-500/20 text-yellow-400',
-    advanced: 'bg-destructive/20 text-destructive',
+    beginner: cn(status.success.bgSubtle, status.success.icon),
+    intermediate: cn(status.warning.bgSubtle, status.warning.icon),
+    advanced: cn(status.error.bgSubtle, status.error.icon),
   }
   return colors[difficulty] || 'bg-gray-500/20 text-gray-400'
 }

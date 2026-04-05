@@ -657,8 +657,8 @@ export default function DeadLetterQueue() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <div className={cn('p-2 rounded-lg', status.success.bgSubtle)}>
+                <CheckCircle2 className={cn('w-5 h-5', status.success.icon)} />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{resolvedCount}</p>
@@ -670,8 +670,8 @@ export default function DeadLetterQueue() {
         <Card className="bg-card/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary-500/10">
-                <Package className="w-5 h-5 text-primary-400" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{items.length}</p>

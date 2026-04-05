@@ -16,6 +16,8 @@ import {
 import '@xyflow/react/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 
 import { ActionNode } from '@/components/workflow/nodes/ActionNode'
 import { DelayNode } from '@/components/workflow/nodes/DelayNode'
@@ -24,7 +26,6 @@ import { LoopNode } from '@/components/cron/nodes/LoopNode'
 import { ConditionNode } from '@/components/cron/nodes/ConditionNode'
 import { TransformNode } from '@/components/cron/nodes/TransformNode'
 import { ExecutionStatusPanel } from '@/components/workflow/builder/ExecutionStatusPanel'
-import { cn } from '@/lib/utils'
 import type { ExecutionStatusPanelProps } from '@/components/workflow/builder/types'
 
 export interface WorkflowCanvasProps {
@@ -134,8 +135,8 @@ export function WorkflowCanvas({
                 className={cn(
                   'px-4 py-2 rounded-lg shadow-lg flex items-center gap-2',
                   validationResult.valid
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                    ? cn(status.success.bgSubtle, status.success.text, 'border', status.success.border)
+                    : cn(status.warning.bgSubtle, status.warning.text, 'border', status.warning.border)
                 )}
               >
                 {validationResult.valid ? (

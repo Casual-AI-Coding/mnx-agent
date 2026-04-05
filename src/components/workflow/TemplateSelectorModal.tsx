@@ -43,11 +43,11 @@ interface WorkflowSelectorModalProps {
 }
 
 const NODE_TYPE_COLORS: Record<string, string> = {
-  action: 'bg-blue-500/80',
-  condition: 'bg-amber-500/80',
-  loop: 'bg-purple-500/80',
-  transform: 'bg-indigo-500/80',
-  default: 'bg-slate-500/80',
+  action: 'bg-primary/80',
+  condition: 'bg-warning/80',
+  loop: 'bg-accent/80',
+  transform: 'bg-secondary/80',
+  default: 'bg-muted/80',
 }
 
 const NODE_TYPE_ICONS: Record<string, string> = {

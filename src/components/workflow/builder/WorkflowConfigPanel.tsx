@@ -6,6 +6,7 @@ import type { Node } from '@xyflow/react'
 import type { ValidationError } from '@/lib/workflow-validation'
 import { getErrorHelp } from '@/lib/workflow-error-messages'
 import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 import { logicNodes } from './WorkflowNodePalette'
 
 interface WorkflowConfigPanelProps {
@@ -86,8 +87,8 @@ export function WorkflowConfigPanel({
               const help = getErrorHelp(error.code)
               return (
                 <div key={idx} className="text-xs">
-                  <div className="text-red-300 font-medium">{help.title}</div>
-                  <div className="text-red-400/70 mt-0.5">{help.description}</div>
+                  <div className={status.error.text}>{help.title}</div>
+                  <div className={cn('mt-0.5', status.error.icon)}>{help.description}</div>
                   <div className="text-primary-foreground/60 mt-1 flex items-start gap-1.5">
                     <span className="text-[10px] text-primary">💡</span>
                     <span>{help.suggestion}</span>
@@ -241,8 +242,8 @@ export function WorkflowConfigPanel({
         )}
 
         {nodeType === 'errorBoundary' && (
-          <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/30">
-            <p className="text-xs text-teal-400">
+          <div className={cn('p-3 rounded-lg', status.info.bgSubtle, 'border', status.info.border)}>
+            <p className={cn('text-xs', status.info.text)}>
               Error Boundary wraps downstream nodes to catch errors.
               Connect nodes to the &quot;Success&quot; handle for normal flow,
               and to the &quot;Error&quot; handle for error recovery.
@@ -250,7 +251,7 @@ export function WorkflowConfigPanel({
             <p className="text-xs text-muted-foreground/70 mt-2">
               On error, the error context will be available via:
             </p>
-            <code className="text-xs text-teal-300 font-mono block mt-1">
+            <code className={cn('text-xs font-mono block mt-1', status.info.icon)}>
               {'{{'}nodeId.error.message{'}}'}
             </code>
           </div>
