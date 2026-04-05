@@ -37,7 +37,6 @@ import {
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
 import { useAuthStore, type UserRole } from '@/stores/auth'
-import { SettingsModal } from '@/components/settings'
 
 const roleHierarchy: Record<UserRole, number> = {
   user: 0,
@@ -92,7 +91,6 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
   const location = useLocation()
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(getStoredCollapsed)
 
   const userRoleLevel = user ? roleHierarchy[user.role] : 0
@@ -106,25 +104,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
     onCollapseChange?.(isCollapsed)
   }, [isCollapsed, onCollapseChange])
 
-  useEffect(() => {
-    if (!showSettingsModal) return
-
-    document.body.style.overflow = 'hidden'
-
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowSettingsModal(false)
-      }
-    }
-    window.addEventListener('keydown', handleEsc)
-
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', handleEsc)
-    }
-  }, [showSettingsModal])
-
-  const toggleSection = (sectionId: string) => {
+const toggleSection = (sectionId: string) => {
     if (isCollapsed) {
       setIsCollapsed(false)
     }
@@ -369,13 +349,18 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
               <span className="text-white font-bold text-[10px]">M</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                title="Settings"
-              >
-                <Cog className="w-4 h-4" />
-              </button>
+                           <NavLink
+                              to="/settings"
+                              className={({ isActive }) =>
+                                cn(
+                                  'text-muted-foreground hover:text-foreground transition-colors p-1',
+                                  isActive && 'text-primary'
+                                )
+                              }
+                              title="Settings"
+                            >
+                              <Cog className="w-4 h-4" />
+                            </NavLink>
               <ShortcutsHelpButton collapsed />
               <a
                 href="https://github.com/oGsLP/mnx-agent"
@@ -397,13 +382,18 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
               <span className="text-xs">{t('sidebar.createdBy')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="Settings"
-              >
-                <Cog className="w-4 h-4" />
-              </button>
+                             <NavLink
+                              to="/settings"
+                              className={({ isActive }) =>
+                                cn(
+                                  'text-muted-foreground hover:text-foreground transition-colors',
+                                  isActive && 'text-primary'
+                                )
+                              }
+                              title="Settings"
+                            >
+                              <Cog className="w-4 h-4" />
+                            </NavLink>
               <ShortcutsHelpButton />
               <a
                 href="https://github.com/oGsLP/mnx-agent"
@@ -418,8 +408,6 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
           </div>
         )}
       </div>
-
-      <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </aside>
   )
 }
