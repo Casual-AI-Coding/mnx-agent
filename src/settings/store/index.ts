@@ -167,10 +167,16 @@ export const useSettingsStore = create<SettingsState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Merge localStorage recovered data with defaults
+          // api field is excluded from localStorage (see partialize above)
+          // so api will be undefined here and will use DEFAULT_SETTINGS.api temporarily
+          // The actual API key will be loaded from backend via initialize() method
           state.settings = {
             ...DEFAULT_SETTINGS,
             ...state.settings,
-            api: DEFAULT_SETTINGS.api,
+            // Don't force override api - let initialize() load from backend
+            // If state.settings.api exists (edge case), preserve it; otherwise use defaults
+            api: state.settings.api ?? DEFAULT_SETTINGS.api,
           }
         }
       },
