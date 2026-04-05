@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const apiSettingsSchema = z.object({
-  minimaxKey: z.string().min(32).max(128),
+  minimaxKey: z.string().max(256),
   region: z.enum(['cn', 'intl']),
   mode: z.enum(['direct', 'proxy']),
   timeout: z.number().int().min(1000).max(120000),

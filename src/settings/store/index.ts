@@ -159,10 +159,12 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        // Only persist local and hybrid settings
-        settings: state.settings,
-      }),
+      partialize: (state) => {
+        const { api, ...safeSettings } = state.settings
+        return {
+          settings: safeSettings as Partial<AllSettings>,
+        }
+      },
     }
   )
 )
