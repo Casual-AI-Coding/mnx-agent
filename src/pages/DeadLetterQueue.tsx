@@ -344,7 +344,7 @@ function BulkRetryModal({ isOpen, onClose, selectedItems, onConfirm, isProcessin
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -368,12 +368,12 @@ function BulkRetryModal({ isOpen, onClose, selectedItems, onConfirm, isProcessin
           <p className="text-foreground">
             You are about to retry <strong>{selectedItems.length}</strong> failed task(s).
           </p>
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div className={cn('bg-warning/10 border border-warning/30 rounded-lg p-4')}>
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-medium text-yellow-400">Warning</span>
+              <AlertTriangle className={cn('w-4 h-4', status.warning.icon)} />
+              <span className={cn('text-sm font-medium', status.warning.text)}>Warning</span>
             </div>
-            <p className="text-sm text-yellow-400/80 mt-1">
+            <p className={cn('text-sm mt-1', status.warning.text)}>
               This action will re-queue all selected tasks. Make sure you have reviewed the errors.
             </p>
           </div>
