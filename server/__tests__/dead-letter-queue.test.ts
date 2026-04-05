@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { DatabaseService } from '../database/service-async.js'
-import { createConnection, getConnection } from '../database/connection.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
 import type {
   DeadLetterQueueItem,
   CreateDeadLetterQueueItem,
@@ -14,13 +14,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
   let testUser2Id: string
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     db = new DatabaseService(getConnection())
   })
 
@@ -54,6 +48,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
   })
 
   afterAll(async () => {
+    await teardownTestDatabase()
   })
 
   describe('createDeadLetterQueueItem', () => {

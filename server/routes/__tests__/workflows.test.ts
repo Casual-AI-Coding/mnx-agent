@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { createConnection, getConnection } from '../../database/connection.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../__tests__/test-helpers.js'
 import workflowsRouter from '../workflows.js'
 
 const mockUser = {
@@ -18,13 +18,7 @@ describe('Workflows API Routes', () => {
   let app: express.Application
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
@@ -37,6 +31,7 @@ describe('Workflows API Routes', () => {
   })
 
   afterAll(async () => {
+    await teardownTestDatabase()
   })
 
   describe('GET /api/workflows', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { createConnection, getConnection } from '../connection.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../__tests__/test-helpers.js'
 import { DatabaseService } from '../service-async.js'
 import type { CreateMediaRecord, MediaType, MediaSource } from '../types.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -10,13 +10,7 @@ describe('MediaRecord Database Service', () => {
   let testOwnerId2: string
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     db = new DatabaseService(getConnection())
     
     // Create test users for owner_id tests
@@ -46,6 +40,7 @@ describe('MediaRecord Database Service', () => {
   afterAll(async () => {
     const conn = getConnection()
     await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testOwnerId1, testOwnerId2])
+    await teardownTestDatabase()
   })
 
   describe('Create MediaRecord', () => {

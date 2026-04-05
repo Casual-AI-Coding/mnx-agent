@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { getDatabase } from '../database/service-async'
-import { createConnection, getConnection } from '../database/connection'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
 import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { CronScheduler } from '../services/cron-scheduler'
@@ -94,13 +94,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
   const testJobIds: string[] = []
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerServices(db)
@@ -124,6 +118,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
         await db.deleteWorkflowTemplate(workflow.id, null)
       } catch {}
     }
+    await teardownTestDatabase()
   })
 
   describe('B-1: Action + Condition', () => {
@@ -413,13 +408,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
   let scheduler: CronScheduler
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerServices(db)
@@ -439,6 +428,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
 
   afterAll(async () => {
     resetServiceNodeRegistry()
+    await teardownTestDatabase()
   })
 
   describe('C-1: Scheduled Image Generation + Save', () => {

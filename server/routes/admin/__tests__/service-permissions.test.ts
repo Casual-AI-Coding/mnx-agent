@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { createConnection, closeConnection, getConnection } from '../../../database/connection.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../../__tests__/test-helpers.js'
 import { getDatabase } from '../../../database/service-async.js'
 import servicePermissionsRouter from '../service-permissions.js'
 
@@ -20,13 +20,7 @@ describe('Service Permissions API Routes', () => {
   let db: Awaited<ReturnType<typeof getDatabase>>
 
   beforeAll(async () => {
-    await createConnection({
-      pgHost: process.env.DB_HOST || 'localhost',
-      pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-      pgUser: process.env.DB_USER || 'postgres',
-      pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
-    })
+    await setupTestDatabase()
     db = await getDatabase()
 
     app = express()
@@ -36,7 +30,7 @@ describe('Service Permissions API Routes', () => {
   })
 
   afterAll(async () => {
-    await closeConnection()
+    await teardownTestDatabase()
   })
 
   beforeEach(async () => {
