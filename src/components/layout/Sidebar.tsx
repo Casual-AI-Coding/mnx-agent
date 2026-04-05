@@ -37,6 +37,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
 import { useAuthStore, type UserRole } from '@/stores/auth'
+import { SettingsModal } from '@/components/settings/SettingsModal'
 
 const roleHierarchy: Record<UserRole, number> = {
   user: 0,
@@ -92,6 +93,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
   const [isCollapsed, setIsCollapsed] = useState(getStoredCollapsed)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const userRoleLevel = user ? roleHierarchy[user.role] : 0
 
@@ -175,7 +177,6 @@ const toggleSection = (sectionId: string) => {
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
         { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Shield },
-        { path: '/system-config', label: t('sidebar.systemConfig', '系统配置'), icon: Settings },
       ],
     },
   ]
@@ -349,18 +350,13 @@ const toggleSection = (sectionId: string) => {
               <span className="text-white font-bold text-[10px]">M</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-                           <NavLink
-                              to="/settings"
-                              className={({ isActive }) =>
-                                cn(
-                                  'text-muted-foreground hover:text-foreground transition-colors p-1',
-                                  isActive && 'text-primary'
-                                )
-                              }
-                              title="Settings"
-                            >
-                              <Cog className="w-4 h-4" />
-                            </NavLink>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                title="Settings"
+              >
+                <Cog className="w-4 h-4" />
+              </button>
               <ShortcutsHelpButton collapsed />
               <a
                 href="https://github.com/oGsLP/mnx-agent"
@@ -382,18 +378,13 @@ const toggleSection = (sectionId: string) => {
               <span className="text-xs">{t('sidebar.createdBy')}</span>
             </div>
             <div className="flex items-center gap-2">
-                             <NavLink
-                              to="/settings"
-                              className={({ isActive }) =>
-                                cn(
-                                  'text-muted-foreground hover:text-foreground transition-colors',
-                                  isActive && 'text-primary'
-                                )
-                              }
-                              title="Settings"
-                            >
-                              <Cog className="w-4 h-4" />
-                            </NavLink>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="Settings"
+              >
+                <Cog className="w-4 h-4" />
+              </button>
               <ShortcutsHelpButton />
               <a
                 href="https://github.com/oGsLP/mnx-agent"
@@ -408,6 +399,8 @@ const toggleSection = (sectionId: string) => {
           </div>
         )}
       </div>
+
+      <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </aside>
   )
 }

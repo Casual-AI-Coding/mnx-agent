@@ -123,7 +123,7 @@ export function useWorkflowBuilder(workflowId: string | null): UseWorkflowBuilde
     edges: [],
   })
 
-  // Sync React Flow state with history state
+  // Sync React Flow state with history state (only on undo/redo)
   React.useEffect(() => {
     if (
       JSON.stringify(nodes) !== JSON.stringify(state.nodes) ||
@@ -132,7 +132,8 @@ export function useWorkflowBuilder(workflowId: string | null): UseWorkflowBuilde
       setNodes(state.nodes)
       setEdges(state.edges)
     }
-  }, [state, nodes, edges, setNodes, setEdges])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, setNodes, setEdges])
 
   // Track changes for history
   React.useEffect(() => {
