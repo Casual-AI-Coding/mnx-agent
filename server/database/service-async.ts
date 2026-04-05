@@ -1,6 +1,5 @@
-import { v4 as uuidv4 } from 'uuid'
-import { DatabaseConnection, createConnection, getConnection, closeConnection, QueryResultRow } from './connection.js'
-import { TaskStatus, TriggerType, ExecutionStatus, MisfirePolicy } from './types.js'
+import { DatabaseConnection, createConnection, closeConnection, QueryResultRow } from './connection.js'
+import { TaskStatus, TriggerType, ExecutionStatus } from './types.js'
 import type {
   CronJob,
   TaskQueueItem,
@@ -21,45 +20,28 @@ import type {
   CreateWorkflowVersion,
   UpdateWorkflowVersion,
   RunStats,
-  CronJobRow,
-  TaskQueueRow,
-  ExecutionLogRow,
-  ExecutionLogDetailRow,
-  CapacityRecordRow,
-  WorkflowTemplateRow,
-  WorkflowVersionRow,
   MediaRecord,
-  MediaRecordRow,
   CreateMediaRecord,
   PromptTemplate,
-  PromptTemplateRow,
   CreatePromptTemplate,
   UpdatePromptTemplate,
   AuditLog,
-  AuditLogRow,
   CreateAuditLog,
   AuditLogQuery,
   AuditStats,
   ServiceNodePermission,
-  ServiceNodePermissionRow,
   DeadLetterQueueItem,
-  DeadLetterQueueRow,
   CreateDeadLetterQueueItem,
   UpdateDeadLetterQueueItem,
   JobTag,
-  JobTagRow,
   JobDependency,
-  JobDependencyRow,
   WebhookConfig,
-  WebhookConfigRow,
   WebhookDelivery,
-  WebhookDeliveryRow,
   CreateWebhookConfig,
   UpdateWebhookConfig,
   CreateWebhookDelivery,
   WebhookEvent,
   SystemConfig,
-  SystemConfigRow,
   CreateSystemConfig,
   UpdateSystemConfig,
 } from './types.js'
@@ -76,136 +58,6 @@ import {
   PromptTemplateRepository,
   SystemConfigRepository,
 } from '../repositories/index.js'
-
-function toISODate(): string {
-  return new Date().toISOString()
-}
-
-function rowToCronJob(row: CronJobRow): CronJob {
-  return { 
-    ...row, 
-    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
-    timeout_ms: row.timeout_ms ?? 300000,
-    misfire_policy: (row.misfire_policy as MisfirePolicy) ?? MisfirePolicy.FIRE_ONCE,
-  }
-}
-
-function rowToTaskQueueItem(row: TaskQueueRow): TaskQueueItem {
-  return { ...row, status: row.status as TaskStatus }
-}
-
-function rowToExecutionLog(row: ExecutionLogRow): ExecutionLog {
-  return { ...row, trigger_type: row.trigger_type as TriggerType, status: row.status as ExecutionStatus }
-}
-
-function rowToExecutionLogDetail(row: ExecutionLogDetailRow): ExecutionLogDetail {
-  return { ...row }
-}
-
-function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
-  return row
-}
-
-function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
-  const nodes_json = typeof row.nodes_json === 'string' 
-    ? row.nodes_json 
-    : JSON.stringify(row.nodes_json)
-  const edges_json = typeof row.edges_json === 'string' 
-    ? row.edges_json 
-    : JSON.stringify(row.edges_json)
-  
-  return { 
-    ...row, 
-    nodes_json, 
-    edges_json, 
-    is_public: typeof row.is_public === 'boolean' ? row.is_public : row.is_public === 1 
-  }
-}
-
-function rowToWorkflowVersion(row: WorkflowVersionRow): WorkflowVersion {
-  return {
-    ...row,
-    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
-  }
-}
-
-function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
-  const metadata = row.metadata ? (typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata) : null
-  return {
-    ...row,
-    type: row.type as MediaRecord['type'],
-    source: row.source as MediaRecord['source'],
-    size_bytes: typeof row.size_bytes === 'string' ? parseInt(row.size_bytes, 10) : row.size_bytes,
-    is_deleted: typeof row.is_deleted === 'boolean' ? row.is_deleted : row.is_deleted === 1,
-    metadata,
-  }
-}
-
-function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
-  const variables = row.variables ? (typeof row.variables === 'string' ? JSON.parse(row.variables) : row.variables) : []
-  return {
-    ...row,
-    category: row.category as PromptTemplate['category'],
-    is_builtin: typeof row.is_builtin === 'boolean' ? row.is_builtin : row.is_builtin === 1,
-    variables,
-  }
-}
-
-function rowToAuditLog(row: AuditLogRow): AuditLog {
-  return {
-    ...row,
-    action: row.action as AuditLog['action'],
-  }
-}
-
-function rowToServiceNodePermission(row: ServiceNodePermissionRow): ServiceNodePermission {
-  return {
-    ...row,
-  }
-}
-
-function rowToDeadLetterQueueItem(row: DeadLetterQueueRow): DeadLetterQueueItem {
-  const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
-  return {
-    ...row,
-    payload,
-  }
-}
-
-function rowToJobTag(row: JobTagRow): JobTag {
-  return { ...row }
-}
-
-function rowToJobDependency(row: JobDependencyRow): JobDependency {
-  return { ...row }
-}
-
-function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
-  const events = typeof row.events === 'string' ? JSON.parse(row.events) : row.events
-  const headers = row.headers ? (typeof row.headers === 'string' ? JSON.parse(row.headers) : row.headers) : null
-  return {
-    ...row,
-    events: events as WebhookEvent[],
-    headers: headers as Record<string, string> | null,
-    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
-  }
-}
-
-function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
-  const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
-  return {
-    ...row,
-    event: row.event as WebhookEvent,
-    payload,
-  }
-}
-
-function rowToSystemConfig(row: SystemConfigRow): SystemConfig {
-  return {
-    ...row,
-    value_type: row.value_type as SystemConfig['value_type'],
-  }
-}
 
 export class DatabaseService {
   private conn: DatabaseConnection
@@ -305,14 +157,6 @@ export class DatabaseService {
 
   isPostgres(): boolean {
     return this.conn.isPostgres()
-  }
-
-  private formatDateForPostgres(date: string): string {
-    return date
-  }
-
-  private getTimestampDefault(): string {
-    return toISODate()
   }
 
   async getAllCronJobs(ownerId?: string): Promise<CronJob[]> {
@@ -845,7 +689,7 @@ export class DatabaseService {
     }, item.owner_id ?? undefined)
 
     await this.updateDeadLetterQueueItem(id, {
-      resolved_at: toISODate(),
+      resolved_at: new Date().toISOString(),
       resolution: 'retried',
     }, ownerId)
 
