@@ -9,6 +9,8 @@ import type {
   CreateExecutionLogDetail,
 } from '../database/types.js'
 
+const testDbName = process.env.DB_TEST_NAME || `${process.env.DB_NAME || 'mnx_agent'}_test`
+
 describe('DatabaseService', () => {
   let db: DatabaseService
 
@@ -18,7 +20,7 @@ describe('DatabaseService', () => {
       pgPort: parseInt(process.env.DB_PORT || '5432', 10),
       pgUser: process.env.DB_USER || 'postgres',
       pgPassword: process.env.DB_PASSWORD || '',
-      pgDatabase: process.env.DB_NAME || 'minimax_agent',
+      pgDatabase: testDbName,
     })
     db = new DatabaseService(getConnection())
     await db.init()
