@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -22,7 +23,11 @@ import {
   ArrowUpDown,
   X,
   RotateCcw,
+  Key,
+  Copy,
+  Check,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -30,6 +35,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Switch } from '@/components/ui/Switch'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { BatchOperationToolbar } from '@/components/shared/BatchOperationToolbar'
+import { ExportButton } from '@/components/shared/ExportButton'
+import { Pagination } from '@/components/shared/Pagination'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -142,7 +152,17 @@ interface FilterChip {
 }
 
 export default function UserManagement() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [users, setUsers] = useState<User[]>([])
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    return isNaN(page) || page < 1 ? 1 : page
+  })
+  const [pageSize, setPageSize] = useState(() => {
+    const size = parseInt(searchParams.get('size') || '20', 10)
+    return [20, 50, 100].includes(size) ? size : 20
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -153,8 +173,14 @@ export default function UserManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
+  const [resetPasswordConfirmOpen, setResetPasswordConfirmOpen] = useState(false)
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
   const [actionLoading, setActionLoading] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -167,9 +193,15 @@ export default function UserManagement() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.get<{ success: boolean; data: User[]; error?: string }>('/users')
+      const data = await apiClient.get<{
+        success: boolean
+        data: User[]
+        pagination: { total: number; page: number; limit: number; totalPages: number }
+        error?: string
+      }>(`/users?page=${currentPage}&limit=${pageSize}`)
       if (data.success) {
         setUsers(data.data)
+        setTotalUsers(data.pagination.total)
       } else {
         setError(data.error || '获取用户列表失败')
       }
@@ -182,7 +214,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     fetchUsers()
-  }, [])
+  }, [currentPage, pageSize])
 
   const activeUsers = users.filter(u => u.is_active).length
   const inactiveUsers = users.filter(u => !u.is_active).length
@@ -267,6 +299,26 @@ export default function UserManagement() {
     }
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      newParams.set('page', page.toString())
+      return newParams
+    })
+  }
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setCurrentPage(1)
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      newParams.set('page', '1')
+      newParams.set('size', size.toString())
+      return newParams
+    })
+  }
+
   const handleCreate = async () => {
     setActionLoading(true)
     try {
@@ -282,10 +334,10 @@ export default function UserManagement() {
         setFormData({ username: '', password: '', email: '', role: 'user', minimax_api_key: '' })
         fetchUsers()
       } else {
-        alert(data.error || '创建用户失败')
+        toast.error(data.error || '创建用户失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     } finally {
       setActionLoading(false)
     }
@@ -305,10 +357,10 @@ export default function UserManagement() {
         setSelectedUser(null)
         fetchUsers()
       } else {
-        alert(data.error || '更新用户失败')
+        toast.error(data.error || '更新用户失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     } finally {
       setActionLoading(false)
     }
@@ -322,10 +374,10 @@ export default function UserManagement() {
       if (data.success) {
         fetchUsers()
       } else {
-        alert(data.error || '操作失败')
+        toast.error(data.error || '操作失败')
       }
     } catch {
-      alert('网络错误')
+      toast.error('网络错误')
     }
   }
 
@@ -339,10 +391,10 @@ export default function UserManagement() {
         setSelectedUser(null)
         fetchUsers()
       } else {
-        alert(data.error || '删除用户失败')
+        toast.error(data.error || '删除用户失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     } finally {
       setActionLoading(false)
     }
@@ -365,6 +417,132 @@ export default function UserManagement() {
     setDeleteDialogOpen(true)
   }
 
+  const openResetPasswordConfirm = (user: User) => {
+    setSelectedUser(user)
+    setResetPasswordConfirmOpen(true)
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedUser) return
+    setActionLoading(true)
+    try {
+      const data = await apiClient.post<{ success: boolean; data?: { newPassword: string; message: string }; error?: string }>(`/users/${selectedUser.id}/reset-password`)
+      if (data.success && data.data?.newPassword) {
+        setNewPassword(data.data.newPassword)
+        setResetPasswordConfirmOpen(false)
+        setResetPasswordDialogOpen(true)
+        toast.success('密码重置成功')
+      } else {
+        toast.error(data.error || '重置密码失败')
+      }
+    } catch {
+      toast.error('网络错误，请稍后重试')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleCopyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(newPassword)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast.success('密码已复制到剪贴板')
+    } catch {
+      toast.error('复制失败，请手动复制')
+    }
+  }
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
+  const selectAllUsers = () => {
+    setSelectedUserIds(new Set(filteredAndSortedUsers.map(u => u.id)))
+  }
+
+  const deselectAllUsers = () => {
+    setSelectedUserIds(new Set())
+  }
+
+  const handleBatchActivate = async () => {
+    if (selectedUserIds.size === 0) return
+    setActionLoading(true)
+    try {
+      const data = await apiClient.post<{ success: boolean; data?: { successCount: number; failCount: number }; error?: string }>('/users/batch', {
+        action: 'activate',
+        userIds: Array.from(selectedUserIds),
+      })
+      if (data.success) {
+        toast.success(`已启用 ${data.data?.successCount || 0} 个用户`)
+        setSelectedUserIds(new Set())
+        fetchUsers()
+      } else {
+        toast.error(data.error || '批量启用失败')
+      }
+    } catch {
+      toast.error('网络错误，请稍后重试')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleBatchDeactivate = async () => {
+    if (selectedUserIds.size === 0) return
+    setActionLoading(true)
+    try {
+      const data = await apiClient.post<{ success: boolean; data?: { successCount: number; failCount: number }; error?: string }>('/users/batch', {
+        action: 'deactivate',
+        userIds: Array.from(selectedUserIds),
+      })
+      if (data.success) {
+        toast.success(`已禁用 ${data.data?.successCount || 0} 个用户`)
+        setSelectedUserIds(new Set())
+        fetchUsers()
+      } else {
+        toast.error(data.error || '批量禁用失败')
+      }
+    } catch {
+      toast.error('网络错误，请稍后重试')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedUserIds.size === 0) return
+    setActionLoading(true)
+    try {
+      const data = await apiClient.post<{ success: boolean; data?: { successCount: number; failCount: number }; error?: string }>('/users/batch', {
+        action: 'delete',
+        userIds: Array.from(selectedUserIds),
+      })
+      if (data.success) {
+        toast.success(`已删除 ${data.data?.successCount || 0} 个用户`)
+        setBatchDeleteDialogOpen(false)
+        setSelectedUserIds(new Set())
+        fetchUsers()
+      } else {
+        toast.error(data.error || '批量删除失败')
+      }
+    } catch {
+      toast.error('网络错误，请稍后重试')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const isAllSelected = filteredAndSortedUsers.length > 0 && selectedUserIds.size === filteredAndSortedUsers.length
+  const hasSelection = selectedUserIds.size > 0
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -383,15 +561,22 @@ export default function UserManagement() {
           </div>
           <p className="text-sm text-muted-foreground/70">管理系统用户、角色和访问权限</p>
         </div>
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button
-            onClick={() => setCreateDialogOpen(true)}
-            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            新建用户
-          </Button>
-        </motion.div>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={filteredAndSortedUsers}
+            filename="users"
+            disabled={filteredAndSortedUsers.length === 0}
+          />
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              onClick={() => setCreateDialogOpen(true)}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              新建用户
+            </Button>
+          </motion.div>
+        </div>
       </motion.div>
 
       <motion.div
@@ -403,6 +588,25 @@ export default function UserManagement() {
         <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" />
         <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color="from-emerald-500 to-emerald-400" />
         <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color="from-slate-500 to-slate-400" />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <BatchOperationToolbar
+          selectedCount={selectedUserIds.size}
+          totalCount={filteredAndSortedUsers.length}
+          onSelectAll={selectAllUsers}
+          onDeselectAll={deselectAllUsers}
+          onActivate={handleBatchActivate}
+          onDeactivate={handleBatchDeactivate}
+          onDelete={() => setBatchDeleteDialogOpen(true)}
+          isAllSelected={isAllSelected}
+          hasSelection={hasSelection}
+          loading={actionLoading}
+        />
       </motion.div>
 
       <motion.div
@@ -611,7 +815,7 @@ export default function UserManagement() {
             )}
           </AnimatePresence>
 
-          {!loading && !error && (
+              {!loading && !error && (
             <div>
               <table className="w-full">
                 <thead>
@@ -712,6 +916,15 @@ export default function UserManagement() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
+                              onClick={() => openResetPasswordConfirm(user)}
+                              className="p-2 rounded-lg text-muted-foreground/60 hover:text-amber-500 hover:bg-amber-500/10 transition-colors"
+                              title="重置密码"
+                            >
+                              <Key className="w-4 h-4" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => openDeleteDialog(user)}
                               className="p-2 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
                               title="删除"
@@ -748,6 +961,14 @@ export default function UserManagement() {
                   )}
                 </motion.div>
               )}
+
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalUsers}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </div>
           )}
         </Card>
@@ -860,20 +1081,84 @@ export default function UserManagement() {
         </DialogFooter>
       </Dialog>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} title="删除用户">
-        <div className="py-4">
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="删除用户"
+        description={`确定要删除用户 ${selectedUser?.username} 吗？此操作不可恢复。`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        requireInput={selectedUser?.username}
+        loading={actionLoading}
+      />
+
+      <ConfirmDialog
+        open={resetPasswordConfirmOpen}
+        onClose={() => setResetPasswordConfirmOpen(false)}
+        onConfirm={handleResetPassword}
+        title="重置密码"
+        description={`确定要重置用户 ${selectedUser?.username} 的密码吗？重置后将生成新密码。`}
+        confirmText="确认重置"
+        cancelText="取消"
+        variant="default"
+        loading={actionLoading}
+      />
+
+      <Dialog open={resetPasswordDialogOpen} onClose={() => setResetPasswordDialogOpen(false)} title="密码重置成功">
+        <div className="space-y-4 py-4">
+          <div className="flex items-center gap-2 text-emerald-600">
+            <Check className="w-5 h-5" />
+            <span className="font-medium">新密码已生成</span>
+          </div>
           <p className="text-sm text-muted-foreground">
-            确定要删除用户 <span className="font-semibold text-foreground">{selectedUser?.username}</span> 吗？此操作不可恢复。
+            请复制下方新密码并转告用户。出于安全考虑，此密码仅显示一次。
           </p>
+          <div className="relative">
+            <Input
+              id="new-password-field"
+              value={newPassword}
+              readOnly
+              className="pr-24 font-mono text-sm bg-muted"
+            />
+            <Button
+              size="sm"
+              onClick={handleCopyPassword}
+              className="absolute right-1 top-1/2 -translate-y-1/2"
+              variant={copied ? "default" : "outline"}
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  已复制
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-1" />
+                  复制
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            删除
+          <Button onClick={() => setResetPasswordDialogOpen(false)}>
+            完成
           </Button>
         </DialogFooter>
       </Dialog>
+      <ConfirmDialog
+        open={batchDeleteDialogOpen}
+        onClose={() => setBatchDeleteDialogOpen(false)}
+        onConfirm={handleBatchDelete}
+        title="批量删除用户"
+        description={`确定要删除选中的 ${selectedUserIds.size} 个用户吗？此操作不可恢复。`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        loading={actionLoading}
+      />
     </div>
   )
 }

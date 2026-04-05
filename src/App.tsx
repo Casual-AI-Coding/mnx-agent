@@ -36,6 +36,7 @@ const WorkflowTemplateManagement = lazy(() => import('@/pages/WorkflowTemplateMa
 const DeadLetterQueue = lazy(() => import('@/pages/DeadLetterQueue'))
 const WebhookManagement = lazy(() => import('@/pages/WebhookManagement'))
 const WorkflowMarketplace = lazy(() => import('@/pages/WorkflowMarketplace'))
+const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -328,6 +329,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="模板市场">
               <WorkflowMarketplace />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="system-config"
+          element={
+            <RouteWithErrorBoundary pageName="系统配置">
+              <SystemConfig />
             </RouteWithErrorBoundary>
           }
         />

@@ -19,12 +19,14 @@ import {
   ArrowUpDown,
   X,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import { ExportButton } from '@/components/shared/ExportButton'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -224,7 +226,7 @@ export default function InvitationCodes() {
       setCopiedCode(code)
       setTimeout(() => setCopiedCode(null), 2000)
     } catch {
-      alert('复制失败')
+      toast.error('复制失败')
     }
   }
 
@@ -241,10 +243,10 @@ export default function InvitationCodes() {
         setGenerateForm({ count: 10, max_uses: 1, expires_at: '' })
         fetchCodes()
       } else {
-        alert(data.error || '生成邀请码失败')
+        toast.error(data.error || '生成邀请码失败')
       }
     } catch {
-      alert('网络错误，请稍后重试')
+      toast.error('网络错误，请稍后重试')
     } finally {
       setActionLoading(false)
     }
@@ -256,10 +258,10 @@ export default function InvitationCodes() {
       if (data.success) {
         fetchCodes()
       } else {
-        alert(data.error || '操作失败')
+        toast.error(data.error || '操作失败')
       }
     } catch {
-      alert('网络错误')
+      toast.error('网络错误')
     }
   }
 
@@ -310,15 +312,22 @@ export default function InvitationCodes() {
           </div>
           <p className="text-sm text-muted-foreground/70">生成和管理注册邀请码</p>
         </div>
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button
-            onClick={() => setGenerateDialogOpen(true)}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500/90 hover:to-amber-600/90 shadow-lg shadow-amber-500/20"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            批量生成
-          </Button>
-        </motion.div>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={filteredAndSortedCodes}
+            filename="invitation_codes"
+            disabled={filteredAndSortedCodes.length === 0}
+          />
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              onClick={() => setGenerateDialogOpen(true)}
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500/90 hover:to-amber-600/90 shadow-lg shadow-amber-500/20"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              批量生成
+            </Button>
+          </motion.div>
+        </div>
       </motion.div>
 
       {}
