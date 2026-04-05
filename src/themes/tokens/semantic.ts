@@ -14,6 +14,8 @@ export interface StatusTokenSet {
   bg: string
   /** Light background with opacity - bg-[color]/10 */
   bgSubtle: string
+  /** Alias for bgSubtle - backward compatibility */
+  bgLight: string
   /** Text color - text-* */
   text: string
   /** Border color - border-* */
@@ -22,6 +24,8 @@ export interface StatusTokenSet {
   icon: string
   /** Foreground for colored backgrounds */
   foreground: string
+  /** Gradient classes */
+  gradient: string
 }
 
 export type StatusType = 'success' | 'warning' | 'error' | 'info' | 'pending'
@@ -33,6 +37,8 @@ export type StatusType = 'success' | 'warning' | 'error' | 'info' | 'pending'
 export interface ServiceTokenSet {
   /** Background with opacity */
   bg: string
+  /** Solid background without opacity */
+  bgSolid: string
   /** Text color */
   text: string
   /** Icon color */

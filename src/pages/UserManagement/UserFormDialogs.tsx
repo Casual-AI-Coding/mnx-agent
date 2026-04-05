@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { cn } from '@/lib/utils'
+import { status } from '@/themes/tokens'
 import type { User, UserRole } from './types'
 
 interface FormData {
@@ -205,7 +207,7 @@ export function UserFormDialogs({
 
       <Dialog open={resetPasswordDialogOpen} onClose={onCloseResetPassword} title="密码重置成功">
         <div className="space-y-4 py-4">
-          <div className="flex items-center gap-2 text-emerald-600">
+          <div className={cn('flex items-center gap-2', status.success.text)}>
             <Check className="w-5 h-5" />
             <span className="font-medium">新密码已生成</span>
           </div>

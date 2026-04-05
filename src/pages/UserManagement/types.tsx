@@ -1,5 +1,6 @@
 import { Crown, Shield, Star, User as UserIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { roles } from '@/themes/tokens/index'
 
 export type UserRole = 'super' | 'admin' | 'pro' | 'user'
 
@@ -36,30 +37,30 @@ export const ROLE_CONFIG: Record<UserRole, {
   super: {
     label: 'Super',
     icon: <Crown className="w-3 h-3" />,
-    gradient: 'from-amber-500 to-orange-500',
-    bgClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    color: 'text-amber-500',
+    gradient: roles.super.gradient,
+    bgClass: cn(roles.super.bgLight, roles.super.text, roles.super.border),
+    color: roles.super.text,
   },
   admin: {
     label: 'Admin',
     icon: <Shield className="w-3 h-3" />,
-    gradient: 'from-blue-500 to-cyan-500',
-    bgClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-    color: 'text-blue-500',
+    gradient: roles.admin.gradient,
+    bgClass: cn(roles.admin.bgLight, roles.admin.text, roles.admin.border),
+    color: roles.admin.text,
   },
   pro: {
     label: 'Pro',
     icon: <Star className="w-3 h-3" />,
-    gradient: 'from-purple-500 to-pink-500',
-    bgClass: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-    color: 'text-purple-500',
+    gradient: roles.pro.gradient,
+    bgClass: cn(roles.pro.bgLight, roles.pro.text, roles.pro.border),
+    color: roles.pro.text,
   },
   user: {
     label: 'User',
     icon: <UserIcon className="w-3 h-3" />,
-    gradient: 'from-emerald-500 to-teal-500',
-    bgClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    color: 'text-emerald-500',
+    gradient: roles.user.gradient,
+    bgClass: cn(roles.user.bgLight, roles.user.text, roles.user.border),
+    color: roles.user.text,
   },
 }
 

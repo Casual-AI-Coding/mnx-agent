@@ -87,7 +87,7 @@ export const ErrorBoundaryNode = React.memo(function ErrorBoundaryNode({ data, s
           <motion.div
             className={cn(
               'absolute bottom-0 left-0 right-0 h-0.5',
-              hasValidationError ? 'bg-destructive/50' : hasValidationWarning ? 'bg-yellow-500/50' : 'bg-primary/50'
+              hasValidationError ? status.error.bgSubtle : hasValidationWarning ? status.warning.bgSubtle : 'bg-primary/50'
             )}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}

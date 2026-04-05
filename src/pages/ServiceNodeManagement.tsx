@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/Switch'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { roles, status } from '@/themes/tokens/index'
 
 type UserRole = 'super' | 'admin' | 'pro' | 'user'
 
@@ -37,10 +38,10 @@ interface ServiceNodePermission {
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
-  super: { label: 'Super', variant: 'destructive', color: 'text-destructive' },
-  admin: { label: 'Admin', variant: 'default', color: 'text-primary-400' },
-  pro: { label: 'Pro', variant: 'secondary', color: 'text-purple-400' },
-  user: { label: 'User', variant: 'outline', color: 'text-emerald-400' },
+  super: { label: 'Super', variant: 'destructive', color: roles.super.text },
+  admin: { label: 'Admin', variant: 'default', color: roles.admin.text },
+  pro: { label: 'Pro', variant: 'secondary', color: roles.pro.text },
+  user: { label: 'User', variant: 'outline', color: roles.user.text },
 }
 
 const CATEGORY_CONFIG: Record<string, { 
@@ -52,31 +53,31 @@ const CATEGORY_CONFIG: Record<string, {
 }> = {
   'MiniMax API': { 
     icon: Zap, 
-    gradient: 'from-blue-500 to-cyan-400',
-    bgGradient: 'from-blue-500/20 to-cyan-400/20',
-    borderColor: 'border-blue-500/30',
-    glowColor: 'shadow-blue-500/20',
+    gradient: roles.admin.gradient,
+    bgGradient: cn('from-primary/20', 'to-info/20'),
+    borderColor: roles.admin.border,
+    glowColor: 'shadow-primary/20',
   },
   'Database': { 
     icon: Database, 
-    gradient: 'from-emerald-500 to-teal-400',
-    bgGradient: 'from-emerald-500/20 to-teal-400/20',
-    borderColor: 'border-emerald-500/30',
-    glowColor: 'shadow-emerald-500/20',
+    gradient: roles.user.gradient,
+    bgGradient: cn('from-success/20', 'to-info/20'),
+    borderColor: roles.user.border,
+    glowColor: 'shadow-success/20',
   },
   'Capacity': { 
     icon: Shield, 
-    gradient: 'from-amber-500 to-orange-400',
-    bgGradient: 'from-amber-500/20 to-orange-400/20',
-    borderColor: 'border-amber-500/30',
-    glowColor: 'shadow-amber-500/20',
+    gradient: roles.super.gradient,
+    bgGradient: cn('from-warning/20', 'to-error/20'),
+    borderColor: roles.super.border,
+    glowColor: 'shadow-warning/20',
   },
   'Media Storage': { 
     icon: HardDrive, 
-    gradient: 'from-purple-500 to-pink-400',
-    bgGradient: 'from-purple-500/20 to-pink-400/20',
-    borderColor: 'border-purple-500/30',
-    glowColor: 'shadow-purple-500/20',
+    gradient: roles.pro.gradient,
+    bgGradient: cn('from-secondary/20', 'to-accent/20'),
+    borderColor: roles.pro.border,
+    glowColor: 'shadow-secondary/20',
   },
   'Queue Processing': { 
     icon: Clock, 
@@ -200,9 +201,9 @@ export default function ServiceNodeManagement() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
-        <StatCard title="总节点数" value={nodes.length} icon={Server} color="from-blue-500 to-cyan-400" />
-        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color="from-emerald-500 to-teal-400" />
-        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color="from-slate-500 to-slate-400" />
+        <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} />
+        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color={status.success.gradient} />
+        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color={status.pending.gradient} />
       </motion.div>
 
       {}
@@ -390,7 +391,7 @@ function NodeCard({ node, saving, updateNode, gradient }: {
             }}
           >
             {node.is_enabled ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <CheckCircle2 className={cn('w-4 h-4 flex-shrink-0', status.success.text)} />
             ) : (
               <XCircle className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
             )}

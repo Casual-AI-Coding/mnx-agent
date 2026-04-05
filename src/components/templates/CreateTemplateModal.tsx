@@ -33,10 +33,10 @@ interface CreateTemplateModalProps {
 }
 
 const CATEGORY_CONFIG: { value: TemplateCategory; label: string; icon: typeof FileText; color: string }[] = [
-  { value: 'text', label: '文本', icon: FileText, color: cn(services.text.icon, services.text.bg, 'border-primary-500/30') },
-  { value: 'image', label: '图像', icon: Image, color: cn(services.image.icon, services.image.bg, 'border-purple-500/30') },
-  { value: 'music', label: '音乐', icon: Music, color: cn(services.music.icon, services.music.bg, 'border-pink-500/30') },
-  { value: 'video', label: '视频', icon: Video, color: cn(services.video.icon, services.video.bg, 'border-orange-500/30') },
+  { value: 'text', label: '文本', icon: FileText, color: cn(services.text.icon, services.text.bg, 'border-primary/30') },
+  { value: 'image', label: '图像', icon: Image, color: cn(services.image.icon, services.image.bg, 'border-accent/30') },
+  { value: 'music', label: '音乐', icon: Music, color: cn(services.music.icon, services.music.bg, 'border-primary-400/30') },
+  { value: 'video', label: '视频', icon: Video, color: cn(services.video.icon, services.video.bg, 'border-destructive/30') },
   { value: 'general', label: '通用', icon: Package, color: 'text-muted-foreground bg-muted/10 border-muted/30' },
 ]
 
@@ -181,7 +181,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
         <div className="space-y-2">
           <Label htmlFor="name" className="text-dark-200">
             {t('templates.name', '名称')}
-            <span className="text-red-400 ml-1">*</span>
+            <span className={cn(status.error.icon, "ml-1")}>*</span>
           </Label>
           <Input
             id="name"
@@ -215,7 +215,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
         <div className="space-y-2">
           <Label className="text-dark-200">
             {t('templates.category', '类别')}
-            <span className="text-red-400 ml-1">*</span>
+            <span className={cn(status.error.icon, "ml-1")}>*</span>
           </Label>
           <div className="relative">
             <button
@@ -268,7 +268,7 @@ export function CreateTemplateModal({ open, onClose }: CreateTemplateModalProps)
         <div className="space-y-2">
           <Label htmlFor="content" className="text-dark-200">
             {t('templates.content', '内容')}
-            <span className="text-red-400 ml-1">*</span>
+            <span className={cn(status.error.icon, "ml-1")}>*</span>
           </Label>
           <Textarea
             id="content"

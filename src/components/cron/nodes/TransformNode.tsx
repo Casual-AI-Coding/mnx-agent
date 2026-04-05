@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { ArrowRightLeft, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { status, primary, primaryText } from '@/themes/tokens'
+import { status, services } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface TransformNodeData extends Record<string, unknown> {
@@ -45,11 +45,11 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
             ) : hasValidationWarning ? (
               <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
             ) : (
-              <ArrowRightLeft className={cn('w-3 h-3', primaryText[400])} />
+              <ArrowRightLeft className={cn('w-3 h-3', status.info.icon)} />
             )}
             <span className={cn(
               'text-xs font-medium',
-              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : status.info.text
             )}>Transform</span>
           </div>
         }
@@ -57,14 +57,14 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : primary[100]
+            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : services.text.bg
           )}>
             {hasValidationError ? (
               <AlertCircle className={cn('w-5 h-5', status.error.icon)} />
             ) : hasValidationWarning ? (
               <AlertTriangle className={cn('w-5 h-5', status.warning.icon)} />
             ) : (
-              <ArrowRightLeft className={cn('w-5 h-5', primaryText[400])} />
+              <ArrowRightLeft className={cn('w-5 h-5', status.info.icon)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -76,7 +76,7 @@ export function TransformNode({ data, selected }: { data: TransformNodeData; sel
             </p>
             <p className={cn(
               'text-xs mt-1',
-              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-muted-foreground'
             )}>
               {transformType || 'Map Fields'}
             </p>

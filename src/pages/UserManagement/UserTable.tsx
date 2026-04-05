@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/Badge'
 import { Pagination } from '@/components/shared/Pagination'
 import { cn } from '@/lib/utils'
+import { status, roles } from '@/themes/tokens/index'
 import type { User } from './types'
 import { RoleBadge, formatDate, formatFullDate } from './types'
 
@@ -134,11 +135,11 @@ export function UserTable({
                         <Switch
                           checked={user.is_active}
                           onCheckedChange={() => onToggleActive(user)}
-                          className="data-[state=checked]:bg-emerald-500"
+                          className={cn('data-[state=checked]:', status.success.bg)}
                         />
                         <span className={cn(
                           'text-xs font-medium',
-                          user.is_active ? 'text-emerald-600' : 'text-muted-foreground/60'
+                          user.is_active ? status.success.text : 'text-muted-foreground/60'
                         )}>
                           {user.is_active ? '启用' : '禁用'}
                         </span>
@@ -177,7 +178,10 @@ export function UserTable({
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => onResetPassword(user)}
-                          className="p-2 rounded-lg text-muted-foreground/60 hover:text-amber-500 hover:bg-amber-500/10 transition-colors"
+                          className={cn(
+                            'p-2 rounded-lg text-muted-foreground/60 hover:bg-warning/10 transition-colors',
+                            'hover:', roles.pro.text
+                          )}
                           title="重置密码"
                         >
                           <Key className="w-4 h-4" />

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { BatchOperationToolbar } from '@/components/shared/BatchOperationToolbar'
 import { ExportButton } from '@/components/shared/ExportButton'
+import { status } from '@/themes/tokens/index'
 import { useUserManagement } from './useUserManagement'
 import { UserFilters } from './UserFilters'
 import { UserTable } from './UserTable'
@@ -143,8 +144,8 @@ export default function UserManagement() {
         className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
         <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" />
-        <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color="from-emerald-500 to-emerald-400" />
-        <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color="from-slate-500 to-slate-400" />
+        <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} />
+        <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} />
       </motion.div>
 
       <motion.div

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { X, Copy, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 interface NodeOutputPanelProps {
   nodeId: string
@@ -49,19 +50,19 @@ export function NodeOutputPanel({
     if (typeof value === 'string') {
       if (value.length > 200) {
         return (
-          <span className="text-green-400">
+          <span className={status.success.icon}>
             "{value.slice(0, 200)}..."
             <span className="text-muted-foreground"> ({value.length} 字符)</span>
           </span>
         )
       }
-      return <span className="text-green-400">"{value}"</span>
+      return <span className={status.success.icon}>"{value}"</span>
     }
     if (typeof value === 'number') {
-      return <span className="text-blue-400">{value}</span>
+      return <span className={status.info.icon}>{value}</span>
     }
     if (typeof value === 'boolean') {
-      return <span className="text-purple-400">{value.toString()}</span>
+      return <span className={services.image.icon}>{value.toString()}</span>
     }
     if (Array.isArray(value)) {
       if (value.length === 0) {
@@ -152,9 +153,9 @@ export function NodeOutputPanel({
                   className="p-1 hover:bg-secondary rounded transition-colors"
                   title="复制"
                 >
-                  {copied === 'input' ? (
-                    <Check className="w-3 h-3 text-green-500" />
-                  ) : (
+{copied === 'input' ? (
+                     <Check className={cn("w-3 h-3", status.success.text)} />
+                   ) : (
                     <Copy className="w-3 h-3" />
                   )}
                 </button>
@@ -190,11 +191,11 @@ export function NodeOutputPanel({
                   className="p-1 hover:bg-secondary rounded transition-colors"
                   title="复制"
                 >
-                  {copied === 'output' ? (
-                    <Check className="w-3 h-3 text-green-500" />
-                  ) : (
-                    <Copy className="w-3 h-3" />
-                  )}
+{copied === 'output' ? (
+                     <Check className={cn("w-3 h-3", status.success.icon)} />
+                   ) : (
+                     <Copy className="w-3 h-3" />
+                   )}
                 </button>
                 {onUseAsInput && (
                   <button
@@ -227,7 +228,7 @@ export function NodeOutputPanel({
         {error && (
           <div className="p-4 bg-destructive/10 border-b border-destructive/20">
             <div className="text-xs font-medium text-destructive mb-1">错误</div>
-            <div className="text-xs text-red-300 font-mono break-all">{error}</div>
+            <div className={cn("text-xs font-mono break-all", status.error.text)}>{error}</div>
           </div>
         )}
 

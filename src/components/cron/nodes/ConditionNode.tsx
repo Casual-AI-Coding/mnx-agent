@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { GitBranch, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { status, primaryText } from '@/themes/tokens'
+import { status } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface ConditionNodeData extends Record<string, unknown> {
@@ -50,11 +50,11 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
               ) : hasValidationWarning ? (
                 <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
               ) : (
-                <GitBranch className={cn('w-3 h-3', primaryText[400])} />
+                <GitBranch className={cn('w-3 h-3', status.info.icon)} />
               )}
               <span className={cn(
                 'text-xs font-medium',
-                hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
+                hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : status.info.text
               )}>IF</span>
             </div>
           }
@@ -68,7 +68,7 @@ export function ConditionNode({ data, selected }: { data: ConditionNodeData; sel
             </p>
             <p className={cn(
               'text-xs mt-1',
-              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : primaryText[400]
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-muted-foreground'
             )}>
               {conditionType || 'Check'}
             </p>

@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
+import { roles, status, taskStatus } from '@/themes/tokens/index'
 import type { UserRole, SortField, SortOrder, FilterChip } from './types'
 import { ROLE_CONFIG } from './types'
 
@@ -167,13 +168,13 @@ export function UserFilters({
             </SelectItem>
             <SelectItem value="active">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <div className={cn('w-2 h-2 rounded-full', status.success.bg)} />
                 已启用
               </div>
             </SelectItem>
             <SelectItem value="inactive">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-slate-400" />
+                <div className={cn('w-2 h-2 rounded-full', taskStatus.pending.dot)} />
                 已禁用
               </div>
             </SelectItem>
@@ -197,11 +198,11 @@ export function UserFilters({
                     transition={{ duration: 0.15, delay: index * 0.03 }}
                     className={cn(
                       'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
-                      chip.type === 'search' && 'bg-primary/10 text-primary border-primary/20',
+                      chip.type === 'search' && cn(status.info.bgSubtle, status.info.text, status.info.border),
                       chip.type === 'role' && roleFilter !== 'all' && ROLE_CONFIG[roleFilter].bgClass,
                       chip.type === 'status' && (statusFilter === 'active'
-                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                        : 'bg-slate-500/10 text-slate-600 border-slate-500/20'
+                        ? cn(status.success.bgSubtle, status.success.text, status.success.border)
+                        : cn(taskStatus.pending.bg, taskStatus.pending.text, taskStatus.pending.border)
                       )
                     )}
                     onClick={() => onRemoveChip(chip)}

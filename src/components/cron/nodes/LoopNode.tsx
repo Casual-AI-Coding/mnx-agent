@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Handle, Position, type Node } from '@xyflow/react'
 import { Repeat, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { status, secondary, secondaryText } from '@/themes/tokens'
+import { status, services } from '@/themes/tokens'
 import { BaseNodeWrapper } from './BaseNodeWrapper'
 
 export interface LoopNodeData extends Record<string, unknown> {
@@ -42,11 +42,11 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
             ) : hasValidationWarning ? (
               <AlertTriangle className={cn('w-3 h-3', status.warning.icon)} />
             ) : (
-              <Repeat className={cn('w-3 h-3', secondaryText[400])} />
+              <Repeat className={cn('w-3 h-3', services.workflow.icon)} />
             )}
             <span className={cn(
               'text-xs font-medium',
-              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : services.workflow.text
             )}>Loop</span>
           </div>
         }
@@ -54,14 +54,14 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         <div className="flex items-start gap-3">
           <div className={cn(
             'p-2 rounded-lg',
-            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : secondary[100]
+            hasValidationError ? status.error.bgLight : hasValidationWarning ? status.warning.bgLight : services.workflow.bg
           )}>
             {hasValidationError ? (
               <AlertCircle className={cn('w-5 h-5', status.error.icon)} />
             ) : hasValidationWarning ? (
               <AlertTriangle className={cn('w-5 h-5', status.warning.icon)} />
             ) : (
-              <RefreshCw className={cn('w-5 h-5', secondaryText[400])} />
+              <RefreshCw className={cn('w-5 h-5', services.workflow.icon)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -73,7 +73,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
             </p>
             <p className={cn(
               'text-xs mt-1 truncate',
-              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
+              hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-muted-foreground'
             )}>
               {condition || 'While condition'}
             </p>
@@ -82,7 +82,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
                 <span className="text-xs text-muted-foreground/70">Max:</span>
                 <span className={cn(
                   'text-xs font-mono',
-                  hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : secondaryText[400]
+                  hasValidationError ? status.error.text : hasValidationWarning ? status.warning.text : 'text-muted-foreground'
                 )}>{maxIterations}</span>
                 {currentIteration !== undefined && (
                   <span className="text-xs text-muted-foreground/50">
@@ -102,7 +102,7 @@ export function LoopNode({ data, selected }: { data: LoopNodeData; selected?: bo
         className="!w-3 !h-3 !bg-secondary !border-2 !border-border"
         style={{ left: '30%' }}
       >
-        <span className={cn('absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs', secondaryText[400])}>Continue</span>
+        <span className={cn('absolute left-1/2 -translate-x-1/2 -bottom-5 text-xs', services.workflow.text)}>Continue</span>
       </Handle>
 
       <Handle
