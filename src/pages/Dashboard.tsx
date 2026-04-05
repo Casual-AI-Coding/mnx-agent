@@ -14,6 +14,7 @@ import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import type { ConnectionStatus } from '@/lib/websocket-client'
+import { cn } from '@/lib/utils'
 import { services, status as statusTokens } from '@/themes/tokens'
 
 const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
@@ -76,25 +77,25 @@ export default function Dashboard() {
   }), [t])
 
   const typeColors = useMemo(() => ({
-    text: 'bg-primary-500/20 text-primary-400',
-    image: 'bg-purple-500/20 text-purple-400',
-    voice: 'bg-green-500/20 text-green-400',
-    music: 'bg-pink-500/20 text-pink-400',
-    video: 'bg-orange-500/20 text-orange-400',
+    text: cn(services.text.bg, services.text.icon),
+    image: cn(services.image.bg, services.image.icon),
+    voice: cn(statusTokens.success.bgSubtle, statusTokens.success.icon),
+    music: cn(services.music.bg, services.music.icon),
+    video: cn(services.video.bg, services.video.icon),
   }), [])
 
   // Memoized: stable array reference
   const quickActions = useMemo(() => [
-    { title: t('dashboard.aiChatAndWriting'), desc: t('dashboard.aiChatAndWriting'), icon: MessageSquare, path: '/text', color: 'hover:border-blue-500' },
-    { title: t('dashboard.realtimeVoiceSynthesis'), desc: t('dashboard.realtimeVoiceSynthesis'), icon: Mic, path: '/voice', color: 'hover:border-green-500' },
-    { title: t('dashboard.batchVoiceSynthesis'), desc: t('dashboard.batchVoiceSynthesis'), icon: MicOff, path: '/voice-async', color: 'hover:border-teal-500' },
-    { title: t('dashboard.aiImageCreation'), desc: t('dashboard.aiImageCreation'), icon: Image, path: '/image', color: 'hover:border-purple-500' },
-    { title: t('dashboard.aiMusicCreation'), desc: t('dashboard.aiMusicCreation'), icon: Music, path: '/music', color: 'hover:border-pink-500' },
-    { title: t('dashboard.aiVideoCreation'), desc: t('dashboard.aiVideoCreation'), icon: Video, path: '/video', color: 'hover:border-orange-500' },
-    { title: t('dashboard.videoIntelligentAgent'), desc: t('dashboard.videoIntelligentAgent'), icon: VideoIcon, path: '/video-agent', color: 'hover:border-red-500' },
-    { title: t('dashboard.customVoiceManagement'), desc: t('dashboard.customVoiceManagement'), icon: User, path: '/voice-mgmt', color: 'hover:border-indigo-500' },
-    { title: t('dashboard.uploadedFileManagement'), desc: t('dashboard.uploadedFileManagement'), icon: FolderOpen, path: '/files', color: 'hover:border-cyan-500' },
-    { title: t('dashboard.apiUsageStatistics'), desc: t('dashboard.apiUsageStatistics'), icon: BarChart3, path: '/token', color: 'hover:border-yellow-500' },
+    { title: t('dashboard.aiChatAndWriting'), desc: t('dashboard.aiChatAndWriting'), icon: MessageSquare, path: '/text', color: 'hover:border-primary' },
+    { title: t('dashboard.realtimeVoiceSynthesis'), desc: t('dashboard.realtimeVoiceSynthesis'), icon: Mic, path: '/voice', color: 'hover:border-success' },
+    { title: t('dashboard.batchVoiceSynthesis'), desc: t('dashboard.batchVoiceSynthesis'), icon: MicOff, path: '/voice-async', color: 'hover:border-info' },
+    { title: t('dashboard.aiImageCreation'), desc: t('dashboard.aiImageCreation'), icon: Image, path: '/image', color: 'hover:border-accent' },
+    { title: t('dashboard.aiMusicCreation'), desc: t('dashboard.aiMusicCreation'), icon: Music, path: '/music', color: 'hover:border-primary-400' },
+    { title: t('dashboard.aiVideoCreation'), desc: t('dashboard.aiVideoCreation'), icon: Video, path: '/video', color: 'hover:border-destructive' },
+    { title: t('dashboard.videoIntelligentAgent'), desc: t('dashboard.videoIntelligentAgent'), icon: VideoIcon, path: '/video-agent', color: 'hover:border-error' },
+    { title: t('dashboard.customVoiceManagement'), desc: t('dashboard.customVoiceManagement'), icon: User, path: '/voice-mgmt', color: 'hover:border-secondary' },
+    { title: t('dashboard.uploadedFileManagement'), desc: t('dashboard.uploadedFileManagement'), icon: FolderOpen, path: '/files', color: 'hover:border-info' },
+    { title: t('dashboard.apiUsageStatistics'), desc: t('dashboard.apiUsageStatistics'), icon: BarChart3, path: '/token', color: 'hover:border-warning' },
   ], [t])
 
   // Memoized: stable function reference
@@ -111,10 +112,10 @@ export default function Dashboard() {
 
   // Memoized: only recalculates when usage or t changes
   const stats = useMemo(() => [
-    { label: t('dashboard.totalGenerations'), value: usage.textTokens + usage.imageRequests + usage.musicRequests + usage.videoRequests, icon: Zap, color: 'text-yellow-400' },
-    { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: 'text-primary-400' },
-    { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: 'text-purple-400' },
-    { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: 'text-orange-400' },
+    { label: t('dashboard.totalGenerations'), value: usage.textTokens + usage.imageRequests + usage.musicRequests + usage.videoRequests, icon: Zap, color: statusTokens.warning.icon },
+    { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: services.text.icon },
+    { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: services.image.icon },
+    { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: services.video.icon },
   ], [usage, t])
 
   useEffect(() => {
