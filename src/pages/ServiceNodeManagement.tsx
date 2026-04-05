@@ -79,12 +79,12 @@ const CATEGORY_CONFIG: Record<string, {
     borderColor: roles.pro.border,
     glowColor: 'shadow-secondary/20',
   },
-  'Queue Processing': { 
-    icon: Clock, 
-    gradient: 'from-orange-500 to-red-400',
-    bgGradient: 'from-orange-500/20 to-red-400/20',
-    borderColor: 'border-orange-500/30',
-    glowColor: 'shadow-orange-500/20',
+  'Queue Processing': {
+    icon: Clock,
+    gradient: status.error.gradient,
+    bgGradient: cn(status.error.bgSubtle, status.error.bg),
+    borderColor: status.error.border,
+    glowColor: 'shadow-destructive/20',
   },
 }
 
@@ -266,12 +266,12 @@ function CategorySection({ category, nodes, saving, updateNode }: {
   saving: string | null
   updateNode: (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => void
 }) {
-  const config = CATEGORY_CONFIG[category] || { 
-    icon: Server, 
-    gradient: 'from-slate-500 to-slate-400',
-    bgGradient: 'from-slate-500/20 to-slate-400/20',
-    borderColor: 'border-slate-500/30',
-    glowColor: 'shadow-slate-500/20',
+  const config = CATEGORY_CONFIG[category] || {
+    icon: Server,
+    gradient: status.pending.gradient,
+    bgGradient: cn(status.pending.bgSubtle, status.pending.bg),
+    borderColor: status.pending.border,
+    glowColor: 'shadow-muted/20',
   }
   const Icon = config.icon
   const enabledInCategory = nodes.filter(n => n.is_enabled).length
@@ -307,7 +307,7 @@ function CategorySection({ category, nodes, saving, updateNode }: {
               config.glowColor
             )}
           >
-            <Icon className="w-6 h-6 text-white" />
+            <Icon className="w-6 h-6 text-foreground" />
           </motion.div>
           
           <div className="flex-1">
@@ -497,7 +497,7 @@ function StatCard({ title, value, icon: Icon, color }: {
               'p-3 rounded-xl bg-gradient-to-br shadow-lg shadow-black/20',
               color
             )}>
-              <Icon className="w-5 h-5 text-white" />
+              <Icon className="w-5 h-5 text-foreground" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wider">{title}</p>
