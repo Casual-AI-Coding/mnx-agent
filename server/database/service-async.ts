@@ -58,6 +58,10 @@ import type {
   UpdateWebhookConfig,
   CreateWebhookDelivery,
   WebhookEvent,
+  SystemConfig,
+  SystemConfigRow,
+  CreateSystemConfig,
+  UpdateSystemConfig,
 } from './types.js'
 
 function toISODate(): string {
@@ -180,6 +184,13 @@ function rowToWebhookDelivery(row: WebhookDeliveryRow): WebhookDelivery {
     ...row,
     event: row.event as WebhookEvent,
     payload,
+  }
+}
+
+function rowToSystemConfig(row: SystemConfigRow): SystemConfig {
+  return {
+    ...row,
+    value_type: row.value_type as SystemConfig['value_type'],
   }
 }
 
@@ -2538,6 +2549,83 @@ export class DatabaseService {
 
     const rows = await this.conn.query<WebhookDeliveryRow>(sql, params)
     return rows.map(rowToWebhookDelivery)
+  }
+
+  // =====================================================================
+  // System Config
+  // =====================================================================
+
+  async getAllSystemConfigs(): Promise<SystemConfig[]> {
+    const rows = await this.conn.query<SystemConfigRow>(
+      'SELECT * FROM system_config ORDER BY key'
+    )
+    return rows.map(rowToSystemConfig)
+  }
+
+  async getSystemConfigByKey(key: string): Promise<SystemConfig | null> {
+    const rows = await this.conn.query<SystemConfigRow>(
+      'SELECT * FROM system_config WHERE key = $1',
+      [key]
+    )
+    return rows[0] ? rowToSystemConfig(rows[0]) : null
+  }
+
+  async createSystemConfig(data: CreateSystemConfig, updatedBy?: string): Promise<SystemConfig> {
+    const id = uuidv4()
+    const now = toISODate()
+
+    await this.conn.execute(
+      `INSERT INTO system_config (id, key, value, description, value_type, updated_at, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, data.key, data.value, data.description, data.value_type, now, updatedBy ?? null]
+    )
+
+    return (await this.getSystemConfigByKey(data.key))!
+  }
+
+  async updateSystemConfig(key: string, updates: UpdateSystemConfig, updatedBy?: string): Promise<SystemConfig | null> {
+    const existing = await this.getSystemConfigByKey(key)
+    if (!existing) return null
+
+    const fields: string[] = []
+    const values: (string | null)[] = []
+    let paramIndex = 1
+
+    if (updates.value !== undefined) {
+      fields.push(`value = $${paramIndex}`)
+      values.push(updates.value)
+      paramIndex++
+    }
+    if (updates.description !== undefined) {
+      fields.push(`description = $${paramIndex}`)
+      values.push(updates.description)
+      paramIndex++
+    }
+
+    if (fields.length === 0) return existing
+
+    fields.push(`updated_at = $${paramIndex}`)
+    values.push(toISODate())
+    paramIndex++
+    fields.push(`updated_by = $${paramIndex}`)
+    values.push(updatedBy ?? null)
+    paramIndex++
+    values.push(key)
+
+    await this.conn.execute(
+      `UPDATE system_config SET ${fields.join(', ')} WHERE key = $${paramIndex}`,
+      values
+    )
+
+    return this.getSystemConfigByKey(key)
+  }
+
+  async deleteSystemConfig(key: string): Promise<boolean> {
+    const result = await this.conn.execute(
+      'DELETE FROM system_config WHERE key = $1',
+      [key]
+    )
+    return result.changes > 0
   }
 
   // =====================================================================

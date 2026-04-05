@@ -17,6 +17,12 @@ const batchGenerateSchema = z.object({
   expires_at: z.string().datetime().nullable().optional(),
 })
 
+const updateInvitationCodeSchema = z.object({
+  max_uses: z.number().int().min(1).optional(),
+  expires_at: z.string().datetime().nullable().optional(),
+  is_active: z.boolean().optional(),
+})
+
 router.get('/', asyncHandler(async (req, res) => {
   const conn = getConnection()
   const rows = await conn.query(`
@@ -48,6 +54,49 @@ router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, re
   }
 
   res.status(201).json({ success: true, data: { count: codes.length, codes } })
+}))
+
+router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const updates = req.body
+  const conn = getConnection()
+
+  const existing = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
+  if (existing.length === 0) {
+    res.status(404).json({ success: false, error: '邀请码不存在' })
+    return
+  }
+
+  const fields: string[] = []
+  const values: unknown[] = []
+  let idx = 1
+
+  if (updates.max_uses !== undefined) {
+    fields.push(`max_uses = $${idx++}`)
+    values.push(updates.max_uses)
+  }
+  if (updates.expires_at !== undefined) {
+    fields.push(`expires_at = $${idx++}`)
+    values.push(updates.expires_at)
+  }
+  if (updates.is_active !== undefined) {
+    fields.push(`is_active = $${idx++}`)
+    values.push(updates.is_active)
+  }
+
+  if (fields.length === 0) {
+    res.json({ success: true, message: '无更新内容', data: existing[0] })
+    return
+  }
+
+  values.push(id)
+  await conn.execute(
+    `UPDATE invitation_codes SET ${fields.join(', ')} WHERE id = $${idx}`,
+    values
+  )
+
+  const updated = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
+  res.json({ success: true, data: updated[0] })
 }))
 
 router.delete('/:id', asyncHandler(async (req, res) => {

@@ -38,4 +38,21 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   res.json({ success: true, data: updated })
 }))
 
+router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const db = await getDatabase()
+
+  const existing = await db.getAllServiceNodePermissions()
+  const node = existing.find(n => n.id === id)
+  
+  if (!node) {
+    res.status(404).json({ success: false, error: 'Service node not found' })
+    return
+  }
+
+  await db.deleteServiceNodePermission(id)
+
+  res.json({ success: true, message: 'Service node deleted' })
+}))
+
 export default router

@@ -4,11 +4,31 @@ import { requireRole } from '../middleware/auth-middleware.js'
 import { getConnection } from '../database/connection.js'
 import { UserService } from '../services/user-service.js'
 import { z } from 'zod'
-import { validate } from '../middleware/validate.js'
+import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 
 const router = Router()
+
+function generateRandomPassword(length: number = 12): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+  const numbers = '0123456789'
+  const special = '!@#$%^&*'
+  const all = uppercase + lowercase + numbers + special
+
+  let password = ''
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]
+  password += lowercase[Math.floor(Math.random() * lowercase.length)]
+  password += numbers[Math.floor(Math.random() * numbers.length)]
+  password += special[Math.floor(Math.random() * special.length)]
+
+  for (let i = 4; i < length; i++) {
+    password += all[Math.floor(Math.random() * all.length)]
+  }
+
+  return password.split('').sort(() => Math.random() - 0.5).join('')
+}
 
 router.use(requireRole(['super']))
 
@@ -28,12 +48,34 @@ const createUserSchema = z.object({
   minimax_api_key: z.string().nullable().optional(),
 })
 
-router.get('/', asyncHandler(async (req, res) => {
+const listUsersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+})
+
+router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, res) => {
+  const { page, limit } = req.query as unknown as { page: number; limit: number }
   const conn = getConnection()
+
+  const countResult = await conn.query<{ total: number }>('SELECT COUNT(*) as total FROM users')
+  const total = countResult[0]?.total || 0
+
+  const offset = (page - 1) * limit
   const rows = await conn.query(
-    'SELECT id, username, email, minimax_api_key, minimax_region, role, is_active, last_login_at, created_at, updated_at FROM users ORDER BY created_at DESC'
+    'SELECT id, username, email, minimax_api_key, minimax_region, role, is_active, last_login_at, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    [limit, offset]
   )
-  res.json({ success: true, data: rows })
+
+  res.json({
+    success: true,
+    data: rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  })
 }))
 
 router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
@@ -101,6 +143,107 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, message: '用户已删除' })
+}))
+
+const batchOperationSchema = z.object({
+  action: z.enum(['activate', 'deactivate', 'delete']),
+  userIds: z.array(z.string().uuid()).min(1),
+})
+
+router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, res) => {
+  const { action, userIds } = req.body
+  const conn = getConnection()
+  const currentUserId = req.user?.userId
+
+  if (action === 'delete' && userIds.includes(currentUserId)) {
+    res.status(400).json({ success: false, error: '不能删除自己的账户' })
+    return
+  }
+
+  const now = new Date().toISOString()
+  let successCount = 0
+  let failCount = 0
+
+  switch (action) {
+    case 'activate':
+      for (const id of userIds) {
+        try {
+          await conn.execute(
+            'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+            [true, now, id]
+          )
+          successCount++
+        } catch {
+          failCount++
+        }
+      }
+      break
+    case 'deactivate':
+      for (const id of userIds) {
+        try {
+          if (id === currentUserId) {
+            failCount++
+            continue
+          }
+          await conn.execute(
+            'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+            [false, now, id]
+          )
+          successCount++
+        } catch {
+          failCount++
+        }
+      }
+      break
+    case 'delete':
+      for (const id of userIds) {
+        try {
+          await conn.execute('DELETE FROM users WHERE id = $1', [id])
+          successCount++
+        } catch {
+          failCount++
+        }
+      }
+      break
+  }
+
+  res.json({
+    success: true,
+    data: {
+      action,
+      successCount,
+      failCount,
+      total: userIds.length,
+    },
+    message: `批量操作完成：成功 ${successCount} 个，失败 ${failCount} 个`,
+  })
+}))
+
+router.post('/:id/reset-password', asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const conn = getConnection()
+
+  const user = await conn.query('SELECT id, username FROM users WHERE id = $1', [id])
+  if (user.length === 0) {
+    res.status(404).json({ success: false, error: '用户不存在' })
+    return
+  }
+
+  const newPassword = generateRandomPassword(12)
+  const passwordHash = await bcrypt.hash(newPassword, 12)
+
+  await conn.execute(
+    'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+    [passwordHash, new Date().toISOString(), id]
+  )
+
+  res.json({
+    success: true,
+    data: {
+      newPassword,
+      message: '密码已重置',
+    },
+  })
 }))
 
 export default router

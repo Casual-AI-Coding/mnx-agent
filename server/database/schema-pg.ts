@@ -290,6 +290,20 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
 );
 
 -- ============================================
+-- System Config
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS system_config (
+  id VARCHAR(36) PRIMARY KEY,
+  key VARCHAR(100) UNIQUE NOT NULL,
+  value TEXT NOT NULL,
+  description TEXT,
+  value_type VARCHAR(20) DEFAULT 'string',
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by VARCHAR(36) REFERENCES users(id)
+);
+
+-- ============================================
 -- Indexes for Performance
 -- ============================================
 
@@ -361,6 +375,9 @@ CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_execution_log_id ON webhook_de
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_owner ON webhook_deliveries(owner_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_delivered_at ON webhook_deliveries(delivered_at DESC);
 
+-- System config indexes
+CREATE INDEX IF NOT EXISTS idx_system_config_key ON system_config(key);
+
 -- ============================================
 -- Initialization Data
 -- ============================================
@@ -393,6 +410,14 @@ INSERT INTO service_node_permissions (id, service_name, method_name, display_nam
   -- Queue Processing
   ('snp-040', 'queueProcessor', 'processImageQueueWithCapacity', 'Process Image Queue', 'Queue Processing', 'admin', true)
 ON CONFLICT (service_name, method_name) DO NOTHING;
+
+-- Initialize system config
+INSERT INTO system_config (id, key, value, description, value_type) VALUES
+  ('cfg-001', 'api.rate_limit_per_minute', '60', 'API rate limit per minute', 'number'),
+  ('cfg-002', 'features.workflow_enabled', 'true', 'Enable workflow feature', 'boolean'),
+  ('cfg-003', 'system.maintenance_mode', 'false', 'Enable system maintenance mode', 'boolean'),
+  ('cfg-004', 'system.announcement', '', 'System announcement message', 'string')
+ON CONFLICT (key) DO NOTHING;
 
 -- Initialize workflow template for image quota consumption
 INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, owner_id, is_public, created_at, updated_at) VALUES
