@@ -58,7 +58,7 @@ export function MediaCard({
         }}
       >
         <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${
-          isSelected ? 'bg-primary' : 'bg-black/50 hover:bg-black/70'
+          isSelected ? 'bg-primary' : 'bg-muted/50 hover:bg-muted/70'
         }`}>
           {isSelected ? (
             <CheckSquare className="w-4 h-4 text-foreground" />
@@ -68,7 +68,7 @@ export function MediaCard({
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-12 pb-3 px-3">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/80 via-foreground/50 to-transparent pt-12 pb-3 px-3">
         <div className="flex items-end justify-between gap-2">
           <div className="min-w-0 flex-1">
             <Badge variant="secondary" className="text-xs mb-1.5">
@@ -91,7 +91,7 @@ export function MediaCard({
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-7 px-2 bg-white/20 hover:bg-white/30 text-foreground border-0"
+                className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   onPreview()
@@ -103,7 +103,7 @@ export function MediaCard({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 px-2 bg-white/20 hover:bg-white/30 text-foreground border-0"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
               onClick={(e) => {
                 e.stopPropagation()
                 onDownload()
@@ -114,7 +114,7 @@ export function MediaCard({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 px-2 bg-white/20 hover:bg-white/30 text-red-300 hover:text-red-200 border-0"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-error hover:text-error/80 border-0"
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete()
