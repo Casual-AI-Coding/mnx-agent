@@ -1,4 +1,4 @@
-import type { Node, Edge } from '@xyflow/react'
+import type { Node, Edge, NodeChange, EdgeChange, Connection, OnNodesChange, OnEdgesChange } from '@xyflow/react'
 import type { ValidationError } from '@/lib/workflow-validation'
 
 export interface WorkflowTemplate {
@@ -124,15 +124,14 @@ export interface TestPanelProps {
 export interface WorkflowCanvasProps {
   nodes: Node[]
   edges: Edge[]
-  onNodesChange: (changes: unknown[]) => void
-  onEdgesChange: (changes: unknown[]) => void
-  onConnect: (connection: unknown) => void
+  onNodesChange: OnNodesChange<Node>
+  onEdgesChange: OnEdgesChange<Edge>
+  onConnect: (connection: Connection) => void
   onNodeClick: (_event: React.MouseEvent, node: Node) => void
   onNodeDoubleClick: (_event: React.MouseEvent, node: Node) => void
   onPaneClick: () => void
   onDragOver: (event: React.DragEvent) => void
   onDrop: (event: React.DragEvent) => void
-  nodeTypes: Record<string, React.ComponentType>
   executionStatusPanelProps: ExecutionStatusPanelProps
   validationResult: { valid: boolean; message: string } | null
 }

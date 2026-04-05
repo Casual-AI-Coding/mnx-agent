@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node } from '@xyflow/react'
+import { useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, type OnNodesChange, type OnEdgesChange } from '@xyflow/react'
 import { useWorkflowHistory } from '@/components/workflow/useWorkflowHistory'
 import { useWorkflowVersions } from './useWorkflowVersions'
 import { useWorkflowExecution } from './useWorkflowExecution'
@@ -20,8 +20,8 @@ export interface UseWorkflowBuilderReturn {
   // React Flow state
   nodes: Node[]
   edges: Edge[]
-  onNodesChange: (changes: unknown[]) => void
-  onEdgesChange: (changes: unknown[]) => void
+  onNodesChange: OnNodesChange<Node>
+  onEdgesChange: OnEdgesChange<Edge>
 
   // Selection
   selectedNode: Node | null
