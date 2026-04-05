@@ -13,6 +13,8 @@ import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { status, services } from '@/themes/tokens'
 
 const MAX_CHARS = 10000
 
@@ -68,7 +70,7 @@ function VoiceWaveform({ isPlaying }: { isPlaying: boolean }) {
       {[...Array(12)].map((_, i) => (
         <motion.div
           key={i}
-          className="w-1 bg-gradient-to-t from-emerald-500 to-teal-400 rounded-full"
+          className={cn('w-1 rounded-full', services.voice.bg)}
           animate={
             isPlaying
               ? {
@@ -135,17 +137,20 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
   return (
     <div className="relative group">
       
-      <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-5 overflow-hidden">
         
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
 
         <div className="relative flex items-center gap-4">
           
           <button
             onClick={togglePlay}
-            className="shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-105 transition-all duration-300"
+            className={cn(
+              'shrink-0 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300',
+              'bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105'
+            )}
           >
             {isPlaying ? (
               <div className="flex gap-0.5">
@@ -164,7 +169,7 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
             
             <div className="mt-3 relative h-1.5 bg-secondary rounded-full overflow-hidden">
               <motion.div
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                className={cn('absolute inset-y-0 left-0 rounded-full', services.voice.bg)}
                 style={{ width: `${progress}%` }}
                 layoutId="progress"
               />
@@ -181,7 +186,10 @@ function GlassAudioPlayer({ audioUrl, onDownload }: { audioUrl: string; onDownlo
           
           <button
             onClick={onDownload}
-            className="shrink-0 w-10 h-10 rounded-lg bg-secondary/80 hover:bg-secondary/80 flex items-center justify-center text-muted-foreground/70 hover:text-emerald-400 transition-all duration-200"
+            className={cn(
+              'shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200',
+              'bg-secondary/80 hover:bg-secondary text-muted-foreground/70 hover:text-foreground'
+            )}
           >
             <Download className="w-5 h-5" />
           </button>
@@ -293,7 +301,7 @@ export default function VoiceSync() {
       
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             {t('voiceSync.title')}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -301,8 +309,8 @@ export default function VoiceSync() {
           </p>
         </div>
         <div className="relative">
-          <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full" />
-          <Mic2 className="w-10 h-10 relative text-emerald-400/80" />
+          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+          <Mic2 className="w-10 h-10 relative text-primary/80" />
         </div>
       </motion.div>
 
@@ -319,13 +327,13 @@ export default function VoiceSync() {
           >
             <motion.div variants={cardHoverVariants} className="relative group">
               
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl overflow-hidden">
                 
                 <div className="px-6 py-4 border-b border-border/60 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', services.voice.bg)}>
+                    <Sparkles className={cn('w-5 h-5', services.voice.icon)} />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">{t('voiceSync.textInputTitle')}</h2>
@@ -339,7 +347,7 @@ export default function VoiceSync() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={t('voiceSync.placeholder')}
-                    className="min-h-[200px] resize-none bg-background/50 border-border/60 text-foreground placeholder:text-muted-foreground/50 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl"
+                    className="min-h-[200px] resize-none bg-background/50 border-border/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20 rounded-xl"
                   />
 
                   
@@ -347,13 +355,14 @@ export default function VoiceSync() {
                     <div className="flex-1 mr-4">
                       <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                         <motion.div
-                          className={`h-full rounded-full transition-colors duration-300 ${
+                          className={cn(
+                            'h-full rounded-full transition-colors duration-300',
                             isOverLimit
-                              ? 'bg-red-500'
+                              ? 'bg-destructive'
                               : progressPercent > 80
-                                ? 'bg-amber-500'
-                                : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                          }`}
+                                ? 'bg-warning'
+                                : services.voice.bg
+                          )}
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPercent}%` }}
                           transition={{ duration: 0.3 }}
@@ -362,9 +371,10 @@ export default function VoiceSync() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-sm font-medium ${
-                          isOverLimit ? 'text-destructive' : 'text-zinc-400'
-                        }`}
+                        className={cn(
+                          'text-sm font-medium',
+                          isOverLimit ? 'text-destructive' : 'text-muted-foreground'
+                        )}
                       >
                         {charCount.toLocaleString()} / {MAX_CHARS.toLocaleString()}
                       </span>
@@ -416,16 +426,16 @@ export default function VoiceSync() {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.3, type: 'spring', stiffness: 500 }}
-                      className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/40"
+                      className={cn('w-8 h-8 rounded-full flex items-center justify-center shadow-lg', 'bg-success text-success-foreground')}
                     >
-                      <Check className="w-4 h-4 text-white" />
+                      <Check className="w-4 h-4" />
                     </motion.div>
                   </div>
 
                   <div className="bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-                        <Music2 className="w-5 h-5 text-emerald-400" />
+                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', services.voice.bg)}>
+                        <Music2 className={cn('w-5 h-5', services.voice.icon)} />
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold text-foreground">{t('voiceSync.resultTitle')}</h2>
@@ -447,7 +457,7 @@ export default function VoiceSync() {
           <motion.div variants={itemVariants}>
             <div className="relative bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl overflow-hidden">
               
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
 
               
               <div className="relative px-6 py-4 border-b border-border/60 flex items-center gap-3">

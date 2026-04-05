@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/Badge'
 import { getStatsOverview, getSuccessRateTrend, getTaskDistribution, getErrorRanking } from '@/lib/api/stats'
 import type { StatsOverview, StatsTrendItem, StatsDistributionItem, StatsErrorItem } from '@/lib/api/stats'
 import { toastError } from '@/lib/toast'
+import { status, services } from '@/themes/tokens'
+import { cn } from '@/lib/utils'
 
 export default function StatsDashboard() {
   const { t } = useTranslation()
@@ -209,8 +211,4 @@ function StatCard({
       </Card>
     </motion.div>
   )
-}
-
-function cn(...args: (string | boolean | undefined)[]) {
-  return args.filter(Boolean).join(' ')
 }

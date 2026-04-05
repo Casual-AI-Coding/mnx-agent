@@ -14,6 +14,7 @@ import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import type { ConnectionStatus } from '@/lib/websocket-client'
+import { services, status } from '@/themes/tokens'
 
 const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
   const statusConfig: Record<ConnectionStatus, { icon: typeof Wifi; color: string; text: string }> = {

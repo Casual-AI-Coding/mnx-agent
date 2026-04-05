@@ -15,6 +15,7 @@ import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type As
 import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
+import { services } from '@/themes/tokens'
 
 // Animation variants
 const containerVariants = {
@@ -220,7 +221,7 @@ export default function ImageGeneration() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent to-secondary bg-clip-text text-transparent">
             {t('imageGeneration.title') || '图片生成'}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -229,8 +230,8 @@ export default function ImageGeneration() {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full" />
-            <Sparkles className="w-8 h-8 relative text-violet-400/60" />
+            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
+            <Sparkles className="w-8 h-8 relative text-accent-foreground/60" />
           </div>
         </div>
       </motion.div>
@@ -246,10 +247,10 @@ export default function ImageGeneration() {
         <motion.div variants={itemVariants} className="xl:col-span-5 space-y-4">
           {/* Prompt Input Card */}
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 via-fuchsia-500/20 to-pink-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
             <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <Zap className="w-4 h-4 text-violet-400" />
+                <Zap className="w-4 h-4 text-accent-foreground" />
                 <span className="text-sm font-medium text-foreground">{t('imageGeneration.prompt') || '提示词'}</span>
               </div>
               <div className="p-4 space-y-4">
@@ -257,7 +258,7 @@ export default function ImageGeneration() {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t('imageGeneration.placeholder') || "描述你想要生成的图片，例如：一只戴着墨镜的猫在海滩上..."}
-                  className="min-h-[120px] resize-none bg-background/50 border-zinc-800 text-zinc-100 placeholder:text-muted-foreground/50 focus:border-violet-500/50 focus:ring-violet-500/20"
+                  className="min-h-[120px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
                 />
                 
                 {/* Template Buttons */}
@@ -268,7 +269,7 @@ export default function ImageGeneration() {
                       onClick={() => handleTemplateSelect(template.id)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                         activeTemplate === template.id
-                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25'
+                          ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25'
                           : 'bg-secondary/50 text-muted-foreground/70 hover:bg-secondary hover:text-foreground'
                       }`}
                     >
@@ -282,11 +283,11 @@ export default function ImageGeneration() {
 
           {/* Reference Image Card */}
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/10 via-primary/10 to-secondary/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
             <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-fuchsia-400" />
+                  <Upload className="w-4 h-4 text-secondary-foreground" />
                   <span className="text-sm font-medium text-foreground">{t('imageGeneration.reference') || '参考图片'}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">可选</span>
@@ -309,11 +310,11 @@ export default function ImageGeneration() {
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-zinc-800 rounded-lg p-6 text-center cursor-pointer hover:border-violet-500/50 hover:bg-violet-500/5 transition-all duration-300 group/upload"
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group/upload"
                   >
                     <div className="relative mx-auto w-12 h-12 mb-3">
-                      <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full group-hover/upload:blur-2xl transition-all" />
-                      <Upload className="w-12 h-12 relative text-muted-foreground/50 group-hover/upload:text-violet-400 transition-colors" />
+                      <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full group-hover/upload:blur-2xl transition-all" />
+                      <Upload className="w-12 h-12 relative text-muted-foreground/50 group-hover/upload:text-accent-foreground transition-colors" />
                     </div>
                     <p className="text-sm font-medium text-muted-foreground/70 group-hover/upload:text-foreground transition-colors">
                       {t('imageGeneration.clickToUpload') || '点击上传参考图片'}
@@ -334,11 +335,11 @@ export default function ImageGeneration() {
 
           {/* Parameters Card */}
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/10 via-primary/10 to-secondary/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
             <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-pink-400" />
+                  <Settings2 className="w-4 h-4 text-secondary-foreground" />
                   <span className="text-sm font-medium text-foreground">{t('imageGeneration.settings') || '参数设置'}</span>
                 </div>
               </div>
@@ -347,7 +348,7 @@ export default function ImageGeneration() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.model') || '模型'}</label>
                   <Select value={model} onValueChange={(v) => setModel(v as ImageModel)}>
-                    <SelectTrigger className="w-full bg-background/50 border-zinc-800 text-foreground hover:border-violet-500/50 transition-colors">
+                    <SelectTrigger className="w-full bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -373,7 +374,7 @@ export default function ImageGeneration() {
                         onClick={() => setAspectRatio(ratio.id)}
                         className={`flex flex-col items-center justify-center py-2.5 rounded-lg transition-all duration-200 border ${
                           aspectRatio === ratio.id
-                            ? 'bg-gradient-to-br from-violet-600/80 to-fuchsia-600/80 border-violet-500/50 text-white shadow-lg shadow-violet-500/20'
+                            ? 'bg-gradient-to-br from-primary/80 to-accent/80 border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
                             : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
                         }`}
                       >
@@ -394,7 +395,7 @@ export default function ImageGeneration() {
                         onClick={() => setNumImages(n)}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
                           numImages === n
-                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-violet-500/50 text-white shadow-lg shadow-violet-500/20'
+                            ? 'bg-gradient-to-r from-primary to-accent border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
                             : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
                         }`}
                       >
@@ -429,11 +430,11 @@ export default function ImageGeneration() {
                           value={seed || ''}
                           onChange={(e) => setSeed(e.target.value ? parseInt(e.target.value) : undefined)}
                           placeholder={t('imageGeneration.seedPlaceholder') || '留空则随机'}
-                          className="flex-1 bg-background/50 border-zinc-800 text-foreground focus:border-violet-500/50"
+                          className="flex-1 bg-background/50 border-border text-foreground focus:border-primary/50"
                         />
                         <button
                           onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                          className="px-3 py-2 rounded-lg bg-zinc-800 text-muted-foreground/70 hover:text-foreground hover:bg-secondary transition-colors"
+                          className="px-3 py-2 rounded-lg bg-secondary text-muted-foreground/70 hover:text-foreground hover:bg-secondary/80 transition-colors"
                         >
                           <RefreshCw className="w-4 h-4" />
                         </button>
@@ -452,15 +453,15 @@ export default function ImageGeneration() {
             disabled={!prompt.trim() || isGenerating}
             className={`w-full relative group overflow-hidden rounded-xl transition-all duration-300 ${
               prompt.trim() && !isGenerating
-                ? 'hover:shadow-2xl hover:shadow-violet-500/30'
+                ? 'hover:shadow-2xl hover:shadow-primary/30'
                 : 'cursor-not-allowed'
             }`}
           >
-            <div className={`absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 transition-all duration-300 ${
+            <div className={`absolute inset-0 bg-gradient-to-r from-primary via-accent to-secondary transition-all duration-300 ${
               prompt.trim() && !isGenerating ? 'group-hover:scale-105' : ''
             }`} />
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-400/20 via-fuchsia-400/20 to-pink-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative flex items-center justify-center gap-2 py-4 text-foreground font-semibold">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary-400/20 via-accent/20 to-secondary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative flex items-center justify-center gap-2 py-4 text-primary-foreground font-semibold">
               {isGenerating ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -494,12 +495,12 @@ export default function ImageGeneration() {
         {/* Right Column - Results */}
         <motion.div variants={itemVariants} className="xl:col-span-7">
           <div className="relative h-full">
-            <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-pink-500/20 rounded-2xl blur opacity-50" />
+            <div className="absolute -inset-0.5 bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/20 rounded-2xl blur opacity-50" />
             <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full min-h-[500px] overflow-hidden">
               {/* Results Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <Grid3x3 className="w-4 h-4 text-violet-400" />
+                  <Grid3x3 className="w-4 h-4 text-accent-foreground" />
                   <span className="text-sm font-medium text-foreground">{t('imageGeneration.results') || '生成结果'}</span>
                 </div>
                 {generatedImages.length > 0 && (
@@ -519,12 +520,12 @@ export default function ImageGeneration() {
                       className="flex flex-col items-center justify-center py-20"
                     >
                       <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 blur-3xl rounded-full animate-pulse" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-accent/30 to-secondary/30 blur-3xl rounded-full animate-pulse" />
                         <div className="relative w-20 h-20">
-                          <div className="absolute inset-0 border-2 border-violet-500/30 rounded-full animate-ping" />
-                          <div className="absolute inset-2 border-2 border-fuchsia-500/40 rounded-full animate-ping" style={{ animationDelay: '0.2s' }} />
-                          <div className="absolute inset-4 border-2 border-pink-500/50 rounded-full animate-ping" style={{ animationDelay: '0.4s' }} />
-                          <Loader2 className="absolute inset-0 w-full h-full text-violet-400 animate-spin" />
+                          <div className="absolute inset-0 border-2 border-accent/30 rounded-full animate-ping" />
+                          <div className="absolute inset-2 border-2 border-primary/40 rounded-full animate-ping" style={{ animationDelay: '0.2s' }} />
+                          <div className="absolute inset-4 border-2 border-secondary/50 rounded-full animate-ping" style={{ animationDelay: '0.4s' }} />
+                          <Loader2 className="absolute inset-0 w-full h-full text-accent-foreground animate-spin" />
                         </div>
                       </div>
                       <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
@@ -547,7 +548,7 @@ export default function ImageGeneration() {
                           transition={{ delay: index * 0.1 }}
                           className="relative group"
                         >
-                          <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300" />
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 to-secondary/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300" />
                           <div
                             className="relative overflow-hidden rounded-xl border border-border/50 bg-background/50 cursor-pointer"
                             onClick={() => handleImagePreview(index)}
@@ -558,7 +559,7 @@ export default function ImageGeneration() {
                               className={`w-full ${getAspectRatioClass()} object-cover`}
                             />
                             {/* Hover Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
                               <div className="flex gap-2">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleImagePreview(index); }}
@@ -592,7 +593,7 @@ export default function ImageGeneration() {
                       className="flex flex-col items-center justify-center py-20 text-muted-foreground"
                     >
                       <div className="relative">
-                        <div className="absolute inset-0 bg-violet-500/10 blur-3xl rounded-full" />
+                        <div className="absolute inset-0 bg-accent/10 blur-3xl rounded-full" />
                         <ImageIcon className="w-16 h-16 relative text-muted-foreground/50" />
                       </div>
                       <p className="mt-6 text-lg font-medium text-muted-foreground/70">

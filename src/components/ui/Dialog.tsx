@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 
 const dialogOverlayVariants = cva(
-  'fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
+  'fixed inset-0 z-50 bg-foreground/10 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
 )
 
 const dialogContentVariants = cva(
@@ -50,7 +50,7 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
         >
           {title && (
             <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-              <h2 className="text-lg font-semibold leading-none tracking-tight text-white">{title}</h2>
+              <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">{title}</h2>
               {description && (
                 <p className="text-sm text-dark-400">{description}</p>
               )}

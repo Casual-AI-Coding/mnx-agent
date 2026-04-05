@@ -14,6 +14,7 @@ import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
+import { services, status } from '@/themes/tokens'
 
 interface Message {
   id: string
@@ -181,7 +182,7 @@ export default function TextGeneration() {
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent to-secondary bg-clip-text text-transparent">
             {t('textGeneration.title')}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -190,7 +191,7 @@ export default function TextGeneration() {
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
-            <SelectTrigger className="w-48 bg-card/50 border-border text-foreground hover:border-violet-500/50 transition-colors">
+            <SelectTrigger className="w-48 bg-card/50 border-border text-foreground hover:border-primary/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border">
@@ -206,7 +207,7 @@ export default function TextGeneration() {
           </Select>
 
           <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-            <SelectTrigger className="w-36 bg-card/50 border-border text-foreground hover:border-violet-500/50 transition-colors">
+            <SelectTrigger className="w-36 bg-card/50 border-border text-foreground hover:border-primary/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border">
@@ -220,14 +221,14 @@ export default function TextGeneration() {
 
           <div className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-border rounded-lg">
             {promptCaching ? (
-              <Zap className="w-4 h-4 text-amber-400" />
+              <Zap className="w-4 h-4 text-warning" />
             ) : (
               <ZapOff className="w-4 h-4 text-muted-foreground" />
             )}
             <Switch
               checked={promptCaching}
               onCheckedChange={setPromptCaching}
-              className="data-[state=checked]:bg-amber-500"
+              className="data-[state=checked]:bg-warning"
             />
             <Label className="text-sm text-muted-foreground cursor-pointer" onClick={() => setPromptCaching(!promptCaching)}>
               {t('textGeneration.promptCaching') || '缓存'}
@@ -250,7 +251,7 @@ export default function TextGeneration() {
         className="flex-1 overflow-y-auto space-y-4 pr-2 chat-scrollbar"
         style={{
           scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(139, 92, 246, 0.3) transparent',
+          scrollbarColor: 'hsl(var(--primary) / 0.3) transparent',
         }}
       >
         <style>{`
@@ -262,11 +263,11 @@ export default function TextGeneration() {
             background: transparent;
           }
           .chat-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, rgba(139, 92, 246, 0.4), rgba(168, 85, 247, 0.3));
+            background: linear-gradient(180deg, hsl(var(--primary) / 0.4), hsl(var(--accent) / 0.3));
             border-radius: 3px;
           }
           .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, rgba(139, 92, 246, 0.6), rgba(168, 85, 247, 0.5));
+            background: linear-gradient(180deg, hsl(var(--primary) / 0.6), hsl(var(--accent) / 0.5));
           }
         `}</style>
         <AnimatePresence mode="popLayout">
@@ -277,8 +278,8 @@ export default function TextGeneration() {
               className="flex flex-col items-center justify-center h-full text-muted-foreground"
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
-                <Sparkles className="w-16 h-16 relative text-violet-400/50" />
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                <Sparkles className="w-16 h-16 relative text-primary/50" />
               </div>
               <p className="mt-6 text-lg font-medium text-muted-foreground">{t('textGeneration.startConversation')}</p>
               <p className="text-sm text-muted-foreground/70 mt-2">{t('textGeneration.pressEnterToSend')}</p>
@@ -296,16 +297,16 @@ export default function TextGeneration() {
               <div
                 className={`relative group max-w-[85%] ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white'
+                    ? 'bg-gradient-to-br from-primary to-accent text-primary-foreground'
                     : 'bg-card/80 backdrop-blur-xl border border-border/50 text-foreground'
                 } rounded-2xl ${message.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'} shadow-lg`}
               >
                 {message.role === 'user' && (
-                  <div className="absolute inset-0 bg-violet-500/30 blur-xl rounded-2xl -z-10" />
+                  <div className="absolute inset-0 bg-primary/30 blur-xl rounded-2xl -z-10" />
                 )}
                 
                 {message.role === 'assistant' && (
-                  <div className="absolute inset-0 bg-violet-500/5 blur-xl rounded-2xl -z-10" />
+                  <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl -z-10" />
                 )}
 
                 <div className="px-4 py-3">
@@ -313,12 +314,12 @@ export default function TextGeneration() {
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                       message.role === 'user' 
                         ? 'bg-white/20' 
-                        : 'bg-gradient-to-br from-violet-500 to-fuchsia-500'
+                        : 'bg-gradient-to-br from-primary to-accent'
                     }`}>
                       {message.role === 'user' ? (
                         <User className="w-3.5 h-3.5" />
                       ) : (
-                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                        <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
                       )}
                     </div>
                     <span className={`text-xs font-medium ${
@@ -346,7 +347,7 @@ export default function TextGeneration() {
                       }`}
                     >
                       {copiedId === message.id ? (
-                        <Check className="w-4 h-4 text-green-400" />
+                        <Check className="w-4 h-4 text-success" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -367,9 +368,9 @@ export default function TextGeneration() {
             <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
                 <span className="text-muted-foreground text-sm">{t('textGeneration.thinking')}</span>
               </div>
@@ -402,7 +403,7 @@ export default function TextGeneration() {
       </div>
 
       <div className="mt-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-pink-500/10 blur-2xl rounded-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10 blur-2xl rounded-2xl" />
         
         <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-2">
           <div className="flex gap-2">
@@ -421,7 +422,7 @@ export default function TextGeneration() {
               disabled={!input.trim() || isLoading}
               className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
                 input.trim() && !isLoading
-                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
+                  ? 'bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-lg shadow-primary/25'
                   : 'bg-secondary/50 text-muted-foreground/50 cursor-not-allowed'
               }`}
             >
