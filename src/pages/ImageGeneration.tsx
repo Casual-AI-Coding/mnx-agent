@@ -563,14 +563,14 @@ export default function ImageGeneration() {
                               <div className="flex gap-2">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleImagePreview(index); }}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors backdrop-blur-sm"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
                                 >
                                   <ZoomIn className="w-4 h-4" />
                                   预览
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleDownload(url, index); }}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors backdrop-blur-sm"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
                                 >
                                   <Download className="w-4 h-4" />
                                   下载
