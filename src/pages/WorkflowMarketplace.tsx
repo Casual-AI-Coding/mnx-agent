@@ -81,7 +81,7 @@ function getDifficultyColor(difficulty: string): string {
     intermediate: cn(status.warning.bgSubtle, status.warning.icon),
     advanced: cn(status.error.bgSubtle, status.error.icon),
   }
-  return colors[difficulty] || 'bg-gray-500/20 text-gray-400'
+  return colors[difficulty] || cn(status.pending.bgSubtle, status.pending.icon)
 }
 
 function getCategoryIcon(category: TemplateCategory) {
@@ -335,7 +335,7 @@ export default function WorkflowMarketplace() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-amber-400">
+                <div className={cn('flex items-center gap-1', status.warning.icon)}>
                   <Star className="w-4 h-4 fill-current" />
                   <span className="font-medium">{selectedTemplate.rating}</span>
                   <span className="text-xs text-muted-foreground">
@@ -401,7 +401,7 @@ function TemplateCard({ template, onPreview, onUse, onCopy, copiedId }: Template
               >
                 {getDifficultyLabel(template.difficulty)}
               </Badge>
-              <div className="flex items-center gap-1 text-xs text-amber-400">
+              <div className={cn('flex items-center gap-1 text-xs', status.warning.icon)}>
                 <Star className="w-3 h-3 fill-current" />
                 {template.rating}
               </div>
@@ -505,7 +505,7 @@ function TemplateListItem({ template, onPreview, onUse, onCopy, copiedId }: Temp
               >
                 {getDifficultyLabel(template.difficulty)}
               </Badge>
-              <div className="flex items-center gap-1 text-xs text-amber-400">
+              <div className={cn('flex items-center gap-1 text-xs', status.warning.icon)}>
                 <Star className="w-3 h-3 fill-current" />
                 {template.rating}
               </div>

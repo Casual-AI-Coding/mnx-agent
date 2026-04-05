@@ -357,7 +357,7 @@ export default function InvitationCodes() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative w-[280px] group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className={cn('h-4 w-4 text-muted-foreground/60 group-focus-within:text-amber-500 transition-colors', status.warning.icon)} />
+                    <Search className={cn('h-4 w-4 text-muted-foreground/60 transition-colors', status.warning.text)} />
                   </div>
                   <Input
                     placeholder="搜索邀请码或创建者..."
@@ -588,8 +588,8 @@ export default function InvitationCodes() {
                                 className={cn(
                                   'p-1.5 rounded-lg transition-colors',
                                   copiedCode === code.code
-                                    ? cn(status.success.bg, status.success.icon)
-                                    : 'text-muted-foreground/60 hover:text-amber-500 hover:bg-amber-500/10'
+                                    ? cn(status.success.bg, status.success.text)
+                                    : cn('text-muted-foreground/60', status.warning.text, status.warning.bgSubtle)
                                 )}
                                 title="复制"
                               >
