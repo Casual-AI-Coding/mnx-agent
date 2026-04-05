@@ -343,8 +343,14 @@ ON CONFLICT (id) DO NOTHING;
     name: 'migration_013_cron_jobs_workflow_id',
     sql: `
 -- Change cron_jobs to use workflow_id instead of workflow_json
--- First make workflow_json nullable (will be deprecated)
-ALTER TABLE cron_jobs ALTER COLUMN workflow_json DROP NOT NULL;
+-- Use DO block to handle potentially missing workflow_json column
+DO $$
+BEGIN
+  -- Make workflow_json nullable if it exists (will be deprecated)
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cron_jobs' AND column_name = 'workflow_json') THEN
+    ALTER TABLE cron_jobs ALTER COLUMN workflow_json DROP NOT NULL;
+  END IF;
+END $$;
 
 -- Add workflow_id column
 ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS workflow_id VARCHAR(36) REFERENCES workflow_templates(id) ON DELETE CASCADE;

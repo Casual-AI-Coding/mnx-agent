@@ -5,29 +5,39 @@
  * - Workflow templates (separate from cron jobs)
  * - Service node permissions
  * - Workflow permissions
+ * 
+ * IMPORTANT: Table creation order must respect foreign key dependencies.
+ * Tables must be created BEFORE other tables reference them.
  */
 
 export const PG_SCHEMA_SQL = `
 -- ============================================
--- Core Tables (Preserved)
+-- Phase 1: Tables with no foreign key dependencies
 -- ============================================
 
-CREATE TABLE IF NOT EXISTS task_queue (
+-- Users (referenced by many tables, must be first)
+CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(36) PRIMARY KEY,
-  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE SET NULL,
-  task_type VARCHAR(50) NOT NULL,
-  payload JSONB NOT NULL,
-  priority INTEGER DEFAULT 0,
-  status VARCHAR(20) DEFAULT 'pending',
-  retry_count INTEGER DEFAULT 0,
-  max_retries INTEGER DEFAULT 3,
-  error_message TEXT,
-  result JSONB,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255),
+  password_hash VARCHAR(255) NOT NULL,
+  minimax_api_key VARCHAR(255),
+  minimax_region VARCHAR(20) DEFAULT 'cn',
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  is_active BOOLEAN DEFAULT true,
+  last_login_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Migrations tracking
+CREATE TABLE IF NOT EXISTS _migrations (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Capacity tracking (no dependencies)
 CREATE TABLE IF NOT EXISTS capacity_tracking (
   id VARCHAR(36) PRIMARY KEY,
   service_type VARCHAR(50) NOT NULL UNIQUE,
@@ -37,39 +47,56 @@ CREATE TABLE IF NOT EXISTS capacity_tracking (
   last_checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Workflow Templates (NEW)
--- ============================================
+-- Media records (no dependencies)
+CREATE TABLE IF NOT EXISTS media_records (
+  id VARCHAR(36) PRIMARY KEY,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255),
+  filepath VARCHAR(500) NOT NULL,
+  type VARCHAR(20) NOT NULL CHECK(type IN ('audio', 'image', 'video', 'music')),
+  mime_type VARCHAR(100),
+  size_bytes BIGINT NOT NULL,
+  source VARCHAR(50) CHECK(source IN ('voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation')),
+  task_id VARCHAR(36),
+  metadata JSONB,
+  is_deleted BOOLEAN DEFAULT false,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP
+);
 
-CREATE TABLE IF NOT EXISTS workflow_templates (
+-- Prompt templates (no dependencies)
+CREATE TABLE IF NOT EXISTS prompt_templates (
   id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  nodes_json JSONB NOT NULL,
-  edges_json JSONB NOT NULL,
-  owner_id VARCHAR(36) REFERENCES users(id),
-  is_public BOOLEAN DEFAULT false,
+  content TEXT NOT NULL,
+  category VARCHAR(20) CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
+  variables JSONB,
+  is_builtin BOOLEAN DEFAULT false,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Workflow Permissions (NEW)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS workflow_permissions (
+-- Audit logs (no dependencies - user_id is just a reference, not enforced FK)
+CREATE TABLE IF NOT EXISTS audit_logs (
   id VARCHAR(36) PRIMARY KEY,
-  workflow_id VARCHAR(36) NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
-  user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  granted_by VARCHAR(36) REFERENCES users(id),
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(workflow_id, user_id)
+  action VARCHAR(20) NOT NULL CHECK(action IN ('create', 'update', 'delete', 'execute')),
+  resource_type VARCHAR(50) NOT NULL,
+  resource_id VARCHAR(36),
+  user_id VARCHAR(36),
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  request_method VARCHAR(10),
+  request_path VARCHAR(500),
+  request_body JSONB,
+  response_status INTEGER,
+  error_message TEXT,
+  duration_ms INTEGER,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Service Node Permissions (NEW)
--- ============================================
-
+-- Service node permissions (no dependencies)
 CREATE TABLE IF NOT EXISTS service_node_permissions (
   id VARCHAR(36) PRIMARY KEY,
   service_name VARCHAR(100) NOT NULL,
@@ -82,10 +109,62 @@ CREATE TABLE IF NOT EXISTS service_node_permissions (
   UNIQUE(service_name, method_name)
 );
 
+-- Invitation codes (depends on users)
+CREATE TABLE IF NOT EXISTS invitation_codes (
+  id VARCHAR(36) PRIMARY KEY,
+  code VARCHAR(32) NOT NULL UNIQUE,
+  created_by VARCHAR(36) REFERENCES users(id),
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================
--- Cron Jobs (NEW Structure)
+-- Phase 2: Tables that depend on Phase 1 tables
 -- ============================================
 
+-- Workflow templates (depends on users)
+CREATE TABLE IF NOT EXISTS workflow_templates (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  nodes_json JSONB NOT NULL,
+  edges_json JSONB NOT NULL,
+  owner_id VARCHAR(36) REFERENCES users(id),
+  is_public BOOLEAN DEFAULT false,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Workflow permissions (depends on workflow_templates and users)
+CREATE TABLE IF NOT EXISTS workflow_permissions (
+  id VARCHAR(36) PRIMARY KEY,
+  workflow_id VARCHAR(36) NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  granted_by VARCHAR(36) REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(workflow_id, user_id)
+);
+
+-- Workflow versions (depends on workflow_templates and users)
+CREATE TABLE IF NOT EXISTS workflow_versions (
+  id TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  nodes_json TEXT NOT NULL,
+  edges_json TEXT NOT NULL,
+  change_summary TEXT,
+  created_by TEXT REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_active INTEGER DEFAULT 1,
+  UNIQUE(template_id, version_number)
+);
+
+-- Cron jobs (depends on workflow_templates and users)
 CREATE TABLE IF NOT EXISTS cron_jobs (
   id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -105,9 +184,27 @@ CREATE TABLE IF NOT EXISTS cron_jobs (
 );
 
 -- ============================================
--- Execution Logs (NEW Structure)
+-- Phase 3: Tables that depend on Phase 2 tables
 -- ============================================
 
+-- Task queue (depends on cron_jobs)
+CREATE TABLE IF NOT EXISTS task_queue (
+  id VARCHAR(36) PRIMARY KEY,
+  job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE SET NULL,
+  task_type VARCHAR(50) NOT NULL,
+  payload JSONB NOT NULL,
+  priority INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'pending',
+  retry_count INTEGER DEFAULT 0,
+  max_retries INTEGER DEFAULT 3,
+  error_message TEXT,
+  result JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP
+);
+
+-- Execution logs (depends on cron_jobs)
 CREATE TABLE IF NOT EXISTS execution_logs (
   id VARCHAR(36) PRIMARY KEY,
   job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE CASCADE,
@@ -122,10 +219,7 @@ CREATE TABLE IF NOT EXISTS execution_logs (
   error_summary TEXT
 );
 
--- ============================================
--- Execution Log Details (NEW Structure)
--- ============================================
-
+-- Execution log details (depends on execution_logs)
 CREATE TABLE IF NOT EXISTS execution_log_details (
   id VARCHAR(36) PRIMARY KEY,
   log_id VARCHAR(36) NOT NULL REFERENCES execution_logs(id) ON DELETE CASCADE,
@@ -141,107 +235,25 @@ CREATE TABLE IF NOT EXISTS execution_log_details (
   duration_ms INTEGER
 );
 
--- ============================================
--- Migrations Tracking (Preserved)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS _migrations (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- Media Records (Preserved)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS media_records (
+-- Job tags (depends on cron_jobs)
+CREATE TABLE IF NOT EXISTS job_tags (
   id VARCHAR(36) PRIMARY KEY,
-  filename VARCHAR(255) NOT NULL,
-  original_name VARCHAR(255),
-  filepath VARCHAR(500) NOT NULL,
-  type VARCHAR(20) NOT NULL CHECK(type IN ('audio', 'image', 'video', 'music')),
-  mime_type VARCHAR(100),
-  size_bytes BIGINT NOT NULL,
-  source VARCHAR(50) CHECK(source IN ('voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation')),
-  task_id VARCHAR(36),
-  metadata JSONB,
-  is_deleted BOOLEAN DEFAULT false,
+  job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  tag VARCHAR(100) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP
+  UNIQUE(job_id, tag)
 );
 
--- ============================================
--- Prompt Templates (Preserved)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS prompt_templates (
+-- Job dependencies (depends on cron_jobs)
+CREATE TABLE IF NOT EXISTS job_dependencies (
   id VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  content TEXT NOT NULL,
-  category VARCHAR(20) CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
-  variables JSONB,
-  is_builtin BOOLEAN DEFAULT false,
+  job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+  depends_on_job_id VARCHAR(36) NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  UNIQUE(job_id, depends_on_job_id)
 );
 
--- ============================================
--- Audit Logs (Preserved)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id VARCHAR(36) PRIMARY KEY,
-  action VARCHAR(20) NOT NULL CHECK(action IN ('create', 'update', 'delete', 'execute')),
-  resource_type VARCHAR(50) NOT NULL,
-  resource_id VARCHAR(36),
-  user_id VARCHAR(36),
-  ip_address VARCHAR(45),
-  user_agent TEXT,
-  request_method VARCHAR(10),
-  request_path VARCHAR(500),
-  request_body JSONB,
-  response_status INTEGER,
-  error_message TEXT,
-  duration_ms INTEGER,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- Authentication (Preserved)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS users (
-  id VARCHAR(36) PRIMARY KEY,
-  username VARCHAR(50) NOT NULL UNIQUE,
-  email VARCHAR(255),
-  password_hash VARCHAR(255) NOT NULL,
-  minimax_api_key VARCHAR(255),
-  minimax_region VARCHAR(20) DEFAULT 'cn',
-  role VARCHAR(20) NOT NULL DEFAULT 'user',
-  is_active BOOLEAN DEFAULT true,
-  last_login_at TIMESTAMP,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS invitation_codes (
-  id VARCHAR(36) PRIMARY KEY,
-  code VARCHAR(32) NOT NULL UNIQUE,
-  created_by VARCHAR(36) REFERENCES users(id),
-  max_uses INTEGER NOT NULL DEFAULT 1,
-  used_count INTEGER NOT NULL DEFAULT 0,
-  expires_at TIMESTAMP,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- Webhook Tables
--- ============================================
-
+-- Webhook configs (depends on cron_jobs and users)
 CREATE TABLE IF NOT EXISTS webhook_configs (
   id VARCHAR(36) PRIMARY KEY,
   job_id VARCHAR(36) REFERENCES cron_jobs(id) ON DELETE CASCADE,
@@ -256,6 +268,7 @@ CREATE TABLE IF NOT EXISTS webhook_configs (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Webhook deliveries (depends on webhook_configs, execution_logs, users)
 CREATE TABLE IF NOT EXISTS webhook_deliveries (
   id VARCHAR(36) PRIMARY KEY,
   webhook_id VARCHAR(36) NOT NULL,
@@ -269,10 +282,7 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
   owner_id VARCHAR(36) REFERENCES users(id)
 );
 
--- ============================================
--- Dead Letter Queue
--- ============================================
-
+-- Dead letter queue (depends on users)
 CREATE TABLE IF NOT EXISTS dead_letter_queue (
   id VARCHAR(36) PRIMARY KEY,
   original_task_id VARCHAR(36),
@@ -289,10 +299,7 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- System Config
--- ============================================
-
+-- System config (depends on users)
 CREATE TABLE IF NOT EXISTS system_config (
   id VARCHAR(36) PRIMARY KEY,
   key VARCHAR(100) UNIQUE NOT NULL,
@@ -301,6 +308,25 @@ CREATE TABLE IF NOT EXISTS system_config (
   value_type VARCHAR(20) DEFAULT 'string',
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_by VARCHAR(36) REFERENCES users(id)
+);
+
+-- Execution states (no enforced FK, uses TEXT types for compatibility)
+CREATE TABLE IF NOT EXISTS execution_states (
+  id TEXT PRIMARY KEY,
+  execution_log_id TEXT NOT NULL,
+  workflow_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  current_layer INTEGER DEFAULT 0,
+  completed_nodes TEXT NOT NULL DEFAULT '[]',
+  failed_nodes TEXT NOT NULL DEFAULT '[]',
+  node_outputs TEXT NOT NULL DEFAULT '{}',
+  context TEXT NOT NULL DEFAULT '{}',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  paused_at TIMESTAMP,
+  resumed_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_by TEXT
 );
 
 -- ============================================
@@ -443,47 +469,6 @@ INSERT INTO cron_jobs (id, name, description, cron_expression, timezone, workflo
     CURRENT_TIMESTAMP
   )
 ON CONFLICT (id) DO NOTHING;
-
--- Execution states for persistence
-CREATE TABLE IF NOT EXISTS execution_states (
-  id TEXT PRIMARY KEY,
-  execution_log_id TEXT NOT NULL,
-  workflow_id TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  current_layer INTEGER DEFAULT 0,
-  completed_nodes TEXT NOT NULL DEFAULT '[]',
-  failed_nodes TEXT NOT NULL DEFAULT '[]',
-  node_outputs TEXT NOT NULL DEFAULT '{}',
-  context TEXT NOT NULL DEFAULT '{}',
-  started_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-  paused_at TEXT,
-  resumed_at TEXT,
-  completed_at TEXT,
-  created_by TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_execution_states_status ON execution_states(status);
-CREATE INDEX IF NOT EXISTS idx_execution_states_log_id ON execution_states(execution_log_id);
-
--- Workflow template versions for versioning
-CREATE TABLE IF NOT EXISTS workflow_versions (
-  id TEXT PRIMARY KEY,
-  template_id TEXT NOT NULL REFERENCES workflow_templates(id) ON DELETE CASCADE,
-  version_number INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  description TEXT,
-  nodes_json TEXT NOT NULL,
-  edges_json TEXT NOT NULL,
-  change_summary TEXT,
-  created_by TEXT REFERENCES users(id),
-  created_at TEXT DEFAULT (datetime('now')),
-  is_active INTEGER DEFAULT 1,
-  UNIQUE(template_id, version_number)
-);
-
-CREATE INDEX IF NOT EXISTS idx_workflow_versions_template_id ON workflow_versions(template_id);
-CREATE INDEX IF NOT EXISTS idx_workflow_versions_active ON workflow_versions(is_active);
 `
 
 export const PG_MIGRATIONS = [

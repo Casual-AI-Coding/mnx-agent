@@ -5,6 +5,6 @@ import { resolve } from 'path'
 config({ path: resolve(__dirname, '../../.env') })
 config({ path: resolve(__dirname, '../../.env.test') })
 
-import { setupTestDatabase, teardownTestDatabase } from './test-helpers.js'
+import { setupTestDatabase, globalTeardown } from './test-helpers.js'
 
-export { setupTestDatabase as setup, teardownTestDatabase as teardown }
+export { setupTestDatabase as setup, globalTeardown as teardown }
