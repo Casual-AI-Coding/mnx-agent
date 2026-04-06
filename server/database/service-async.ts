@@ -159,6 +159,13 @@ export class DatabaseService {
     return this.conn.isPostgres()
   }
 
+  async transaction<T>(fn: (db: DatabaseService) => Promise<T>): Promise<T> {
+    return this.conn.transaction(async (txConn) => {
+      const txDb = new DatabaseService(txConn)
+      return fn(txDb)
+    })
+  }
+
   async getAllCronJobs(ownerId?: string): Promise<CronJob[]> {
     return this.jobRepo.getAll(ownerId)
   }
