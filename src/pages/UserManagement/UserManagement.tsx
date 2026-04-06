@@ -34,7 +34,7 @@ function StatCard({ title, value, icon: Icon, color, compact = false }: {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
-            <p className="text-base font-bold">{value}</p>
+            <p className="text-base font-bold text-foreground">{value}</p>
           </div>
         </div>
       </motion.div>
@@ -52,7 +52,7 @@ function StatCard({ title, value, icon: Icon, color, compact = false }: {
             </div>
             <div>
               <p className="text-xs text-muted-foreground/70 font-medium uppercase tracking-wider">{title}</p>
-              <p className="text-2xl font-bold">{value}</p>
+              <p className="text-2xl font-bold text-foreground">{value}</p>
             </div>
           </div>
         </CardContent>

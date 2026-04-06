@@ -387,7 +387,7 @@ function StatCard({
             </div>
             <div>
               <p className="text-xs text-muted-foreground/70">{title}</p>
-              <p className="text-xl font-bold">{value}</p>
+              <p className="text-xl font-bold text-foreground">{value}</p>
             </div>
           </div>
         </CardContent>

@@ -387,7 +387,7 @@ function StatCard({
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{value}</p>
+              <p className="text-2xl font-bold text-foreground">{value}</p>
               <p className="text-muted-foreground/70 text-sm">{title}</p>
             </div>
           </div>

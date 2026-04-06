@@ -167,7 +167,7 @@ export default function Dashboard() {
                   <stat.icon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                   <p className="text-sm text-muted-foreground/70">{stat.label}</p>
                 </div>
               </CardContent>
