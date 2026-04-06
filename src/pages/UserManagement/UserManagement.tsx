@@ -11,12 +11,37 @@ import { UserTable } from './UserTable'
 import { UserFormDialogs } from './UserFormDialogs'
 import type { User } from './types'
 
-function StatCard({ title, value, icon: Icon, color }: {
+function StatCard({ title, value, icon: Icon, color, compact = false }: {
   title: string
   value: number
   icon: React.ElementType
   color: string
+  compact?: boolean
 }) {
+  if (compact) {
+    return (
+      <motion.div 
+        whileHover={{ y: -2, scale: 1.02 }}
+        transition={{ type: 'spring', stiffness: 400 }}
+      >
+        <Card className="relative overflow-hidden border-border/50">
+          <div className={cn('absolute inset-0 opacity-10 bg-gradient-to-br', color)} />
+          <CardContent className="relative p-3">
+            <div className="flex items-center gap-2.5">
+              <div className={cn('p-1.5 rounded-lg bg-gradient-to-br shadow-md', color)}>
+                <Icon className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
+                <p className="text-lg font-bold">{value}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 400 }}>
       <Card className="relative overflow-hidden border border-border/50">
@@ -106,9 +131,9 @@ export default function UserManagement() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-start justify-between gap-4"
       >
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-3 mb-1">
             <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
               <Users className="w-6 h-6 text-primary" />
@@ -119,33 +144,31 @@ export default function UserManagement() {
           </div>
           <p className="text-sm text-muted-foreground/70">管理系统用户、角色和访问权限</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ExportButton
-            data={filteredAndSortedUsers}
-            filename="users"
-            disabled={filteredAndSortedUsers.length === 0}
-          />
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              onClick={() => setCreateDialogOpen(true)}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              新建用户
-            </Button>
-          </motion.div>
+        
+        <div className="flex items-center gap-3">
+          <div className="grid grid-cols-3 gap-2">
+            <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" compact />
+            <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} compact />
+            <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} compact />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <ExportButton
+              data={filteredAndSortedUsers}
+              filename="users"
+              disabled={filteredAndSortedUsers.length === 0}
+            />
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                新建用户
+              </Button>
+            </motion.div>
+          </div>
         </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-      >
-        <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" />
-        <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} />
-        <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} />
       </motion.div>
 
       <motion.div

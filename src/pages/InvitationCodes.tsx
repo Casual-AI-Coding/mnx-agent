@@ -282,7 +282,7 @@ export default function InvitationCodes() {
         className={cn(
           'px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1',
           isActive
-            ? cn(status.warning.bg, status.warning.text, status.warning.border)
+            ? cn(status.warning.bg, status.warning.foreground, status.warning.border)
             : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
         )}
       >
@@ -300,9 +300,9 @@ export default function InvitationCodes() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-start justify-between gap-4"
       >
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-3 mb-1">
             <div className={cn('p-2 rounded-xl bg-gradient-to-br border', status.warning.bgSubtle, status.warning.border)}>
               <Key className={cn('w-6 h-6', status.warning.text)} />
@@ -313,35 +313,32 @@ export default function InvitationCodes() {
           </div>
           <p className="text-sm text-muted-foreground/70">生成和管理注册邀请码</p>
         </div>
-        <div className="flex items-center gap-2">
-          <ExportButton
-            data={filteredAndSortedCodes}
-            filename="invitation_codes"
-            disabled={filteredAndSortedCodes.length === 0}
-          />
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              onClick={() => setGenerateDialogOpen(true)}
-              className={cn('bg-gradient-to-r shadow-lg shadow-warning/20', status.warning.bg, 'hover:opacity-90')}
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              批量生成
-            </Button>
-          </motion.div>
+        
+        <div className="flex items-center gap-3">
+          <div className="grid grid-cols-4 gap-2">
+            <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} compact />
+            <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} compact />
+            <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} compact />
+            <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-muted to-muted-foreground/70" compact />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <ExportButton
+              data={filteredAndSortedCodes}
+              filename="invitation_codes"
+              disabled={filteredAndSortedCodes.length === 0}
+            />
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => setGenerateDialogOpen(true)}
+                className={cn('bg-gradient-to-r shadow-lg shadow-warning/20', status.warning.bg, status.warning.foreground, 'hover:opacity-90')}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                批量生成
+              </Button>
+            </motion.div>
+          </div>
         </div>
-      </motion.div>
-
-      {}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4"
-      >
-        <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} />
-        <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} />
-        <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} />
-        <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-muted to-muted-foreground/70" />
       </motion.div>
 
       {}
@@ -451,9 +448,9 @@ export default function InvitationCodes() {
                             transition={{ duration: 0.15, delay: index * 0.03 }}
                             className={cn(
                               'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity',
-                              chip.type === 'search' && cn(status.warning.bg, status.warning.text, status.warning.border),
-                              chip.type === 'status' && statusFilter === 'active' && cn(status.success.bg, status.success.text, status.success.border),
-                              chip.type === 'status' && statusFilter === 'used' && cn(status.info.bg, status.info.text, status.info.border),
+                              chip.type === 'search' && cn(status.warning.bg, status.warning.foreground, status.warning.border),
+                              chip.type === 'status' && statusFilter === 'active' && cn(status.success.bg, status.success.foreground, status.success.border),
+                              chip.type === 'status' && statusFilter === 'used' && cn(status.info.bg, status.info.foreground, status.info.border),
                               chip.type === 'status' && statusFilter === 'expired' && 'bg-muted/50 text-muted-foreground border-muted-foreground/20',
                               chip.type === 'status' && statusFilter === 'inactive' && 'bg-destructive/10 text-destructive border-destructive/20'
                             )}
@@ -576,7 +573,7 @@ export default function InvitationCodes() {
                               <code className={cn(
                                 'px-3 py-1.5 rounded-lg font-mono text-sm font-medium border',
                                 usable
-                                  ? cn(status.warning.bg, status.warning.text, status.warning.border)
+                                  ? cn(status.warning.bg, status.warning.foreground, status.warning.border)
                                   : 'bg-muted text-muted-foreground border-border'
                               )}>
                                 {code.code}
@@ -728,7 +725,7 @@ export default function InvitationCodes() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>取消</Button>
-          <Button onClick={handleGenerate} disabled={actionLoading} className={cn('bg-warning hover:bg-warning/90', status.warning.bg, status.warning.text)}>
+          <Button onClick={handleGenerate} disabled={actionLoading} className={cn('bg-warning hover:bg-warning/90', status.warning.bg, status.warning.foreground)}>
             {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             <Sparkles className="w-4 h-4 mr-2" />
             生成
@@ -741,12 +738,37 @@ export default function InvitationCodes() {
 
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
-function StatCard({ title, value, icon: Icon, color }: {
+function StatCard({ title, value, icon: Icon, color, compact = false }: {
   title: string
   value: number
   icon: React.ElementType
   color: string
+  compact?: boolean
 }) {
+  if (compact) {
+    return (
+      <motion.div 
+        whileHover={{ y: -2, scale: 1.02 }}
+        transition={{ type: 'spring', stiffness: 400 }}
+      >
+        <Card className="relative overflow-hidden border-border/50">
+          <div className={cn('absolute inset-0 opacity-10 bg-gradient-to-br', color)} />
+          <CardContent className="relative p-3">
+            <div className="flex items-center gap-2.5">
+              <div className={cn('p-1.5 rounded-lg bg-gradient-to-br shadow-md', color)}>
+                <Icon className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
+                <p className="text-lg font-bold">{value}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 400 }}>
       <Card className="relative overflow-hidden border-border/50">

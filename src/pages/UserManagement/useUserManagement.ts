@@ -160,13 +160,15 @@ export function useUserManagement(): UseUserManagementReturn {
     try {
       const data = await apiClient.get<{
         success: boolean
-        data: User[]
-        pagination: { total: number; page: number; limit: number; totalPages: number }
+        data: {
+          data: User[]
+          pagination: { total: number; page: number; limit: number; totalPages: number }
+        }
         error?: string
       }>(`/users?page=${currentPage}&limit=${pageSize}`)
       if (data.success) {
-        setUsers(data.data)
-        setTotalUsers(data.pagination.total)
+        setUsers(data.data.data)
+        setTotalUsers(data.data.pagination.total)
       } else {
         setError(data.error || '获取用户列表失败')
       }

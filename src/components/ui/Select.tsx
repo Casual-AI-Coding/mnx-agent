@@ -252,10 +252,6 @@ const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProp
       () => innerRef.current as HTMLButtonElement,
       []
     )
-
-    React.useEffect(() => {
-      innerRef.current?.focus()
-    }, [])
     
     return (
       <button

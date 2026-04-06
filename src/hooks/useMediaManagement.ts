@@ -111,6 +111,9 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
+  // Track fetched IDs to avoid duplicate requests
+  const fetchedIdsRef = useRef<Set<string>>(new Set())
+
   // Derived: filtered records based on search query
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) return records
@@ -125,11 +128,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
     return source.filter(r => r.type === 'image')
   }, [viewMode, timelineRecords, filteredRecords])
 
-  // Derived: lightbox slides
+  // Derived: lightbox slides (only include images that have signed URLs)
   const lightboxSlides = useMemo(() =>
-    imageRecords.map(r => ({
-      src: signedUrls[r.id] || `/api/media/${r.id}/download`
-    })),
+    imageRecords
+      .filter(r => signedUrls[r.id])
+      .map(r => ({
+        src: signedUrls[r.id]
+      })),
     [imageRecords, signedUrls]
   )
 
@@ -254,12 +259,15 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Handle preview (for images)
   const handlePreview = useCallback((record: MediaRecord) => {
-    if (record.type === 'image') {
-      const index = imageRecords.findIndex(r => r.id === record.id)
-      setLightboxIndex(index >= 0 ? index : 0)
-      setLightboxOpen(true)
+    if (record.type === 'image' && signedUrls[record.id]) {
+      const slidesWithIds = imageRecords.filter(r => signedUrls[r.id])
+      const index = slidesWithIds.findIndex(r => r.id === record.id)
+      if (index >= 0) {
+        setLightboxIndex(index)
+        setLightboxOpen(true)
+      }
     }
-  }, [imageRecords])
+  }, [imageRecords, signedUrls])
 
   // Handle page change
   const handlePageChange = useCallback((page: number) => {
@@ -385,53 +393,63 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Fetch signed URLs for images in records
   useEffect(() => {
-    if (records.length > 0) {
-      const imageRecords = records.filter(r => r.type === 'image' && !signedUrls[r.id])
-      if (imageRecords.length === 0) return
+    if (records.length === 0) return
 
-      Promise.all(
-        imageRecords.map(async (r) => {
-          try {
-            const url = await getMediaDownloadUrl(r.id)
-            return { id: r.id, url }
-          } catch {
-            return { id: r.id, url: '' }
-          }
-        })
-      ).then(results => {
-        setSignedUrls(prev => {
-          const urlMap = { ...prev }
-          results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
-          return urlMap
-        })
+    const imageRecords = records.filter(r =>
+      r.type === 'image' && !fetchedIdsRef.current.has(r.id)
+    )
+    if (imageRecords.length === 0) return
+
+    // Mark IDs as fetched immediately to prevent duplicate requests
+    imageRecords.forEach(r => fetchedIdsRef.current.add(r.id))
+
+    Promise.all(
+      imageRecords.map(async (r) => {
+        try {
+          const url = await getMediaDownloadUrl(r.id)
+          return { id: r.id, url }
+        } catch {
+          return { id: r.id, url: '' }
+        }
       })
-    }
-  }, [records, signedUrls])
+    ).then(results => {
+      setSignedUrls(prev => {
+        const urlMap = { ...prev }
+        results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
+        return urlMap
+      })
+    })
+  }, [records])
 
   // Fetch signed URLs for images in timeline records
   useEffect(() => {
-    if (timelineRecords.length > 0) {
-      const imageRecords = timelineRecords.filter(r => r.type === 'image' && !signedUrls[r.id])
-      if (imageRecords.length === 0) return
+    if (timelineRecords.length === 0) return
 
-      Promise.all(
-        imageRecords.map(async (r) => {
-          try {
-            const url = await getMediaDownloadUrl(r.id)
-            return { id: r.id, url }
-          } catch {
-            return { id: r.id, url: '' }
-          }
-        })
-      ).then(results => {
-        setSignedUrls(prev => {
-          const urlMap = { ...prev }
-          results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
-          return urlMap
-        })
+    const imageRecords = timelineRecords.filter(r =>
+      r.type === 'image' && !fetchedIdsRef.current.has(r.id)
+    )
+    if (imageRecords.length === 0) return
+
+    // Mark IDs as fetched immediately to prevent duplicate requests
+    imageRecords.forEach(r => fetchedIdsRef.current.add(r.id))
+
+    Promise.all(
+      imageRecords.map(async (r) => {
+        try {
+          const url = await getMediaDownloadUrl(r.id)
+          return { id: r.id, url }
+        } catch {
+          return { id: r.id, url: '' }
+        }
       })
-    }
-  }, [timelineRecords, signedUrls])
+    ).then(results => {
+      setSignedUrls(prev => {
+        const urlMap = { ...prev }
+        results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
+        return urlMap
+      })
+    })
+  }, [timelineRecords])
 
   return {
     // State
