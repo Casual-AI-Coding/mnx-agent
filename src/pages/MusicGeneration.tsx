@@ -132,12 +132,6 @@ export default function MusicGeneration() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">{t('musicGeneration.title')}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t('musicGeneration.subtitle')}
-          </p>
-        </div>
         <Button variant="outline" onClick={clearAll}>
           <RefreshCw className="w-4 h-4 mr-2" />
           {t('musicGeneration.clearBtn')}

@@ -121,10 +121,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('audit.title', '审计日志')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('audit.subtitle', '追踪系统操作记录')}</p>
-        </div>
+        <div />
         <Button variant="outline" onClick={loadData}>
           <RefreshCw className="w-4 h-4 mr-2" />
           {t('common.refresh', '刷新')}

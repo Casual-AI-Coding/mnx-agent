@@ -164,23 +164,15 @@ export default function WorkflowMarketplace() {
     <div className="min-h-full bg-background">
       <div className="border-b border-border bg-card/50">
         <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">工作流模板市场</h1>
-              <p className="text-sm text-muted-foreground/70 mt-1">
-                发现和使用预定义的工作流模板，快速构建自动化任务
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/workflow-builder')}
-              >
-                <GitBranch className="w-4 h-4 mr-2" />
-                创建工作流
-              </Button>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/workflow-builder')}
+            >
+              <GitBranch className="w-4 h-4 mr-2" />
+              创建工作流
+            </Button>
           </div>
         </div>
 

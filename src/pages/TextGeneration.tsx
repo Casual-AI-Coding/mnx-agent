@@ -181,14 +181,6 @@ export default function TextGeneration() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent to-secondary bg-clip-text text-transparent">
-            {t('textGeneration.title')}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t('textGeneration.subtitle')}
-          </p>
-        </div>
         <div className="flex items-center gap-3">
           <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
             <SelectTrigger className="w-48 bg-card/50 border-border text-foreground hover:border-primary/50 transition-colors">

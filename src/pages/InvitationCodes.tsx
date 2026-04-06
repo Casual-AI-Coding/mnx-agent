@@ -302,17 +302,7 @@ export default function InvitationCodes() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-start justify-between gap-4"
       >
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <div className={cn('p-2 rounded-xl bg-gradient-to-br border', status.warning.bgSubtle, status.warning.border)}>
-              <Key className={cn('w-6 h-6', status.warning.text)} />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              邀请码管理
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground/70">生成和管理注册邀请码</p>
-        </div>
+        <div className="flex-1" />
         
         <div className="flex items-center gap-3">
           <div className="grid grid-cols-4 gap-2">

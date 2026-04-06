@@ -168,10 +168,7 @@ export default function FileManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('files.title', '文件管理')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('files.subtitle', '管理上传的文件，支持 txt、zip、图片等格式')}</p>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={fetchFiles} disabled={isLoading}>
             <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />

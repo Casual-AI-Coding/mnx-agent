@@ -22,14 +22,7 @@ export default function CronManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Cron Management</h1>
-          <p className="text-muted-foreground/70 mt-2">
-            Schedule, monitor, and manage automated workflow executions
-          </p>
-        </div>
-      </div>
+      <div className="flex items-center justify-between flex-wrap gap-4" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-card border border-border">

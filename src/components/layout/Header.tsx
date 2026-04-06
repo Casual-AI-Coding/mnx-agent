@@ -207,11 +207,16 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onShowKeyModal}
-                className="flex items-center justify-center w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-transparent hover:border-border/50"
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border",
+                  apiKey 
+                    ? "text-success bg-success/10 border-success/20 hover:bg-success/20" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 border-transparent hover:border-border/50"
+                )}
                 title={apiKey ? t('header.apiKeyConfigured') : t('header.configKey')}
               >
                 <Key className="w-[18px] h-[18px]" />
-                {apiKey && <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-success" />}
+                <span className="text-sm font-medium">{apiKey ? '已设置' : '设置Key'}</span>
               </motion.button>
             </div>
 

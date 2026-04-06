@@ -196,10 +196,7 @@ export default function VoiceManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('voiceManagement.title', '音色管理')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('voiceManagement.subtitle', '浏览系统音色、试听和收藏喜爱的声音')}</p>
-        </div>
+        <div />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

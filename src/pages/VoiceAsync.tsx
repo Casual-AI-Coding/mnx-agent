@@ -468,27 +468,6 @@ export default function VoiceAsync() {
       animate="visible"
       className="space-y-6"
     >
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div className="relative">
-          <div className="absolute -inset-2 bg-gradient-to-r from-secondary/20 via-primary/20 to-accent/20 blur-2xl rounded-3xl opacity-60" />
-          <div className="relative">
-            <div className="flex items-center gap-3 mb-1">
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shadow-lg', services.voice.bgSolid, 'shadow-secondary/20')}>
-                <Volume2 className="w-5 h-5 text-foreground" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary via-primary to-accent bg-clip-text text-transparent">
-                  异步语音生成
-                </h1>
-              </div>
-            </div>
-            <p className="text-muted-foreground/70 text-sm pl-1">
-              支持长文本（最大 {MAX_CHARS.toLocaleString()} 字符）或文件输入，任务完成后可下载音频文件
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <motion.div variants={cardVariants}>

@@ -218,24 +218,6 @@ export default function ImageGeneration() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent to-secondary bg-clip-text text-transparent">
-            {t('imageGeneration.title') || '图片生成'}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t('imageGeneration.subtitle') || '使用 AI 根据文本描述生成精美图片'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
-            <Sparkles className="w-8 h-8 relative text-accent-foreground/60" />
-          </div>
-        </div>
-      </motion.div>
-
       {!apiKey && (
         <motion.div variants={itemVariants}>
           <WarningBanner message="请先在右上角配置 API Key，否则无法使用图片生成功能。" />

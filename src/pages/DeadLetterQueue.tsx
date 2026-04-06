@@ -586,12 +586,7 @@ export default function DeadLetterQueue() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dead Letter Queue</h1>
-          <p className="text-muted-foreground/70 mt-2">
-            View and manage failed tasks that exceeded their retry limit
-          </p>
-        </div>
+        <div />
         <div className="flex items-center gap-3">
           {selectedItems.size > 0 && (
             <Button onClick={() => setIsBulkRetryModalOpen(true)}>

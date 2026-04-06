@@ -65,10 +65,7 @@ export default function MediaManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">媒体管理</h1>
-          <p className="text-muted-foreground/70 mt-1">管理生成的音频、图片、视频和音乐文件</p>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-muted/50 rounded-lg p-1">
             <Button

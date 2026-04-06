@@ -183,17 +183,7 @@ export default function ServiceNodeManagement() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-start justify-between gap-4"
       >
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-              <Settings className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{t('serviceNodes.title', '节点权限管理')}</h1>
-              <p className="text-muted-foreground/70 text-sm">{t('serviceNodes.subtitle', '管理工作流中可用服务节点的访问权限')}</p>
-            </div>
-          </div>
-        </div>
+        <div className="flex-1" />
         
         <div className="grid grid-cols-3 gap-2">
           <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} compact />

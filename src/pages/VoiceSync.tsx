@@ -305,22 +305,6 @@ export default function VoiceSync() {
       className="space-y-6"
     >
       
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            {t('voiceSync.title')}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {t('voiceSync.subtitleWithLimit', { count: MAX_CHARS.toLocaleString() })}
-          </p>
-        </div>
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-          <Mic2 className="w-10 h-10 relative text-primary/80" />
-        </div>
-      </motion.div>
-
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <div className="lg:col-span-2 space-y-6">

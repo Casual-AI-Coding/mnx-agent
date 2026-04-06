@@ -73,10 +73,7 @@ export default function TemplateLibrary() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('templates.title', '模板库')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('templates.subtitle', '管理和使用提示词模板')}</p>
-        </div>
+        <div />
         <Button className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="w-4 h-4" />
           {t('templates.create', '创建模板')}

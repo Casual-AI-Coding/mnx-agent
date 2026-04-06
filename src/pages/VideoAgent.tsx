@@ -236,15 +236,6 @@ export default function VideoAgent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">视频 Agent</h1>
-          <p className="text-muted-foreground text-sm">
-            选择模板，快速生成专业视频内容
-          </p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {!selectedTemplate ? (

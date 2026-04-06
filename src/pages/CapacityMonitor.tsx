@@ -92,12 +92,6 @@ export default function CapacityMonitor() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Capacity Monitor</h1>
-          <p className="text-muted-foreground/70 mt-2">
-            MiniMax Coding Plan usage and quota monitoring
-          </p>
-        </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground/50">
             Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}

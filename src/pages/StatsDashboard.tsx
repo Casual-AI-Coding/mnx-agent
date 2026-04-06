@@ -55,10 +55,7 @@ export default function StatsDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('stats.title', '执行统计')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('stats.subtitle', '任务执行数据分析')}</p>
-        </div>
+        <div />
         <Button variant="outline" onClick={loadStats}>
           刷新数据
         </Button>

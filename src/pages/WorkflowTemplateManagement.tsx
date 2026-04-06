@@ -207,11 +207,7 @@ export default function WorkflowTemplateManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('workflowTemplates.title', '流程模板管理')}</h1>
-          <p className="text-muted-foreground/70 mt-1">{t('workflowTemplates.subtitle', '管理工作流模板的可见性和权限')}</p>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input

@@ -134,17 +134,7 @@ export default function UserManagement() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-start justify-between gap-4"
       >
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-              <Users className="w-6 h-6 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              用户管理
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground/70">管理系统用户、角色和访问权限</p>
-        </div>
+        <div className="flex-1" />
         
         <div className="flex items-center gap-3">
           <div className="grid grid-cols-3 gap-2">
