@@ -2,6 +2,86 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2] - 2026-04-06
+
+### Fixed
+
+**暗色模式兼容性修复** - 替换非标准 Tailwind 类为主题变量
+
+- **全局样式兜底** - 添加 body 默认前景色和背景色
+  - `src/index.css` (+4/-0) - 确保 `color: hsl(var(--foreground))` 和 `background-color: hsl(var(--background))`
+  - 解决暗色模式下文字不可见问题
+
+- **UI 组件修复** - 替换 `dark-*` 类为标准主题变量
+  - `src/components/ui/Dialog.tsx` (+6/-6) - `dark-*` → `text-muted-foreground`, `bg-muted`
+  - `src/components/ui/EmptyState.tsx` (+6/-6) - 暗色文字可见性修复
+  - `src/components/ui/MarkdownRenderer.tsx` (+8/-8) - Markdown 内容渲染修复
+  - `src/components/ui/Tooltip.tsx` (+2/-2) - Tooltip 提示文字修复
+
+- **Onboarding 组件修复** - 新用户引导可见性
+  - `src/components/onboarding/QuickStartGuide.tsx` (+14/-14) - 快速指南文字可见
+  - `src/components/onboarding/WelcomeModal.tsx` (+26/-26) - 欢迎弹窗内容可见
+
+- **Workflow 组件修复** - 工作流构建器暗色模式
+  - `src/components/workflow/WorkflowPreview.tsx` (+12/-12) - 工作流预览文字可见
+  - `src/components/workflow/builder/WorkflowCanvas.tsx` (+20/-20) - 画布背景和文字修复
+  - `src/components/workflow/nodes/DelayNode.tsx` (+4/-4) - 延迟节点显示修复
+
+- **其他组件修复** - 全面暗色模式兼容
+  - `src/components/shared/ExportButton.tsx` (+2/-2) - `bg-dark-900` → `bg-muted`
+  - `src/components/templates/CreateTemplateModal.tsx` (+42/-42) - 模板创建弹窗修复
+  - `src/components/media/MediaTableView.tsx` (+8/-8) - 媒体表格文字修复
+
+- **页面组件修复** - 各功能页面暗色可见性
+  - `src/pages/AuditLogs.tsx` (+2/-2) - 审计日志页面
+  - `src/pages/ImageGeneration.tsx` (+2/-2) - 图像生成页面
+  - `src/pages/InvitationCodes.tsx` (+14/-14) - 遇请码管理页面
+  - `src/pages/MusicGeneration.tsx` (+2/-2) - 音乐生成页面
+  - `src/pages/TokenMonitor.tsx` (+12/-12) - Token 监控页面
+  - `src/pages/UserManagement/UserTable.tsx` (+14/-14) - 用户管理表格
+  - `src/pages/VideoAgent.tsx` (+2/-2) - 视频 Agent 页面
+  - `src/pages/VideoGeneration.tsx` (+2/-2) - 视频生成页面
+  - `src/pages/VoiceAsync.tsx` (+2/-2) - 异步语音页面
+  - `src/pages/VoiceSync.tsx` (+2/-2) - 同步语音页面
+  - `src/pages/TextGeneration.tsx` (+2/-2) - 文本生成页面
+
+### Changed
+
+**UI 改进** - StatCard compact mode + 渐变色优化
+
+- **StatCard Compact Mode** - 统计卡片紧凑模式
+  - `src/pages/StatsDashboard.tsx` (+27/-1) - 新增 `compact?: boolean` 参数
+  - `py-2` → `py-1` - 更扁平的卡片外观
+  - 图标/文字尺寸优化 (`w-3.5 h-3.5`, `text-base`, `text-[10px]`)
+  - 渐变背景透明度调整 (opacity-15)
+
+- **调试页面渐变色优化** - 固定鲜艳渐变替代主题感知渐变
+  - `src/config/pages.ts` (+22/-7) - 新增 4 个渐变变体：
+    - `indigo-violet`: from-indigo-500 to-violet-500 (靛蓝→紫罗兰)
+    - `sky-blue`: from-sky-400 to-blue-500 (天蓝)
+    - `rose-pink`: from-rose-400 to-pink-500 (玫瑰粉)
+    - `violet-purple`: from-violet-500 to-purple-600 (紫罗兰)
+  - 各调试页面渐变色分配：
+    - Text Generation: indigo-violet
+    - Voice Sync/Async: sky-blue
+    - Image Generation: rose-pink
+    - Music Generation: violet-purple
+    - Video/Video Agent: orange-amber (已有)
+
+### Performance
+
+- **代码质量指标**
+  - 26 个文件变更 (+148/-111)
+  - 暗色模式修复涉及 26 个组件/页面
+  - 统一使用 Tailwind theme variables，提升主题一致性
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 无破坏性 API 变更
+- ✅ 仅样式调整，不影响功能逻辑
+- ✅ 主题变量迁移向后兼容
+
 ## [1.6.1] - 2026-04-06
 
 ### Added
