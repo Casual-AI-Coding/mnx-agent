@@ -40,20 +40,14 @@ export interface DefaultsResponse {
 
 export async function getSettings(): Promise<SettingsResponse<Partial<AllSettings>>> {
   const response = await internalAxios.get('/settings')
-  return {
-    success: true,
-    data: response.data,
-  }
+  return response.data
 }
 
 export async function getSettingsByCategory(
   category: SettingsCategory
 ): Promise<SettingsResponse<Record<string, unknown>>> {
   const response = await internalAxios.get(`/settings/${category}`)
-  return {
-    success: true,
-    data: response.data,
-  }
+  return response.data
 }
 
 export async function updateSettings(
@@ -61,13 +55,7 @@ export async function updateSettings(
   settings: Record<string, unknown>
 ): Promise<SettingsResponse<Record<string, unknown>>> {
   const response = await internalAxios.patch(`/settings/${category}`, { settings })
-  return {
-    success: true,
-    data: response.data.settings,
-    meta: {
-      changedKeys: response.data.changedKeys,
-    },
-  }
+  return response.data
 }
 
 export async function replaceSettings(
@@ -75,23 +63,14 @@ export async function replaceSettings(
   settings: Record<string, unknown>
 ): Promise<SettingsResponse<Record<string, unknown>>> {
   const response = await internalAxios.put(`/settings/${category}`, { settings })
-  return {
-    success: true,
-    data: response.data.settings,
-    meta: {
-      changedKeys: response.data.changedKeys,
-    },
-  }
+  return response.data
 }
 
 export async function resetSettings(
   category: SettingsCategory
 ): Promise<SettingsResponse<Record<string, unknown>>> {
   const response = await internalAxios.delete(`/settings/${category}`)
-  return {
-    success: true,
-    data: response.data.defaults,
-  }
+  return response.data
 }
 
 export async function getSettingsHistory(
@@ -105,16 +84,10 @@ export async function getSettingsHistory(
   params.append('limit', String(limit))
 
   const response = await internalAxios.get(`/settings/history?${params.toString()}`)
-  return {
-    success: true,
-    data: response.data,
-  }
+  return response.data
 }
 
 export async function getDefaultSettings(): Promise<DefaultsResponse> {
   const response = await internalAxios.get('/settings/defaults')
-  return {
-    success: true,
-    data: response.data,
-  }
+  return response.data
 }
