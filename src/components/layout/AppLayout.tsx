@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Key, X } from 'lucide-react'
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 export default function AppLayout() {
   const { t, i18n } = useTranslation()
   const location = useLocation()
-  const { settings, setCategory } = useSettingsStore()
+  const { settings, setCategory, initialize, saveSettings } = useSettingsStore()
   const apiKey = settings?.api?.minimaxKey ?? DEFAULT_SETTINGS.api.minimaxKey
   const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
@@ -23,12 +23,22 @@ export default function AppLayout() {
   const [tempKey, setTempKey] = useState(apiKey)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
   const pageConfig = getPageConfig(location.pathname)
   const PageIcon = pageConfig?.icon
 
   const handleOpenKeyModal = () => {
     setTempKey(apiKey)
     setShowKeyModal(true)
+  }
+
+  const handleSaveApiKey = async () => {
+    setApiKey(tempKey)
+    await saveSettings('api')
+    setShowKeyModal(false)
   }
 
   return (
@@ -96,10 +106,7 @@ export default function AppLayout() {
                     {t('common.cancel')}
                   </button>
                   <button
-                    onClick={() => {
-                      setApiKey(tempKey)
-                      setShowKeyModal(false)
-                    }}
+                    onClick={handleSaveApiKey}
                     className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-all"
                   >
                     {t('common.save')}
