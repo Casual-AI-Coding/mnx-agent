@@ -2,6 +2,105 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.5] - 2026-04-06
+
+### Added
+
+**Theme Adaptation Refactoring - 语义化设计 Token 系统**
+
+**架构升级：**
+- **Token 系统模块化** - 替换旧 `tokens.ts` 为模块化结构
+  - `src/themes/tokens/semantic.ts` (80行) - Token 类型定义
+  - `src/themes/tokens/values.ts` (195行) - 主题感知 Token 值
+  - `src/themes/tokens/utils.ts` (93行) - Token 工具函数
+  - `src/themes/tokens/values.test.ts` (70行) - 单元测试覆盖
+  - `src/themes/tokens/index.ts` (45行) - 统一导出入口
+
+- **语义状态颜色系统** - 5 种 Token Set 定义
+  - `status`: success/warning/error/info/pending（7 种属性：bg, bgSubtle, text, border, icon, foreground, gradient）
+  - `taskStatus`: pending/running/completed/failed/cancelled（4 种属性：bg, text, border, dot）
+  - `services`: text/voice/image/music/video/cron/workflow（4 种属性：bg, bgSolid, text, icon）
+  - `roles`: super/admin/pro/user（5 种属性：gradient, bg, bgLight, text, border）
+
+- **CSS 变量扩展** - 所有 22 个主题（11 dark + 11 light）新增语义状态颜色
+  - `--success`, `--warning`, `--error`, `--info` 及对应 foreground 颜色
+  - HSL 格式，保证跨主题对比度一致性
+
+- **Tailwind 配置扩展** - 语义颜色映射
+  - 新增 `success`, `warning`, `error`, `info` 语义颜色
+  - 支持 opacity modifier：`bg-success/10`, `text-warning/80`
+
+- **开发工具** - 硬编码颜色检测脚本
+  - `scripts/detect-hardcoded-colors.cjs` (134行)
+  - 自动检测残留的硬编码 Tailwind 颜色（如 `bg-blue-500`）
+
+**文档：**
+- 新增设计文档 `docs/superpowers/plans/2026-04-05-theme-adaptation-refactoring.md` (1733行)
+  - Wave 1-3 迁移计划
+  - Token 设计原则
+  - 测试策略
+
+### Changed
+
+**组件迁移（Wave 3）- 80 个文件迁移到语义 Token**
+
+**高频组件：**
+- `StatusBadge.tsx` (+50/-15) - 状态徽章完全迁移
+- `ServiceIcon.tsx` (+10/-8) - 服务图标颜色重构
+- `ImageGeneration.tsx` (+71/-0) - 图像生成页面迁移
+- `VoiceSync.tsx` (+151/-0) - 语音同步页面迁移
+- `VoiceAsync.tsx` (+151/-0) - 异步语音页面迁移
+- `InvitationCodes.tsx` (+65/-0) - 邀请码管理迁移
+
+**Workflow Builder 节点：**
+- `ConditionNode.tsx` (+14/-13) - 条件节点迁移
+- `LoopNode.tsx` (+19/-18) - 循环节点迁移
+- `TransformNode.tsx` (+16/-15) - 转换节点迁移
+- `ActionNode.tsx` (+31/-0) - 动作节点迁移
+- `DelayNode.tsx` (+33/-0) - 延迟节点迁移
+- `ErrorBoundaryNode.tsx` (+47/-0) - 错误边界节点迁移
+
+**页面迁移（完整列表）：**
+- Dashboard, AuditLogs, CapacityMonitor, StatsDashboard, DeadLetterQueue
+- FileManagement, WebhookManagement, TemplateLibrary, WorkflowMarketplace
+- UserManagement, TextGeneration, VideoAgent, VideoGeneration
+- ServiceNodeManagement, TokenMonitor
+
+**文件删除：**
+- 移除旧 Token 系统 `src/themes/tokens.ts` (415行)
+
+### Performance
+
+**代码质量改进：**
+- 净增长：+2,241 行（新增 3,420 行，删除 1,179 行）
+- Token 系统模块化：单文件 415 行 → 4 个模块化文件（平均 ~120 行）
+- 测试覆盖：新增 26 个 Token 单元测试
+
+### Technical Debt
+
+- ✅ 消除 ~500 处硬编码颜色值
+- ✅ 建立可扩展的语义化 Token 架构
+- ✅ 所有颜色值通过 CSS 变量动态响应主题
+- ✅ 为未来主题扩展和暗色/亮色模式切换打下基础
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 组件接口无破坏性变更
+- ✅ Token 系统向后兼容（渐进式迁移）
+- ✅ 旧 Token 文件删除不影响功能（新系统已覆盖所有用例）
+
+### Known Issues
+
+- **测试环境配置问题** - 部分 PostgreSQL 测试因权限问题失败
+  - 错误：`permission denied for schema public`
+  - 影响：数据库相关测试无法运行（非代码问题）
+  - 解决方案：配置测试数据库权限（参见 `TESTING.md`）
+
+- **测试超时问题** - `CapacityChecker.waitForCapacity` 测试超时
+  - 默认 timeout 5000ms 不够长
+  - 解决方案：增加 `testTimeout` 配置或调整测试等待策略
+
 ## [1.5.4] - 2026-04-05
 
 ### Fixed
