@@ -195,6 +195,9 @@ export const useExecutionLogsStore = create<ExecutionLogsState>()(
     }),
     {
       name: 'minimax-execution-logs',
+      partialize: (state) => ({
+        logs: state.logs,
+      }),
     }
   )
 )
