@@ -448,6 +448,12 @@ export class CronScheduler {
 
 let schedulerInstance: CronScheduler | null = null
 
+/**
+ * Get or create the CronScheduler singleton.
+ * 
+ * @deprecated Use DI Container via getCronSchedulerService() from service-registration.ts
+ * This function is kept for backward compatibility.
+ */
 export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: ITaskExecutor, options?: CronSchedulerOptions): CronScheduler {
   if (!schedulerInstance) {
     const notificationService = getNotificationService(db)
