@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Switch } from '@/components/ui/Switch'
 import { Slider } from '@/components/ui/Slider'
 import { useSettingsStore } from '@/settings/store'
-import { Save, RotateCcw, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 const textModelOptions = [
   { value: 'MiniMax-Text-01', label: 'MiniMax-Text-01' },
@@ -265,17 +264,6 @@ function VideoSettings() {
 
 export function GenerationSettingsPanel() {
   const [activeTab, setActiveTab] = useState('text')
-  const saveSettings = useSettingsStore(s => s.saveSettings)
-  const isSaving = useSettingsStore(s => s.isSaving)
-  const resetCategory = useSettingsStore(s => s.resetCategory)
-
-  const handleSave = async () => {
-    await saveSettings('generation')
-  }
-
-  const handleReset = () => {
-    resetCategory('generation')
-  }
 
   return (
     <div className="space-y-6">
@@ -304,17 +292,6 @@ export function GenerationSettingsPanel() {
           </Tabs>
         </CardContent>
       </Card>
-
-      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-card">
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          重置
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4 mr-2" />
-          {isSaving ? '保存中...' : '保存'}
-        </Button>
-      </div>
     </div>
   )
 }

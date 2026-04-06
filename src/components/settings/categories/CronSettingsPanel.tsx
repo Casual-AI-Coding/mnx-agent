@@ -1,9 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { SelectSetting, NumberSetting } from '../fields'
 import { useCategory } from '@/settings/store/hooks'
-import { useSettingsStore } from '@/settings/store'
-import { Save, RotateCcw, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 
 const timezoneOptions = [
   { value: 'Asia/Shanghai', label: 'Asia/Shanghai (UTC+8)' },
@@ -35,16 +33,6 @@ const misfirePolicyOptions = [
 
 export function CronSettingsPanel() {
   const [settings] = useCategory('cron')
-  const saveSettings = useSettingsStore(s => s.saveSettings)
-  const isSaving = useSettingsStore(s => s.isSaving)
-
-  const handleSave = async () => {
-    await saveSettings('cron')
-  }
-
-  const handleReset = () => {
-    useSettingsStore.getState().resetCategory('cron')
-  }
 
   return (
     <div className="space-y-6">
@@ -116,17 +104,6 @@ export function CronSettingsPanel() {
           />
         </CardContent>
       </Card>
-
-      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-card">
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          重置
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4 mr-2" />
-          {isSaving ? '保存中...' : '保存'}
-        </Button>
-      </div>
     </div>
   )
 }

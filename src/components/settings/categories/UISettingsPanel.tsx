@@ -1,10 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { SelectSetting, BooleanSetting, NumberSetting } from '../fields'
 import { ThemePicker } from '../ThemePicker'
 import { useCategory } from '@/settings/store/hooks'
-import { useSettingsStore } from '@/settings/store'
-import { Save, RotateCcw, Palette } from 'lucide-react'
+import { Palette } from 'lucide-react'
 
 const toastPositionOptions = [
   { value: 'top-left', label: '左上' },
@@ -27,16 +25,6 @@ const fontSizeOptions = [
 
 export function UISettingsPanel() {
   const [settings] = useCategory('ui')
-  const saveSettings = useSettingsStore(s => s.saveSettings)
-  const isSaving = useSettingsStore(s => s.isSaving)
-
-  const handleSave = async () => {
-    await saveSettings('ui')
-  }
-
-  const handleReset = () => {
-    useSettingsStore.getState().resetCategory('ui')
-  }
 
   return (
     <div className="space-y-6">
@@ -132,17 +120,6 @@ export function UISettingsPanel() {
           />
         </CardContent>
       </Card>
-
-      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-card">
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          重置
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4 mr-2" />
-          {isSaving ? '保存中...' : '保存'}
-        </Button>
-      </div>
     </div>
   )
 }

@@ -1,9 +1,11 @@
 import { createPortal } from 'react-dom'
-import { X, Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { X, Settings, Save, RotateCcw } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth'
+import { Button } from '@/components/ui/Button'
+import { useSettingsStore } from '@/settings/store'
 import {
   User,
   Key,
@@ -98,6 +100,14 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
   const [isAnimating, setIsAnimating] = useState(false)
   const [activeCategory, setActiveCategory] = useState(initialCategory)
   const { user } = useAuthStore()
+  const mainRef = useRef<HTMLElement>(null)
+  
+  const saveSettings = useSettingsStore(s => s.saveSettings)
+  const resetCategory = useSettingsStore(s => s.resetCategory)
+  const isSaving = useSettingsStore(s => s.isSaving)
+  const dirtyCategories = useSettingsStore(s => s.dirtyCategories)
+  
+  const hasChanges = dirtyCategories.has(activeCategory as SettingsCategory)
 
   useEffect(() => {
     if (open) {
@@ -115,6 +125,13 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
       setActiveCategory(initialCategory)
     }
   }, [open, initialCategory])
+  
+  // Reset scroll position when category changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0
+    }
+  }, [activeCategory])
 
   if (!shouldRender) return null
 
@@ -122,6 +139,14 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
     if (e.target === e.currentTarget) {
       onClose()
     }
+  }
+
+  const handleSave = async () => {
+    await saveSettings(activeCategory as SettingsCategory)
+  }
+
+  const handleReset = () => {
+    resetCategory(activeCategory as SettingsCategory)
   }
 
   const categoryInfo = CATEGORY_TITLES[activeCategory] || CATEGORY_TITLES.account
@@ -211,26 +236,46 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
             </nav>
           </aside>
 
-          <main className="flex-1 overflow-y-auto px-6 py-8">
-            {!user ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                请先登录以查看设置
-              </div>
-            ) : (
-              <motion.div
-                key={activeCategory}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-foreground">{categoryInfo.title}</h3>
-                  <p className="text-sm text-muted-foreground">{categoryInfo.description}</p>
+          <div className="flex-1 flex flex-col min-h-0">
+            <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-8">
+              {!user ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  请先登录以查看设置
                 </div>
-                <CategoryPanel category={activeCategory} />
-              </motion.div>
-            )}
-          </main>
+              ) : (
+                <motion.div
+                  key={activeCategory}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-foreground">{categoryInfo.title}</h3>
+                    <p className="text-sm text-muted-foreground">{categoryInfo.description}</p>
+                  </div>
+                  <CategoryPanel category={activeCategory} />
+                </motion.div>
+              )}
+            </main>
+            
+            <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-card flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleReset}
+                disabled={!hasChanges}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                重置
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving || !hasChanges}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? '保存中...' : '保存'}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>,

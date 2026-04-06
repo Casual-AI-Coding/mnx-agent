@@ -1,22 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { BooleanSetting, NumberSetting } from '../fields'
 import { useCategory } from '@/settings/store/hooks'
-import { useSettingsStore } from '@/settings/store'
-import { Save, RotateCcw, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 
 export function PrivacySettingsPanel() {
   const [settings] = useCategory('privacy')
-  const saveSettings = useSettingsStore(s => s.saveSettings)
-  const isSaving = useSettingsStore(s => s.isSaving)
-
-  const handleSave = async () => {
-    await saveSettings('privacy')
-  }
-
-  const handleReset = () => {
-    useSettingsStore.getState().resetCategory('privacy')
-  }
 
   return (
     <div className="space-y-6">
@@ -67,17 +55,6 @@ export function PrivacySettingsPanel() {
           />
         </CardContent>
       </Card>
-
-      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-card">
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          重置
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4 mr-2" />
-          {isSaving ? '保存中...' : '保存'}
-        </Button>
-      </div>
     </div>
   )
 }
