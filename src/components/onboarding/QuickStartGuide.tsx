@@ -87,11 +87,11 @@ export function QuickStartGuide({
           <h3 className="text-lg font-semibold text-foreground">
             {t('onboarding.quickStartGuide', '快速入门指南')}
           </h3>
-          <span className="text-sm text-dark-400">
+          <span className="text-sm text-muted-foreground">
             {completedCount}/{steps.length}
           </span>
         </div>
-        <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-primary-500 to-purple-500"
             initial={{ width: 0 }}
@@ -111,8 +111,8 @@ export function QuickStartGuide({
             transition={{ delay: index * 0.1 }}
             className={cn(
               'group relative flex items-start gap-4 p-4 rounded-lg text-left',
-              'border border-dark-700 bg-dark-800/30',
-              'hover:border-primary-500/30 hover:bg-dark-800/50',
+              'border border-muted bg-muted/30',
+              'hover:border-primary-500/30 hover:bg-muted/50',
               'transition-all duration-200'
             )}
           >
@@ -141,12 +141,12 @@ export function QuickStartGuide({
                   </span>
                 )}
               </div>
-              <p className="text-sm text-dark-400 mt-1 leading-relaxed">
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 {step.description}
               </p>
             </div>
 
-            <ArrowRight className="w-4 h-4 text-dark-600 group-hover:text-dark-400 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
           </motion.button>
         ))}
       </div>
@@ -171,7 +171,7 @@ export function QuickStartGuideCompact({ onDismiss, className }: QuickStartGuide
   ]
 
   return (
-    <div className={cn('p-4 rounded-lg border border-dark-700 bg-dark-800/50', className)}>
+    <div className={cn('p-4 rounded-lg border border-muted bg-muted/50', className)}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-medium text-foreground">
           {t('onboarding.quickStart', '快速开始')}

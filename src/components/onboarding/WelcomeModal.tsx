@@ -46,11 +46,11 @@ export function WelcomeModal({
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600">
                 <Sparkles className="w-6 h-6 text-primary-foreground" />
               </div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-dark-200 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
                 {t('onboarding.welcomeTitle', '欢迎使用 MiniMax AI 工具集')}
               </h2>
             </div>
-            <p className="text-dark-400 text-sm leading-relaxed">
+            <p className="text-muted-foreground text-sm leading-relaxed">
               {t('onboarding.welcomeDescription', '这是一个强大的 AI 工具集，支持文本对话、语音合成、图像生成、音乐创作和视频生成。内置定时任务调度系统，让 AI 能力自动化运行。')}
             </p>
           </DialogHeader>
@@ -61,8 +61,8 @@ export function WelcomeModal({
             onClick={handleSetApiKey}
             className={cn(
               'group relative flex flex-col items-start gap-2 p-4 rounded-lg',
-              'border border-dark-700 bg-dark-800/50',
-              'hover:border-primary-500/50 hover:bg-dark-800',
+              'border border-border bg-muted/50',
+              'hover:border-primary-500/50 hover:bg-muted',
               'transition-all duration-200 text-left'
             )}
           >
@@ -72,7 +72,7 @@ export function WelcomeModal({
                 {t('onboarding.setApiKey', '设置 API Key')}
               </span>
             </div>
-            <span className="text-xs text-dark-500">
+            <span className="text-xs text-muted-foreground/70">
               {t('onboarding.setApiKeyDesc', '配置 MiniMax API 以开始使用')}
             </span>
           </button>
@@ -81,8 +81,8 @@ export function WelcomeModal({
             onClick={handleStartExploring}
             className={cn(
               'group relative flex flex-col items-start gap-2 p-4 rounded-lg',
-              'border border-dark-700 bg-dark-800/50',
-              'hover:border-success/50 hover:bg-dark-800',
+              'border border-border bg-muted/50',
+              'hover:border-success/50 hover:bg-muted',
               'transition-all duration-200 text-left'
             )}
           >
@@ -92,26 +92,26 @@ export function WelcomeModal({
                 {t('onboarding.startExploring', '开始使用')}
               </span>
             </div>
-            <span className="text-xs text-dark-500">
+            <span className="text-xs text-muted-foreground/70">
               {t('onboarding.startExploringDesc', '直接探索各项功能')}
             </span>
           </button>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-dark-800">
+        <DialogFooter className="flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => onDontShowAgain(e.target.checked)}
               className={cn(
-                'w-4 h-4 rounded border border-dark-600',
-                'bg-dark-800 text-primary-500',
+                'w-4 h-4 rounded border border-muted-foreground/50',
+                'bg-muted text-primary-500',
                 'focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-0',
                 'transition-colors cursor-pointer'
               )}
             />
-            <span className="text-sm text-dark-400 group-hover:text-dark-300 transition-colors">
+            <span className="text-sm text-muted-foreground group-hover:text-muted-foreground transition-colors">
               {t('onboarding.dontShowAgain', '不再显示')}
             </span>
           </label>
@@ -120,7 +120,7 @@ export function WelcomeModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-dark-400 hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             {t('common.close', '关闭')}
           </Button>

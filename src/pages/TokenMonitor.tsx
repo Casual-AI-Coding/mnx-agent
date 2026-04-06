@@ -287,7 +287,7 @@ export default function TokenMonitor() {
                   return (
                     <div key={day.date} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{day.date}</span>
+                        <span className="font-medium text-foreground">{day.date}</span>
                         <span className="text-muted-foreground">{total.toLocaleString()} 请求</span>
                       </div>
                       <div className="h-8 flex rounded-md overflow-hidden">
@@ -334,23 +334,23 @@ export default function TokenMonitor() {
                 <div className="flex items-center gap-4 pt-4 border-t text-sm">
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.text.bgSolid)} />
-                    <span>文本</span>
+                    <span className="text-foreground">文本</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.voice.bgSolid)} />
-                    <span>语音</span>
+                    <span className="text-foreground">语音</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.image.bgSolid)} />
-                    <span>图片</span>
+                    <span className="text-foreground">图片</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.music.bgSolid)} />
-                    <span>音乐</span>
+                    <span className="text-foreground">音乐</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.video.bgSolid)} />
-                    <span>视频</span>
+                    <span className="text-foreground">视频</span>
                   </div>
                 </div>
               </div>

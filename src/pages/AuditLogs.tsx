@@ -215,7 +215,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               description={t('audit.noLogsHint', '系统操作将自动记录在此')}
             />
           ) : (
-            <div className="divide-y divide-dark-800">
+            <div className="divide-y divide-border">
               {logs.map((log) => (
                 <motion.div
                   key={log.id}
