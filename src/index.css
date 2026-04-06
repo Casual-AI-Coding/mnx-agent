@@ -57,6 +57,10 @@
   
   body {
     overflow-y: scroll;
+    /* 兜底文字颜色：确保所有元素继承主题感知的前景色 */
+    color: hsl(var(--foreground));
+    /* 兜底背景颜色：确保根元素有正确的背景 */
+    background-color: hsl(var(--background));
   }
 }
 
