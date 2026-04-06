@@ -137,7 +137,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
     >
       <div
         className={`
-          absolute inset-0 bg-foreground/10 backdrop-blur-md
+          absolute inset-0 bg-foreground/5 backdrop-blur-xl
           transition-opacity duration-300
           ${isAnimating ? 'opacity-100' : 'opacity-0'}
         `}
@@ -146,8 +146,9 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
       <div
         className={`
           relative w-full max-w-5xl h-[85vh] overflow-hidden
-          bg-gradient-to-br from-card via-secondary to-card
-          border border-border rounded-2xl shadow-2xl
+          bg-gradient-to-br from-card/95 via-secondary/90 to-card/95
+          backdrop-blur-sm
+          border border-border/50 rounded-2xl shadow-2xl
           transition-all duration-300 ease-out
           ${isAnimating
             ? 'opacity-100 scale-100 translate-y-0'
@@ -210,7 +211,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
             </nav>
           </aside>
 
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto px-6 py-8">
             {!user ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 请先登录以查看设置
@@ -222,7 +223,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="mb-4">
+                <div className="mb-6">
                   <h3 className="text-lg font-semibold text-foreground">{categoryInfo.title}</h3>
                   <p className="text-sm text-muted-foreground">{categoryInfo.description}</p>
                 </div>

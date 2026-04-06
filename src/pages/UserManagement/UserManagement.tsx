@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Users, Plus, CheckCircle2, XCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { BatchOperationToolbar } from '@/components/shared/BatchOperationToolbar'
