@@ -55,6 +55,7 @@ export default function AppLayout() {
               icon={<PageIcon className="w-5 h-5" />}
               title={pageConfig.title}
               description={pageConfig.description}
+              gradient={pageConfig.gradient}
             />
           )}
           <Outlet />

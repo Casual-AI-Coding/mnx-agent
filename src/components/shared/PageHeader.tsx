@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { GRADIENT_CLASSES, type GradientVariant } from '@/config/pages'
 
 interface PageHeaderProps {
   icon?: ReactNode
@@ -8,9 +9,12 @@ interface PageHeaderProps {
   description?: string
   actions?: ReactNode
   className?: string
+  gradient?: GradientVariant
 }
 
-export function PageHeader({ icon, title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({ icon, title, description, actions, className, gradient = 'primary-accent' }: PageHeaderProps) {
+  const gradientClass = GRADIENT_CLASSES[gradient]
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: -10 }}
@@ -36,7 +40,7 @@ export function PageHeader({ icon, title, description, actions, className }: Pag
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15, duration: 0.3 }}
-            className="text-2xl font-bold bg-gradient-to-r from-primary-400 via-accent to-secondary bg-clip-text text-transparent"
+            className={cn("text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r", gradientClass)}
           >
             {title}
           </motion.h1>
