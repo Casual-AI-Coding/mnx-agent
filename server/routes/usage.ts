@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express'
-import { getMiniMaxClient } from '../lib/minimax'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
 import { successResponse } from '../middleware/api-response'
 
 const router = Router()
 
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const client = getMiniMaxClient()
+    const client = getClientFromRequest(req)
     const result = await client.getBalance()
     successResponse(res, result)
   } catch (error) {
