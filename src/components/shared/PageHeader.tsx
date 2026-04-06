@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
@@ -11,21 +12,56 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon, title, description, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-center justify-between", className)}>
-      <div className="flex items-center gap-3">
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn("flex items-center justify-between", className)}
+    >
+      <div className="flex items-center gap-4">
         {icon && (
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-            {icon}
-          </div>
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.2 }}
+            className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-lg shadow-primary/5"
+          >
+            <div className="text-primary">
+              {icon}
+            </div>
+          </motion.div>
         )}
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <motion.h1 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15, duration: 0.3 }}
+            className="text-3xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent"
+          >
+            {title}
+          </motion.h1>
           {description && (
-            <p className="text-muted-foreground mt-0.5">{description}</p>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="text-muted-foreground/70 mt-1"
+            >
+              {description}
+            </motion.p>
           )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
-    </div>
+      {actions && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25, duration: 0.3 }}
+          className="flex items-center gap-2"
+        >
+          {actions}
+        </motion.div>
+      )}
+    </motion.div>
   )
 }
