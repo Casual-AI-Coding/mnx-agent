@@ -2,6 +2,118 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1] - 2026-04-06
+
+### Added
+
+**UI 统一化与优化**
+
+- **PageHeader 组件统一化** - 所有页面统一页头布局
+  - `src/components/shared/PageHeader.tsx` (61行) - 统一页头组件
+  - 渐变文字效果和入场动画
+  - 支持自定义标题、描述、图标、操作按钮
+  - 19 个页面迁移到统一 PageHeader：
+    - Dashboard, AuditLogs, CapacityMonitor, StatsDashboard
+    - CronManagement, MediaManagement, FileManagement
+    - ImageGeneration, TextGeneration, VoiceSync/Async, VideoGeneration, VideoAgent
+    - InvitationCodes, UserManagement, WebhookManagement
+    - WorkflowMarketplace, TemplateLibrary, WorkflowTemplateManagement
+    - MusicGeneration, VoiceManagement, ServiceNodeManagement, DeadLetterQueue
+
+- **页面配色系统** - 每个类别独特渐变色
+  - `src/config/pages.ts` (196行) - 页面配置系统
+  - 9 个类别配色定义：
+    - Dashboard (紫蓝渐变)
+    - Debug/Automation (青蓝渐变)
+    - Media (粉紫渐变)
+    - Generation (红橙渐变)
+    - System (青绿渐变)
+    - Workflow (紫橙渐变)
+    - Admin (蓝青渐变)
+    - Settings (橙粉渐变)
+    - Stats (紫青渐变)
+
+### Changed
+
+**Settings Modal UI 优化**
+- `src/components/settings/SettingsModal.tsx` (+116/-0) - 布局重构
+  - 按钮提取到父组件，避免滚动穿透
+  - 移除玻璃态渐变效果
+  - 统一间距和布局一致性
+  - 修复 footer padding 问题
+
+**页面迁移详情**
+- Dashboard (+2/-0) - 迁移到 PageHeader
+- AuditLogs (+25/-0) - 添加 PageHeader 和统计操作
+- CapacityMonitor (+43/-0) - PageHeader + StatsCard 布局优化
+- CronManagement (+80/-0) - PageHeader + 操作按钮迁移
+- MediaManagement (+80/-0) - PageHeader + 统一布局
+- FileManagement (+49/-0) - PageHeader + 操作优化
+- ImageGeneration (+28/-0) - PageHeader 迁移
+- TextGeneration (+18/-0) - PageHeader 迁移
+- VoiceSync (+25/-0), VoiceAsync (+29/-0) - PageHeader 迁移
+- VideoGeneration (+16/-0), VideoAgent (+16/-0) - PageHeader 迁移
+- InvitationCodes (+112/-0) - PageHeader + 操作迁移
+- UserManagement (+97/-0) - PageHeader + 统一布局
+- WebhookManagement (+70/-0) - PageHeader 迁移
+- WorkflowMarketplace (+199/-0) - PageHeader + 卡片优化
+- TemplateLibrary (+23/-0) - PageHeader 迁移
+- WorkflowTemplateManagement (+35/-0) - PageHeader 迁移
+
+**API 层优化**
+- `src/lib/api/settings.ts` (+41/-0) - 简化响应处理
+- `server/routes/media.ts` (+34/-0) - 增强 media API
+- `server/lib/media-storage.ts` (+7/-0) - 存储优化
+
+**组件调整**
+- `src/components/layout/AppLayout.tsx` (+21/-0) - 布局优化
+- `src/components/layout/Header.tsx` (+9/-0) - Header 简化
+- `src/components/ui/Select.tsx` (+4/-0) - Select 样式清理
+
+### Fixed
+
+- **Settings API 响应处理** - 修复配置加载/保存逻辑
+  - 正确处理 backend API 响应格式
+  - 修复 settings store 初始化
+  - 修复 settings save/load 流程
+
+- **暗色模式可见性** - StatCard 渐变背景修复
+  - 添加 `text-foreground` 确保文字在暗色背景可见
+  - StatCard compact mode 渐变背景修复
+  - 恢复彩色渐变文字效果
+
+- **localStorage Persistence** - Map/Set 序列化修复
+  - `src/stores/executionLogs.ts` (+3/-0)
+  - 排除 Map/Set 从 localStorage persistence
+  - 防止序列化错误
+
+- **UI 细节修复**
+  - Media preview 布局优化
+  - Settings 面板按钮样式修复
+  - Scroll 性能优化
+  - 暗色模式渐变文字大小调整
+
+### Performance
+
+- **代码质量指标**
+  - 49 个文件变更 (+1325/-949)
+  - PageHeader 组件统一 19 个页面，减少重复代码
+  - 页面配色系统集中管理，提升可维护性
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 无破坏性 API 变更
+- ✅ UI 变更不影响功能逻辑
+- ✅ Settings Modal 重构向后兼容
+
+### Known Issues
+
+- **测试环境配置问题** - PostgreSQL 测试因权限问题失败（继承自 v1.6.0）
+  - 错误：`permission denied for schema public`
+  - 影响：数据库相关测试无法运行（非代码问题）
+  - 解决方案：配置测试数据库权限（参见 `TESTING.md`）
+
 ## [1.6.0] - 2026-04-06
 
 ### Added
