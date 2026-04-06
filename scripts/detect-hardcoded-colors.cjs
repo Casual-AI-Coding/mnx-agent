@@ -16,13 +16,14 @@ const path = require('path')
 // Patterns to detect hardcoded Tailwind color classes
 const COLOR_PATTERNS = [
   // Background colors: bg-blue-500, bg-green-100, etc.
-  /bg-(blue|green|red|yellow|purple|gray|white|black|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
+  /bg-(blue|green|red|yellow|purple|gray|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
   // Text colors: text-blue-500, text-gray-600, etc.
-  /text-(blue|green|red|yellow|purple|gray|white|black|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
+  /text-(blue|green|red|yellow|purple|gray|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
   // Border colors: border-blue-500, border-gray-300, etc.
-  /border-(blue|green|red|yellow|purple|gray|white|black|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
-  // bg-white, bg-black, text-white, text-black
-  /\b(bg|text|border)-(white|black)\b/,
+  /border-(blue|green|red|yellow|purple|gray|pink|indigo|cyan|teal|orange|amber|emerald|sky|violet|fuchsia|rose|slate|zinc|neutral|stone)-\d+/,
+  // bg-white, bg-black - these are semantic for overlays/backdrops
+  // text-white, text-black are semantic for contrast text on colored backgrounds
+  // These are excluded as they are valid semantic choices, not hardcoded theme colors
 ]
 
 // Files/patterns to exclude

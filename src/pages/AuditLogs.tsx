@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
   '0': 'text-muted-foreground/70',
   '2': status.success.icon,
   '3': status.warning.icon,
-  '4': 'text-orange-400',
+  '4': status.warning.icon,
   '5': 'text-destructive',
 }
 

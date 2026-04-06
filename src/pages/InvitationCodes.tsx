@@ -341,7 +341,7 @@ export default function InvitationCodes() {
         <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} />
         <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} />
         <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} />
-        <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-slate-500 to-slate-400" />
+        <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-muted to-muted-foreground/70" />
       </motion.div>
 
       {}
@@ -419,12 +419,12 @@ export default function InvitationCodes() {
                         已用完
                       </div>
                     </SelectItem>
-                    <SelectItem value="expired">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-slate-400" />
-                        已过期
-                      </div>
-                    </SelectItem>
+<SelectItem value="expired">
+                       <div className="flex items-center gap-2">
+                         <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                         已过期
+                       </div>
+                     </SelectItem>
                     <SelectItem value="inactive">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-destructive" />
@@ -454,7 +454,7 @@ export default function InvitationCodes() {
                               chip.type === 'search' && cn(status.warning.bg, status.warning.text, status.warning.border),
                               chip.type === 'status' && statusFilter === 'active' && cn(status.success.bg, status.success.text, status.success.border),
                               chip.type === 'status' && statusFilter === 'used' && cn(status.info.bg, status.info.text, status.info.border),
-                              chip.type === 'status' && statusFilter === 'expired' && 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+                              chip.type === 'status' && statusFilter === 'expired' && 'bg-muted/50 text-muted-foreground border-muted-foreground/20',
                               chip.type === 'status' && statusFilter === 'inactive' && 'bg-destructive/10 text-destructive border-destructive/20'
                             )}
                             onClick={() => removeFilterChip(chip)}
@@ -615,13 +615,13 @@ export default function InvitationCodes() {
                                   transition={{ duration: 0.5, delay: index * 0.05 }}
                                   className={cn(
                                     'h-full rounded-full',
-                                    usagePercent >= 100 ? 'bg-slate-400' : cn(status.warning.gradient)
+                                    usagePercent >= 100 ? 'bg-muted-foreground/50' : cn(status.warning.gradient)
                                   )}
                                 />
                               </div>
                               <span className={cn(
                                 'text-xs font-medium',
-                                usagePercent >= 100 ? 'text-slate-400' : status.warning.text
+                                usagePercent >= 100 ? 'text-muted-foreground' : status.warning.text
                               )}>
                                 {code.used_count}/{code.max_uses}
                               </span>
@@ -648,7 +648,7 @@ export default function InvitationCodes() {
                             ) : expired ? (
                               <Badge variant="destructive">已过期</Badge>
                             ) : code.used_count >= code.max_uses ? (
-                              <Badge variant="outline" className="text-slate-400">已用完</Badge>
+                              <Badge variant="outline" className="text-muted-foreground">已用完</Badge>
                             ) : (
                               <Badge variant="outline" className="text-muted-foreground">已禁用</Badge>
                             )}

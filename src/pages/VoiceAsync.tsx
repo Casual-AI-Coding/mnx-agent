@@ -42,6 +42,8 @@ import {
   type Emotion,
   type T2AAsyncStatusResponse,
 } from '@/types'
+import { cn } from '@/lib/utils'
+import { status as statusTokens, services } from '@/themes/tokens'
 
 const MAX_CHARS = 50000
 
@@ -363,26 +365,26 @@ export default function VoiceAsync() {
     switch (status) {
       case 'pending':
         return (
-          <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-            <Clock className="w-4 h-4 text-amber-400" />
+          <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.warning.bgSubtle)}>
+            <Clock className={cn('w-4 h-4', statusTokens.warning.icon)} />
           </div>
         )
       case 'processing':
         return (
-          <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center">
-            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+          <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.info.bgSubtle)}>
+            <Loader2 className={cn('w-4 h-4 animate-spin', statusTokens.info.icon)} />
           </div>
         )
       case 'completed':
         return (
-          <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center">
-            <CheckCircle className="w-4 h-4 text-teal-400" />
+          <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.success.bgSubtle)}>
+            <CheckCircle className={cn('w-4 h-4', statusTokens.success.icon)} />
           </div>
         )
       case 'failed':
         return (
-          <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center">
-            <XCircle className="w-4 h-4 text-rose-400" />
+          <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.error.bgSubtle)}>
+            <XCircle className={cn('w-4 h-4', statusTokens.error.icon)} />
           </div>
         )
       default:
@@ -398,25 +400,25 @@ export default function VoiceAsync() {
     switch (status) {
       case 'pending':
         return (
-          <Badge className="bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20">
+          <Badge className={cn(statusTokens.warning.bgSubtle, statusTokens.warning.text, statusTokens.warning.border, 'hover:bg-warning/20')}>
             等待中
           </Badge>
         )
       case 'processing':
         return (
-          <Badge className="bg-cyan-500/10 text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/20">
+          <Badge className={cn(statusTokens.info.bgSubtle, statusTokens.info.text, statusTokens.info.border, 'hover:bg-info/20')}>
             处理中
           </Badge>
         )
       case 'completed':
         return (
-          <Badge className="bg-teal-500/10 text-teal-300 border-teal-500/20 hover:bg-teal-500/20">
+          <Badge className={cn(statusTokens.success.bgSubtle, statusTokens.success.text, statusTokens.success.border, 'hover:bg-success/20')}>
             已完成
           </Badge>
         )
       case 'failed':
         return (
-          <Badge className="bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20">
+          <Badge className={cn(statusTokens.error.bgSubtle, statusTokens.error.text, statusTokens.error.border, 'hover:bg-error/20')}>
             失败
           </Badge>
         )
@@ -447,13 +449,13 @@ export default function VoiceAsync() {
   const getProgressColor = (status: TaskStatus) => {
     switch (status) {
       case 'pending':
-        return 'from-amber-500/40 to-amber-400/40'
+        return statusTokens.warning.gradient
       case 'processing':
-        return 'from-cyan-500/40 to-teal-400/40'
+        return statusTokens.info.gradient
       case 'completed':
-        return 'from-teal-500/40 to-emerald-400/40'
+        return statusTokens.success.gradient
       case 'failed':
-        return 'from-rose-500/40 to-red-400/40'
+        return statusTokens.error.gradient
       default:
         return 'from-muted/40 to-muted-foreground/70/40'
     }
@@ -468,14 +470,14 @@ export default function VoiceAsync() {
     >
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="relative">
-          <div className="absolute -inset-2 bg-gradient-to-r from-teal-500/20 via-cyan-500/20 to-blue-500/20 blur-2xl rounded-3xl opacity-60" />
+          <div className="absolute -inset-2 bg-gradient-to-r from-secondary/20 via-primary/20 to-accent/20 blur-2xl rounded-3xl opacity-60" />
           <div className="relative">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shadow-lg', services.voice.bgSolid, 'shadow-secondary/20')}>
                 <Volume2 className="w-5 h-5 text-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary via-primary to-accent bg-clip-text text-transparent">
                   异步语音生成
                 </h1>
               </div>
@@ -491,11 +493,11 @@ export default function VoiceAsync() {
         <div className="space-y-6">
           <motion.div variants={cardVariants}>
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-br from-secondary/10 via-primary/10 to-accent/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
               <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-teal-400" />
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', services.voice.bg)}>
+                    <Sparkles className={cn('w-4 h-4', services.voice.icon)} />
                   </div>
                   <div className="font-semibold text-foreground">输入内容</div>
                 </div>
@@ -505,7 +507,7 @@ export default function VoiceAsync() {
                     <TabsList className="grid w-full grid-cols-2 bg-background/50 border border-border/50 p-1 rounded-xl">
                       <TabsTrigger
                         value="text"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/20 data-[state=active]:to-cyan-500/20 data-[state=active]:text-teal-300 data-[state=active]:border-teal-500/30 rounded-lg transition-all duration-200"
+                        className="data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary-foreground data-[state=active]:border-secondary/30 rounded-lg transition-all duration-200"
                       >
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4" />
@@ -514,7 +516,7 @@ export default function VoiceAsync() {
                       </TabsTrigger>
                       <TabsTrigger
                         value="file"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500/20 data-[state=active]:to-cyan-500/20 data-[state=active]:text-teal-300 data-[state=active]:border-teal-500/30 rounded-lg transition-all duration-200"
+                        className="data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary-foreground data-[state=active]:border-secondary/30 rounded-lg transition-all duration-200"
                       >
                         <div className="flex items-center gap-2">
                           <Upload className="w-4 h-4" />
@@ -525,25 +527,25 @@ export default function VoiceAsync() {
 
                     <TabsContent value="text" className="mt-4 space-y-4">
                       <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5 rounded-xl blur-lg" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-primary/5 rounded-xl blur-lg" />
                         <Textarea
                           value={text}
                           onChange={e => setText(e.target.value)}
                           placeholder={`输入要转换为语音的文本（最大 ${MAX_CHARS.toLocaleString()} 字符）...`}
-                          className="relative min-h-[200px] resize-none bg-background/50 border-border/50 text-zinc-100 placeholder:text-muted-foreground/50 focus:border-teal-500/50 focus:ring-teal-500/20 rounded-xl"
+                          className="relative min-h-[200px] resize-none bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground/50 focus:border-secondary/50 focus:ring-secondary/20 rounded-xl"
                         />
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${isOverLimit ? 'bg-rose-500' : 'bg-teal-500'} animate-pulse`}
+                            className={cn('w-2 h-2 rounded-full animate-pulse', isOverLimit ? statusTokens.error.bg : statusTokens.success.bg)}
                           />
-                          <span className={isOverLimit ? 'text-rose-400' : 'text-muted-foreground/70'}>
+                          <span className={isOverLimit ? statusTokens.error.text : 'text-muted-foreground/70'}>
                             {charCount.toLocaleString()} / {MAX_CHARS.toLocaleString()} 字符
                           </span>
                         </div>
                         {isOverLimit && (
-                          <Badge className="bg-rose-500/10 text-rose-300 border-rose-500/20">
+                          <Badge className={cn(statusTokens.error.bgSubtle, statusTokens.error.text, statusTokens.error.border)}>
                             超出限制
                           </Badge>
                         )}
@@ -552,20 +554,21 @@ export default function VoiceAsync() {
 
                     <TabsContent value="file" className="mt-4 space-y-4">
                       <div
-                        className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
+                        className={cn(
+                          'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300',
                           isDragging
-                            ? 'border-teal-500 bg-teal-500/10'
+                            ? cn('border-secondary', statusTokens.success.bgSubtle)
                             : 'border-border hover:border-border hover:bg-secondary/30'
-                        }`}
+                        )}
                         onClick={() => fileInputRef.current?.click()}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-cyan-500/5 to-blue-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 via-primary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="relative">
-                          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center">
-                            <Upload className="w-8 h-8 text-teal-400" />
+                          <div className={cn('w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center', services.voice.bg)}>
+                            <Upload className={cn('w-8 h-8', services.voice.icon)} />
                           </div>
                           <p className="text-foreground font-medium mb-2">
                             拖放文件或点击上传
@@ -593,11 +596,11 @@ export default function VoiceAsync() {
                               onRetry={handleRetryUpload}
                               retryCount={uploadRetryCount}
                               maxRetries={3}
-                              className="border-rose-500/30 bg-rose-500/5"
+                              className={cn(statusTokens.error.border, statusTokens.error.bgSubtle)}
                             />
                             <button
                               onClick={clearUploadError}
-                              className="absolute top-2 right-2 p-1 text-rose-400/70 hover:text-rose-400 transition-colors"
+                              className={cn('absolute top-2 right-2 p-1 transition-colors', statusTokens.error.icon, 'opacity-70 hover:opacity-100')}
                               aria-label="Dismiss error"
                             >
                               <XCircle className="w-4 h-4" />
@@ -614,16 +617,16 @@ export default function VoiceAsync() {
                             exit={{ opacity: 0, y: -10 }}
                             className="relative overflow-hidden"
                           >
-                            <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 opacity-20" />
-                            <div className="relative flex items-center gap-3 p-4 bg-teal-500/10 border border-teal-500/30 rounded-xl">
-                              <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
-                                <CheckCircle className="w-4 h-4 text-teal-400" />
+                            <div className={cn('absolute inset-0 opacity-20', services.voice.bg)} />
+                            <div className={cn('relative flex items-center gap-3 p-4 border rounded-xl', statusTokens.success.bgSubtle, statusTokens.success.border)}>
+                              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', services.voice.bg)}>
+                                <CheckCircle className={cn('w-4 h-4', services.voice.icon)} />
                               </div>
                               <div className="flex-1">
-                                <p className="text-sm font-medium text-teal-300">
+                                <p className={cn('text-sm font-medium', statusTokens.success.text)}>
                                   文件上传成功
                                 </p>
-                                <p className="text-xs text-teal-400/70 font-mono">
+                                <p className="text-xs text-muted-foreground/70 font-mono">
                                   {fileId}
                                 </p>
                               </div>
@@ -640,11 +643,11 @@ export default function VoiceAsync() {
 
           <motion.div variants={cardVariants}>
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-primary/10 to-secondary/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
               <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-violet-400" />
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', services.image.bg)}>
+                    <Zap className={cn('w-4 h-4', services.image.icon)} />
                   </div>
                   <div className="font-semibold text-foreground">参数设置</div>
                 </div>
@@ -653,14 +656,14 @@ export default function VoiceAsync() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5 text-violet-400" />
+                        <Layers className={cn('w-3.5 h-3.5', services.image.icon)} />
                         模型
                       </label>
                       <Select
                         value={model}
                         onValueChange={v => setModel(v as SpeechModel)}
                       >
-                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-accent/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
@@ -679,11 +682,11 @@ export default function VoiceAsync() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Mic className="w-3.5 h-3.5 text-violet-400" />
+                        <Mic className={cn('w-3.5 h-3.5', services.image.icon)} />
                         音色
                       </label>
                       <Select value={voiceId} onValueChange={setVoiceId}>
-                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-accent/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
@@ -702,14 +705,14 @@ export default function VoiceAsync() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                        <Sparkles className={cn('w-3.5 h-3.5', services.image.icon)} />
                         情绪
                       </label>
                       <Select
                         value={emotion}
                         onValueChange={v => setEmotion(v as Emotion)}
                       >
-                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-violet-500/50 transition-colors rounded-xl">
+                        <SelectTrigger className="bg-background/50 border-border/50 text-foreground hover:border-accent/50 transition-colors rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
@@ -729,7 +732,7 @@ export default function VoiceAsync() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-violet-400" />
+                        <Clock className={cn('w-3.5 h-3.5', services.image.icon)} />
                         语速 ({speed.toFixed(1)}x)
                       </label>
                       <Input
@@ -739,13 +742,13 @@ export default function VoiceAsync() {
                         step={0.1}
                         value={speed}
                         onChange={e => setSpeed(parseFloat(e.target.value))}
-                        className="bg-background/50 border-border/50 text-foreground focus:border-violet-500/50 focus:ring-violet-500/20 rounded-xl"
+                        className="bg-background/50 border-border/50 text-foreground focus:border-accent/50 focus:ring-accent/20 rounded-xl"
                       />
                     </div>
                   </div>
 
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 via-cyan-500/20 to-blue-500/20 blur-xl rounded-xl" />
+                    <div className={cn('absolute inset-0 blur-xl rounded-xl', services.voice.bg)} />
                     <button
                       onClick={createTask}
                       disabled={
@@ -756,7 +759,7 @@ export default function VoiceAsync() {
                         (activeTab === 'text' && (!text.trim() || isOverLimit)) ||
                         (activeTab === 'file' && !fileId)
                           ? 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
-                          : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.02] active:scale-[0.98]'
+                          : cn(services.voice.bgSolid, 'hover:opacity-90 shadow-lg shadow-secondary/25 hover:shadow-secondary/40 hover:scale-[1.02] active:scale-[0.98]')
                       }`}
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -773,12 +776,12 @@ export default function VoiceAsync() {
 
         <motion.div variants={cardVariants}>
           <div className="relative group h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+            <div className={cn('absolute inset-0 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity', statusTokens.warning.bgSubtle)} />
             <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden h-full">
               <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-amber-400" />
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', statusTokens.warning.bgSubtle)}>
+                    <Clock className={cn('w-4 h-4', statusTokens.warning.icon)} />
                   </div>
                   <div className="font-semibold text-foreground">任务列表</div>
                 </div>
@@ -795,7 +798,7 @@ export default function VoiceAsync() {
                     className="flex flex-col items-center justify-center py-16 text-muted-foreground"
                   >
                     <div className="relative">
-                      <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full" />
+                      <div className={cn('absolute inset-0 blur-3xl rounded-full', statusTokens.warning.bgSubtle)} />
                       <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-card border border-border flex items-center justify-center">
                         <Volume2 className="w-10 h-10 text-muted-foreground/50" />
                       </div>
@@ -820,17 +823,17 @@ export default function VoiceAsync() {
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           {task.status === 'processing' && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-teal-500/20 blur-xl rounded-2xl animate-pulse" />
+                            <div className={cn('absolute inset-0 blur-xl rounded-2xl animate-pulse', statusTokens.info.bgSubtle)} />
                           )}
 
                           <div
                             className={`relative overflow-hidden rounded-xl border transition-all duration-300 ${
                               task.status === 'completed'
-                                ? 'bg-card/80 border-teal-500/30'
+                                ? cn('bg-card/80', statusTokens.success.border)
                                 : task.status === 'processing'
-                                  ? 'bg-card/80 border-cyan-500/40'
+                                  ? cn('bg-card/80', statusTokens.info.border)
                                   : task.status === 'failed'
-                                    ? 'bg-card/80 border-rose-500/30'
+                                    ? cn('bg-card/80', statusTokens.error.border)
                                     : 'bg-card/60 border-border/50'
                             }`}
                           >
@@ -857,7 +860,7 @@ export default function VoiceAsync() {
                                 </div>
                                 <button
                                   onClick={() => removeTask(task.taskId)}
-                                  className="p-2 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                  className={cn('p-2 rounded-lg text-muted-foreground transition-colors opacity-0 group-hover:opacity-100 hover:text-error hover:bg-error/10')}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -867,11 +870,11 @@ export default function VoiceAsync() {
                                 <div
                                   className={`absolute inset-0 rounded-lg opacity-10 ${
                                     task.status === 'completed'
-                                      ? 'bg-teal-500'
+                                      ? statusTokens.success.bg
                                       : task.status === 'processing'
-                                        ? 'bg-cyan-500'
+                                        ? statusTokens.info.bg
                                         : task.status === 'failed'
-                                          ? 'bg-rose-500'
+                                          ? statusTokens.error.bg
                                           : 'bg-muted'
                                   }`}
                                 />
@@ -894,7 +897,7 @@ export default function VoiceAsync() {
                                         `audio-${task.taskId}.mp3`
                                       )
                                     }
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 border border-teal-500/30 text-teal-300 rounded-lg transition-all duration-200 group/btn"
+                                    className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg transition-all duration-200 group/btn border border-secondary/20', services.voice.bg, 'hover:opacity-80', services.voice.text)}
                                   >
                                     <Download
                                       className="w-4 h-4 group-hover/btn:animate-bounce"
@@ -902,7 +905,7 @@ export default function VoiceAsync() {
                                     <span className="font-medium">
                                       下载音频
                                       {task.result.audioLength > 0 && (
-                                        <span className="text-teal-400/70 ml-1">
+                                        <span className={cn('ml-1 opacity-70', services.voice.text)}>
                                           ({formatDuration(task.result.audioLength)})
                                         </span>
                                       )}
@@ -929,15 +932,15 @@ export default function VoiceAsync() {
                                 <motion.div
                                   initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg"
+                                  className={cn('flex items-center gap-2 p-3 rounded-lg', statusTokens.error.bgSubtle, statusTokens.error.border)}
                                 >
-                                  <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                                  <p className="text-sm text-rose-300">{task.error}</p>
+                                  <XCircle className={cn('w-4 h-4 shrink-0', statusTokens.error.icon)} />
+                                  <p className={cn('text-sm', statusTokens.error.text)}>{task.error}</p>
                                 </motion.div>
                               )}
 
                               {task.status === 'processing' && (
-                                <div className="flex items-center gap-2 text-xs text-cyan-400">
+                                <div className={cn('flex items-center gap-2 text-xs', statusTokens.info.text)}>
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   <span>正在生成音频，请稍候...</span>
                                 </div>
