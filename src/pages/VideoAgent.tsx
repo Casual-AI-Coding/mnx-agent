@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
@@ -236,6 +237,12 @@ export default function VideoAgent() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        icon={<Video className="w-5 h-5" />}
+        title="视频 Agent"
+        description="智能视频处理代理"
+        gradient="primary-accent"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {!selectedTemplate ? (

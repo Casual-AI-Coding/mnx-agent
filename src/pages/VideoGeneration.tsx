@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -179,6 +180,12 @@ export default function VideoGeneration() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        icon={<Video className="w-5 h-5" />}
+        title="视频生成"
+        description="AI 视频内容生成"
+        gradient="accent-secondary"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           <Card>

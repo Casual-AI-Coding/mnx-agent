@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image as ImageIcon, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn } from 'lucide-react'
+import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import WarningBanner from '@/components/shared/WarningBanner'
 import { APIReference } from '@/components/shared/APIReference'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { generateImage } from '@/lib/api/image'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
@@ -218,6 +219,13 @@ export default function ImageGeneration() {
       initial="hidden"
       animate="visible"
     >
+      <PageHeader
+        icon={<LucideImage className="w-5 h-5" />}
+        title="图像生成"
+        description="AI 图像生成与编辑"
+        gradient="primary-accent"
+      />
+
       {!apiKey && (
         <motion.div variants={itemVariants}>
           <WarningBanner message="请先在右上角配置 API Key，否则无法使用图片生成功能。" />
@@ -576,7 +584,7 @@ export default function ImageGeneration() {
                     >
                       <div className="relative">
                         <div className="absolute inset-0 bg-accent/10 blur-3xl rounded-full" />
-                        <ImageIcon className="w-16 h-16 relative text-muted-foreground/50" />
+                        <LucideImage className="w-16 h-16 relative text-muted-foreground/50" />
                       </div>
                       <p className="mt-6 text-lg font-medium text-muted-foreground/70">
                         {t('imageGeneration.ready') || '准备生成'}

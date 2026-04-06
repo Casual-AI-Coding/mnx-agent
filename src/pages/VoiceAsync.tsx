@@ -15,9 +15,11 @@ import {
   Zap,
   Layers,
   Mic,
+  MicOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RetryableError } from '@/components/shared/RetryableError'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import {
@@ -468,6 +470,12 @@ export default function VoiceAsync() {
       animate="visible"
       className="space-y-6"
     >
+      <PageHeader
+        icon={<MicOff className="w-5 h-5" />}
+        title="语音异步合成"
+        description="批量语音合成与长文本处理"
+        gradient="accent-secondary"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <motion.div variants={cardVariants}>

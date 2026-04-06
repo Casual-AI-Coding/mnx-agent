@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Switch } from '@/components/ui/Switch'
 import { generateMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
@@ -131,6 +132,12 @@ export default function MusicGeneration() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        icon={<Music className="w-5 h-5" />}
+        title="音乐生成"
+        description="AI 音乐创作与生成"
+        gradient="secondary-primary"
+      />
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={clearAll}>
           <RefreshCw className="w-4 h-4 mr-2" />

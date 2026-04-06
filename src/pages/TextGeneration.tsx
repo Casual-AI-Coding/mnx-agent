@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw, Zap, ZapOff } from 'lucide-react'
+import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw, Zap, ZapOff, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Switch } from '@/components/ui/Switch'
 import { Label } from '@/components/ui/Label'
@@ -180,6 +181,13 @@ export default function TextGeneration() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <PageHeader
+        icon={<MessageSquare className="w-5 h-5" />}
+        title="文本生成"
+        description="使用 MiniMax API 进行智能文本生成"
+        gradient="primary-accent"
+      />
+
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
