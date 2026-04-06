@@ -734,15 +734,19 @@ function StatCard({ title, value, icon: Icon, color, compact = false }: {
 }) {
   if (compact) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/50">
-        <div className={cn('p-1 rounded', color)}>
-          <Icon className="w-3 h-3 text-white" />
+      <motion.div 
+        whileHover={{ y: -1 }}
+        transition={{ type: 'spring', stiffness: 400 }}
+        className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card border border-border/50 shadow-sm"
+      >
+        <div className={cn('p-1.5 rounded-md bg-gradient-to-br shadow-sm', color)}>
+          <Icon className="w-3.5 h-3.5 text-white" />
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground/60">{title}</p>
-          <p className="text-sm font-bold">{value}</p>
+          <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
+          <p className="text-base font-bold">{value}</p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
