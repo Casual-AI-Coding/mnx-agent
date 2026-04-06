@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
-import { getDatabase } from '../../database/service-async.js'
+import { getDatabaseService } from '../../service-registration.js'
 import { LogService } from '../../services/domain/log.service.js'
 import { TaskService } from '../../services/domain/task.service.js'
 import { WorkflowEngine } from '../../services/workflow-engine'
@@ -21,7 +21,7 @@ import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-iso
 const router = Router()
 
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const logService = new LogService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { job_id?: string; status?: string; limit: number }
@@ -32,7 +32,7 @@ router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (
 }))
 
 router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const logService = new LogService(db)
   const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
@@ -53,7 +53,7 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 }))
 
 router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const logService = new LogService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await logService.getById(req.params.id, ownerId)
@@ -76,7 +76,7 @@ router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
 }))
 
 router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
@@ -101,7 +101,7 @@ router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
 }))
 
 router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
@@ -120,7 +120,7 @@ router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
 }))
 
 router.get('/executions/:id', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
@@ -168,14 +168,14 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
 }))
 
 router.get('/workflow/templates', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const templates: WorkflowTemplate[] = await db.getMarkedWorkflowTemplates(ownerId)
   successResponse(res, { templates, total: templates.length })
 }))
 
 router.post('/workflow/templates', validate(createWorkflowTemplateSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   try {
     JSON.parse(req.body.nodes_json)
@@ -195,7 +195,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
 }))
 
 router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), validate(updateWorkflowTemplateSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
   if (!template) {
@@ -219,7 +219,7 @@ router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSch
 }))
 
 router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
   if (!template) {

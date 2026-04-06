@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabase } from '../../database/service-async'
+import { getDatabaseService } from '../../service-registration.js'
 import { UserService } from '../../services/user-service'
 import { getConnection } from '../../database/connection'
 import { successResponse, errorResponse } from '../../middleware/api-response'
@@ -18,7 +18,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
     return
   }
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
@@ -53,7 +53,7 @@ router.delete('/:id/revoke', requireRole(['super']), asyncHandler(async (req, re
     return
   }
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
@@ -74,7 +74,7 @@ router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req,
     return
   }
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {
@@ -89,7 +89,7 @@ router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req,
 router.get('/:id/permissions', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const workflow = await db.getWorkflowTemplateById(id)
 
   if (!workflow) {

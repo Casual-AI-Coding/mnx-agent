@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
-import { getDatabase } from '../../database/service-async.js'
+import { getDatabaseService } from '../../service-registration.js'
 import { getCronSchedulerService } from '../../service-registration.js'
 import jobsRouter from './jobs'
 import queueRouter from './queue'
@@ -12,7 +12,7 @@ const router = Router()
 
 router.get('/health', asyncHandler(async (_req, res) => {
   try {
-    const db = await getDatabase()
+    const db = getDatabaseService()
     const scheduler = getCronSchedulerService()
 
     const taskCounts = await db.getTaskCountsByStatus()

@@ -1,14 +1,14 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabase } from '../../database/service-async'
+import { getDatabaseService } from '../../service-registration.js'
 import { VALID_ROLES } from '../../types/workflow'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super']), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const nodes = await db.getAllServiceNodePermissions()
   successResponse(res, nodes)
 }))
@@ -22,7 +22,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const existing = await db.getAllServiceNodePermissions()
   const node = existing.find(n => n.id === id)
   
@@ -41,7 +41,7 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const db = await getDatabase()
+  const db = getDatabaseService()
 
   const existing = await db.getAllServiceNodePermissions()
   const node = existing.find(n => n.id === id)

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
 import type { AuditAction } from '../database/types'
 import { successResponse, errorResponse } from '../middleware/api-response'
@@ -26,7 +26,7 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     ? (user_id as string | undefined)
     : req.user?.userId
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const result = await db.getAuditLogs({
     action: action as AuditAction | undefined,
     resource_type: resource_type as string | undefined,
@@ -52,7 +52,7 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
 }))
 
 router.get('/stats', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   // Non-admin users can only see stats for their own audit logs
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
@@ -64,7 +64,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
 }))
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const log = await db.getAuditLogById(req.params.id)
   if (!log) {
     errorResponse(res, 'Audit log not found', 404)

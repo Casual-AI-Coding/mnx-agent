@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import { getServiceNodeRegistryService } from '../service-registration.js'
 import {
   workflowIdParamsSchema,
@@ -21,7 +21,7 @@ const router = Router()
 router.get('/available-actions', asyncHandler(async (req, res) => {
   const userRole = req.user!.role
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const serviceRegistry = getServiceNodeRegistryService()
   const nodes = await serviceRegistry.getAvailableNodes(userRole)
 
@@ -49,7 +49,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const offset = (pageNum - 1) * limitNum
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   let isPublicFilter: boolean | undefined
   if (is_public === 'true') {
@@ -77,7 +77,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }))
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const userId = req.user!.userId
   const userRole = req.user!.role
 
@@ -102,7 +102,7 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 }))
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const userRole = req.user!.role
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
@@ -154,7 +154,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
 }))
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const userId = req.user!.userId
   const userRole = req.user!.role
 
@@ -216,7 +216,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
 }))
 
 router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const userId = req.user!.userId
   const userRole = req.user!.role
 
@@ -270,7 +270,7 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
 }))
 
 router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const success = await db.deleteWorkflowTemplate(req.params.id, ownerId)
   if (!success) {
@@ -285,7 +285,7 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const { testData = {}, dryRun = false } = req.body
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
 
   const workflow = await db.getWorkflowTemplateById(id, ownerId)
   if (!workflow) {

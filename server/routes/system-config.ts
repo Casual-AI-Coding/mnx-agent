@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -26,7 +26,7 @@ const createConfigSchema = z.object({
 
 // GET /api/system-config - Get all system configs
 router.get('/', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const configs = await db.getAllSystemConfigs()
   successResponse(res, configs)
 }))
@@ -34,7 +34,7 @@ router.get('/', asyncHandler(async (req, res) => {
 // GET /api/system-config/:key - Get a single config by key
 router.get('/:key', asyncHandler(async (req, res) => {
   const { key } = req.params
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const config = await db.getSystemConfigByKey(key)
   
   if (!config) {
@@ -48,7 +48,7 @@ router.get('/:key', asyncHandler(async (req, res) => {
 // POST /api/system-config - Create a new config
 router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => {
   const { key, value, description, value_type } = req.body
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   const existing = await db.getSystemConfigByKey(key)
   if (existing) {
@@ -70,7 +70,7 @@ router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => 
 router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res) => {
   const { key } = req.params
   const { value, description } = req.body
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   const config = await db.updateSystemConfig(key, {
     value,
@@ -88,7 +88,7 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
 // DELETE /api/system-config/:key - Delete a config
 router.delete('/:key', asyncHandler(async (req, res) => {
   const { key } = req.params
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   const deleted = await db.deleteSystemConfig(key)
   if (!deleted) {

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import {
   listTemplatesQuerySchema,
   templateIdParamsSchema,
@@ -22,7 +22,7 @@ router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req
   const offset = (pageNum - 1) * limitNum
   const ownerId = getOwnerId(req)
 
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const result = await db.getPromptTemplates({
     category: category as string | undefined,
     limit: limitNum,
@@ -42,7 +42,7 @@ router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req
 }))
 
 router.get('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
   const template = await db.getPromptTemplateById(req.params.id, ownerId)
   if (!template) {
@@ -53,14 +53,14 @@ router.get('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (r
 }))
 
 router.post('/', validate(createTemplateSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
   const template = await db.createPromptTemplate(req.body, ownerId)
   res.status(201).json({ success: true, data: template })
 }))
 
 router.put('/:id', validateParams(templateIdParamsSchema), validate(updateTemplateSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
   const template = await db.updatePromptTemplate(req.params.id, req.body, ownerId)
   if (!template) {
@@ -71,7 +71,7 @@ router.put('/:id', validateParams(templateIdParamsSchema), validate(updateTempla
 }))
 
 router.delete('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
   const success = await db.deletePromptTemplate(req.params.id, ownerId)
   if (!success) {

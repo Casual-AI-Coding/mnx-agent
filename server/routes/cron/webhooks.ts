@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
-import { getDatabase } from '../../database/service-async.js'
+import { getDatabaseService } from '../../service-registration.js'
 import { getNotificationServiceInstance } from '../../service-registration.js'
 import {
   createWebhookSchema,
@@ -16,14 +16,14 @@ import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-iso
 const router = Router()
 
 router.get('/webhooks', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhooks: WebhookConfig[] = await db.getWebhookConfigsByOwner(ownerId)
   successResponse(res, { webhooks, total: webhooks.length })
 }))
 
 router.post('/webhooks', validate(createWebhookSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const webhookData = req.body
 
@@ -47,7 +47,7 @@ router.post('/webhooks', validate(createWebhookSchema), asyncHandler(async (req,
 }))
 
 router.get('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
   if (!webhook) {
@@ -58,7 +58,7 @@ router.get('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(
 }))
 
 router.patch('/webhooks/:id', validateParams(webhookIdParamsSchema), validate(updateWebhookSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const existing = await db.getWebhookConfigById(req.params.id, ownerId)
   if (!existing) {
@@ -70,7 +70,7 @@ router.patch('/webhooks/:id', validateParams(webhookIdParamsSchema), validate(up
 }))
 
 router.delete('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const existing = await db.getWebhookConfigById(req.params.id, ownerId)
   if (!existing) {
@@ -82,7 +82,7 @@ router.delete('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandl
 }))
 
 router.post('/webhooks/:id/test', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const notificationService = getNotificationServiceInstance()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
@@ -95,7 +95,7 @@ router.post('/webhooks/:id/test', validateParams(webhookIdParamsSchema), asyncHa
 }))
 
 router.get('/webhooks/:id/deliveries', validateParams(webhookIdParamsSchema), validateQuery(webhookDeliveriesQuerySchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
   if (!webhook) {

@@ -1,21 +1,21 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabase } from '../../database/service-async'
+import { getDatabaseService } from '../../service-registration.js'
 import { VALID_ROLES } from '../../types/workflow'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const permissions = await db.getAllServiceNodePermissions()
   successResponse(res, { permissions, total: permissions.length })
 }))
 
 router.get('/:service/:method', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
   const { service, method } = req.params
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const permission = await db.getServiceNodePermission(service, method)
   
   if (!permission) {
@@ -39,7 +39,7 @@ router.post('/', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
   
-  const db = await getDatabase()
+  const db = getDatabaseService()
   await db.upsertServiceNodePermission({
     service_name,
     method_name,
@@ -62,7 +62,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
     return
   }
   
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const allPermissions = await db.getAllServiceNodePermissions()
   const existing = allPermissions.find(p => p.id === id)
   
@@ -107,7 +107,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const db = await getDatabase()
+  const db = getDatabaseService()
   
   const allPermissions = await db.getAllServiceNodePermissions()
   const existing = allPermissions.find(p => p.id === id)

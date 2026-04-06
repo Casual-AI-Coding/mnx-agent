@@ -80,82 +80,42 @@ export async function registerServices(): Promise<void> {
   })
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<DatabaseService>(TOKENS.DATABASE)` instead.
- * This function will be removed in a future version.
- */
 export function getDatabaseService(): DatabaseService {
   return getGlobalContainer().resolve<DatabaseService>(TOKENS.DATABASE)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<TaskExecutor>(TOKENS.TASK_EXECUTOR)` instead.
- * This function will be removed in a future version.
- */
 export function getTaskExecutorService(): TaskExecutor {
   return getGlobalContainer().resolve<TaskExecutor>(TOKENS.TASK_EXECUTOR)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)` instead.
- * This function will be removed in a future version.
- */
 export function getCapacityCheckerService(): CapacityChecker {
   return getGlobalContainer().resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)` instead.
- * This function will be removed in a future version.
- */
 export function getQueueProcessorService(): QueueProcessor {
   return getGlobalContainer().resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<WorkflowEngine>(TOKENS.WORKFLOW_ENGINE)` instead.
- * This function will be removed in a future version.
- */
 export function getWorkflowEngineService(): WorkflowEngine {
   return getGlobalContainer().resolve<WorkflowEngine>(TOKENS.WORKFLOW_ENGINE)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<CronScheduler>(TOKENS.CRON_SCHEDULER)` instead.
- * This function will be removed in a future version.
- */
 export function getCronSchedulerService(): CronScheduler {
   return getGlobalContainer().resolve<CronScheduler>(TOKENS.CRON_SCHEDULER)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)` instead.
- * This function will be removed in a future version.
- */
 export function getServiceNodeRegistryService(): ServiceNodeRegistry {
   return getGlobalContainer().resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<WebSocketService>(TOKENS.WEBSOCKET_SERVICE)` instead.
- * This function will be removed in a future version.
- */
 export function getWebSocketServiceInstance(): WebSocketService {
   return getGlobalContainer().resolve<WebSocketService>(TOKENS.WEBSOCKET_SERVICE)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<NotificationService>(TOKENS.NOTIFICATION_SERVICE)` instead.
- * This function will be removed in a future version.
- */
 export function getNotificationServiceInstance(): NotificationService {
   return getGlobalContainer().resolve<NotificationService>(TOKENS.NOTIFICATION_SERVICE)
 }
 
-/**
- * @deprecated Use `getGlobalContainer().resolve<ExecutionStateManager>(TOKENS.EXECUTION_STATE_MANAGER)` instead.
- * This function will be removed in a future version.
- */
 export function getExecutionStateManagerInstance(): ExecutionStateManager {
   return getGlobalContainer().resolve<ExecutionStateManager>(TOKENS.EXECUTION_STATE_MANAGER)
 }

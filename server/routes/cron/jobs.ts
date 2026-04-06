@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../../middleware/api-response'
-import { getDatabase } from '../../database/service-async.js'
+import { getDatabaseService } from '../../service-registration.js'
 import { getCronSchedulerService } from '../../service-registration.js'
 import { CronExpressionParser } from 'cron-parser'
 import {
@@ -23,7 +23,7 @@ import { JobService } from '../../services/domain/job.service.js'
 const router = Router()
 
 router.get('/jobs', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const jobService = new JobService(db)
   const jobs = await jobService.getAll(ownerId)
@@ -31,7 +31,7 @@ router.get('/jobs', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const jobData = req.body
@@ -66,7 +66,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
 }))
 
 router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -78,7 +78,7 @@ router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(asyn
 }))
 
 router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const existingJob = await jobService.getById(req.params.id, ownerId)
@@ -91,7 +91,7 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
 }))
 
 router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCronJobSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const existingJob = await jobService.getById(req.params.id, ownerId)
@@ -104,7 +104,7 @@ router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(update
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -121,7 +121,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
 }))
 
 router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -141,7 +141,7 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
 }))
 
 router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -164,7 +164,7 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
 }))
 
 router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -187,7 +187,7 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
 }))
 
 router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -224,7 +224,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
 }))
 
 router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -248,7 +248,7 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -270,7 +270,7 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -292,7 +292,7 @@ router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(addJobTagSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -307,7 +307,7 @@ router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(ad
 }))
 
 router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -321,7 +321,7 @@ router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHa
 }))
 
 router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -334,7 +334,7 @@ router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler
 }))
 
 router.get('/tags/:tag/jobs', validateParams(jobsByTagParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const jobs = await jobService.getWithTag(req.params.tag)
@@ -342,14 +342,14 @@ router.get('/tags/:tag/jobs', validateParams(jobsByTagParamsSchema), asyncHandle
 }))
 
 router.get('/tags', asyncHandler(async (_req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const tags = await jobService.getAllTags()
   successResponse(res, { tags })
 }))
 
 router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), validate(addJobDependencySchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -382,7 +382,7 @@ router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), val
 }))
 
 router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -396,7 +396,7 @@ router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParam
 }))
 
 router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
@@ -409,7 +409,7 @@ router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyn
 }))
 
 router.get('/jobs/:id/dependents', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
+  const db = getDatabaseService()
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
