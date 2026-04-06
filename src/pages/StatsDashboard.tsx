@@ -206,7 +206,7 @@ function StatCard({
         className="relative overflow-hidden rounded-lg border border-border/50 shadow-sm"
       >
         <div className={cn('absolute inset-0 opacity-15 bg-gradient-to-br', color)} />
-        <div className="relative flex items-center gap-2.5 px-3 py-2">
+        <div className="relative flex items-center gap-2.5 px-3 py-1">
           <div className={cn('p-1.5 rounded-md bg-gradient-to-br shadow-sm', color)}>
             <Icon className="w-3.5 h-3.5 text-white" />
           </div>
