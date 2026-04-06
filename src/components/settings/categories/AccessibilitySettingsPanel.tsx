@@ -65,7 +65,7 @@ export function AccessibilitySettingsPanel() {
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-gradient-to-t from-card via-card/95 to-transparent">
+      <div className="sticky bottom-0 flex justify-end gap-2 pt-6 pb-2 mt-6 bg-card">
         <Button variant="outline" onClick={handleReset}>
           <RotateCcw className="h-4 w-4 mr-2" />
           重置
