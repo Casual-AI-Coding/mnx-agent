@@ -258,7 +258,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
               )}
             </main>
             
-            <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-card flex justify-end gap-3">
+            <div className="flex-shrink-0 px-6 pt-4 pb-6 border-t border-border/50 bg-card flex justify-end gap-3">
               <Button 
                 variant="outline" 
                 onClick={handleReset}
