@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { VOICE_OPTIONS } from '@/types'
 import { createSyncVoice } from '@/lib/api/voice'
 import { cn } from '@/lib/utils'
@@ -195,9 +196,12 @@ export default function VoiceManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-      </div>
+      <PageHeader
+        icon={<User className="w-5 h-5" />}
+        title={t('voiceManagement.title', '音色管理')}
+        description={t('voiceManagement.subtitle', '浏览系统音色、试听和收藏喜爱的声音')}
+        gradient="green-emerald"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard

@@ -1,4 +1,4 @@
-import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List } from 'lucide-react'
+import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -11,6 +11,7 @@ import { TimelineItem } from '@/components/media/TimelineItem'
 import { MediaTableView } from '@/components/media/MediaTableView'
 import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/BatchOperationsToolbar'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { MEDIA_TABS } from '@/lib/constants/media'
 import { formatDateHeader, getDateKey } from '@/lib/utils/media'
 import { cn } from '@/lib/utils'
@@ -64,41 +65,45 @@ export default function MediaManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-muted/50 rounded-lg p-1">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className="h-8 px-3"
-            >
-              <List className="w-4 h-4" />
+      <PageHeader
+        icon={<HardDrive className="w-5 h-5" />}
+        title="媒体管理"
+        gradient="green-emerald"
+        actions={
+          <>
+            <div className="flex items-center bg-muted/50 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="h-8 px-3"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'card' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('card')}
+                className="h-8 px-3"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('timeline')}
+                className="h-8 px-3"
+              >
+                <Calendar className="w-4 h-4" />
+              </Button>
+            </div>
+            <Button variant="outline" onClick={() => fetchMedia(false)} disabled={isLoading}>
+              <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
+              刷新
             </Button>
-            <Button
-              variant={viewMode === 'card' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('card')}
-              className="h-8 px-3"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'timeline' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('timeline')}
-              className="h-8 px-3"
-            >
-              <Calendar className="w-4 h-4" />
-            </Button>
-          </div>
-          <Button variant="outline" onClick={() => fetchMedia(false)} disabled={isLoading}>
-            <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
-            刷新
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">

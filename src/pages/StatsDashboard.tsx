@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle } from
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { getStatsOverview, getSuccessRateTrend, getTaskDistribution, getErrorRanking } from '@/lib/api/stats'
 import type { StatsOverview, StatsTrendItem, StatsDistributionItem, StatsErrorItem } from '@/lib/api/stats'
 import { toastError } from '@/lib/toast'
@@ -54,12 +55,17 @@ export default function StatsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <Button variant="outline" onClick={loadStats}>
-          刷新数据
-        </Button>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="w-5 h-5" />}
+        title={t('stats.title', '执行统计')}
+        description={t('stats.subtitle', '任务执行数据分析')}
+        gradient="blue-cyan"
+        actions={
+          <Button variant="outline" onClick={loadStats}>
+            刷新数据
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard

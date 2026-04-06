@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useSettingsStore } from '@/settings/store'
 import { usePagination } from '@/hooks/usePagination'
 import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
@@ -167,25 +168,30 @@ export default function FileManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchFiles} disabled={isLoading}>
-            <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
-            刷新
-          </Button>
-          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-            <Upload className="w-4 h-4 mr-2" />
-            {uploading ? '上传中...' : '上传文件'}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </div>
-      </div>
+      <PageHeader
+        icon={<FolderOpen className="w-5 h-5" />}
+        title={t('files.title', '文件管理')}
+        description={t('files.subtitle', '管理上传的文件，支持 txt、zip、图片等格式')}
+        gradient="green-emerald"
+        actions={
+          <>
+            <Button variant="outline" onClick={fetchFiles} disabled={isLoading}>
+              <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
+              刷新
+            </Button>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Upload className="w-4 h-4 mr-2" />
+              {uploading ? '上传中...' : '上传文件'}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <StatCard

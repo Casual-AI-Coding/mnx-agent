@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { WorkflowPreviewWrapper } from '@/components/workflow/WorkflowPreview'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
@@ -207,17 +208,23 @@ export default function WorkflowTemplateManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <Input
-            placeholder="搜索流程..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <PageHeader
+        icon={<Layers className="w-5 h-5" />}
+        title={t('workflowTemplates.title', '流程模板管理')}
+        description={t('workflowTemplates.subtitle', '管理工作流模板的可见性和权限')}
+        gradient="purple-pink"
+        actions={
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+            <Input
+              placeholder="搜索流程..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useTemplatesStore } from '@/stores/templates'
 import type { PromptTemplate, TemplateCategory } from '@/lib/api/templates'
 import { toastSuccess, toastError } from '@/lib/toast'
@@ -72,13 +73,18 @@ export default function TemplateLibrary() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <Button className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="w-4 h-4" />
-          {t('templates.create', '创建模板')}
-        </Button>
-      </div>
+      <PageHeader
+        icon={<FileText className="w-5 h-5" />}
+        title={t('templates.title', '模板库')}
+        description={t('templates.subtitle', '管理和使用提示词模板')}
+        gradient="green-emerald"
+        actions={
+          <Button className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-4 h-4" />
+            {t('templates.create', '创建模板')}
+          </Button>
+        }
+      />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

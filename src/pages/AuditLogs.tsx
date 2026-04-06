@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -120,13 +121,18 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div />
-        <Button variant="outline" onClick={loadData}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          {t('common.refresh', '刷新')}
-        </Button>
-      </div>
+      <PageHeader
+        icon={<Shield className="w-5 h-5" />}
+        title={t('audit.title', '审计日志')}
+        description={t('audit.subtitle', '追踪系统操作记录')}
+        gradient="blue-cyan"
+        actions={
+          <Button variant="outline" onClick={loadData}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t('common.refresh', '刷新')}
+          </Button>
+        }
+      />
 
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

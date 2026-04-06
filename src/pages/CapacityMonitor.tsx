@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useCapacityStore } from '@/stores/capacity'
 import type { ServiceType } from '@/types/cron'
 import { cn } from '@/lib/utils'
@@ -91,21 +92,27 @@ export default function CapacityMonitor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground/50">
-            Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Gauge className="w-5 h-5" />}
+        title="Capacity Monitor"
+        description="MiniMax Coding Plan usage and quota monitoring"
+        gradient="blue-cyan"
+        actions={
+          <>
+            <span className="text-xs text-muted-foreground/50">
+              Last updated: {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : 'Never'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </>
+        }
+      />
 
       {error && (
         <Card className="border-destructive/50 bg-destructive/10">

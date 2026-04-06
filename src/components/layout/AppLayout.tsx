@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Key, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import HistoryPanel from './HistoryPanel'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { getPageConfig } from '@/config/pages'
 import { useSettingsStore } from '@/settings/store'
 import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
   const { t, i18n } = useTranslation()
-  const location = useLocation()
   const { settings, setCategory, initialize, saveSettings } = useSettingsStore()
   const apiKey = settings?.api?.minimaxKey ?? DEFAULT_SETTINGS.api.minimaxKey
   const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
@@ -26,9 +23,6 @@ export default function AppLayout() {
   useEffect(() => {
     initialize()
   }, [initialize])
-
-  const pageConfig = getPageConfig(location.pathname)
-  const PageIcon = pageConfig?.icon
 
   const handleOpenKeyModal = () => {
     setTempKey(apiKey)
@@ -49,15 +43,7 @@ export default function AppLayout() {
         'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200',
         isSidebarCollapsed ? 'ml-[60px]' : 'ml-[220px]'
       )}>
-        <div className="p-6 space-y-6">
-          {pageConfig && PageIcon && (
-            <PageHeader
-              icon={<PageIcon className="w-5 h-5" />}
-              title={pageConfig.title}
-              description={pageConfig.description}
-              gradient={pageConfig.gradient}
-            />
-          )}
+        <div className="p-6">
           <Outlet />
         </div>
       </main>
