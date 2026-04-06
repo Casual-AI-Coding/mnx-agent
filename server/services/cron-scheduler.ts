@@ -4,7 +4,8 @@ import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
-import { getNotificationService } from './notification-service.js'
+import { getGlobalContainer } from '../container.js'
+import { TOKENS } from '../service-registration.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
@@ -50,7 +51,7 @@ export class CronScheduler {
     this.db = db
     this.workflowEngine = workflowEngine
     this.taskExecutor = taskExecutor || null
-    this.notificationService = notificationService ?? getNotificationService(db)
+    this.notificationService = notificationService || null
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
     this.maxConcurrent = options?.maxConcurrent ?? 5
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? TASK_TIMEOUTS.DEFAULT_CRON_MS
@@ -449,17 +450,11 @@ export class CronScheduler {
 let schedulerInstance: CronScheduler | null = null
 
 /**
- * Get or create the CronScheduler singleton.
- * 
- * @deprecated Use DI Container via getCronSchedulerService() from service-registration.ts
- * This function is kept for backward compatibility.
+ * @deprecated Use getCronSchedulerService() from service-registration.ts
+ * This function ignores parameters and uses DI Container internally.
  */
 export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: ITaskExecutor, options?: CronSchedulerOptions): CronScheduler {
-  if (!schedulerInstance) {
-    const notificationService = getNotificationService(db)
-    schedulerInstance = new CronScheduler(db, workflowEngine, taskExecutor, notificationService, options)
-  }
-  return schedulerInstance
+  return getGlobalContainer().resolve(TOKENS.CRON_SCHEDULER)
 }
 
 export function resetCronScheduler(): void {

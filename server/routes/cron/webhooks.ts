@@ -3,7 +3,7 @@ import { validate, validateQuery, validateParams } from '../../middleware/valida
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { getDatabase } from '../../database/service-async.js'
-import { getNotificationService } from '../../services/notification-service'
+import { getNotificationServiceInstance } from '../../service-registration.js'
 import {
   createWebhookSchema,
   updateWebhookSchema,
@@ -83,7 +83,7 @@ router.delete('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandl
 
 router.post('/webhooks/:id/test', validateParams(webhookIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const notificationService = getNotificationService(db)
+  const notificationService = getNotificationServiceInstance()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
   if (!webhook) {

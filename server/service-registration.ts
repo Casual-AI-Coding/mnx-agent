@@ -10,6 +10,7 @@ import { getServiceNodeRegistry } from './services/service-node-registry.js'
 import { getWebSocketService } from './services/websocket-service.js'
 import { getNotificationService } from './services/notification-service.js'
 import { getExecutionStateManager } from './services/execution-state-manager.js'
+import type { NotificationService } from './services/notification-service.js'
 
 export const TOKENS = {
   DATABASE: 'database',
@@ -58,15 +59,16 @@ export async function registerServices(): Promise<void> {
     return new WorkflowEngine(c.resolve(TOKENS.DATABASE), c.resolve(TOKENS.SERVICE_NODE_REGISTRY))
   })
 
-  container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c) => {
+  container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c): NotificationService => {
     return getNotificationService(c.resolve(TOKENS.DATABASE))
   })
 
-  container.registerSingleton(TOKENS.CRON_SCHEDULER, (c) => {
+  container.registerSingleton(TOKENS.CRON_SCHEDULER, (c): CronScheduler => {
     return new CronScheduler(
       c.resolve(TOKENS.DATABASE),
       c.resolve(TOKENS.WORKFLOW_ENGINE),
-      c.resolve(TOKENS.TASK_EXECUTOR)
+      c.resolve(TOKENS.TASK_EXECUTOR),
+      c.resolve(TOKENS.NOTIFICATION_SERVICE)
     )
   })
 
@@ -95,11 +97,11 @@ export function getQueueProcessorService() {
   return getGlobalContainer().resolve(TOKENS.QUEUE_PROCESSOR)
 }
 
-export function getWorkflowEngineService() {
+export function getWorkflowEngineService(): WorkflowEngine {
   return getGlobalContainer().resolve(TOKENS.WORKFLOW_ENGINE)
 }
 
-export function getCronSchedulerService() {
+export function getCronSchedulerService(): CronScheduler {
   return getGlobalContainer().resolve(TOKENS.CRON_SCHEDULER)
 }
 
@@ -111,7 +113,7 @@ export function getWebSocketServiceInstance() {
   return getGlobalContainer().resolve(TOKENS.WEBSOCKET_SERVICE)
 }
 
-export function getNotificationServiceInstance() {
+export function getNotificationServiceInstance(): NotificationService {
   return getGlobalContainer().resolve(TOKENS.NOTIFICATION_SERVICE)
 }
 

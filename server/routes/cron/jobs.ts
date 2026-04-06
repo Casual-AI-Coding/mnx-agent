@@ -3,9 +3,7 @@ import { validate, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../../middleware/api-response'
 import { getDatabase } from '../../database/service-async.js'
-import { getCronScheduler } from '../../services/cron-scheduler'
-import { WorkflowEngine } from '../../services/workflow-engine'
-import { getServiceNodeRegistry } from '../../services/service-node-registry'
+import { getCronSchedulerService } from '../../service-registration.js'
 import { CronExpressionParser } from 'cron-parser'
 import {
   createCronJobSchema,
@@ -35,8 +33,7 @@ router.get('/jobs', asyncHandler(async (req, res) => {
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const jobData = req.body
 
   if (!jobData.workflow_id) {
@@ -126,8 +123,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
 router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
   if (!job) {
@@ -147,8 +143,7 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
 router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
   if (!job) {
@@ -201,8 +196,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
     return
   }
   
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   
   const nextRuns: string[] = []
   let validation = { valid: true, errors: [] as string[] }
@@ -232,8 +226,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
 router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
@@ -257,8 +250,7 @@ router.post('/jobs/bulk/enable', asyncHandler(async (req, res) => {
 router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
@@ -280,8 +272,7 @@ router.post('/jobs/bulk/disable', asyncHandler(async (req, res) => {
 router.post('/jobs/bulk/delete', asyncHandler(async (req, res) => {
   const db = await getDatabase()
   const jobService = new JobService(db)
-  const serviceRegistry = getServiceNodeRegistry(db)
-  const scheduler = getCronScheduler(db, new WorkflowEngine(db, serviceRegistry))
+  const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const { ids } = req.body
   if (!Array.isArray(ids)) {
