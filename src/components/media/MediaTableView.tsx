@@ -64,7 +64,7 @@ export function MediaTableView({
               key={record.id}
               className={`hover:bg-muted/50 ${selectedIds.has(record.id) ? 'bg-primary/5' : ''}`}
             >
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 text-foreground">
                 <button
                   onClick={() => onSelect(record.id)}
                   className="flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 hover:border-primary/50 transition-colors"
@@ -77,7 +77,7 @@ export function MediaTableView({
                   )}
                 </button>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 text-foreground">
                 <div className="flex items-center gap-3">
                   {record.type === 'image' ? (
                     <img
@@ -95,7 +95,7 @@ export function MediaTableView({
                   </span>
                 </div>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 text-foreground">
                 <Badge variant={TYPE_VARIANTS[record.type]}>
                   {TYPE_LABELS[record.type]}
                 </Badge>
@@ -109,7 +109,7 @@ export function MediaTableView({
               <td className="px-4 py-3 text-muted-foreground">
                 {formatDate(record.created_at)}
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 text-foreground">
                 <div className="flex items-center justify-end gap-2">
                   {record.type === 'image' && (
                     <Button

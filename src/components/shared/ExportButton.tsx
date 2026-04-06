@@ -48,7 +48,7 @@ export function ExportButton({ data, filename, disabled }: ExportButtonProps) {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-40 rounded-md border border-border bg-dark-900 shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-40 rounded-md border border-border bg-muted shadow-lg z-50">
           <button
             onClick={handleExportCSV}
             className="w-full px-4 py-2 text-left text-sm hover:bg-secondary transition-colors"

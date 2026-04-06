@@ -106,7 +106,7 @@ export function UserTable({
                     }}
                     className="group hover:bg-muted/30"
                   >
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-foreground">
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           'w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold',
@@ -127,10 +127,10 @@ export function UserTable({
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-foreground">
                       <RoleBadge role={user.role} />
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-foreground">
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={user.is_active}
@@ -145,12 +145,12 @@ export function UserTable({
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-foreground">
                       <Badge variant="outline" className="font-mono text-xs">
                         {user.minimax_region === 'cn' ? 'CN' : 'INT'}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-muted-foreground">
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span className={cn(!user.last_login_at && 'text-muted-foreground/40')}>
@@ -158,12 +158,12 @@ export function UserTable({
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-muted-foreground">
                       <span className="text-sm text-muted-foreground/70">
                         {formatFullDate(user.created_at)}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-foreground">
                       <div className="flex items-center justify-center gap-1">
                         <motion.button
                           whileHover={{ scale: 1.1 }}

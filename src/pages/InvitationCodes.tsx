@@ -555,7 +555,7 @@ export default function InvitationCodes() {
                           whileHover={{ backgroundColor: 'rgba(var(--muted), 0.3)' }}
                           className="group"
                         >
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             <div className="flex items-center gap-2">
                               <code className={cn(
                                 'px-3 py-1.5 rounded-lg font-mono text-sm font-medium border',
@@ -585,12 +585,12 @@ export default function InvitationCodes() {
                               </motion.button>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             <span className="text-sm text-foreground">
                               {code.created_by_username || '系统'}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 max-w-[100px] h-1.5 bg-muted rounded-full overflow-hidden">
                                 <motion.div
@@ -611,7 +611,7 @@ export default function InvitationCodes() {
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             <div className="flex items-center gap-1.5 text-sm">
                               <Clock className={cn(
                                 'w-3.5 h-3.5',
@@ -624,7 +624,7 @@ export default function InvitationCodes() {
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             {usable ? (
                               <Badge className={cn(status.success.bgSubtle, status.success.text, status.success.border, 'hover:bg-success/20')}>
                                 可用
@@ -637,12 +637,12 @@ export default function InvitationCodes() {
                               <Badge variant="outline" className="text-muted-foreground">已禁用</Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-muted-foreground">
                             <span className="text-sm text-muted-foreground/70">
                               {formatFullDate(code.created_at)}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-foreground">
                             <div className="flex items-center justify-center gap-1">
                               {usable && (
                                 <motion.button
