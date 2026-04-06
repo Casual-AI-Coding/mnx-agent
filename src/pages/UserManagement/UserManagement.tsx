@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { BatchOperationToolbar } from '@/components/shared/BatchOperationToolbar'
 import { ExportButton } from '@/components/shared/ExportButton'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { status } from '@/themes/tokens/index'
 import { useUserManagement } from './useUserManagement'
 import { UserFilters } from './UserFilters'
@@ -129,21 +130,13 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4"
-      >
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-3">
-          <div className="grid grid-cols-3 gap-2">
-            <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" compact />
-            <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} compact />
-            <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} compact />
-          </div>
-          
-          <div className="flex items-center gap-2">
+      <PageHeader
+        icon={<Users className="w-5 h-5" />}
+        title="用户管理"
+        description="管理系统用户、角色和访问权限"
+        gradient="orange-amber"
+        actions={
+          <>
             <ExportButton
               data={filteredAndSortedUsers}
               filename="users"
@@ -158,6 +151,22 @@ export default function UserManagement() {
                 新建用户
               </Button>
             </motion.div>
+          </>
+        }
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between gap-4"
+      >
+        <div className="flex-1" />
+        
+        <div className="flex items-center gap-3">
+          <div className="grid grid-cols-3 gap-2">
+            <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" compact />
+            <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} compact />
+            <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} compact />
           </div>
         </div>
       </motion.div>

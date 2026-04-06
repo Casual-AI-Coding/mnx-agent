@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Switch } from '@/components/ui/Switch'
@@ -177,22 +178,23 @@ export default function ServiceNodeManagement() {
 
   return (
     <div className="space-y-8">
-      {}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4"
-      >
-        <div className="flex-1" />
-        
-        <div className="grid grid-cols-3 gap-2">
-          <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} compact />
-          <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color={status.success.gradient} compact />
-          <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color={status.pending.gradient} compact />
-        </div>
-      </motion.div>
+      <PageHeader
+        icon={<Settings className="w-5 h-5" />}
+        title={t('serviceNodes.title', '节点权限管理')}
+        description={t('serviceNodes.subtitle', '管理工作流中可用服务节点的访问权限')}
+        gradient="orange-amber"
+        actions={
+          <Button>
+            {t('serviceNodes.createRule', '创建权限规则')}
+          </Button>
+        }
+      />
 
-      {}
+      <div className="grid grid-cols-3 gap-2">
+        <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} compact />
+        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color={status.success.gradient} compact />
+        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color={status.pending.gradient} compact />
+      </div>
       <AnimatePresence>
         {sortedCategories.map((category, index) => (
           <motion.div

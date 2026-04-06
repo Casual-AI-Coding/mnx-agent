@@ -28,6 +28,7 @@ import {
   CardFooter,
 } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Select,
   SelectTrigger,
@@ -584,21 +585,25 @@ export default function DeadLetterQueue() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div />
-        <div className="flex items-center gap-3">
-          {selectedItems.size > 0 && (
-            <Button onClick={() => setIsBulkRetryModalOpen(true)}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Retry Selected ({selectedItems.size})
+      <PageHeader
+        icon={<AlertTriangle className="w-5 h-5" />}
+        title="Dead Letter Queue"
+        description="View and manage failed tasks that exceeded their retry limit"
+        gradient="orange-amber"
+        actions={
+          <div className="flex items-center gap-3">
+            {selectedItems.size > 0 && (
+              <Button onClick={() => setIsBulkRetryModalOpen(true)}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry Selected ({selectedItems.size})
+              </Button>
+            )}
+            <Button variant="outline" onClick={fetchItems}>
+              <RefreshCw className="w-4 h-4" />
             </Button>
-          )}
-          <Button variant="outline" onClick={fetchItems}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Auto-Retry Config Card */}
       <Card>

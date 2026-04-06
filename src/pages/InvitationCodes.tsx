@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { ExportButton } from '@/components/shared/ExportButton'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import { status, roles } from '@/themes/tokens'
@@ -296,23 +297,13 @@ export default function InvitationCodes() {
 
   return (
     <div className="space-y-6">
-      {}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4"
-      >
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-3">
-          <div className="grid grid-cols-4 gap-2">
-            <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} compact />
-            <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} compact />
-            <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} compact />
-            <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-muted to-muted-foreground/70" compact />
-          </div>
-          
-          <div className="flex items-center gap-2">
+      <PageHeader
+        icon={<Key className="w-5 h-5" />}
+        title="邀请码管理"
+        description="生成和管理注册邀请码"
+        gradient="orange-amber"
+        actions={
+          <>
             <ExportButton
               data={filteredAndSortedCodes}
               filename="invitation_codes"
@@ -327,9 +318,9 @@ export default function InvitationCodes() {
                 批量生成
               </Button>
             </motion.div>
-          </div>
-        </div>
-      </motion.div>
+          </>
+        }
+      />
 
       {}
       <motion.div

@@ -46,6 +46,7 @@ import { useCronJobsStore } from '@/stores/cronJobs'
 import type { WebhookConfig, WebhookDelivery, WebhookEvent, CreateWebhookConfig, UpdateWebhookConfig } from '@/types/cron'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { status } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
@@ -508,10 +509,13 @@ const DeliveryLogModal = memo(function DeliveryLogModal({
   )
 })
 
-const WebhooksListTab = memo(function WebhooksListTab() {
+const WebhooksListTab = memo(function WebhooksListTab({
+  onCreateClick,
+}: {
+  onCreateClick?: () => void
+}) {
   const { webhooks, loading, fetchWebhooks, removeWebhook, testWebhook } = useWebhooksStore()
   const { jobs, fetchJobs } = useCronJobsStore()
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [webhookToEdit, setWebhookToEdit] = useState<WebhookConfig | null>(null)
   const [webhookToDelete, setWebhookToDelete] = useState<WebhookConfig | null>(null)
@@ -521,12 +525,6 @@ const WebhooksListTab = memo(function WebhooksListTab() {
     fetchWebhooks()
     fetchJobs()
   }, [fetchWebhooks, fetchJobs])
-
-  const handleCreate = async (data: CreateWebhookConfig | UpdateWebhookConfig) => {
-    const { addWebhook } = useWebhooksStore.getState()
-    await addWebhook(data as CreateWebhookConfig)
-    toast.success('Webhook created successfully')
-  }
 
   const handleEdit = async (data: CreateWebhookConfig | UpdateWebhookConfig) => {
     if (!webhookToEdit) return
@@ -582,19 +580,6 @@ const WebhooksListTab = memo(function WebhooksListTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Webhooks</h3>
-          <p className="text-sm text-muted-foreground/70">
-            Configure webhook endpoints to receive job execution notifications
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Webhook
-        </Button>
-      </div>
-
       {webhooks.length === 0 ? (
         <Card className="border-dashed border-border">
           <CardContent className="py-16 text-center">
@@ -603,7 +588,7 @@ const WebhooksListTab = memo(function WebhooksListTab() {
             <p className="text-sm text-muted-foreground/50 mb-6 max-w-md mx-auto">
               Create your first webhook to receive notifications when jobs start, succeed, or fail.
             </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Button onClick={onCreateClick}>
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Webhook
             </Button>
@@ -689,12 +674,6 @@ const WebhooksListTab = memo(function WebhooksListTab() {
       )}
 
       <WebhookFormModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreate}
-      />
-
-      <WebhookFormModal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false)
@@ -726,10 +705,28 @@ const WebhooksListTab = memo(function WebhooksListTab() {
 
 export default function WebhookManagement() {
   const [activeTab, setActiveTab] = useState('webhooks')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+  const handleCreate = async (data: CreateWebhookConfig | UpdateWebhookConfig) => {
+    const { addWebhook } = useWebhooksStore.getState()
+    await addWebhook(data as CreateWebhookConfig)
+    toast.success('Webhook created successfully')
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4" />
+      <PageHeader
+        icon={<Webhook className="w-5 h-5" />}
+        title="Webhook Management"
+        description="Configure webhook endpoints to receive real-time notifications for job executions"
+        gradient="purple-pink"
+        actions={
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Webhook
+          </Button>
+        }
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-card border border-border">
@@ -752,11 +749,17 @@ export default function WebhookManagement() {
             className="mt-6"
           >
             <TabsContent value="webhooks" className="mt-0">
-              <WebhooksListTab />
+              <WebhooksListTab onCreateClick={() => setIsCreateModalOpen(true)} />
             </TabsContent>
           </motion.div>
         </AnimatePresence>
       </Tabs>
+
+      <WebhookFormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreate}
+      />
     </div>
   )
 }
