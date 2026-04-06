@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TaskStatus, TriggerType, ExecutionStatus, MisfirePolicy } from '../database/types'
+import { taskTypeEnum, executionStatusEnum } from './schemas/enums.js'
 
 // ============================================================================
 // Cron Job Schemas
@@ -25,15 +26,6 @@ export const cronJobIdParamsSchema = z.object({
 // ============================================================================
 // Task Queue Schemas
 // ============================================================================
-
-const taskTypeEnum = z.enum([
-  'text',
-  'voice_sync',
-  'voice_async',
-  'image',
-  'music',
-  'video',
-])
 
 export const createTaskSchema = z.object({
   job_id: z.string().optional(),
@@ -66,7 +58,7 @@ export const taskQueueQuerySchema = z.object({
 
 export const executionLogQuerySchema = z.object({
   job_id: z.string().optional(),
-  status: z.enum(['running', 'completed', 'failed', 'partial']).optional(),
+  status: executionStatusEnum.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 })
 

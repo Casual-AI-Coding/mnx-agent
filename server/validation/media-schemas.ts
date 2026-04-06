@@ -1,6 +1,8 @@
 import { z } from 'zod'
+import { mediaTypeEnum } from './schemas/enums.js'
 
-export const mediaTypeEnum = z.enum(['audio', 'image', 'video', 'music'])
+export { mediaTypeEnum } from './schemas/enums.js'
+
 export const mediaSourceEnum = z.enum(['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation'])
 
 export const listMediaQuerySchema = z.object({
