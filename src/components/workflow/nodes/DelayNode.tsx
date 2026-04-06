@@ -48,7 +48,7 @@ export const DelayNode = React.memo(function DelayNode({ data, selected }: { dat
         type="target"
         position={Position.Top}
         id="in"
-        className="!w-3 !h-3 !bg-secondary !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-secondary !border-2 !border-muted-foreground"
       />
 
       <BaseNodeWrapper
@@ -120,7 +120,7 @@ export const DelayNode = React.memo(function DelayNode({ data, selected }: { dat
         type="source"
         position={Position.Bottom}
         id="out"
-        className="!w-3 !h-3 !bg-secondary !border-2 !border-dark-900"
+        className="!w-3 !h-3 !bg-secondary !border-2 !border-muted-foreground"
       />
     </>
   )

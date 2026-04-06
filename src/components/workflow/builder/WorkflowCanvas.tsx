@@ -96,32 +96,32 @@ export function WorkflowCanvas({
             const nodeData = node.data as { executionStatus?: string } | undefined
             switch (nodeData?.executionStatus) {
               case 'running':
-                return '#3b82f6'
+                return 'hsl(var(--primary))'
               case 'completed':
-                return '#22c55e'
+                return 'hsl(var(--success))'
               case 'error':
-                return '#ef4444'
+                return 'hsl(var(--destructive))'
               default:
                 break
             }
             switch (node.type) {
               case 'action':
-                return '#3b82f6'
+                return 'hsl(var(--primary))'
               case 'loop':
-                return '#a855f7'
+                return 'hsl(var(--primary-400))'
               case 'condition':
-                return '#f59e0b'
+                return 'hsl(var(--warning))'
               case 'transform':
-                return '#6366f1'
+                return 'hsl(var(--info))'
               case 'errorBoundary':
-                return '#14b8a6'
+                return 'hsl(var(--success))'
               default:
-                return '#71717a'
+                return 'hsl(var(--muted-foreground))'
             }
           }}
           maskColor="rgba(0, 0, 0, 0.8)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#374151" />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--muted-foreground))" />
 
         <ExecutionStatusPanel {...executionStatusPanelProps} />
 

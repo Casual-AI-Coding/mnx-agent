@@ -127,16 +127,16 @@ export function WorkflowPreview({ nodesJson, edgesJson, className }: WorkflowPre
           className="bg-muted/30 border border-border rounded-md"
           nodeColor={(node) => {
             switch (node.type) {
-              case 'action': return '#3b82f6'
-              case 'loop': return '#a855f7'
-              case 'condition': return '#f59e0b'
-              case 'transform': return '#6366f1'
-              default: return '#71717a'
+              case 'action': return 'hsl(var(--primary))'
+              case 'loop': return 'hsl(var(--primary-400))'
+              case 'condition': return 'hsl(var(--warning))'
+              case 'transform': return 'hsl(var(--info))'
+              default: return 'hsl(var(--muted-foreground))'
             }
           }}
           maskColor="rgba(0, 0, 0, 0.7)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#374151" />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--muted-foreground))" />
       </ReactFlow>
     </div>
   )
