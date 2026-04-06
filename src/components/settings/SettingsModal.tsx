@@ -50,19 +50,6 @@ const SETTINGS_CATEGORIES: SettingsCategoryInfo[] = [
   { id: 'accessibility', label: '无障碍', icon: Accessibility, description: '屏幕阅读器、键盘导航' },
 ]
 
-const CATEGORY_TITLES: Record<string, { title: string; description: string }> = {
-  account: { title: '账户设置', description: '管理个人信息、语言、时区等' },
-  api: { title: 'API 配置', description: '配置 MiniMax API 密钥和区域设置' },
-  ui: { title: '界面设置', description: '自定义主题、布局、动画效果' },
-  generation: { title: '生成设置', description: '配置文本、语音、图像、音乐、视频生成默认参数' },
-  cron: { title: '定时任务', description: '配置调度器默认参数和重试策略' },
-  workflow: { title: '工作流设置', description: '配置工作流编辑器偏好' },
-  notification: { title: '通知设置', description: '配置 Webhook、邮件、桌面通知' },
-  media: { title: '媒体存储', description: '配置文件存储路径和命名规则' },
-  privacy: { title: '隐私安全', description: '管理数据和令牌安全设置' },
-  accessibility: { title: '无障碍设置', description: '配置辅助功能和键盘导航' },
-}
-
 function CategoryPanel({ category }: { category: string }) {
   switch (category) {
     case 'account':
@@ -150,8 +137,6 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
     resetCategory(activeCategory as SettingsCategory)
   }
 
-  const categoryInfo = CATEGORY_TITLES[activeCategory] || CATEGORY_TITLES.account
-
   return createPortal(
     <div
       className={`
@@ -186,13 +171,10 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
 
         <div className="relative flex items-center justify-between px-6 py-4 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
-              <Settings className="w-5 h-5 text-primary-foreground" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Settings className="w-4.5 h-4.5 text-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Settings</h2>
-              <p className="text-sm text-muted-foreground">{categoryInfo.title}</p>
-            </div>
+            <h2 className="text-lg font-semibold text-foreground">设置</h2>
           </div>
 
           <button
@@ -238,7 +220,7 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
           </aside>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-8">
+            <main ref={mainRef} className="flex-1 overflow-y-auto px-6 py-6">
               {!user ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   请先登录以查看设置
@@ -250,32 +232,31 @@ export function SettingsModal({ open, onClose, initialCategory = 'account' }: Se
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-foreground">{categoryInfo.title}</h3>
-                    <p className="text-sm text-muted-foreground">{categoryInfo.description}</p>
-                  </div>
                   <CategoryPanel category={activeCategory} />
                 </motion.div>
               )}
             </main>
             
-            <div className="flex-shrink-0 px-6 pt-4 pb-6 border-t border-border/50 bg-card flex justify-end gap-3">
-              <Button 
-                variant="outline" 
-                onClick={handleReset}
-                disabled={!hasChanges}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                重置
-              </Button>
-              <Button 
-                onClick={handleSave} 
-                disabled={isSaving || !hasChanges}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? '保存中...' : '保存'}
-              </Button>
-            </div>
+            {hasChanges && (
+              <div className="flex-shrink-0 px-6 py-3 border-t border-border/50 bg-muted/30 flex justify-end gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleReset}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  重置
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                >
+                  <Save className="h-4 w-4 mr-1.5" />
+                  {isSaving ? '保存中...' : '保存更改'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
