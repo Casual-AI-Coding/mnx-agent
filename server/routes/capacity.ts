@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabase } from '../database/service-async.js'
-import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { getLogger } from '../lib/logger'
 import { successResponse, errorResponse } from '../middleware/api-response'
 
@@ -11,13 +11,7 @@ const router = Router()
 
 router.get('/', asyncHandler(async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'] as string | undefined
-    const region = req.headers['x-region'] as string | undefined
-    
-    const hasValidApiKey = apiKey && apiKey.trim().length > 0
-    const client = hasValidApiKey 
-      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
-      : getMiniMaxClient()
+    const client = getClientFromRequest(req)
     
     const db = await getDatabase()
     const codingPlan = await client.getCodingPlanRemains()
@@ -41,13 +35,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.post('/refresh', asyncHandler(async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'] as string | undefined
-    const region = req.headers['x-region'] as string | undefined
-    
-    const hasValidApiKey = apiKey && apiKey.trim().length > 0
-    const client = hasValidApiKey 
-      ? createMiniMaxClientFromHeaders(apiKey!.trim(), region)
-      : getMiniMaxClient()
+    const client = getClientFromRequest(req)
     
     const codingPlan = await client.getCodingPlanRemains()
     const now = new Date()

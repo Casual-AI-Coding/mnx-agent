@@ -1,16 +1,9 @@
 import { Router, Request, Response } from 'express'
-import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
 import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
-
-function getClient(req: Request) {
-  const apiKey = req.headers['x-api-key'] as string | undefined
-  const region = req.headers['x-region'] as string | undefined
-  const hasValidApiKey = apiKey && apiKey.trim().length > 0
-  return hasValidApiKey ? createMiniMaxClientFromHeaders(apiKey!.trim(), region) : getMiniMaxClient()
-}
 
 interface MusicGenerateBody {
   model?: string
@@ -27,7 +20,7 @@ interface MusicGenerateBody {
 
 router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const client = getClient(req)
+    const client = getClientFromRequest(req)
     const { model, lyrics, style_prompt, optimize_lyrics, audio_setting, output_format } = req.body as MusicGenerateBody
 
     if (!lyrics) {

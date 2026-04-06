@@ -1,20 +1,13 @@
 import { Router, Request, Response } from 'express'
-import { getMiniMaxClient, createMiniMaxClientFromHeaders } from '../lib/minimax'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
 import { successResponse, errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
-function getClient(req: Request) {
-  const apiKey = req.headers['x-api-key'] as string | undefined
-  const region = req.headers['x-region'] as string | undefined
-  const hasValidApiKey = apiKey && apiKey.trim().length > 0
-  return hasValidApiKey ? createMiniMaxClientFromHeaders(apiKey!.trim(), region) : getMiniMaxClient()
-}
-
 router.post('/list', async (req: Request, res: Response) => {
   try {
-    const client = getClient(req)
+    const client = getClientFromRequest(req)
     const { voice_type } = req.body
     const result = await client.voiceList(voice_type || 'all')
     successResponse(res, result)
@@ -25,7 +18,7 @@ router.post('/list', async (req: Request, res: Response) => {
 
 router.post('/clone', async (req: Request, res: Response) => {
   try {
-    const client = getClient(req)
+    const client = getClientFromRequest(req)
 
     const { voice_id, file_id, clone_prompt, text, model, language_boost } = req.body
 
@@ -65,7 +58,7 @@ router.post('/clone', async (req: Request, res: Response) => {
 
 router.post('/design', async (req: Request, res: Response) => {
   try {
-    const client = getClient(req)
+    const client = getClientFromRequest(req)
     const { prompt, preview_text, voice_id } = req.body
 
     if (!prompt || !preview_text) {
@@ -85,7 +78,7 @@ router.post('/design', async (req: Request, res: Response) => {
 
 router.post('/delete', async (req: Request, res: Response) => {
   try {
-    const client = getClient(req)
+    const client = getClientFromRequest(req)
     const { voice_id, voice_type } = req.body
 
     if (!voice_id || !voice_type) {
