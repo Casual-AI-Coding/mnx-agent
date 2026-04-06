@@ -44,16 +44,6 @@ export function PageHeader({ icon, title, description, actions, className, gradi
           >
             {title}
           </motion.h1>
-          {description && (
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.3 }}
-              className="text-muted-foreground/70 mt-1"
-            >
-              {description}
-            </motion.p>
-          )}
         </div>
       </div>
       {actions && (
