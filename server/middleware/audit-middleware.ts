@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import type { AuditAction } from '../database/types'
 import { getLogger } from '../lib/logger'
 
@@ -86,55 +86,52 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
 
-    getDatabase()
-      .then(db => {
-        const resourceType = extractResourceType(req.path)
-        const resourceId = req.params.id || req.params.jobId || null
+    const db = getDatabaseService()
+    const resourceType = extractResourceType(req.path)
+    const resourceId = req.params.id || req.params.jobId || null
 
-        const requestBody = req.body && Object.keys(req.body).length > 0
-          ? JSON.stringify(redactSensitiveData(req.body))
-          : null
+    const requestBody = req.body && Object.keys(req.body).length > 0
+      ? JSON.stringify(redactSensitiveData(req.body))
+      : null
 
-        let errorMessage: string | null = null
-        if (res.statusCode >= 400 && responseBody) {
-          if (typeof responseBody === 'object' && responseBody !== null) {
-            const body = responseBody as Record<string, unknown>
-            errorMessage = (body.error as string) || (body.message as string) || null
-          }
-        }
+    let errorMessage: string | null = null
+    if (res.statusCode >= 400 && responseBody) {
+      if (typeof responseBody === 'object' && responseBody !== null) {
+        const body = responseBody as Record<string, unknown>
+        errorMessage = (body.error as string) || (body.message as string) || null
+      }
+    }
 
-        return db.createAuditLog({
-          action: methodToAction(req.method),
-          resource_type: resourceType,
-          resource_id: resourceId,
-          user_id: req.user?.userId ?? null,
-          ip_address: req.ip || null,
-          user_agent: req.get('user-agent') || null,
-          request_method: req.method,
-          request_path: req.originalUrl,
-          request_body: requestBody,
-          response_status: res.statusCode,
-          error_message: errorMessage,
-          duration_ms: duration,
-        })
+    db.createAuditLog({
+      action: methodToAction(req.method),
+      resource_type: resourceType,
+      resource_id: resourceId,
+      user_id: req.user?.userId ?? null,
+      ip_address: req.ip || null,
+      user_agent: req.get('user-agent') || null,
+      request_method: req.method,
+      request_path: req.originalUrl,
+      request_body: requestBody,
+      response_status: res.statusCode,
+      error_message: errorMessage,
+      duration_ms: duration,
+    }).catch(error => {
+      const logger = getLogger()
+      logger.error({
+        type: 'audit_log_failure',
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        request: {
+          method: req.method,
+          path: req.originalUrl,
+          ip: req.ip,
+        },
+        response: {
+          statusCode: res.statusCode,
+          duration,
+        },
       })
-      .catch(error => {
-        const logger = getLogger()
-        logger.error({
-          type: 'audit_log_failure',
-          error: (error as Error).message,
-          stack: (error as Error).stack,
-          request: {
-            method: req.method,
-            path: req.originalUrl,
-            ip: req.ip,
-          },
-          response: {
-            statusCode: res.statusCode,
-            duration,
-          },
-        })
-      })
+    })
 
     try {
       return originalEnd.apply(this, args)

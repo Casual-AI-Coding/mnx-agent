@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
-import { getDatabase } from '../database/service-async.js'
+import { getDatabaseService } from '../service-registration.js'
 import {
   listMediaQuerySchema,
   mediaIdParamsSchema,
@@ -19,6 +19,7 @@ import archiver from 'archiver'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 
 const router = Router()
+const db = getDatabaseService()
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,7 +31,6 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
   const offset = (Number(page) - 1) * Number(limit)
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const db = await getDatabase()
   const result = await db.getMediaRecords({
     type: type as any,
     source: source as any,
@@ -52,7 +52,6 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 }))
 
 router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
   const includeDeleted = req.query.includeDeleted === 'true'
@@ -64,14 +63,12 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
 }))
 
 router.post('/', validate(createMediaRecordSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const record = await db.createMediaRecord(req.body, ownerId)
   createdResponse(res, record)
 }))
 
 router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaRecordSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.updateMediaRecord(req.params.id, req.body, ownerId)
   if (!record) {
@@ -83,14 +80,12 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
   const { ids } = req.body as { ids: string[] }
-  const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const result = await db.softDeleteMediaRecords(ids)
   successResponse(res, result)
 }))
 
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const success = await db.softDeleteMediaRecord(req.params.id, ownerId)
   if (!success) {
@@ -116,7 +111,6 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     type as any
   )
 
-  const db = await getDatabase()
   const record = await db.createMediaRecord({
     filename,
     original_name: req.file.originalname,
@@ -149,7 +143,6 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     type as any
   )
 
-  const db = await getDatabase()
   const record = await db.createMediaRecord({
     filename: savedFilename,
     original_name: finalFilename,
@@ -169,7 +162,6 @@ router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async
     return
   }
 
-  const db = await getDatabase()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
   if (!record || record.is_deleted) {
@@ -201,7 +193,6 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
     return
   }
 
-  const db = await getDatabase()
   const record = await db.getMediaRecordById(req.params.id)
   if (!record || record.is_deleted) {
     errorResponse(res, 'Media not found', 404)
@@ -216,7 +207,6 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
   const { ids } = req.body as { ids: string[] }
-  const db = await getDatabase()
   const records = await db.getMediaRecordsByIds(ids)
 
   if (records.length === 0) {

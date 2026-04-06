@@ -32,18 +32,19 @@ import invitationCodesRouter from './routes/invitation-codes.js'
 import systemConfigRouter from './routes/system-config.js'
 import settingsRouter from './routes/settings/index.js'
 import { authenticateJWT } from './middleware/auth-middleware.js'
-import { getDatabase, closeDatabase } from './database/service-async.js'
-import { getMiniMaxClient } from './lib/minimax'
-import { TaskExecutor } from './services/task-executor'
-import { CapacityChecker } from './services/capacity-checker'
-import { QueueProcessor } from './services/queue-processor'
-import { WorkflowEngine } from './services/workflow-engine'
-import { CronScheduler } from './services/cron-scheduler'
+import { closeDatabase } from './database/service-async.js'
 import { initCronWebSocket } from './services/websocket-service'
-import { getServiceNodeRegistry } from './services/service-node-registry'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from './lib/media-storage'
 import { toCSV } from './lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from './lib/media-token'
+import { registerServices, TOKENS, getCronSchedulerService } from './service-registration.js'
+import { getGlobalContainer } from './container.js'
+import type { ServiceNodeRegistry } from './services/service-node-registry.js'
+import type { DatabaseService } from './database/service-async.js'
+import type { MiniMaxClient } from './lib/minimax.js'
+import type { TaskExecutor } from './services/task-executor.js'
+import type { CapacityChecker } from './services/capacity-checker.js'
+import type { QueueProcessor } from './services/queue-processor.js'
 
 config()
 
@@ -114,15 +115,15 @@ app.use('/api/settings', settingsRouter)
 app.use(errorHandler)
 
 async function initializeServices() {
-  const dbService = await getDatabase()
+  await registerServices()
   
-  const serviceRegistry = getServiceNodeRegistry(dbService)
-
-  const minimaxClient = getMiniMaxClient()
-  const taskExecutor = new TaskExecutor(minimaxClient, dbService)
-  const capacityChecker = new CapacityChecker(minimaxClient, dbService)
-  const queueProcessor = new QueueProcessor(dbService, taskExecutor, capacityChecker)
-
+  const container = getGlobalContainer()
+  const dbService = container.resolve<DatabaseService>(TOKENS.DATABASE)
+  const minimaxClient = container.resolve<MiniMaxClient>(TOKENS.MINIMAX_CLIENT)
+  const taskExecutor = container.resolve<TaskExecutor>(TOKENS.TASK_EXECUTOR)
+  const capacityChecker = container.resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)
+  const queueProcessor = container.resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)
+  const serviceRegistry = container.resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)
   await serviceRegistry.register({
     serviceName: 'minimaxClient',
     instance: minimaxClient,
@@ -235,28 +236,21 @@ async function initializeServices() {
     ],
   })
 
-  const workflowEngine = new WorkflowEngine(dbService, serviceRegistry)
-
-  const cronScheduler = new CronScheduler(dbService, workflowEngine)
-
+  const cronScheduler = getCronSchedulerService()
   await cronScheduler.init()
-
-  return { dbService, cronScheduler }
+  
+  logger.info({ msg: 'Services initialized successfully via DI Container' })
 }
 
 const server = app.listen(PORT, () => {
   logger.info({ msg: 'MiniMax Proxy Server started', port: PORT })
 })
 
-initializeServices()
-  .then(({ cronScheduler }) => {
-    logger.info({ msg: 'Services initialized successfully' })
-  })
-  .catch((error) => {
-    logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
-    console.error('Full error:', error)
-    process.exit(1)
-  })
+initializeServices().catch((error) => {
+  logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
+  console.error('Full error:', error)
+  process.exit(1)
+})
 
 initCronWebSocket(server)
 logger.info({ msg: 'WebSocket server initialized', path: '/ws/cron' })
