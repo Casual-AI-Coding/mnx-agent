@@ -11,6 +11,9 @@ import { getWebSocketService } from './services/websocket-service.js'
 import { getNotificationService } from './services/notification-service.js'
 import { getExecutionStateManager } from './services/execution-state-manager.js'
 import type { NotificationService } from './services/notification-service.js'
+import type { ServiceNodeRegistry } from './services/service-node-registry.js'
+import type { WebSocketService } from './services/websocket-service.js'
+import type { ExecutionStateManager } from './services/execution-state-manager.js'
 
 export const TOKENS = {
   DATABASE: 'database',
@@ -105,11 +108,11 @@ export function getCronSchedulerService(): CronScheduler {
   return getGlobalContainer().resolve(TOKENS.CRON_SCHEDULER)
 }
 
-export function getServiceNodeRegistryService() {
+export function getServiceNodeRegistryService(): ServiceNodeRegistry {
   return getGlobalContainer().resolve(TOKENS.SERVICE_NODE_REGISTRY)
 }
 
-export function getWebSocketServiceInstance() {
+export function getWebSocketServiceInstance(): WebSocketService {
   return getGlobalContainer().resolve(TOKENS.WEBSOCKET_SERVICE)
 }
 
@@ -117,6 +120,6 @@ export function getNotificationServiceInstance(): NotificationService {
   return getGlobalContainer().resolve(TOKENS.NOTIFICATION_SERVICE)
 }
 
-export function getExecutionStateManagerInstance() {
+export function getExecutionStateManagerInstance(): ExecutionStateManager {
   return getGlobalContainer().resolve(TOKENS.EXECUTION_STATE_MANAGER)
 }

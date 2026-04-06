@@ -3,7 +3,7 @@ import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import { getDatabase } from '../database/service-async.js'
-import { getServiceNodeRegistry } from '../services/service-node-registry'
+import { getServiceNodeRegistryService } from '../service-registration.js'
 import {
   workflowIdParamsSchema,
   createWorkflowSchema,
@@ -22,10 +22,10 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
   const userRole = req.user!.role
 
   const db = await getDatabase()
-  const serviceRegistry = getServiceNodeRegistry(db)
+  const serviceRegistry = getServiceNodeRegistryService()
   const nodes = await serviceRegistry.getAvailableNodes(userRole)
 
-  const grouped = nodes.reduce<Record<string, unknown[]>>((acc, node) => {
+  const grouped = nodes.reduce<Record<string, unknown[]>>((acc: Record<string, unknown[]>, node) => {
     const category = node.category
     if (!acc[category]) acc[category] = []
     acc[category].push({
@@ -296,7 +296,7 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const edges = JSON.parse(workflow.edges_json)
   const executionId = `test_${Date.now()}`
 
-  const serviceRegistry = getServiceNodeRegistry(db)
+  const serviceRegistry = getServiceNodeRegistryService()
   const workflowEngine = new WorkflowEngine(db, serviceRegistry)
 
   cronEvents.emitWorkflowTestStarted(id, executionId)

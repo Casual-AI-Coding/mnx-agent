@@ -6,7 +6,7 @@ import { getDatabase } from '../../database/service-async.js'
 import { LogService } from '../../services/domain/log.service.js'
 import { TaskService } from '../../services/domain/task.service.js'
 import { WorkflowEngine } from '../../services/workflow-engine'
-import { getExecutionStateManager } from '../../services/execution-state-manager'
+import { getExecutionStateManagerInstance } from '../../service-registration.js'
 import {
   executionLogQuerySchema,
   executionLogIdParamsSchema,
@@ -77,7 +77,7 @@ router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
 
 router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const stateManager = getExecutionStateManager(db)
+  const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
   if (!state) {
@@ -102,7 +102,7 @@ router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
 
 router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const stateManager = getExecutionStateManager(db)
+  const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
   if (!state) {
@@ -121,7 +121,7 @@ router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
 
 router.get('/executions/:id', asyncHandler(async (req, res) => {
   const db = await getDatabase()
-  const stateManager = getExecutionStateManager(db)
+  const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
   if (!state) {
