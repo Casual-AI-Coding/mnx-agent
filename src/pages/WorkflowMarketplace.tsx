@@ -20,6 +20,7 @@ import {
   Video,
   Music,
   BarChart3,
+  Store,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -27,6 +28,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog } from '@/components/ui/Dialog'
 import { WorkflowPreviewWrapper } from '@/components/workflow/WorkflowPreview'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   BUILTIN_TEMPLATES,
   TEMPLATE_CATEGORIES,
@@ -161,24 +163,15 @@ export default function WorkflowMarketplace() {
   }
 
   return (
-    <div className="min-h-full bg-background">
-      <div className="border-b border-border bg-card/50">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/workflow-builder')}
-            >
-              <GitBranch className="w-4 h-4 mr-2" />
-              创建工作流
-            </Button>
-          </div>
-        </div>
-
-        <div className="px-6 pb-4">
+    <div className="space-y-6">
+      <PageHeader
+        icon={<Store className="w-5 h-5" />}
+        title="工作流模板市场"
+        description="发现和使用预定义的工作流模板"
+        gradient="purple-pink"
+        actions={
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+            <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
               <Input
                 placeholder="搜索模板..."
@@ -203,91 +196,97 @@ export default function WorkflowMarketplace() {
                 <List className="w-4 h-4" />
               </Button>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/workflow-builder')}
+            >
+              <GitBranch className="w-4 h-4 mr-2" />
+              创建工作流
+            </Button>
           </div>
+        }
+      />
 
-          <div className="flex items-center gap-2 mt-4">
-            <Filter className="w-4 h-4 text-muted-foreground/50" />
-            <span className="text-sm text-muted-foreground">分类：</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-sm transition-colors',
-                  selectedCategory === null
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                )}
-              >
-                全部 ({BUILTIN_TEMPLATES.length})
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm transition-colors flex items-center gap-1.5',
-                    selectedCategory === cat.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  )}
-                >
-                  <cat.IconComponent className={cn('w-3.5 h-3.5', cat.color)} />
-                  {cat.label} ({cat.count})
-                </button>
-              ))}
-            </div>
-          </div>
+      <div className="flex items-center gap-2">
+        <Filter className="w-4 h-4 text-muted-foreground/50" />
+        <span className="text-sm text-muted-foreground">分类：</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-sm transition-colors',
+              selectedCategory === null
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            全部 ({BUILTIN_TEMPLATES.length})
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={cn(
+                'px-3 py-1.5 rounded-full text-sm transition-colors flex items-center gap-1.5',
+                selectedCategory === cat.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              )}
+            >
+              <cat.IconComponent className={cn('w-3.5 h-3.5', cat.color)} />
+              {cat.label} ({cat.count})
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="p-6">
-        {filteredTemplates.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-              <Search className="w-8 h-8 text-muted-foreground/30" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-1">未找到模板</h3>
-            <p className="text-sm text-muted-foreground">
-              尝试使用其他关键词搜索，或查看其他分类
-            </p>
+      {filteredTemplates.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+            <Search className="w-8 h-8 text-muted-foreground/30" />
           </div>
-        ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className={cn(
-              viewMode === 'grid'
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                : 'space-y-2'
-            )}
-          >
-            <AnimatePresence>
-              {filteredTemplates.map((template) => (
-                <motion.div key={template.id} variants={itemVariants}>
-                  {viewMode === 'grid' ? (
-                    <TemplateCard
-                      template={template}
-                      onPreview={handlePreview}
-                      onUse={handleUseTemplate}
-                      onCopy={handleCopyNodes}
-                      copiedId={copiedId}
-                    />
-                  ) : (
-                    <TemplateListItem
-                      template={template}
-                      onPreview={handlePreview}
-                      onUse={handleUseTemplate}
-                      onCopy={handleCopyNodes}
-                      copiedId={copiedId}
-                    />
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </div>
+          <h3 className="text-lg font-medium text-foreground mb-1">未找到模板</h3>
+          <p className="text-sm text-muted-foreground">
+            尝试使用其他关键词搜索，或查看其他分类
+          </p>
+        </div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className={cn(
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+              : 'space-y-2'
+          )}
+        >
+          <AnimatePresence>
+            {filteredTemplates.map((template) => (
+              <motion.div key={template.id} variants={itemVariants}>
+                {viewMode === 'grid' ? (
+                  <TemplateCard
+                    template={template}
+                    onPreview={handlePreview}
+                    onUse={handleUseTemplate}
+                    onCopy={handleCopyNodes}
+                    copiedId={copiedId}
+                  />
+                ) : (
+                  <TemplateListItem
+                    template={template}
+                    onPreview={handlePreview}
+                    onUse={handleUseTemplate}
+                    onCopy={handleCopyNodes}
+                    copiedId={copiedId}
+                  />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       <Dialog
         open={showPreview}

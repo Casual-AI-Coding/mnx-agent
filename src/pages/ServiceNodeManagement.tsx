@@ -184,17 +184,19 @@ export default function ServiceNodeManagement() {
         description={t('serviceNodes.subtitle', '管理工作流中可用服务节点的访问权限')}
         gradient="orange-amber"
         actions={
-          <Button>
-            {t('serviceNodes.createRule', '创建权限规则')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="grid grid-cols-3 gap-2">
+              <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} compact />
+              <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color={status.success.gradient} compact />
+              <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color={status.pending.gradient} compact />
+            </div>
+            <Button>
+              {t('serviceNodes.createRule', '创建权限规则')}
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid grid-cols-3 gap-2">
-        <StatCard title="总节点数" value={nodes.length} icon={Server} color={roles.admin.gradient} compact />
-        <StatCard title="已启用" value={enabledCount} icon={CheckCircle2} color={status.success.gradient} compact />
-        <StatCard title="已禁用" value={nodes.length - enabledCount} icon={XCircle} color={status.pending.gradient} compact />
-      </div>
       <AnimatePresence>
         {sortedCategories.map((category, index) => (
           <motion.div

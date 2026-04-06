@@ -136,7 +136,12 @@ export default function UserManagement() {
         description="管理系统用户、角色和访问权限"
         gradient="orange-amber"
         actions={
-          <>
+          <div className="flex items-center gap-3">
+            <div className="grid grid-cols-3 gap-2">
+              <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" compact />
+              <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} compact />
+              <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} compact />
+            </div>
             <ExportButton
               data={filteredAndSortedUsers}
               filename="users"
@@ -151,30 +156,14 @@ export default function UserManagement() {
                 新建用户
               </Button>
             </motion.div>
-          </>
+          </div>
         }
       />
 
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4"
-      >
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-3">
-          <div className="grid grid-cols-3 gap-2">
-            <StatCard title="总用户" value={users.length} icon={Users} color="from-primary to-primary/60" compact />
-            <StatCard title="已启用" value={activeUsers} icon={CheckCircle2} color={status.success.gradient} compact />
-            <StatCard title="已禁用" value={inactiveUsers} icon={XCircle} color={status.pending.gradient} compact />
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
+        transition={{ delay: 0.1 }}
       >
         <BatchOperationToolbar
           selectedCount={selectedUserIds.size}
