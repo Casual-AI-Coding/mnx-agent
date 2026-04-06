@@ -188,12 +188,37 @@ function StatCard({
   value,
   icon: Icon,
   color,
+  compact = true,
 }: {
   title: string
   value: string | number
   icon: typeof BarChart3
   color: string
+  compact?: boolean
 }) {
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -1 }}
+        transition={{ type: 'spring', stiffness: 400 }}
+        className="relative overflow-hidden rounded-lg border border-border/50 shadow-sm"
+      >
+        <div className={cn('absolute inset-0 opacity-15 bg-gradient-to-br', color)} />
+        <div className="relative flex items-center gap-2.5 px-3 py-2">
+          <div className={cn('p-1.5 rounded-md bg-gradient-to-br shadow-sm', color)}>
+            <Icon className="w-3.5 h-3.5 text-white" />
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
+            <p className="text-base font-bold text-foreground">{value}</p>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
