@@ -2,7 +2,7 @@ import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { WorkflowResult, TaskResult, TestExecutionOptions, WorkflowNode, WorkflowEdge } from './types.js'
-import { getExecutionStateManager } from '../execution-state-manager.js'
+import { ExecutionStateManager } from '../execution-state-manager.js'
 import { parseWorkflowJson, validateWorkflow } from './parser.js'
 import { buildExecutionLayers } from './topological-sort.js'
 import { resolveNodeConfig } from './template-resolver.js'
@@ -65,7 +65,7 @@ export class WorkflowEngine {
     this.dryRun = options?.dryRun || false
 
     const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
-    const stateManager = supportsStatePersistence ? getExecutionStateManager(this.db) : null
+    const stateManager = supportsStatePersistence ? new ExecutionStateManager(this.db) : null
     let executionStateId: string | null = null
     let abortController: AbortController | null = null
 
@@ -215,7 +215,7 @@ export class WorkflowEngine {
       throw new Error('Execution state persistence is not supported')
     }
 
-    const stateManager = getExecutionStateManager(this.db)
+    const stateManager = new ExecutionStateManager(this.db)
     const state = await stateManager.getById(executionId)
 
     if (!state || state.status !== 'paused') {

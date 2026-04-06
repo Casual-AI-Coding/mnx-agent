@@ -7,13 +7,10 @@ import { QueueProcessor } from './services/queue-processor.js'
 import { WorkflowEngine } from './services/workflow/index.js'
 import { CronScheduler } from './services/cron-scheduler.js'
 import { getServiceNodeRegistry } from './services/service-node-registry.js'
-import { getWebSocketService } from './services/websocket-service.js'
-import { getNotificationService } from './services/notification-service.js'
-import { getExecutionStateManager } from './services/execution-state-manager.js'
-import type { NotificationService } from './services/notification-service.js'
+import { WebSocketService } from './services/websocket-service.js'
+import { NotificationService } from './services/notification-service.js'
+import { ExecutionStateManager } from './services/execution-state-manager.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
-import type { WebSocketService } from './services/websocket-service.js'
-import type { ExecutionStateManager } from './services/execution-state-manager.js'
 
 export const TOKENS = {
   DATABASE: 'database',
@@ -63,7 +60,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c): NotificationService => {
-    return getNotificationService(c.resolve(TOKENS.DATABASE))
+    return new NotificationService(c.resolve(TOKENS.DATABASE))
   })
 
   container.registerSingleton(TOKENS.CRON_SCHEDULER, (c): CronScheduler => {
@@ -76,11 +73,11 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.WEBSOCKET_SERVICE, () => {
-    return getWebSocketService()
+    return WebSocketService.getInstance()
   })
 
   container.registerSingleton(TOKENS.EXECUTION_STATE_MANAGER, (c) => {
-    return getExecutionStateManager(c.resolve(TOKENS.DATABASE))
+    return new ExecutionStateManager(c.resolve(TOKENS.DATABASE))
   })
 }
 

@@ -190,19 +190,3 @@ export class NotificationService {
     }
   }
 }
-
-let notificationInstance: NotificationService | null = null
-
-/**
- * @deprecated Use DI Container via getNotificationServiceInstance() from service-registration.ts
- */
-export function getNotificationService(db: DatabaseService, options?: { timeout?: number }): NotificationService {
-  if (!notificationInstance) {
-    notificationInstance = new NotificationService(db, options)
-  }
-  return notificationInstance
-}
-
-export function resetNotificationService(): void {
-  notificationInstance = null
-}

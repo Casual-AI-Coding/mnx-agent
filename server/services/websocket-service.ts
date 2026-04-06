@@ -306,19 +306,3 @@ export class WebSocketService {
     return cronEvents
   }
 }
-
-let wsServiceInstance: WebSocketService | null = null
-
-export function getWebSocketService(): WebSocketService {
-  if (!wsServiceInstance) {
-    wsServiceInstance = WebSocketService.getInstance()
-  }
-  return wsServiceInstance
-}
-
-export function resetWebSocketService(): void {
-  if (wsServiceInstance) {
-    wsServiceInstance.close()
-    wsServiceInstance = null
-  }
-}

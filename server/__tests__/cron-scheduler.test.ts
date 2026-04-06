@@ -1,4 +1,4 @@
-import { CronScheduler, getCronScheduler, resetCronScheduler } from '../services/cron-scheduler'
+import { CronScheduler } from '../services/cron-scheduler'
 import { CronJob, ExecutionStatus, TriggerType, MisfirePolicy } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest'
 
@@ -80,7 +80,6 @@ describe('CronScheduler', () => {
 
   afterEach(() => {
     scheduler?.stopAll()
-    resetCronScheduler()
   })
 
   // ============================================================================
@@ -472,36 +471,7 @@ describe('CronScheduler', () => {
     })
   })
 
-  // ============================================================================
-  // Singleton Management
-  // ============================================================================
-
-  describe('Singleton Management', () => {
-    it('should return same instance from getCronScheduler', () => {
-      resetCronScheduler()
-      
-      const instance1 = getCronScheduler(mockDb as any, mockWorkflowEngine as any)
-      const instance2 = getCronScheduler(mockDb as any, mockWorkflowEngine as any)
-      
-      expect(instance1).toBe(instance2)
-      
-      resetCronScheduler()
-    })
-
-    it('should reset singleton with resetCronScheduler', () => {
-      const instance1 = getCronScheduler(mockDb as any, mockWorkflowEngine as any)
-      
-      resetCronScheduler()
-      
-      const instance2 = getCronScheduler(mockDb as any, mockWorkflowEngine as any)
-      
-      expect(instance1).not.toBe(instance2)
-      
-      resetCronScheduler()
-    })
-  })
-
-  // ============================================================================
+// ============================================================================
   // Misfire Handling
   // ============================================================================
 

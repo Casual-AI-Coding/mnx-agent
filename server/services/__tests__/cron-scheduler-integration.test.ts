@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { CronScheduler, getCronScheduler, resetCronScheduler } from '../cron-scheduler'
+import { CronScheduler } from '../cron-scheduler'
 import { WorkflowEngine } from '../workflow-engine'
 import { QueueProcessor } from '../queue-processor'
 import type { DatabaseService } from '../../database/service-async'
@@ -17,7 +17,6 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    resetCronScheduler()
 
     mockDb = {
       getActiveCronJobs: vi.fn().mockResolvedValue([]),
@@ -52,7 +51,6 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
   afterEach(() => {
     cronScheduler?.stopAll()
-    resetCronScheduler()
   })
 
   describe('TaskExecutor integration', () => {
@@ -78,19 +76,6 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
       expect(result).toBeDefined()
       expect(result.success).toBe(true)
-    })
-  })
-
-  describe('getCronScheduler factory with TaskExecutor', () => {
-    it('should accept TaskExecutor parameter', () => {
-      const scheduler = getCronScheduler(
-        mockDb as DatabaseService,
-        workflowEngine as any,
-        mockTaskExecutor as any,
-        { timezone: 'UTC' }
-      )
-
-      expect(scheduler).toBeDefined()
     })
   })
 })

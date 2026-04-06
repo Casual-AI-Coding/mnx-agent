@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import cronRoutes from '../routes/cron'
+import { getGlobalContainer, resetContainer } from '../container'
+import { TOKENS } from '../service-registration'
 
 vi.mock('../database/service-async', () => ({
   getDatabase: vi.fn(),
@@ -12,10 +14,6 @@ vi.mock('../services/service-node-registry', () => ({
   resetServiceNodeRegistry: vi.fn(),
 }))
 
-vi.mock('../services/cron-scheduler', () => ({
-  getCronScheduler: vi.fn(),
-}))
-
 describe('Manual Trigger Error Handling', () => {
   let app: express.Application
   let mockDb: any
@@ -23,6 +21,7 @@ describe('Manual Trigger Error Handling', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    resetContainer()
 
     mockDb = {
       getCronJobById: vi.fn(),
@@ -34,14 +33,19 @@ describe('Manual Trigger Error Handling', () => {
     }
 
     const { getDatabase } = await import('../database/service-async')
-    const { getCronScheduler } = await import('../services/cron-scheduler')
-
     ;(getDatabase as any).mockResolvedValue(mockDb)
-    ;(getCronScheduler as any).mockReturnValue(mockScheduler)
+
+    // Setup DI Container with mock scheduler
+    const container = getGlobalContainer()
+    container.register(TOKENS.CRON_SCHEDULER, mockScheduler)
 
     app = express()
     app.use(express.json())
     app.use('/api/cron', cronRoutes)
+  })
+
+  afterEach(() => {
+    resetContainer()
   })
 
   it('should return error if job execution fails', async () => {

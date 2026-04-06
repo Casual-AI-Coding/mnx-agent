@@ -161,16 +161,3 @@ export class ExecutionStateManager {
     await this.db.run('DELETE FROM execution_states WHERE id = $1', [id])
   }
 }
-
-let managerInstance: ExecutionStateManager | null = null
-
-export function getExecutionStateManager(db: DatabaseService): ExecutionStateManager {
-  if (!managerInstance) {
-    managerInstance = new ExecutionStateManager(db)
-  }
-  return managerInstance
-}
-
-export function resetExecutionStateManager(): void {
-  managerInstance = null
-}

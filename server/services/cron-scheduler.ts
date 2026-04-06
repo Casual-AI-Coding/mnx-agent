@@ -4,8 +4,6 @@ import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
-import { getGlobalContainer } from '../container.js'
-import { TOKENS } from '../service-registration.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
@@ -444,22 +442,5 @@ export class CronScheduler {
 
   async resumeExecution(executionId: string): Promise<void> {
     await this.workflowEngine.resumeExecution(executionId)
-  }
-}
-
-let schedulerInstance: CronScheduler | null = null
-
-/**
- * @deprecated Use getCronSchedulerService() from service-registration.ts
- * This function ignores parameters and uses DI Container internally.
- */
-export function getCronScheduler(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: ITaskExecutor, options?: CronSchedulerOptions): CronScheduler {
-  return getGlobalContainer().resolve(TOKENS.CRON_SCHEDULER)
-}
-
-export function resetCronScheduler(): void {
-  if (schedulerInstance) {
-    schedulerInstance.stopAll()
-    schedulerInstance = null
   }
 }
