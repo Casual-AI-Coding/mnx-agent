@@ -303,7 +303,13 @@ export default function InvitationCodes() {
         description="生成和管理注册邀请码"
         gradient="orange-amber"
         actions={
-          <>
+          <div className="flex items-center gap-3">
+            <div className="grid grid-cols-4 gap-2">
+              <StatCard title="总邀请码" value={totalCodes} icon={Key} color={status.warning.gradient} compact />
+              <StatCard title="可用" value={activeCodes} icon={CheckCircle2} color={status.success.gradient} compact />
+              <StatCard title="已用完" value={usedCodes} icon={Users} color={status.info.gradient} compact />
+              <StatCard title="已过期" value={expiredCodes} icon={XCircle} color="from-muted to-muted-foreground/70" compact />
+            </div>
             <ExportButton
               data={filteredAndSortedCodes}
               filename="invitation_codes"
@@ -318,7 +324,7 @@ export default function InvitationCodes() {
                 批量生成
               </Button>
             </motion.div>
-          </>
+          </div>
         }
       />
 
@@ -728,25 +734,15 @@ function StatCard({ title, value, icon: Icon, color, compact = false }: {
 }) {
   if (compact) {
     return (
-      <motion.div 
-        whileHover={{ y: -2, scale: 1.02 }}
-        transition={{ type: 'spring', stiffness: 400 }}
-      >
-        <Card className="relative overflow-hidden border-border/50">
-          <div className={cn('absolute inset-0 opacity-10 bg-gradient-to-br', color)} />
-          <CardContent className="relative p-3">
-            <div className="flex items-center gap-2.5">
-              <div className={cn('p-1.5 rounded-lg bg-gradient-to-br shadow-md', color)}>
-                <Icon className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">{title}</p>
-                <p className="text-lg font-bold">{value}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/50">
+        <div className={cn('p-1 rounded', color)}>
+          <Icon className="w-3 h-3 text-white" />
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground/60">{title}</p>
+          <p className="text-sm font-bold">{value}</p>
+        </div>
+      </div>
     )
   }
 

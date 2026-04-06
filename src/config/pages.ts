@@ -41,13 +41,13 @@ export interface PageConfig {
 }
 
 export const GRADIENT_CLASSES: Record<GradientVariant, string> = {
-  'primary-accent': 'from-primary-400 via-accent to-secondary',
-  'secondary-primary': 'from-secondary via-primary to-accent',
-  'accent-secondary': 'from-accent via-secondary to-primary',
-  'blue-cyan': 'from-blue-400 via-cyan-400 to-teal-400',
-  'purple-pink': 'from-purple-400 via-pink-400 to-rose-400',
-  'orange-amber': 'from-orange-400 via-amber-400 to-yellow-400',
-  'green-emerald': 'from-green-400 via-emerald-400 to-teal-400',
+  'primary-accent': 'from-primary to-accent',
+  'secondary-primary': 'from-secondary to-primary',
+  'accent-secondary': 'from-accent to-secondary',
+  'blue-cyan': 'from-blue-500 to-cyan-500',
+  'purple-pink': 'from-purple-500 to-pink-500',
+  'orange-amber': 'from-orange-500 to-amber-500',
+  'green-emerald': 'from-green-500 to-emerald-500',
 }
 
 export const PAGE_CONFIGS: Record<string, PageConfig> = {
