@@ -136,7 +136,7 @@ export default function MusicGeneration() {
         icon={<Music className="w-5 h-5" />}
         title="音乐生成"
         description="AI 音乐创作与生成"
-        gradient="secondary-primary"
+        gradient="violet-purple"
       />
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={clearAll}>

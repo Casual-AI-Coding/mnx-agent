@@ -241,7 +241,7 @@ export default function VideoAgent() {
         icon={<Video className="w-5 h-5" />}
         title="视频 Agent"
         description="智能视频处理代理"
-        gradient="primary-accent"
+        gradient="orange-amber"
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">

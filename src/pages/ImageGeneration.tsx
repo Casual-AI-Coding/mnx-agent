@@ -223,7 +223,7 @@ export default function ImageGeneration() {
         icon={<LucideImage className="w-5 h-5" />}
         title="图像生成"
         description="AI 图像生成与编辑"
-        gradient="primary-accent"
+        gradient="rose-pink"
       />
 
       {!apiKey && (

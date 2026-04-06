@@ -309,7 +309,7 @@ export default function VoiceSync() {
         icon={<Mic className="w-5 h-5" />}
         title="语音同步合成"
         description="实时语音合成服务"
-        gradient="secondary-primary"
+        gradient="sky-blue"
       />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

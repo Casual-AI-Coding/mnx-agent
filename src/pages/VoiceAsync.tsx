@@ -474,7 +474,7 @@ export default function VoiceAsync() {
         icon={<MicOff className="w-5 h-5" />}
         title="语音异步合成"
         description="批量语音合成与长文本处理"
-        gradient="accent-secondary"
+        gradient="sky-blue"
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">

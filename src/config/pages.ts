@@ -32,6 +32,10 @@ export type GradientVariant =
   | 'purple-pink'
   | 'orange-amber'
   | 'green-emerald'
+  | 'indigo-violet'
+  | 'sky-blue'
+  | 'rose-pink'
+  | 'violet-purple'
 
 export interface PageConfig {
   title: string
@@ -48,6 +52,10 @@ export const GRADIENT_CLASSES: Record<GradientVariant, string> = {
   'purple-pink': 'from-purple-500 to-pink-500',
   'orange-amber': 'from-orange-500 to-amber-500',
   'green-emerald': 'from-green-500 to-emerald-500',
+  'indigo-violet': 'from-indigo-500 to-violet-500',
+  'sky-blue': 'from-sky-400 to-blue-500',
+  'rose-pink': 'from-rose-400 to-pink-500',
+  'violet-purple': 'from-violet-500 to-purple-600',
 }
 
 export const PAGE_CONFIGS: Record<string, PageConfig> = {
@@ -55,43 +63,43 @@ export const PAGE_CONFIGS: Record<string, PageConfig> = {
     title: '文本生成',
     description: '使用 MiniMax API 进行智能文本生成',
     icon: MessageSquare,
-    gradient: 'primary-accent',
+    gradient: 'indigo-violet',
   },
   '/voice': {
     title: '语音同步合成',
     description: '实时语音合成服务',
     icon: Mic,
-    gradient: 'secondary-primary',
+    gradient: 'sky-blue',
   },
   '/voice-async': {
     title: '语音异步合成',
     description: '批量语音合成与长文本处理',
     icon: MicOff,
-    gradient: 'accent-secondary',
+    gradient: 'sky-blue',
   },
   '/image': {
     title: '图像生成',
     description: 'AI 图像生成与编辑',
     icon: Image,
-    gradient: 'primary-accent',
+    gradient: 'rose-pink',
   },
   '/music': {
     title: '音乐生成',
     description: 'AI 音乐创作与生成',
     icon: Music,
-    gradient: 'secondary-primary',
+    gradient: 'violet-purple',
   },
   '/video': {
     title: '视频生成',
     description: 'AI 视频内容生成',
     icon: Video,
-    gradient: 'accent-secondary',
+    gradient: 'orange-amber',
   },
   '/video-agent': {
     title: '视频 Agent',
     description: '智能视频处理代理',
     icon: VideoIcon,
-    gradient: 'primary-accent',
+    gradient: 'orange-amber',
   },
   '/voice-mgmt': {
     title: '语音管理',

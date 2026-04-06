@@ -185,7 +185,7 @@ export default function TextGeneration() {
         icon={<MessageSquare className="w-5 h-5" />}
         title="文本生成"
         description="使用 MiniMax API 进行智能文本生成"
-        gradient="primary-accent"
+        gradient="indigo-violet"
       />
 
       <div className="flex items-center justify-between mb-6">

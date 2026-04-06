@@ -184,7 +184,7 @@ export default function VideoGeneration() {
         icon={<Video className="w-5 h-5" />}
         title="视频生成"
         description="AI 视频内容生成"
-        gradient="accent-secondary"
+        gradient="orange-amber"
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
