@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/Button'
 import { useSettingsStore } from '@/settings/store'
+import type { SettingsCategory } from '@/settings/types'
 import {
   User,
   Key,

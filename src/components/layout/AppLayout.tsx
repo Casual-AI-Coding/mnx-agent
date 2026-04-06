@@ -33,7 +33,7 @@ export default function AppLayout() {
         'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200',
         isSidebarCollapsed ? 'ml-[60px]' : 'ml-[220px]'
       )}>
-        <div className="p-8">
+        <div className="p-6">
           <Outlet />
         </div>
       </main>

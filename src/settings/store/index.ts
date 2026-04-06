@@ -60,14 +60,19 @@ export const useSettingsStore = create<SettingsState>()(
           const response = await getSettings()
           
           if (response.success && response.data) {
+            const serverSettings = response.data as Partial<AllSettings>
             set(state => ({
-              settings: { ...state.settings, ...(response.data as Partial<AllSettings>) },
+              settings: { 
+                ...state.settings, 
+                ...serverSettings,
+                api: serverSettings.api ?? state.settings.api
+              },
               lastSyncedAt: new Date(),
               dirtyCategories: new Set(),
             }))
           }
         } catch (error) {
-          set({ syncError: error as Error })
+          set({  syncError: error as Error })
         } finally {
           set({ isLoading: false })
         }

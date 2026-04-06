@@ -1,7 +1,12 @@
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useEffect } from 'react'
+import { Save, RotateCcw, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
+import { useAllSettings, useHasUnsavedChanges } from '@/settings/store/hooks'
+import type { SettingsCategory } from '@/settings/types'
 import { Card, CardContent } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { SettingsLayout } from '@/components/settings/SettingsLayout'
 import { SettingsContent } from '@/components/settings/SettingsContent'
 import { AccountSettingsPanel } from '@/components/settings/categories/AccountSettingsPanel'
@@ -74,8 +79,28 @@ export default function SettingsPage() {
   const { category } = useParams<{ category: string }>()
   const activeCategory = category || 'account'
   const { user } = useAuthStore()
+  const { settings, isLoading, isSaving, initialize, saveSettings, resetCategory } = useAllSettings()
+  const hasUnsavedChanges = useHasUnsavedChanges()
+
+  useEffect(() => {
+    if (user) {
+      initialize()
+    }
+  }, [user, initialize])
 
   const categoryInfo = CATEGORY_TITLES[activeCategory] || CATEGORY_TITLES.account
+
+  const handleSave = async () => {
+    try {
+      await saveSettings(activeCategory as SettingsCategory)
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+    }
+  }
+
+  const handleReset = () => {
+    resetCategory(activeCategory as SettingsCategory)
+  }
 
   if (!user) {
     return (
@@ -100,6 +125,31 @@ export default function SettingsPage() {
           <SettingsContent
             title={categoryInfo.title}
             description={categoryInfo.description}
+            actions={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  disabled={isLoading || isSaving}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  重置
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isLoading || isSaving || !hasUnsavedChanges}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  保存
+                </Button>
+              </div>
+            }
           >
             <CategoryPanel category={activeCategory} />
           </SettingsContent>
