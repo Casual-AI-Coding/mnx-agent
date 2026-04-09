@@ -5,6 +5,7 @@ import { getDatabaseService } from '../service-registration.js'
 import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
 import type { AuditAction } from '../database/types'
 import { successResponse, errorResponse } from '../middleware/api-response'
+import { withEntityNotFound } from '../utils/index.js'
 
 const router = Router()
 
@@ -66,10 +67,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const db = getDatabaseService()
   const log = await db.getAuditLogById(req.params.id)
-  if (!log) {
-    errorResponse(res, 'Audit log not found', 404)
-    return
-  }
+  if (!withEntityNotFound(log, res, 'Audit log')) return
   successResponse(res, log)
 }))
 

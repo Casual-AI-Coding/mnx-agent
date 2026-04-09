@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
 import { v4 as uuidv4 } from 'uuid'
 import { successResponse, errorResponse } from '../middleware/api-response'
+import { withEntityNotFound } from '../utils/index.js'
 
 const router = Router()
 
@@ -36,11 +37,8 @@ router.get('/:key', asyncHandler(async (req, res) => {
   const { key } = req.params
   const db = getDatabaseService()
   const config = await db.getSystemConfigByKey(key)
-  
-  if (!config) {
-    errorResponse(res, 'Configuration not found', 404)
-    return
-  }
+
+  if (!withEntityNotFound(config, res, 'Configuration')) return
   
   successResponse(res, config)
 }))
@@ -76,12 +74,9 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
     value,
     description,
   }, req.user?.userId)
-  
-  if (!config) {
-    errorResponse(res, 'Configuration not found', 404)
-    return
-  }
-  
+
+  if (!withEntityNotFound(config, res, 'Configuration')) return
+
   successResponse(res, config)
 }))
 
@@ -91,10 +86,7 @@ router.delete('/:key', asyncHandler(async (req, res) => {
   const db = getDatabaseService()
   
   const deleted = await db.deleteSystemConfig(key)
-  if (!deleted) {
-    errorResponse(res, 'Configuration not found', 404)
-    return
-  }
+  if (!withEntityNotFound(deleted, res, 'Configuration')) return
   
   successResponse(res, { message: 'Configuration deleted' })
 }))

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
+import { withEntityNotFound } from '../../utils/index.js'
 import { getDatabaseService } from '../../service-registration.js'
 import { LogService } from '../../services/domain/log.service.js'
 import { TaskService } from '../../services/domain/task.service.js'
@@ -37,10 +38,7 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
   const taskService = new TaskService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await logService.getById(req.params.id, ownerId)
-  if (!log) {
-    errorResponse(res, 'Log not found', 404)
-    return
-  }
+  if (!withEntityNotFound(log, res, 'Log')) return
   let tasks: { id: string; status: string; created_at: string }[] = []
   if (log.job_id) {
     tasks = (await taskService.getByJobId(log.job_id, ownerId)).map((t: TaskQueueItem) => ({
@@ -57,10 +55,7 @@ router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyn
   const logService = new LogService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await logService.getById(req.params.id, ownerId)
-  if (!log) {
-    errorResponse(res, 'Log not found', 404)
-    return
-  }
+  if (!withEntityNotFound(log, res, 'Log')) return
   const details = await logService.getDetails(req.params.id)
   successResponse(res, { log, details })
 }))
@@ -198,10 +193,7 @@ router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSch
   const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
-  if (!template) {
-    errorResponse(res, 'Template not found', 404)
-    return
-  }
+  if (!withEntityNotFound(template, res, 'Template')) return
   if (req.body.nodes_json) {
     try { JSON.parse(req.body.nodes_json) } catch {
       errorResponse(res, 'nodes_json must be valid JSON', 400)
@@ -222,10 +214,7 @@ router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParams
   const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
-  if (!template) {
-    errorResponse(res, 'Template not found', 404)
-    return
-  }
+  if (!withEntityNotFound(template, res, 'Template')) return
   await db.deleteWorkflowTemplate(req.params.id, ownerId)
   successResponse(res, { deleted: true })
 }))

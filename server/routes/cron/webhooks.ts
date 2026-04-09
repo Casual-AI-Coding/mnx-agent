@@ -12,6 +12,7 @@ import {
 } from '../../validation/cron-schemas'
 import { WebhookConfig } from '../../database/types'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
+import { withEntityNotFound } from '../../utils/index.js'
 
 const router = Router()
 
@@ -28,10 +29,7 @@ router.post('/webhooks', validate(createWebhookSchema), asyncHandler(async (req,
   const webhookData = req.body
 
   const job = await db.getCronJobById(webhookData.job_id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
 
   const webhook = await db.createWebhookConfig({
     job_id: webhookData.job_id,
@@ -50,10 +48,7 @@ router.get('/webhooks/:id', validateParams(webhookIdParamsSchema), asyncHandler(
   const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!webhook) {
-    errorResponse(res, 'Webhook not found', 404)
-    return
-  }
+  if (!withEntityNotFound(webhook, res, 'Webhook')) return
   successResponse(res, webhook)
 }))
 
@@ -86,10 +81,7 @@ router.post('/webhooks/:id/test', validateParams(webhookIdParamsSchema), asyncHa
   const notificationService = getNotificationServiceInstance()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!webhook) {
-    errorResponse(res, 'Webhook not found', 404)
-    return
-  }
+  if (!withEntityNotFound(webhook, res, 'Webhook')) return
   const result = await notificationService.testWebhook(req.params.id)
   res.json({ success: result.success, data: result })
 }))
@@ -98,10 +90,7 @@ router.get('/webhooks/:id/deliveries', validateParams(webhookIdParamsSchema), va
   const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const webhook = await db.getWebhookConfigById(req.params.id, ownerId)
-  if (!webhook) {
-    errorResponse(res, 'Webhook not found', 404)
-    return
-  }
+  if (!withEntityNotFound(webhook, res, 'Webhook')) return
   const query = req.query as unknown as { limit: number }
   const deliveries = await db.getWebhookDeliveriesByWebhook(req.params.id, query.limit, ownerId)
   successResponse(res, { deliveries, total: deliveries.length })
