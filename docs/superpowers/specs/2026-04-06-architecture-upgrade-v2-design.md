@@ -7,6 +7,77 @@
 
 ## 一、现状分析总结
 
+### 1.0 新发现问题（2026-04-09 探索）
+
+基于代码探索发现以下额外问题：
+
+#### 1.0.1 服务层职责过重
+
+| 服务 | 方法数 | 问题 |
+|------|--------|------|
+| JobService | 19 | 混合CRUD + 依赖图 + 标签管理 |
+| TaskService | 17 | 混合任务生命周期 + 死信队列 |
+| CronScheduler | 16 | 混合调度 + 执行 + 并发控制 + misfire |
+| QueueProcessor | 14 | 混合队列处理 + 重试 + DLQ自动重试 |
+| ExecutionStateManager | 13 | 混合状态持久化 + 节点跟踪 |
+| CapacityChecker | 9 | 混合余额检查 + 配额管理 |
+
+**推荐拆分**:
+- JobService → JobService + DependencyGraphService + TagService
+- TaskService → TaskService + DeadLetterQueueService
+- CronScheduler → CronScheduler + ConcurrencyManager + MisfireHandler
+- QueueProcessor → QueueProcessor + RetryManager + DLQAutoRetryScheduler
+
+#### 1.0.2 全局事件耦合
+
+`cronEvents` 是全局单例 EventEmitter，被 8+ 服务直接导入，违反依赖注入原则。
+
+**解决方案**: 创建 EventBus 接口，通过 DI 注入
+
+#### 1.0.3 大文件列表 (>500行)
+
+**后端**:
+| 文件 | 行数 | 问题 |
+|------|------|------|
+| service-async.ts | 868 | DatabaseService God Object |
+| workflow-engine.test.ts | 1053 | 测试文件，可接受 |
+| queue-processor.ts | 494 | 需拆分 |
+| cron-scheduler.ts | 446 | 需拆分 |
+| jobs.ts (路由) | 424 | 需提取通用模式 |
+
+**前端**:
+| 文件 | 行数 | 问题 |
+|------|------|------|
+| workflow-templates.ts | 982 | 模板数据应分离 |
+| VoiceAsync.tsx | 965 | 页面职责过多 |
+| DeadLetterQueue.tsx | 938 | 多个Modal内嵌 |
+| TestRunPanel.tsx | 834 | 多个子组件内嵌 |
+| InvitationCodes.tsx | 774 | 功能堆叠 |
+| WebhookManagement.tsx | 765 | Modal过重 |
+| VoiceSync.tsx | 733 | 页面职责过多 |
+| cron.ts (API) | 607 | 需按领域拆分 |
+
+#### 1.0.4 硬编码重复
+
+| 常量 | 重复位置 | 问题 |
+|------|----------|------|
+| BALANCE_CACHE_TTL_MS | timeouts.ts + capacity-checker.ts | 30000重复定义 |
+| HEARTBEAT_INTERVAL | websocket-service.ts | 未使用WEBSOCKET_TIMEOUTS |
+| concurrency: 5 | settings-service.ts + defaults.ts | 前后端重复 |
+| timeout: 30000 | settings-service.ts + defaults.ts | 前后端重复 |
+| storagePath | settings-service.ts + defaults.ts | 前后端重复 |
+
+#### 1.0.5 代码重复模式 (~440行)
+
+| 模式 | 影响文件 | 重复行数 |
+|------|----------|----------|
+| CRUD not-found检查 | 15+路由 | ~100行 |
+| Pagination计算 | 6文件 | ~30行 |
+| Workflow权限检查 | workflows.ts (3x) | ~135行 |
+| Domain Service样板 | 3服务 | ~60行 |
+| Repository create逻辑 | 6仓库 | ~80行 |
+| JSON验证 | 4文件 | ~32行 |
+
 ### 1.1 核心问题清单
 
 | 类别 | 问题 | 严重程度 | 位置 |
@@ -183,6 +254,45 @@
 
 **Commit节点**: `refactor(security): unify permission filtering`
 
+### Phase 8: 服务层职责拆分
+
+**目标**: 消除服务职责过重、解耦全局事件
+
+**任务**:
+| ID | 任务 | 输入 | 输出 | 验证标准 |
+|----|------|------|------|----------|
+| P8-1 | 创建EventBus接口 | cronEvents全局单例 | IEventBus + DI注入 | 无直接导入cronEvents |
+| P8-2 | 拆分CronScheduler | 16方法 | +ConcurrencyManager +MisfireHandler | 每服务<10方法 |
+| P8-3 | 拆分QueueProcessor | 14方法 | +RetryManager +DLQAutoRetryScheduler | 每服务<10方法 |
+
+**Commit节点**: `refactor(server): split service responsibilities`
+
+### Phase 9: 大文件拆分
+
+**目标**: 文件行数<500，组件职责单一
+
+**任务**:
+| ID | 任务 | 输入 | 输出 | 验证标准 |
+|----|------|------|------|----------|
+| P9-1 | DatabaseService拆分 | 868行 | Domain Services | 仅Facade角色 |
+| P9-2 | 前端模板分离 | workflow-templates.ts 982行 | templates/*.ts | 数据与代码分离 |
+| P9-3 | 前端组件拆分 | DeadLetterQueue等 | 独立Modal组件 | 每组件<300行 |
+
+**Commit节点**: `refactor(split): reduce file sizes`
+
+### Phase 10: 硬编码去重
+
+**目标**: 常量单一来源，前后端同步
+
+**任务**:
+| ID | 任务 | 输入 | 输出 | 验证标准 |
+|----|------|------|------|----------|
+| P10-1 | 后端常量去重 | 5+重复定义 | 导入config | 无重复定义 |
+| P10-2 | WebSocket使用config | HEARTBEAT_*内联 | 使用WEBSOCKET_TIMEOUTS | 统一配置 |
+| P10-3 | 创建shared-constants | 前后端重复 | packages/shared-constants | 单一来源 |
+
+**Commit节点**: `refactor(config): deduplicate constants`
+
 ## 四、依赖关系图
 
 ```
@@ -210,6 +320,17 @@ Phase 6 (独立):
 
 Phase 7 (依赖Phase 1, Phase 6):
   P1-3 → P7-1 → P7-2 → P7-3
+
+Phase 8 (依赖Phase 1, Phase 2):
+  P1-1 → P2-1 → P8-1 → P8-2 → P8-3
+
+Phase 9 (依赖Phase 6):
+  P6-3 → P9-1
+  P9-2 (独立)
+  P9-3 (独立)
+
+Phase 10 (依赖Phase 1):
+  P1-1 → P10-1 → P10-2 → P10-3
 ```
 
 ## 五、验证标准
@@ -225,15 +346,20 @@ Phase 7 (依赖Phase 1, Phase 6):
 | Phase 5 | Store无WebSocket逻辑，仅管理UI状态 |
 | Phase 6 | 多表操作支持事务，无isPostgres判断散落 |
 | Phase 7 | owner_id自动过滤，无遗漏 |
+| Phase 8 | 无服务>10方法，无全局EventEmitter导入 |
+| Phase 9 | 无文件>500行，前端组件独立 |
+| Phase 10 | 无重复常量定义，前后端使用同一来源 |
 
 ### 5.2 质量指标
 
 | 指标 | 当前 | 目标 |
 |------|------|------|
-| 最大文件行数 | 862行 | <300行 |
+| 最大文件行数 | 862行 | <500行 |
+| 最大服务方法数 | 19 | <10 |
 | 重复代码比例 | ~30% | <5% |
 | 服务定位器调用 | 5+ 处 | 0 |
 | API双轨制 | 2种 | 1种 |
+| 硬编码重复 | 15+ | 0 |
 | 测试覆盖率 | 未知 | >80% |
 
 ## 六、技术决策记录

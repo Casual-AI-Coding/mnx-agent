@@ -12,9 +12,14 @@ import {
   testRunWorkflowSchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
-import { ROLE_HIERARCHY } from '../types/workflow'
 import { WorkflowEngine } from '../services/workflow-engine'
 import { cronEvents } from '../services/websocket-service'
+import {
+  getPaginationParams,
+  createPaginatedResponse,
+  parseJsonField,
+  validateWorkflowNodePermissions,
+} from '../utils/index.js'
 
 const router = Router()
 
@@ -42,11 +47,8 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
 }))
 
 router.get('/', asyncHandler(async (req, res) => {
-  const { is_public, page, limit } = req.query
-  const pageNum = Math.max(1, parseInt(String(page)) || 1)
-  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit)) || 20))
-
-  const offset = (pageNum - 1) * limitNum
+  const { is_public } = req.query
+  const { page, limit, offset } = getPaginationParams(req.query)
   const ownerId = buildOwnerFilter(req).params[0]
 
   const db = getDatabaseService()
@@ -61,19 +63,11 @@ router.get('/', asyncHandler(async (req, res) => {
   const result = await db.getWorkflowTemplatesPaginated({
     ownerId,
     isTemplate: isPublicFilter,
-    limit: limitNum,
+    limit,
     offset,
   })
 
-  successResponse(res, {
-    workflows: result.templates,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total: result.total,
-      totalPages: Math.ceil(result.total / limitNum),
-    },
-  })
+  successResponse(res, createPaginatedResponse(result.templates, result.total, page, limit))
 }))
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
@@ -107,41 +101,10 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
   const { nodes_json } = req.body
-  let actionNodes: Array<{ type: string; data: { config?: { service?: string; method?: string } } }> = []
-  try {
-    const parsed = JSON.parse(nodes_json)
-    actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
-  } catch {
-    errorResponse(res, 'nodes_json must be valid JSON', 400)
-    return
-  }
+  const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(nodes_json, res, 'nodes_json')
+  if (!parsed) return
 
-  const userLevel = ROLE_HIERARCHY[userRole] ?? 0
-
-  for (const node of actionNodes) {
-    const config = node.data?.config || {}
-    const { service, method } = config
-
-    if (!service || !method) continue
-
-    const permission = await db.getServiceNodePermission(service, method)
-
-    if (!permission) {
-      errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
-      return
-    }
-
-    if (!permission.is_enabled) {
-      errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
-      return
-    }
-
-    const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
-    if (nodeLevel > userLevel) {
-      errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
-      return
-    }
-  }
+  if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
 
   const workflow = await db.createWorkflowTemplate({
     name: req.body.name,
@@ -164,51 +127,16 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
     return
   }
 
-  const hasAccess =
-    existing.owner_id === userId ||
-    userRole === 'super'
-
+  const hasAccess = existing.owner_id === userId || userRole === 'super'
   if (!hasAccess) {
     errorResponse(res, 'You do not have permission to update this workflow', 403)
     return
   }
 
   if (req.body.nodes_json) {
-    let actionNodes: Array<{ type: string; data: { config?: { service?: string; method?: string } } }> = []
-    try {
-      const parsed = JSON.parse(req.body.nodes_json)
-      actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
-    } catch {
-      errorResponse(res, 'nodes_json must be valid JSON', 400)
-      return
-    }
-
-    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
-
-    for (const node of actionNodes) {
-      const config = node.data?.config || {}
-      const { service, method } = config
-
-      if (!service || !method) continue
-
-      const permission = await db.getServiceNodePermission(service, method)
-
-      if (!permission) {
-        errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
-        return
-      }
-
-      if (!permission.is_enabled) {
-        errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
-        return
-      }
-
-      const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
-      if (nodeLevel > userLevel) {
-        errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
-        return
-      }
-    }
+    const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
+    if (!parsed) return
+    if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
   }
 
   const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
@@ -233,36 +161,9 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
   }
 
   if (req.body.nodes_json) {
-    let actionNodes: Array<{ type: string; data: { config?: { service?: string; method?: string } } }> = []
-    try {
-      const parsed = JSON.parse(req.body.nodes_json)
-      actionNodes = (parsed.nodes || []).filter((n: { type: string }) => n.type === 'action')
-    } catch {
-      errorResponse(res, 'nodes_json must be valid JSON', 400)
-      return
-    }
-
-    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
-    for (const node of actionNodes) {
-      const config = node.data?.config || {}
-      const { service, method } = config
-      if (!service || !method) continue
-
-      const permission = await db.getServiceNodePermission(service, method)
-      if (!permission) {
-        errorResponse(res, `Unknown service method: ${service}.${method}`, 400)
-        return
-      }
-      if (!permission.is_enabled) {
-        errorResponse(res, `Service method ${service}.${method} is disabled`, 403)
-        return
-      }
-      const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
-      if (nodeLevel > userLevel) {
-        errorResponse(res, `You don't have permission to use ${service}.${method}. Requires ${permission.min_role} role.`, 403)
-        return
-      }
-    }
+    const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
+    if (!parsed) return
+    if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
   }
 
   const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
