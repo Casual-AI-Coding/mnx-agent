@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-04-09
+
+### Added
+
+**Token Refresh System - httpOnly Cookie-based Authentication**
+
+- **Backend Implementation**
+  - Add `cookie-parser` middleware for httpOnly cookie support
+  - `POST /api/auth/refresh` endpoint with token rotation
+  - `POST /api/auth/logout` endpoint to clear cookie
+  - `verifyRefreshToken()` method in UserService
+  - Refresh token stored in httpOnly cookie (7 days expiry)
+  - Access token expires in 15 minutes
+
+- **Frontend Implementation**
+  - `useTokenRefresh` hook for proactive token refresh (3-minute buffer)
+  - JWT parsing utilities (`src/lib/jwt.ts`)
+    - `parseJWT()`, `parseTokenExpiry()`, `calculateRefreshTime()`, `isTokenExpired()`
+  - 401 interceptor with refresh queue for concurrent requests
+  - Race condition guard in token refresh hook
+  - Handle page reload: refresh from httpOnly cookie when authenticated
+
+- **Security Improvements**
+  - Access token NOT stored in localStorage (XSS protection)
+  - Refresh token stored in httpOnly cookie
+  - Cookie settings: `sameSite=lax`, `secure` in production
+  - Token type validation (reject refresh tokens when expecting access tokens)
+
+### Changed
+
+- **Auth API** - Remove `refreshToken` from login/register response body
+  - Now sent via httpOnly cookie instead of JSON response
+  - Clients must use `withCredentials: true` for cookie handling
+
+- **Logout Flow** - Call backend API before clearing local state
+  - Properly clears httpOnly cookie on server
+
+### Documentation
+
+- `docs/token-implementation.md` - Token authentication implementation guide
+- `docs/superpowers/specs/2026-04-08-token-refresh-design.md` - Design specification
+- `docs/superpowers/plans/2026-04-08-token-refresh.md` - Implementation plan
+
 ## [1.6.2] - 2026-04-06
 
 ### Fixed
