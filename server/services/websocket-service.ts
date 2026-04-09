@@ -13,7 +13,7 @@ export interface CronEvent {
   timestamp: string
 }
 
-class CronEventEmitter extends EventEmitter implements IEventBus {
+export class CronEventEmitter extends EventEmitter implements IEventBus {
   emitJobCreated(job: unknown): void {
     this.emit('job_event', {
       type: 'job_created',

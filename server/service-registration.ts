@@ -10,6 +10,9 @@ import { getServiceNodeRegistry, type ServiceNodeRegistry } from './services/ser
 import { WebSocketService } from './services/websocket-service.js'
 import { NotificationService } from './services/notification-service.js'
 import { ExecutionStateManager } from './services/execution-state-manager.js'
+import { WorkflowService } from './services/domain/index.js'
+import { cronEvents, CronEventEmitter } from './services/websocket-service.js'
+import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 
 export const TOKENS = {
   DATABASE: 'database',
@@ -23,6 +26,8 @@ export const TOKENS = {
   WEBSOCKET_SERVICE: 'websocketService',
   NOTIFICATION_SERVICE: 'notificationService',
   EXECUTION_STATE_MANAGER: 'executionStateManager',
+  WORKFLOW_SERVICE: 'workflowService',
+  EVENT_BUS: 'eventBus',
 } as const
 
 export async function registerServices(): Promise<void> {
@@ -78,6 +83,13 @@ export async function registerServices(): Promise<void> {
   container.registerSingleton(TOKENS.EXECUTION_STATE_MANAGER, (c) => {
     return new ExecutionStateManager(c.resolve(TOKENS.DATABASE))
   })
+
+  container.registerSingleton(TOKENS.WORKFLOW_SERVICE, (c) => {
+    return new WorkflowService(c.resolve(TOKENS.DATABASE))
+  })
+
+  // Register the global event bus singleton (CronEventEmitter implements IEventBus)
+  container.register(TOKENS.EVENT_BUS, cronEvents)
 }
 
 export function getDatabaseService(): DatabaseService {
@@ -118,4 +130,12 @@ export function getNotificationServiceInstance(): NotificationService {
 
 export function getExecutionStateManagerInstance(): ExecutionStateManager {
   return getGlobalContainer().resolve<ExecutionStateManager>(TOKENS.EXECUTION_STATE_MANAGER)
+}
+
+export function getWorkflowService(): WorkflowService {
+  return getGlobalContainer().resolve<WorkflowService>(TOKENS.WORKFLOW_SERVICE)
+}
+
+export function getEventBus(): IEventBus {
+  return getGlobalContainer().resolve<IEventBus>(TOKENS.EVENT_BUS)
 }
