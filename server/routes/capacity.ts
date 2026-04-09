@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { getDatabaseService } from '../service-registration.js'
+import { CapacityService } from '../services/domain'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { getLogger } from '../lib/logger'
 import { successResponse, errorResponse } from '../middleware/api-response'
@@ -13,13 +14,13 @@ router.get('/', asyncHandler(async (req, res) => {
   try {
     const client = getClientFromRequest(req)
     
-    const db = getDatabaseService()
+    const capacityService = new CapacityService(getDatabaseService())
     const codingPlan = await client.getCodingPlanRemains()
-    const records = await db.getAllCapacityRecords()
+    const records = await capacityService.getAll()
     successResponse(res, { codingPlan, records })
   } catch (error) {
-    const db = getDatabaseService()
-    const records = await db.getAllCapacityRecords()
+    const capacityService = new CapacityService(getDatabaseService())
+    const records = await capacityService.getAll()
     const errorMessage = (error as Error).message
     logger.error({ msg: 'Failed to fetch coding plan', error: errorMessage })
     res.json({ 
@@ -48,15 +49,15 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       music: { rpm: 10 },
       video: { rpm: 5 },
     }
-    const db = getDatabaseService()
+    const capacityService = new CapacityService(getDatabaseService())
     for (const [serviceType, config] of Object.entries(rateLimits)) {
-      await db.upsertCapacityRecord(serviceType, {
+      await capacityService.upsert(serviceType, {
         remaining_quota: config.rpm,
         total_quota: config.rpm,
         reset_at: resetAt,
       })
     }
-    const records = await db.getAllCapacityRecords()
+    const records = await capacityService.getAll()
     successResponse(res, { codingPlan, records })
   } catch (error) {
     errorResponse(res, (error as Error).message, 503)
