@@ -8,7 +8,8 @@ export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
         'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
         'log_created' | 'log_updated' |
-        'workflow_test_started' | 'workflow_test_completed' | 'workflow_node_output'
+        'workflow_test_started' | 'workflow_test_completed' | 'workflow_node_output' |
+        'workflow_node_start' | 'workflow_node_complete' | 'workflow_node_error'
   payload: unknown
   timestamp: string
 }
@@ -133,6 +134,30 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
       timestamp: new Date().toISOString()
     } as CronEvent)
   }
+
+  emitWorkflowNodeStart(nodeId: string, executionId: string, workflowId?: string): void {
+    this.emit('workflow_node_event', {
+      type: 'workflow_node_start',
+      payload: { nodeId, executionId, workflowId },
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitWorkflowNodeComplete(nodeId: string, executionId: string, result: unknown, durationMs: number): void {
+    this.emit('workflow_node_event', {
+      type: 'workflow_node_complete',
+      payload: { nodeId, executionId, result, durationMs },
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
+
+  emitWorkflowNodeError(nodeId: string, executionId: string, error: string): void {
+    this.emit('workflow_node_event', {
+      type: 'workflow_node_error',
+      payload: { nodeId, executionId, error },
+      timestamp: new Date().toISOString()
+    } as CronEvent)
+  }
 }
 
 export const cronEvents = new CronEventEmitter()
@@ -234,6 +259,7 @@ export function initCronWebSocket(server: Server): WebSocketServer {
   cronEvents.on('task_event', (event: CronEvent) => sendToClients('tasks', event))
   cronEvents.on('log_event', (event: CronEvent) => sendToClients('logs', event))
   cronEvents.on('workflow_event', (event: CronEvent) => sendToClients('workflows', event))
+  cronEvents.on('workflow_node_event', (event: CronEvent) => sendToClients('workflows', event))
 
   startHeartbeat()
 

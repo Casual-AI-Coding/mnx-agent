@@ -14,4 +14,7 @@ export interface IEventBus {
   emitWorkflowTestStarted(workflowId: string, executionId: string): void
   emitWorkflowTestCompleted(workflowId: string, executionId: string, result: unknown, error?: string): void
   emitWorkflowNodeOutput(nodeId: string, output: unknown, executionId: string): void
+  emitWorkflowNodeStart(nodeId: string, executionId: string, workflowId?: string): void
+  emitWorkflowNodeComplete(nodeId: string, executionId: string, result: unknown, durationMs: number): void
+  emitWorkflowNodeError(nodeId: string, executionId: string, error: string): void
 }
