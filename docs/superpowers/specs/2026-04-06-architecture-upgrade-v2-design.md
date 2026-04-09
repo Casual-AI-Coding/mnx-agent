@@ -410,6 +410,9 @@ Phase 10 (依赖Phase 1):
 |------|----------|----------|
 | Phase 1 | 2026-04-09 | ✅ DI Container 增强，MiniMaxClientFactory，BaseRepository |
 | Phase 3 | 2026-04-09 | ✅ 路由层重构，route helpers，9个路由文件优化，~187行减少 |
+| Phase 4-1 | 2026-04-09 | ✅ 前端错误处理统一：单一ApiError类，toApiResponse模式，46个catch块更新 |
+| Phase 6 | 2026-04-09 | ✅ 前端常量统一：TIMEOUTS, WEBSOCKET, PAGINATION, QUEUE, CHARACTER_LIMITS, WORKFLOW |
+| Phase 7 | 2026-04-09 | ✅ 组件拆分计划：12个大文件分析完成，计划文档已创建 |
 | Phase 8 | 2026-04-09 | ✅ 服务层拆分：IEventBus、ConcurrencyManager、MisfireHandler、RetryManager、DLQAutoRetryScheduler |
 | Phase 9 | 2026-04-09 | ✅ Domain Services：MediaService、WorkflowService、WebhookService、CapacityService |
 
@@ -417,8 +420,7 @@ Phase 10 (依赖Phase 1):
 
 | 阶段 | 预计时间 | 依赖 | 分析结果 |
 |------|----------|------|----------|
-| Phase 4 | 2小时 | 无 | 11个Axios文件 + 7个Fetch文件需统一 |
-| Phase 6 | 1小时 | 无 | 后端配置已完善，前端无config目录 |
-| Phase 7 | 1.5小时 | 无 | 19个组件>400行，6个>700行 |
+| Phase 4-2 | 1小时 | 无 | Fetch API调用迁移到Axios（分析中） |
+| Phase 7执行 | 3小时 | 无 | 按 `plans/2026-04-09-frontend-component-split.md` 执行 |
 
-**剩余工作量**: 约4.5小时
+**剩余工作量**: 约4小时
