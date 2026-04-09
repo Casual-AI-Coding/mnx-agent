@@ -1,6 +1,7 @@
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
+import type { IEventBus } from '../interfaces/event-bus.interface.js'
 import type { WorkflowResult, TaskResult, TestExecutionOptions, WorkflowNode, WorkflowEdge } from './types.js'
 import { ExecutionStateManager } from '../execution-state-manager.js'
 import { parseWorkflowJson, validateWorkflow } from './parser.js'
@@ -30,6 +31,7 @@ export class WorkflowEngine {
   private static runningExecutions = new Map<string, WorkflowEngine>()
   private testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }> = {}
   private dryRun: boolean = false
+  private eventBus: IEventBus
 
   private static setRunningExecution(executionId: string, engine: WorkflowEngine): void {
     this.runningExecutions.set(executionId, engine)
@@ -43,10 +45,11 @@ export class WorkflowEngine {
     return this.runningExecutions.get(executionId)
   }
 
-  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor?: ITaskExecutor) {
+  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor: ITaskExecutor | undefined, eventBus: IEventBus) {
     this.db = db
     this.serviceRegistry = serviceRegistry
     this.taskExecutor = taskExecutor || null
+    this.eventBus = eventBus
   }
 
   async executeWorkflow(
@@ -120,6 +123,7 @@ export class WorkflowEngine {
           workflowEdges: this.workflowEdges,
           dryRun: this.dryRun,
           testData: this.testData,
+          eventBus: this.eventBus,
         }
 
         const layerResults = await Promise.all(

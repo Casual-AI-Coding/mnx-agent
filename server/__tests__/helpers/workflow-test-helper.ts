@@ -2,6 +2,7 @@ import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../../services/service-node-registry'
 import { WorkflowEngine } from '../../services/workflow-engine'
 import { CronScheduler } from '../../services/cron-scheduler'
+import { createMockEventBus } from './mock-event-bus'
 
 export interface TestWorkflowFixture {
   id: string
@@ -27,7 +28,7 @@ export class WorkflowTestHelper {
   constructor(db: DatabaseService, registry: ServiceNodeRegistry) {
     this.db = db
     this.registry = registry
-    this.engine = new WorkflowEngine(db, registry)
+    this.engine = new WorkflowEngine(db, registry, createMockEventBus())
   }
 
   async createTestWorkflow(config: {

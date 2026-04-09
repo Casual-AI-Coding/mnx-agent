@@ -2,6 +2,7 @@ import type { TaskResult, WorkflowNode, WorkflowEdge } from './types.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
+import type { IEventBus } from '../interfaces/event-bus.interface.js'
 import { 
   nodeExecutorRegistry, 
   executeNodeWithRegistry,
@@ -22,6 +23,7 @@ export interface NodeExecutorDeps {
   workflowEdges: WorkflowEdge[]
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
+  eventBus: IEventBus
 }
 
 export async function executeNode(
@@ -44,6 +46,7 @@ export async function executeNode(
     workflowEdges: deps.workflowEdges,
     dryRun: deps.dryRun,
     testData: deps.testData,
+    eventBus: deps.eventBus,
   }
 
   const executeOnce = async (): Promise<TaskResult> => {

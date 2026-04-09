@@ -1,7 +1,7 @@
 import type { WorkflowNode } from '../types.js'
 import type { DatabaseService } from '../../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 
 export interface ActionExecutorDeps {
   db: DatabaseService
@@ -10,6 +10,7 @@ export interface ActionExecutorDeps {
   workflowId: string | null
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
+  eventBus: IEventBus
 }
 
 export async function executeActionNode(
@@ -17,7 +18,7 @@ export async function executeActionNode(
   config: Record<string, unknown>,
   deps: ActionExecutorDeps
 ): Promise<unknown> {
-  const { db, serviceRegistry, executionLogId, workflowId, dryRun, testData } = deps
+  const { db, serviceRegistry, executionLogId, workflowId, dryRun, testData, eventBus } = deps
   const service = config.service as string
   const method = config.method as string
   const args = (config.args as unknown[]) ?? []
@@ -26,14 +27,7 @@ export async function executeActionNode(
   let detailId: string | null = null
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'action',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   if (dryRun) {
@@ -46,20 +40,10 @@ export async function executeActionNode(
         mockData: true,
       }
 
-    cronEvents.emitWorkflowNodeOutput(node.id, mockResponse, executionLogId || 'test-run')
+    eventBus.emitWorkflowNodeOutput(node.id, mockResponse, executionLogId || 'test-run')
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'action',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result: mockResponse,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, mockResponse, Date.now() - detailStartTime)
     }
 
     return mockResponse
@@ -89,17 +73,7 @@ export async function executeActionNode(
     }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'action',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, result, Date.now() - detailStartTime)
     }
 
     return result
@@ -113,15 +87,7 @@ export async function executeActionNode(
     }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'action',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }

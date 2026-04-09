@@ -1,5 +1,5 @@
 import type { TaskResult, WorkflowEdge, WorkflowGraph, WorkflowNode } from '../types.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 import { resolveTemplateString } from '../template-resolver.js'
 import { buildExecutionOrder } from '../topological-sort.js'
 
@@ -10,6 +10,7 @@ export interface LoopExecutorDeps {
   workflowEdges: WorkflowEdge[]
   resolveNodeConfig: (config: Record<string, unknown>, nodeOutputs: Map<string, unknown>) => Record<string, unknown>
   executeNode: (node: WorkflowNode, config: Record<string, unknown>, nodeOutputs: Map<string, unknown>) => Promise<TaskResult>
+  eventBus: IEventBus
 }
 
 export async function executeLoopNode(
@@ -25,6 +26,7 @@ export async function executeLoopNode(
     workflowEdges,
     resolveNodeConfig,
     executeNode,
+    eventBus,
   } = deps
 
   const items = config.items as string | undefined
@@ -36,14 +38,7 @@ export async function executeLoopNode(
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'loop',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -117,31 +112,13 @@ export async function executeLoopNode(
     const loopResult = { iterations: iterationCount, results }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'loop',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result: loopResult,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, loopResult, Date.now() - detailStartTime)
     }
 
     return loopResult
   } catch (error) {
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'loop',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }

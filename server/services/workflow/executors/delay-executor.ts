@@ -1,9 +1,10 @@
 import type { WorkflowNode } from '../types.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 
 export interface DelayExecutorDeps {
   executionLogId: string | null
   workflowId: string | null
+  eventBus: IEventBus
 }
 
 export async function executeDelayNode(
@@ -11,18 +12,11 @@ export async function executeDelayNode(
   config: Record<string, unknown>,
   deps: DelayExecutorDeps
 ): Promise<{ delayed: number }> {
-  const { executionLogId, workflowId } = deps
+  const { executionLogId, workflowId, eventBus } = deps
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'delay',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -41,31 +35,13 @@ export async function executeDelayNode(
     const result = { delayed: delayMs }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'delay',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, result, Date.now() - detailStartTime)
     }
 
     return result
   } catch (error) {
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'delay',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }

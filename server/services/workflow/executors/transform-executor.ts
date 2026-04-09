@@ -1,11 +1,12 @@
 import type { WorkflowNode } from '../types.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 import { getValueAtPath } from '../template-resolver.js'
 import { evaluateCondition } from './condition-executor.js'
 
 export interface TransformExecutorDeps {
   executionLogId: string | null
   workflowId: string | null
+  eventBus: IEventBus
 }
 
 export async function executeTransformNode(
@@ -14,7 +15,7 @@ export async function executeTransformNode(
   nodeOutputs: Map<string, unknown>,
   deps: TransformExecutorDeps
 ): Promise<unknown> {
-  const { executionLogId, workflowId } = deps
+  const { executionLogId, workflowId, eventBus } = deps
   const transformType = (config.transformType as string) || 'passthrough'
   const inputPath = config.inputPath as string | undefined
   const outputFormat = config.outputFormat as string | undefined
@@ -23,14 +24,7 @@ export async function executeTransformNode(
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'transform',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -92,31 +86,13 @@ export async function executeTransformNode(
     }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'transform',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result: outputData,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, outputData, Date.now() - detailStartTime)
     }
 
     return outputData
   } catch (error) {
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'transform',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }

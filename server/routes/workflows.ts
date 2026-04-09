@@ -202,8 +202,8 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const executionId = `test_${Date.now()}`
 
   const serviceRegistry = getServiceNodeRegistryService()
-  const workflowEngine = new WorkflowEngine(db, serviceRegistry)
   const eventBus = getEventBus()
+  const workflowEngine = new WorkflowEngine(db, serviceRegistry, undefined, eventBus)
 
   eventBus.emitWorkflowTestStarted(id, executionId)
 

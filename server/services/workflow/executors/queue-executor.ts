@@ -2,7 +2,7 @@ import type { WorkflowNode, TaskResult } from '../types.js'
 import type { DatabaseService } from '../../../database/service-async.js'
 import type { ITaskExecutor } from '../../../types/task.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 
 export interface QueueExecutorDeps {
   db: DatabaseService
@@ -10,6 +10,7 @@ export interface QueueExecutorDeps {
   serviceRegistry: ServiceNodeRegistry
   executionLogId: string | null
   workflowId: string | null
+  eventBus: IEventBus
 }
 
 export async function executeQueueNode(
@@ -17,7 +18,7 @@ export async function executeQueueNode(
   config: Record<string, unknown>,
   deps: QueueExecutorDeps
 ): Promise<{ total: number; succeeded: number; failed: number }> {
-  const { db, taskExecutor, serviceRegistry, executionLogId, workflowId } = deps
+  const { db, taskExecutor, serviceRegistry, executionLogId, workflowId, eventBus } = deps
   const jobId = config.jobId as string | undefined
   const taskType = config.taskType as string | undefined
   const limit = (config.limit as number) ?? 10
@@ -25,14 +26,7 @@ export async function executeQueueNode(
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'queue',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -95,31 +89,13 @@ export async function executeQueueNode(
     const queueResult = { total, succeeded, failed }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'queue',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result: queueResult,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, queueResult, Date.now() - detailStartTime)
     }
 
     return queueResult
   } catch (error) {
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'queue',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }

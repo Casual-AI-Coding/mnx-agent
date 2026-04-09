@@ -64,7 +64,7 @@ describe('Workflow Engine - Stage A Verification', () => {
   beforeEach(() => {
     mockRegistry = createMockServiceRegistry()
     mockDb = createMockDb()
-    engine = new WorkflowEngine(mockDb, mockRegistry)
+    engine = new WorkflowEngine(mockDb, mockRegistry, createMockEventBus())
   })
 
   describe('A-1: Single Action Node', () => {

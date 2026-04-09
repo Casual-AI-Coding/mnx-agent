@@ -1,3 +1,4 @@
+import { createMockEventBus } from './__tests__/helpers/mock-event-bus'
 /**
  * 阶段 B 验证：真实 API 集成测试
  * 直接调用 WorkflowEngine，不通过 HTTP API
@@ -7,13 +8,15 @@ import { getDatabase } from './database/service-async.js'
 import { getServiceNodeRegistry } from './services/service-node-registry.js'
 import { WorkflowEngine } from './services/workflow-engine.js'
 import { getMiniMaxClient } from './lib/minimax.js'
+import { getEventBus } from './service-registration.js'
 
 async function testWorkflow() {
   console.log('=== Stage B: Real API Integration ===\n')
 
   const db = await getDatabase()
   const registry = getServiceNodeRegistry(db)
-  const engine = new WorkflowEngine(db, registry)
+  const eventBus = getEventBus()
+  const engine = new WorkflowEngine(db, registry, undefined, eventBus)
 
   // 检查注册的服务
   const services = registry.getAllServices()

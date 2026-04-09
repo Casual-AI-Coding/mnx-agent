@@ -9,7 +9,7 @@ describe('Workflow Engine Error Handling', () => {
   beforeEach(() => {
     mockDb = {} as any
     mockRegistry = {} as any
-    engine = new WorkflowEngine(mockDb, mockRegistry)
+    engine = new WorkflowEngine(mockDb, mockRegistry, createMockEventBus())
   })
 
   it('should return specific error for malformed JSON', async () => {

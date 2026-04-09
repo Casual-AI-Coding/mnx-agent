@@ -61,7 +61,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.WORKFLOW_ENGINE, (c) => {
-    return new WorkflowEngine(c.resolve(TOKENS.DATABASE), c.resolve(TOKENS.SERVICE_NODE_REGISTRY))
+    return new WorkflowEngine(c.resolve(TOKENS.DATABASE), c.resolve(TOKENS.SERVICE_NODE_REGISTRY), undefined, c.resolve(TOKENS.EVENT_BUS))
   })
 
   container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c): NotificationService => {

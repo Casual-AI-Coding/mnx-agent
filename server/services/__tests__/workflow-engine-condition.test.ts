@@ -23,7 +23,7 @@ describe('WorkflowEngine - Condition Branching', () => {
       }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry)
+    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
   })
 
   describe('true branch execution', () => {

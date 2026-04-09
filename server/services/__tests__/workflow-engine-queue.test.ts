@@ -36,7 +36,7 @@ describe('WorkflowEngine - Queue Node', () => {
       call: vi.fn().mockResolvedValue({ success: true }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry)
+    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
   })
 
   describe('queue processing', () => {

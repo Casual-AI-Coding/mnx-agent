@@ -4,7 +4,7 @@ import { WorkflowEngine } from '../workflow-engine'
 import { QueueProcessor } from '../queue-processor'
 import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../service-node-registry'
-import { cronEvents } from '../websocket-service'
+import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus'
 
 describe('CronScheduler Integration with TaskExecutor', () => {
   let mockDb: Partial<DatabaseService>
@@ -41,12 +41,13 @@ describe('CronScheduler Integration with TaskExecutor', () => {
       executeTask: vi.fn(),
     }
 
-    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, mockTaskExecutor as any)
+    const mockEventBus = createMockEventBus()
+    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, mockEventBus, mockTaskExecutor as any)
     cronScheduler = new CronScheduler(mockDb as DatabaseService, workflowEngine as any, mockTaskExecutor as any, {
       maxConcurrent: 2,
       timezone: 'UTC',
       defaultTimeoutMs: 5000,
-    })
+    }, mockEventBus)
   })
 
   afterEach(() => {
@@ -246,7 +247,7 @@ describe('WorkflowEngine with TaskExecutor', () => {
       executeTask: vi.fn(),
     }
 
-    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, mockTaskExecutor as any)
+    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus(), mockTaskExecutor as any)
   })
 
   it('should use TaskExecutor directly when available for queue nodes', async () => {
@@ -295,7 +296,7 @@ describe('WorkflowEngine with TaskExecutor', () => {
   })
 
   it('should fall back to serviceRegistry when TaskExecutor is not available', async () => {
-    const workflowEngineWithoutExecutor = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry)
+    const workflowEngineWithoutExecutor = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
 
     const queueTask = {
       id: 'task-1',

@@ -1,5 +1,5 @@
 import type { TaskResult, WorkflowEdge, WorkflowNode } from '../types.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 
 export interface ErrorBoundaryExecutorDeps {
   executionLogId: string | null
@@ -8,6 +8,7 @@ export interface ErrorBoundaryExecutorDeps {
   workflowEdges: WorkflowEdge[]
   resolveNodeConfig: (config: Record<string, unknown>, nodeOutputs: Map<string, unknown>) => Record<string, unknown>
   executeNode: (node: WorkflowNode, config: Record<string, unknown>, nodeOutputs: Map<string, unknown>) => Promise<TaskResult>
+  eventBus: IEventBus
 }
 
 export async function executeErrorBoundaryNode(
@@ -16,18 +17,11 @@ export async function executeErrorBoundaryNode(
   nodeOutputs: Map<string, unknown>,
   deps: ErrorBoundaryExecutorDeps
 ): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
-  const { executionLogId, workflowId, workflowNodes, workflowEdges, resolveNodeConfig, executeNode } = deps
+  const { executionLogId, workflowId, workflowNodes, workflowEdges, resolveNodeConfig, executeNode, eventBus } = deps
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'errorBoundary',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -35,17 +29,12 @@ export async function executeErrorBoundaryNode(
 
     if (successNodes.length === 0) {
       if (executionLogId) {
-        cronEvents.emit('workflow_node_complete', {
-          executionId: executionLogId,
-          nodeId: node.id,
-          nodeType: 'errorBoundary',
-          nodeLabel: node.data?.label || node.id,
-          startedAt: new Date(detailStartTime).toISOString(),
-          completedAt: new Date().toISOString(),
-          durationMs: Date.now() - detailStartTime,
-          result: { success: true, message: 'No nodes to protect' },
-          workflowId,
-        })
+        eventBus.emitWorkflowNodeComplete(
+          node.id,
+          executionLogId,
+          { success: true, message: 'No nodes to protect' },
+          Date.now() - detailStartTime
+        )
       }
       return { success: true }
     }
@@ -68,17 +57,7 @@ export async function executeErrorBoundaryNode(
         nodeOutputs.set(node.id, errorInfo)
 
         if (executionLogId) {
-          cronEvents.emit('workflow_node_complete', {
-            executionId: executionLogId,
-            nodeId: node.id,
-            nodeType: 'errorBoundary',
-            nodeLabel: node.data?.label || node.id,
-            startedAt: new Date(detailStartTime).toISOString(),
-            completedAt: new Date().toISOString(),
-            durationMs: Date.now() - detailStartTime,
-            result: errorInfo,
-            workflowId,
-          })
+          eventBus.emitWorkflowNodeComplete(node.id, executionLogId, errorInfo, Date.now() - detailStartTime)
         }
 
         return errorInfo
@@ -90,17 +69,7 @@ export async function executeErrorBoundaryNode(
     }
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'errorBoundary',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result: { success: true },
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, { success: true }, Date.now() - detailStartTime)
     }
 
     return { success: true }
@@ -116,15 +85,7 @@ export async function executeErrorBoundaryNode(
     nodeOutputs.set(node.id, errorInfo)
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'errorBoundary',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
 
     return errorInfo

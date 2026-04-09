@@ -2,6 +2,7 @@ import type { WorkflowNode, WorkflowEdge, TaskResult } from './types.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
+import type { IEventBus } from '../interfaces/event-bus.interface.js'
 import {
   executeActionNode,
   executeConditionNode,
@@ -25,6 +26,7 @@ export interface NodeExecutionContext {
   workflowEdges: WorkflowEdge[]
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
+  eventBus: IEventBus
 }
 
 export interface NodeExecutionResult {
@@ -71,6 +73,7 @@ nodeExecutorRegistry.register('action', async (node, config, nodeOutputs, contex
     workflowId: context.workflowId,
     dryRun: context.dryRun,
     testData: context.testData,
+    eventBus: context.eventBus,
   })
 })
 
@@ -78,6 +81,7 @@ nodeExecutorRegistry.register('condition', async (node, config, nodeOutputs, con
   return executeConditionNode(node, config, nodeOutputs, {
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
+    eventBus: context.eventBus,
   })
 })
 
@@ -97,6 +101,7 @@ nodeExecutorRegistry.register('loop', async (node, config, nodeOutputs, context)
     workflowEdges: context.workflowEdges,
     resolveNodeConfig,
     executeNode: wrappedExecuteNode as any,
+    eventBus: context.eventBus,
   })
 })
 
@@ -104,6 +109,7 @@ nodeExecutorRegistry.register('transform', async (node, config, nodeOutputs, con
   return executeTransformNode(node, config, nodeOutputs, {
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
+    eventBus: context.eventBus,
   })
 })
 
@@ -114,6 +120,7 @@ nodeExecutorRegistry.register('queue', async (node, config, nodeOutputs, context
     serviceRegistry: context.serviceRegistry,
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
+    eventBus: context.eventBus,
   })
 })
 
@@ -121,6 +128,7 @@ nodeExecutorRegistry.register('delay', async (node, config, nodeOutputs, context
   return executeDelayNode(node, config, {
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
+    eventBus: context.eventBus,
   })
 })
 
@@ -140,6 +148,7 @@ nodeExecutorRegistry.register('errorBoundary', async (node, config, nodeOutputs,
     workflowEdges: context.workflowEdges,
     resolveNodeConfig,
     executeNode: wrappedExecuteNode as any,
+    eventBus: context.eventBus,
   })
 })
 

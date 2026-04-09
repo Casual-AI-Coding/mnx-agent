@@ -10,6 +10,7 @@ import { TaskExecutor } from '../services/task-executor'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from '../lib/media-storage'
 import { toCSV } from '../lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token'
+import { createMockEventBus } from './helpers/mock-event-bus'
 import type { WorkflowTemplate } from '../database/types'
 
 async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
@@ -99,7 +100,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     db = await getDatabase()
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry)
+    engine = new WorkflowEngine(db, registry, createMockEventBus())
   })
 
   beforeEach(async () => {
@@ -413,7 +414,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
     db = await getDatabase()
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry)
+    engine = new WorkflowEngine(db, registry, createMockEventBus())
     scheduler = new CronScheduler(db, engine)
   })
 

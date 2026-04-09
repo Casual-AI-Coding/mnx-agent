@@ -23,7 +23,7 @@ describe('WorkflowEngine - Node Timeout', () => {
       }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry)
+    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
   })
 
   describe('default timeout', () => {

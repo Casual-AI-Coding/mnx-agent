@@ -1,10 +1,11 @@
 import type { WorkflowNode } from '../types.js'
-import { cronEvents } from '../../websocket-service.js'
+import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 import { resolveTemplateString } from '../template-resolver.js'
 
 export interface ConditionExecutorDeps {
   executionLogId: string | null
   workflowId: string | null
+  eventBus: IEventBus
 }
 
 export async function executeConditionNode(
@@ -13,7 +14,7 @@ export async function executeConditionNode(
   nodeOutputs: Map<string, unknown>,
   deps: ConditionExecutorDeps
 ): Promise<boolean> {
-  const { executionLogId, workflowId } = deps
+  const { executionLogId, workflowId, eventBus } = deps
   const condition = config.condition as string | undefined
   if (!condition) {
     throw new Error('Condition node requires a condition config')
@@ -22,14 +23,7 @@ export async function executeConditionNode(
   const detailStartTime = Date.now()
 
   if (executionLogId) {
-    cronEvents.emit('workflow_node_start', {
-      executionId: executionLogId,
-      nodeId: node.id,
-      nodeType: 'condition',
-      nodeLabel: node.data?.label || node.id,
-      startedAt: new Date().toISOString(),
-      workflowId,
-    })
+    eventBus.emitWorkflowNodeStart(node.id, executionLogId, workflowId || undefined)
   }
 
   try {
@@ -37,31 +31,13 @@ export async function executeConditionNode(
     const result = evaluateCondition(resolvedCondition)
 
     if (executionLogId) {
-      cronEvents.emit('workflow_node_complete', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'condition',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        completedAt: new Date().toISOString(),
-        durationMs: Date.now() - detailStartTime,
-        result,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeComplete(node.id, executionLogId, result, Date.now() - detailStartTime)
     }
 
     return result
   } catch (error) {
     if (executionLogId) {
-      cronEvents.emit('workflow_node_error', {
-        executionId: executionLogId,
-        nodeId: node.id,
-        nodeType: 'condition',
-        nodeLabel: node.data?.label || node.id,
-        startedAt: new Date(detailStartTime).toISOString(),
-        errorMessage: (error as Error).message,
-        workflowId,
-      })
+      eventBus.emitWorkflowNodeError(node.id, executionLogId, (error as Error).message)
     }
     throw error
   }
