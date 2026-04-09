@@ -35,7 +35,7 @@ const InvitationCodes = lazy(() => import('@/pages/InvitationCodes'))
 const ServiceNodeManagement = lazy(() => import('@/pages/ServiceNodeManagement'))
 const WorkflowTemplateManagement = lazy(() => import('@/pages/WorkflowTemplateManagement'))
 const DeadLetterQueue = lazy(() => import('@/pages/DeadLetterQueue'))
-const WebhookManagement = lazy(() => import('@/pages/WebhookManagement'))
+const WebhookManagement = lazy(() => import('@/pages/CronManagement/WebhookManagement'))
 const WorkflowMarketplace = lazy(() => import('@/pages/WorkflowMarketplace'))
 const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
 
