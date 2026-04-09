@@ -132,15 +132,19 @@ export interface PaginatedResponse<T> {
  * @example
  * const response = createPaginatedResponse(records, total, page, limit)
  * successResponse(res, response)
+ * 
+ * // With custom key:
+ * const response = createPaginatedResponse(templates, total, page, limit, 'templates')
  */
 export function createPaginatedResponse<T>(
-  records: T[],
+  items: T[],
   total: number,
   page: number,
-  limit: number
-): PaginatedResponse<T> {
+  limit: number,
+  itemsKey: string = 'records'
+): Record<string, T[] | PaginationMeta> {
   return {
-    records,
+    [itemsKey]: items,
     pagination: createPaginationMeta(total, page, limit),
   }
 }
