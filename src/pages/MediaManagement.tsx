@@ -311,7 +311,7 @@ export default function MediaManagement() {
       <ConfirmDialog
         open={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, record: null })}
-        onConfirm={handleDelete}
+        onConfirm={() => handleDelete(deleteDialog.record!)}
         title="确认删除"
         description={`确定要删除文件 "${deleteDialog.record?.original_name || deleteDialog.record?.filename || ''}" 吗？此操作无法撤销。`}
         confirmText="删除"
