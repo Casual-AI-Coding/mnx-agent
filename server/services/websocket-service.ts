@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { WebSocketServer, WebSocket } from 'ws'
 import type { Server } from 'http'
 import { UserService } from './user-service.js'
+import type { IEventBus } from './interfaces/event-bus.interface'
 
 export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
@@ -12,7 +13,7 @@ export interface CronEvent {
   timestamp: string
 }
 
-class CronEventEmitter extends EventEmitter {
+class CronEventEmitter extends EventEmitter implements IEventBus {
   emitJobCreated(job: unknown): void {
     this.emit('job_event', {
       type: 'job_created',
