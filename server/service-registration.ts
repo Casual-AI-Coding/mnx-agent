@@ -55,7 +55,8 @@ export async function registerServices(): Promise<void> {
     return new QueueProcessor(
       c.resolve(TOKENS.DATABASE),
       c.resolve(TOKENS.TASK_EXECUTOR),
-      c.resolve(TOKENS.CAPACITY_CHECKER)
+      c.resolve(TOKENS.CAPACITY_CHECKER),
+      c.resolve(TOKENS.EVENT_BUS)
     )
   })
 
@@ -72,7 +73,8 @@ export async function registerServices(): Promise<void> {
       c.resolve(TOKENS.DATABASE),
       c.resolve(TOKENS.WORKFLOW_ENGINE),
       c.resolve(TOKENS.TASK_EXECUTOR),
-      c.resolve(TOKENS.NOTIFICATION_SERVICE)
+      c.resolve(TOKENS.NOTIFICATION_SERVICE),
+      c.resolve(TOKENS.EVENT_BUS)
     )
   })
 

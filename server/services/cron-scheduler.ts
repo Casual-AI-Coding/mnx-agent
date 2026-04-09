@@ -4,6 +4,7 @@ import type { DatabaseService } from '../database/service-async.js'
 import { WorkflowResult } from './workflow-engine'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
+import type { IEventBus } from './interfaces/event-bus.interface.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
@@ -11,7 +12,6 @@ import {
   TriggerType,
   MisfirePolicy
 } from '../database/types'
-import { cronEvents } from './websocket-service'
 import { TASK_TIMEOUTS } from '../config/timeouts.js'
 
 export type { DatabaseService }
@@ -39,17 +39,19 @@ export class CronScheduler {
   private workflowEngine: WorkflowEngine
   private taskExecutor: ITaskExecutor | null = null
   private notificationService: NotificationService | null = null
+  private eventBus: IEventBus
   private timezone: string
   private maxConcurrent: number
   private defaultTimeoutMs: number
   private runningJobs: Set<string> = new Set()
   private isShuttingDown: boolean = false
 
-  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor?: ITaskExecutor, notificationService?: NotificationService, options?: CronSchedulerOptions) {
+  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor: ITaskExecutor | null, notificationService: NotificationService | null, eventBus: IEventBus, options?: CronSchedulerOptions) {
     this.db = db
     this.workflowEngine = workflowEngine
-    this.taskExecutor = taskExecutor || null
-    this.notificationService = notificationService || null
+    this.taskExecutor = taskExecutor
+    this.notificationService = notificationService
+    this.eventBus = eventBus
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
     this.maxConcurrent = options?.maxConcurrent ?? 5
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? TASK_TIMEOUTS.DEFAULT_CRON_MS
@@ -263,7 +265,7 @@ export class CronScheduler {
       }).catch(err => console.error('[CronScheduler] Failed to send on_failure notification:', err))
     } finally {
       this.releaseExecutionSlot(job.id)
-      cronEvents.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
+      this.eventBus.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
     }
   }
 

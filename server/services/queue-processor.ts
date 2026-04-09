@@ -1,7 +1,7 @@
 import type { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
-import { cronEvents } from './websocket-service'
+import type { IEventBus } from './interfaces/event-bus.interface.js'
 import { RETRY_TIMEOUTS } from '../config/timeouts.js'
 
 export type { DatabaseService }
@@ -39,6 +39,7 @@ export class QueueProcessor {
   private db: DatabaseService
   private taskExecutor: ITaskExecutor
   private capacityChecker: CapacityChecker
+  private eventBus: IEventBus
   private readonly maxRetryDelayMs = RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS
   private autoRetryConfig: AutoRetryConfig
   private autoRetryTimer: NodeJS.Timeout | null = null
@@ -47,11 +48,13 @@ export class QueueProcessor {
     db: DatabaseService,
     taskExecutor: ITaskExecutor,
     capacityChecker: CapacityChecker,
+    eventBus: IEventBus,
     autoRetryConfig?: Partial<AutoRetryConfig>
   ) {
     this.db = db
     this.taskExecutor = taskExecutor
     this.capacityChecker = capacityChecker
+    this.eventBus = eventBus
     this.autoRetryConfig = {
       enabled: autoRetryConfig?.enabled ?? true,
       initialDelayMs: autoRetryConfig?.initialDelayMs ?? RETRY_TIMEOUTS.BASE_DELAY_MS * 60,
@@ -191,7 +194,7 @@ export class QueueProcessor {
         result: JSON.stringify(result.data),
       })
 
-      cronEvents.emitTaskCompleted(task)
+      this.eventBus.emitTaskCompleted(task)
 
       return result
 
@@ -204,7 +207,7 @@ export class QueueProcessor {
         error_message: errorMessage,
       })
 
-      cronEvents.emitTaskFailed(task)
+      this.eventBus.emitTaskFailed(task)
 
       return {
         success: false,
@@ -235,7 +238,7 @@ export class QueueProcessor {
         max_retries: task.max_retries,
       }, task.owner_id ?? undefined)
 
-      cronEvents.emitTaskMovedToDLQ(task, error)
+      this.eventBus.emitTaskMovedToDLQ(task, error)
     } catch (err) {
       console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, err)
     }
@@ -470,9 +473,10 @@ export function createQueueProcessor(
   db: DatabaseService,
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
+  eventBus: IEventBus,
   autoRetryConfig?: Partial<AutoRetryConfig>
 ): QueueProcessor {
-  return new QueueProcessor(db, taskExecutor, capacityChecker, autoRetryConfig)
+  return new QueueProcessor(db, taskExecutor, capacityChecker, eventBus, autoRetryConfig)
 }
 
 let queueProcessorInstance: QueueProcessor | null = null
@@ -481,10 +485,11 @@ export function getQueueProcessor(
   db: DatabaseService,
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
+  eventBus: IEventBus,
   autoRetryConfig?: Partial<AutoRetryConfig>
 ): QueueProcessor {
   if (!queueProcessorInstance) {
-    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, autoRetryConfig)
+    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, eventBus, autoRetryConfig)
   }
   return queueProcessorInstance
 }
