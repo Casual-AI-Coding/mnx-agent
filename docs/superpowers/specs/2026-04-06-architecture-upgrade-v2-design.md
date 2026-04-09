@@ -3,7 +3,7 @@
 > 版本: 2.0.0
 > 日期: 2026-04-06
 > 作者: P8架构师
-> 状态: 设计中
+> 状态: **实施中** - Phase 8 完成，Phase 4/6/7 待实施
 
 ## 一、现状分析总结
 
@@ -13,14 +13,19 @@
 
 #### 1.0.1 服务层职责过重
 
-| 服务 | 方法数 | 问题 |
-|------|--------|------|
-| JobService | 19 | 混合CRUD + 依赖图 + 标签管理 |
-| TaskService | 17 | 混合任务生命周期 + 死信队列 |
-| CronScheduler | 16 | 混合调度 + 执行 + 并发控制 + misfire |
-| QueueProcessor | 14 | 混合队列处理 + 重试 + DLQ自动重试 |
-| ExecutionStateManager | 13 | 混合状态持久化 + 节点跟踪 |
-| CapacityChecker | 9 | 混合余额检查 + 配额管理 |
+| 服务 | 方法数 | 问题 | 状态 |
+|------|--------|------|------|
+| JobService | 19 | 混合CRUD + 依赖图 + 标签管理 | 待拆分 |
+| TaskService | 17 | 混合任务生命周期 + 死信队列 | 待拆分 |
+| CronScheduler | ~~16~~ 10 | ~~混合调度 + 执行 + 并发控制 + misfire~~ | ✅ 已拆分 |
+| QueueProcessor | ~~14~~ 8 | ~~混合队列处理 + 重试 + DLQ自动重试~~ | ✅ 已拆分 |
+| ExecutionStateManager | 13 | 混合状态持久化 + 节点跟踪 | 待拆分 |
+| CapacityChecker | 9 | 混合余额检查 + 配额管理 | 待拆分 |
+
+**已完成的拆分**:
+- ✅ CronScheduler → CronScheduler + ConcurrencyManager + MisfireHandler
+- ✅ QueueProcessor → QueueProcessor + RetryManager + DLQAutoRetryScheduler
+- ✅ IEventBus 接口创建，所有服务通过 DI 注入事件总线
 
 **推荐拆分**:
 - JobService → JobService + DependencyGraphService + TagService
@@ -30,9 +35,9 @@
 
 #### 1.0.2 全局事件耦合
 
-`cronEvents` 是全局单例 EventEmitter，被 8+ 服务直接导入，违反依赖注入原则。
+~~`cronEvents` 是全局单例 EventEmitter，被 8+ 服务直接导入，违反依赖注入原则。~~
 
-**解决方案**: 创建 EventBus 接口，通过 DI 注入
+**已解决**: ✅ 创建 IEventBus 接口，所有服务通过 DI 注入事件总线
 
 #### 1.0.3 大文件列表 (>500行)
 
@@ -399,14 +404,21 @@ Phase 10 (依赖Phase 1):
 
 ## 八、实施时间线
 
-| 阶段 | 预计时间 | 依赖 |
-|------|----------|------|
-| Phase 1 | 2小时 | 无 |
-| Phase 2 | 2小时 | Phase 1 |
-| Phase 3 | 1.5小时 | Phase 1 |
-| Phase 4 | 2小时 | 无 |
-| Phase 5 | 1.5小时 | Phase 4 |
-| Phase 6 | 2小时 | 无 |
-| Phase 7 | 1小时 | Phase 1, Phase 6 |
+### 已完成阶段
 
-**总计**: 约12小时
+| 阶段 | 完成日期 | 主要成果 |
+|------|----------|----------|
+| Phase 1 | 2026-04-09 | ✅ DI Container 增强，MiniMaxClientFactory，BaseRepository |
+| Phase 3 | 2026-04-09 | ✅ 路由层重构，route helpers，9个路由文件优化，~187行减少 |
+| Phase 8 | 2026-04-09 | ✅ 服务层拆分：IEventBus、ConcurrencyManager、MisfireHandler、RetryManager、DLQAutoRetryScheduler |
+| Phase 9 | 2026-04-09 | ✅ Domain Services：MediaService、WorkflowService、WebhookService、CapacityService |
+
+### 待实施阶段
+
+| 阶段 | 预计时间 | 依赖 | 分析结果 |
+|------|----------|------|----------|
+| Phase 4 | 2小时 | 无 | 11个Axios文件 + 7个Fetch文件需统一 |
+| Phase 6 | 1小时 | 无 | 后端配置已完善，前端无config目录 |
+| Phase 7 | 1.5小时 | 无 | 19个组件>400行，6个>700行 |
+
+**剩余工作量**: 约4.5小时
