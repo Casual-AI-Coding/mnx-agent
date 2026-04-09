@@ -1,5 +1,6 @@
 import * as React from 'react'
 import type { Node, Edge } from '@xyflow/react'
+import { WORKFLOW } from '@/lib/config'
 
 export interface WorkflowState {
   nodes: Node[]
@@ -22,7 +23,7 @@ export interface UseWorkflowHistoryReturn {
   reset: (initialState: WorkflowState) => void
 }
 
-const MAX_HISTORY_SIZE = 50
+const { MAX_HISTORY_SIZE } = WORKFLOW
 
 export function useWorkflowHistory(initialState: WorkflowState = { nodes: [], edges: [] }): UseWorkflowHistoryReturn {
   const [history, setHistory] = React.useState<HistoryState>({

@@ -1,7 +1,8 @@
 import { z } from 'zod'
+import { CHARACTER_LIMITS, TIMEOUTS } from '@/lib/config'
 
 export const textGenSchema = z.object({
-  input: z.string().min(1, '请输入内容').max(10000, '内容超长'),
+  input: z.string().min(1, '请输入内容').max(CHARACTER_LIMITS.TEXT_INPUT, '内容超长'),
   selectedModel: z.string().min(1, '请选择模型'),
   selectedTemplate: z.string(),
   temperature: z.number().min(0).max(1),
@@ -10,7 +11,7 @@ export const textGenSchema = z.object({
 })
 
 export const imageGenSchema = z.object({
-  prompt: z.string().min(1, '请输入提示词').max(5000, '提示词超长'),
+  prompt: z.string().min(1, '请输入提示词').max(CHARACTER_LIMITS.PROMPT, '提示词超长'),
   model: z.enum(['image-01', 'image-01-live']),
   aspectRatio: z.enum(['1:1', '16:9', '4:3', '3:2', '2:3', '3:4', '9:16', '21:9']),
   numImages: z.number().int().min(1).max(4),
@@ -20,7 +21,7 @@ export const imageGenSchema = z.object({
 })
 
 export const voiceSyncSchema = z.object({
-  text: z.string().min(1, '请输入文本').max(10000, '超出字符限制'),
+  text: z.string().min(1, '请输入文本').max(CHARACTER_LIMITS.TEXT_INPUT, '超出字符限制'),
   model: z.string().min(1, '请选择模型'),
   voiceId: z.string().min(1, '请选择声音'),
   emotion: z.string(),
@@ -30,7 +31,7 @@ export const voiceSyncSchema = z.object({
 })
 
 export const voiceAsyncSchema = z.object({
-  text: z.string().max(50000, '超出字符限制').optional(),
+  text: z.string().max(CHARACTER_LIMITS.LONG_TEXT, '超出字符限制').optional(),
   fileId: z.string().optional(),
   model: z.string().min(1, '请选择模型'),
   voiceId: z.string().min(1, '请选择声音'),
@@ -51,14 +52,14 @@ export const voiceAsyncSchema = z.object({
 })
 
 export const musicGenSchema = z.object({
-  lyrics: z.string().min(1, '请输入歌词').max(10000, '歌词超长'),
+  lyrics: z.string().min(1, '请输入歌词').max(CHARACTER_LIMITS.LYRICS, '歌词超长'),
   stylePrompt: z.string().max(2000, '风格提示词超长').optional(),
   model: z.string().min(1, '请选择模型'),
   optimizeLyrics: z.boolean(),
 })
 
 export const videoGenSchema = z.object({
-  prompt: z.string().min(1, '请输入提示词').max(5000, '提示词超长'),
+  prompt: z.string().min(1, '请输入提示词').max(CHARACTER_LIMITS.PROMPT, '提示词超长'),
   model: z.string().min(1, '请选择模型'),
 })
 
@@ -83,7 +84,7 @@ export const cronJobSchema = z.object({
   cron_expression: z.string().min(1, 'Cron表达式不能为空'),
   timezone: z.string().min(1, '请选择时区'),
   workflow_id: z.string().min(1, '请选择工作流'),
-  timeout_ms: z.number().min(1000, '最小超时时间为 1 秒').max(600000, '最大超时时间为 10 分钟').optional(),
+  timeout_ms: z.number().min(TIMEOUTS.MIN_CRON, '最小超时时间为 1 秒').max(TIMEOUTS.MAX_CRON, '最大超时时间为 10 分钟').optional(),
   is_active: z.boolean(),
 })
 

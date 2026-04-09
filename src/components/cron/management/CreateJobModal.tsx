@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/Select'
 import { FormError } from '@/components/ui/FormError'
 import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
+import { TIMEOUTS } from '@/lib/config'
 import {
   COMMON_TIMEZONES,
   getLocalTimezone,
@@ -51,7 +52,7 @@ export function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProp
       cron_expression: '',
       timezone: localTimezone,
       workflow_id: '',
-      timeout_ms: 300000, // 5 minutes default
+      timeout_ms: TIMEOUTS.DEFAULT_CRON,
       is_active: true,
     },
   })
@@ -68,7 +69,7 @@ export function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProp
         cron_expression: '',
         timezone: localTimezone,
         workflow_id: '',
-        timeout_ms: 300000, // 5 minutes default
+        timeout_ms: TIMEOUTS.DEFAULT_CRON,
         is_active: true,
       })
       fetchTemplates()

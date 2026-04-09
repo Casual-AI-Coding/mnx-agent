@@ -1,5 +1,6 @@
 // src/settings/store/defaults.ts
 import type { AllSettings, SettingsCategory } from '@/settings/types'
+import { TIMEOUTS } from '@/lib/config'
 
 export const DEFAULT_SETTINGS: AllSettings = {
   account: {
@@ -14,7 +15,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     minimaxKey: '',
     region: 'cn',
     mode: 'direct',
-    timeout: 30000,
+    timeout: TIMEOUTS.API_REQUEST,
     retryAttempts: 3,
     retryDelay: 1000,
   },

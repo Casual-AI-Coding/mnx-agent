@@ -5,6 +5,7 @@ import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { apiClient } from '@/lib/api/client'
+import { WORKFLOW } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
 
@@ -111,7 +112,7 @@ export function WorkflowSelectorModal({
     setIsLoading(true)
     setError(null)
     try {
-      const result = await apiClient.get('/workflows?limit=50') as { data?: { workflows: WorkflowTemplate[] }; success?: boolean }
+      const result = await apiClient.get(`/workflows?limit=${WORKFLOW.TEMPLATE_LIST_LIMIT}`) as { data?: { workflows: WorkflowTemplate[] }; success?: boolean }
       const workflows = result.data?.workflows || []
       setTemplates(workflows)
       setFilteredTemplates(workflows)

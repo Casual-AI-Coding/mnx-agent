@@ -1,4 +1,5 @@
 import { toastInfo, toastSuccess, toastError } from './toast'
+import { WEBSOCKET } from '@/lib/config'
 
 export interface WebSocketMessage {
   type: 'connected' | 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
@@ -116,9 +117,9 @@ export class ReconnectingWebSocket {
   constructor(options: WebSocketClientOptions) {
     this.url = options.url
     this.reconnectBaseDelay = options.reconnectBaseDelay ?? 1000
-    this.reconnectMaxDelay = options.reconnectMaxDelay ?? 30000
-    this.heartbeatInterval = options.heartbeatInterval ?? 30000
-    this.heartbeatTimeout = options.heartbeatTimeout ?? 10000
+    this.reconnectMaxDelay = options.reconnectMaxDelay ?? WEBSOCKET.RECONNECT_MAX_DELAY
+    this.heartbeatInterval = options.heartbeatInterval ?? WEBSOCKET.HEARTBEAT_INTERVAL
+    this.heartbeatTimeout = options.heartbeatTimeout ?? WEBSOCKET.HEARTBEAT_TIMEOUT
     this.jitterMax = options.jitterMax ?? 1000
     this.bufferEvents = options.bufferEvents ?? true
 

@@ -21,6 +21,7 @@ import {
   getNextRuns,
   formatDateWithTimezone,
 } from '@/lib/cron-utils'
+import { TIMEOUTS } from '@/lib/config'
 import { CronExpressionBuilder } from '@/components/cron/CronExpressionBuilder'
 import { cronJobSchema, type CronJobFormData } from '@/lib/form-schemas'
 import type { CronJob, UpdateCronJobDTO } from '@/types/cron'
@@ -50,7 +51,7 @@ export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalPro
       cron_expression: '',
       timezone: getLocalTimezone(),
       workflow_id: '',
-      timeout_ms: 300000, // 5 minutes default
+      timeout_ms: TIMEOUTS.DEFAULT_CRON,
       is_active: true,
     },
   })
@@ -67,7 +68,7 @@ export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalPro
         cron_expression: job.cronExpression,
         timezone: job.timezone || getLocalTimezone(),
         workflow_id: job.workflowId ?? '',
-        timeout_ms: job.timeoutMs ?? 300000, // 5 minutes default
+        timeout_ms: job.timeoutMs ?? TIMEOUTS.DEFAULT_CRON,
         is_active: job.isActive,
       })
       fetchTemplates()
