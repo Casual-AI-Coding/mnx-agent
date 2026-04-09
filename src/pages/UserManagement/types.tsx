@@ -97,6 +97,101 @@ export function formatFullDate(dateStr: string): string {
   })
 }
 
+export interface FormData {
+  username: string
+  password: string
+  email: string
+  role: UserRole
+  minimax_api_key: string
+}
+
+export interface UseUserManagementReturn {
+  // Data
+  users: User[]
+  totalUsers: number
+  filteredAndSortedUsers: User[]
+  filterChips: FilterChip[]
+  activeUsers: number
+  inactiveUsers: number
+
+  // Loading states
+  loading: boolean
+  error: string | null
+  actionLoading: boolean
+
+  // Pagination
+  currentPage: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+
+  // Filters
+  searchQuery: string
+  roleFilter: UserRole | 'all'
+  statusFilter: 'all' | 'active' | 'inactive'
+  hasActiveFilters: boolean
+  setSearchQuery: (query: string) => void
+  setRoleFilter: (role: UserRole | 'all') => void
+  setStatusFilter: (status: 'all' | 'active' | 'inactive') => void
+  removeFilterChip: (chip: FilterChip) => void
+  clearAllFilters: () => void
+
+  // Sorting
+  sortField: SortField
+  sortOrder: SortOrder
+  toggleSort: (field: SortField) => void
+
+  // Selection
+  selectedUserIds: Set<string>
+  toggleUserSelection: (userId: string) => void
+  selectAllUsers: () => void
+  deselectAllUsers: () => void
+  isAllSelected: boolean
+  hasSelection: boolean
+
+  // Dialog states
+  createDialogOpen: boolean
+  editDialogOpen: boolean
+  deleteDialogOpen: boolean
+  batchDeleteDialogOpen: boolean
+  resetPasswordConfirmOpen: boolean
+  resetPasswordDialogOpen: boolean
+
+  // Selected user for actions
+  selectedUser: User | null
+
+  // Dialog controls
+  setCreateDialogOpen: (open: boolean) => void
+  setEditDialogOpen: (open: boolean) => void
+  setDeleteDialogOpen: (open: boolean) => void
+  setBatchDeleteDialogOpen: (open: boolean) => void
+  setResetPasswordConfirmOpen: (open: boolean) => void
+  setResetPasswordDialogOpen: (open: boolean) => void
+
+  // Form
+  formData: FormData
+  setFormData: (data: FormData | ((prev: FormData) => FormData)) => void
+
+  // Reset password
+  newPassword: string
+  copied: boolean
+  handleCopyPassword: () => Promise<void>
+
+  // Actions
+  openEditDialog: (user: User) => void
+  openDeleteDialog: (user: User) => void
+  openResetPasswordConfirm: (user: User) => void
+  handleCreate: () => Promise<void>
+  handleEdit: () => Promise<void>
+  handleDelete: () => Promise<void>
+  handleToggleActive: (user: User) => Promise<void>
+  handleResetPassword: () => Promise<void>
+  handleBatchActivate: () => Promise<void>
+  handleBatchDeactivate: () => Promise<void>
+  handleBatchDelete: () => Promise<void>
+  fetchUsers: () => Promise<void>
+}
+
 export function RoleBadge({ role }: { role: UserRole }) {
   const config = ROLE_CONFIG[role]
   return (
