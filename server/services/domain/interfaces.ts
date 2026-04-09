@@ -220,6 +220,70 @@ export interface ITaskService {
 
 import type { ExecutionLog, ExecutionLogDetail, CreateExecutionLog, CreateExecutionLogDetail, UpdateExecutionLog } from '../../database/types.js'
 
+/**
+ * MediaFilter
+ */
+export interface MediaFilter {
+  type?: string
+  source?: string
+  limit?: number
+  offset?: number
+  includeDeleted?: boolean
+  ownerId?: string
+}
+
+/**
+ * MediaQueryResult
+ */
+export interface MediaQueryResult {
+  records: MediaRecord[]
+  total: number
+}
+
+/**
+ * IMediaService Domain Interface
+ *
+ * Defines the contract for all MediaRecord-related operations.
+ */
+import type { MediaRecord, CreateMediaRecord } from '../../database/types.js'
+
+export interface IMediaService {
+  /**
+   * Get a single media record by ID
+   */
+  getById(id: string, ownerId?: string): Promise<MediaRecord | null>
+
+  /**
+   * Get all media records with pagination and filtering
+   */
+  getAll(filter: MediaFilter): Promise<MediaQueryResult>
+
+  /**
+   * Create a new media record
+   */
+  create(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord>
+
+  /**
+   * Update an existing media record
+   */
+  update(id: string, data: Partial<MediaRecord>, ownerId?: string): Promise<MediaRecord | null>
+
+  /**
+   * Soft delete a media record
+   */
+  softDelete(id: string, ownerId?: string): Promise<boolean>
+
+  /**
+   * Hard delete a media record
+   */
+  hardDelete(id: string, ownerId?: string): Promise<boolean>
+
+  /**
+   * Get multiple media records by IDs
+   */
+  getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]>
+}
+
 export interface LogFilter {
   jobId?: string
   ownerId?: string
@@ -270,4 +334,159 @@ export interface ILogService {
    * Get aggregate statistics for execution logs
    */
   getStats(ownerId?: string): Promise<LogStats>
+}
+
+/**
+ * WebhookService Domain Interface
+ *
+ * Defines the contract for all WebhookConfig and WebhookDelivery operations.
+ */
+
+import type { WebhookConfig, WebhookDelivery, CreateWebhookConfig, UpdateWebhookConfig, CreateWebhookDelivery } from '../../database/types.js'
+
+export interface IWebhookService {
+  /**
+   * Get all webhook configs, optionally filtered by owner
+   */
+  getAll(ownerId?: string): Promise<WebhookConfig[]>
+
+  /**
+   * Get a single webhook config by ID
+   */
+  getById(id: string, ownerId?: string): Promise<WebhookConfig | null>
+
+  /**
+   * Get webhook configs by job ID
+   */
+  getByJobId(jobId: string, ownerId?: string): Promise<WebhookConfig[]>
+
+  /**
+   * Create a new webhook config
+   */
+  create(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig>
+
+  /**
+   * Update an existing webhook config
+   */
+  update(id: string, data: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig>
+
+  /**
+   * Delete a webhook config
+   */
+  delete(id: string, ownerId?: string): Promise<void>
+
+  /**
+   * Get deliveries for a webhook
+   */
+  getDeliveries(webhookId: string, limit?: number, ownerId?: string): Promise<WebhookDelivery[]>
+
+  /**
+   * Create a new webhook delivery record
+   */
+  createDelivery(data: CreateWebhookDelivery): Promise<WebhookDelivery>
+}
+
+/**
+ * WorkflowService Domain Interface
+ *
+ * Defines the contract for all WorkflowTemplate-related operations.
+ */
+
+import type { WorkflowTemplate, WorkflowVersion, CreateWorkflowTemplate, UpdateWorkflowTemplate, CreateWorkflowVersion } from '../../database/types.js'
+
+export interface IWorkflowService {
+  /**
+   * Get a single workflow template by ID
+   */
+  getById(id: string, ownerId?: string): Promise<WorkflowTemplate | null>
+
+  /**
+   * Get all workflow templates, optionally filtered by owner
+   */
+  getAll(ownerId?: string): Promise<WorkflowTemplate[]>
+
+  /**
+   * Get workflow templates with pagination
+   */
+  getPaginated(page: number, limit: number, ownerId?: string): Promise<{ templates: WorkflowTemplate[]; total: number }>
+
+  /**
+   * Get marked (public) workflow templates
+   */
+  getMarked(ownerId?: string): Promise<WorkflowTemplate[]>
+
+  /**
+   * Create a new workflow template
+   */
+  create(data: CreateWorkflowTemplate, ownerId?: string): Promise<WorkflowTemplate>
+
+  /**
+   * Update an existing workflow template
+   */
+  update(id: string, data: UpdateWorkflowTemplate, ownerId?: string): Promise<WorkflowTemplate | null>
+
+  /**
+   * Delete a workflow template
+   */
+  delete(id: string, ownerId?: string): Promise<void>
+
+  /**
+   * Get all versions for a workflow template
+   */
+  getVersions(templateId: string): Promise<WorkflowVersion[]>
+
+  /**
+   * Get the active version for a workflow template
+   */
+  getActiveVersion(templateId: string): Promise<WorkflowVersion | null>
+
+  /**
+   * Create a new workflow version
+   */
+  createVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion>
+
+  /**
+   * Activate a workflow version
+   */
+  activateVersion(versionId: string): Promise<WorkflowVersion | null>
+
+  /**
+   * Delete a workflow version
+   */
+  deleteVersion(versionId: string): Promise<void>
+}
+
+/**
+ * CapacityService Domain Interface
+ *
+ * Defines the contract for all CapacityRecord-related operations.
+ */
+
+import type { CapacityRecord, UpdateCapacityRecord } from '../../database/types.js'
+
+export interface ICapacityService {
+  /**
+   * Get all capacity records
+   */
+  getAll(): Promise<CapacityRecord[]>
+
+  /**
+   * Get a capacity record by service type
+   */
+  getByService(serviceType: string): Promise<CapacityRecord | null>
+
+  /**
+   * Upsert a capacity record
+   */
+  upsert(serviceType: string, data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }): Promise<CapacityRecord>
+
+  /**
+   * Update capacity remaining quota
+   */
+  updateCapacity(serviceType: string, remaining: number): Promise<void>
+
+  /**
+   * Decrement capacity by amount
+   */
+  decrementCapacity(serviceType: string, amount?: number): Promise<CapacityRecord | null>
 }
