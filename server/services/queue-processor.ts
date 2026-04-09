@@ -2,18 +2,10 @@ import type { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
-import { RETRY_TIMEOUTS } from '../config/timeouts.js'
+import type { IRetryManager } from './interfaces/retry-manager.interface.js'
 
 export type { DatabaseService }
 export type { ITaskExecutor }
-
-export interface AutoRetryConfig {
-  enabled: boolean
-  initialDelayMs: number
-  maxDelayMs: number
-  maxAttempts: number
-  backoffMultiplier: number
-}
 
 export interface QueueOptions {
   batchSize?: number
@@ -40,39 +32,20 @@ export class QueueProcessor {
   private taskExecutor: ITaskExecutor
   private capacityChecker: CapacityChecker
   private eventBus: IEventBus
-  private readonly maxRetryDelayMs = RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS
-  private autoRetryConfig: AutoRetryConfig
-  private autoRetryTimer: NodeJS.Timeout | null = null
+  private retryManager: IRetryManager
 
   constructor(
     db: DatabaseService,
     taskExecutor: ITaskExecutor,
     capacityChecker: CapacityChecker,
     eventBus: IEventBus,
-    autoRetryConfig?: Partial<AutoRetryConfig>
+    retryManager: IRetryManager
   ) {
     this.db = db
     this.taskExecutor = taskExecutor
     this.capacityChecker = capacityChecker
     this.eventBus = eventBus
-    this.autoRetryConfig = {
-      enabled: autoRetryConfig?.enabled ?? true,
-      initialDelayMs: autoRetryConfig?.initialDelayMs ?? RETRY_TIMEOUTS.BASE_DELAY_MS * 60,
-      maxDelayMs: autoRetryConfig?.maxDelayMs ?? RETRY_TIMEOUTS.MAX_RETRY_DELAY_MS,
-      maxAttempts: autoRetryConfig?.maxAttempts ?? 3,
-      backoffMultiplier: autoRetryConfig?.backoffMultiplier ?? 2,
-    }
-  }
-
-  private calculateRetryDelay(retryCount: number): number {
-    // Exponential backoff with jitter: 1s, 2s, 4s, 8s, 16s... capped at 5 minutes
-    const baseDelay = 1000 * Math.pow(2, retryCount)
-    const jitter = Math.random() * 1000 // Add up to 1s of random jitter
-    return Math.min(baseDelay + jitter, this.maxRetryDelayMs)
-  }
-
-  private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    this.retryManager = retryManager
   }
 
   async processQueue(jobId: string, options?: QueueOptions): Promise<QueueResult> {
@@ -118,8 +91,8 @@ export class QueueProcessor {
           
           if (!skipFailed && task.retry_count < task.max_retries) {
             // Apply exponential backoff before requeuing
-            const delayMs = this.calculateRetryDelay(task.retry_count)
-            await this.sleep(delayMs)
+            const delayMs = this.retryManager.getRetryDelay(task.retry_count)
+            await this.retryManager.delay(delayMs)
             await this.requeueTask(task)
           } else if (task.retry_count >= task.max_retries) {
             // Move to dead letter queue
@@ -292,8 +265,8 @@ export class QueueProcessor {
         stats.tasksFailed++
         
         if (!skipFailed && task.retry_count < task.max_retries) {
-          const delayMs = this.calculateRetryDelay(task.retry_count)
-          await this.sleep(delayMs)
+          const delayMs = this.retryManager.getRetryDelay(task.retry_count)
+          await this.retryManager.delay(delayMs)
           await this.requeueTask(task)
         } else if (task.retry_count >= task.max_retries) {
           await this.moveToDeadLetterQueue(task, taskResult.error || 'Max retries exceeded')
@@ -370,8 +343,8 @@ export class QueueProcessor {
         stats.tasksFailed++
         
         if (task.retry_count < task.max_retries) {
-          const delayMs = this.calculateRetryDelay(task.retry_count)
-          await this.sleep(delayMs)
+          const delayMs = this.retryManager.getRetryDelay(task.retry_count)
+          await this.retryManager.delay(delayMs)
           await this.requeueTask(task)
         } else {
           await this.moveToDeadLetterQueue(task, taskResult.error || 'Max retries exceeded')
@@ -390,83 +363,6 @@ export class QueueProcessor {
       capacityRemaining: remainingCapacity,
     }
   }
-
-  startAutoRetry(): void {
-    if (!this.autoRetryConfig.enabled || this.autoRetryTimer) {
-      return
-    }
-
-    console.log('[QueueProcessor] Starting auto-retry scheduler')
-    this.autoRetryTimer = setInterval(
-      () => this.processDLQAutoRetry(),
-      this.autoRetryConfig.initialDelayMs
-    )
-  }
-
-  stopAutoRetry(): void {
-    if (this.autoRetryTimer) {
-      clearInterval(this.autoRetryTimer)
-      this.autoRetryTimer = null
-      console.log('[QueueProcessor] Stopped auto-retry scheduler')
-    }
-  }
-
-  private async processDLQAutoRetry(): Promise<void> {
-    try {
-      const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 10)
-      
-      for (const item of dlqItems) {
-        if (item.resolved_at) continue
-        
-        const retryCount = item.retry_count ?? 0
-        if (retryCount >= this.autoRetryConfig.maxAttempts) {
-          console.log(`[QueueProcessor] DLQ item ${item.id} exceeded max attempts (${retryCount}/${this.autoRetryConfig.maxAttempts})`)
-          continue
-        }
-
-        const delayMs = Math.min(
-          this.autoRetryConfig.initialDelayMs * Math.pow(this.autoRetryConfig.backoffMultiplier, retryCount),
-          this.autoRetryConfig.maxDelayMs
-        )
-
-        const failedAt = new Date(item.failed_at).getTime()
-        const now = Date.now()
-        if (now - failedAt < delayMs) {
-          continue
-        }
-
-        console.log(`[QueueProcessor] Auto-retrying DLQ item ${item.id} (attempt ${retryCount + 1}/${this.autoRetryConfig.maxAttempts})`)
-        
-        try {
-          const taskId = await this.db.retryDeadLetterQueueItem(item.id, item.owner_id ?? undefined)
-          console.log(`[QueueProcessor] DLQ item ${item.id} requeued as task ${taskId}`)
-        } catch (error) {
-          console.error(`[QueueProcessor] Failed to retry DLQ item ${item.id}:`, error)
-        }
-      }
-    } catch (error) {
-      console.error('[QueueProcessor] Error in auto-retry processing:', error)
-    }
-  }
-
-  async getAutoRetryStats(): Promise<{
-    enabled: boolean
-    dlqItemCount: number
-    pendingRetryCount: number
-    config: AutoRetryConfig
-  }> {
-    const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 1000)
-    const pendingRetry = dlqItems.filter(item => 
-      !item.resolved_at && (item.retry_count ?? 0) < this.autoRetryConfig.maxAttempts
-    )
-
-    return {
-      enabled: this.autoRetryConfig.enabled,
-      dlqItemCount: dlqItems.length,
-      pendingRetryCount: pendingRetry.length,
-      config: this.autoRetryConfig,
-    }
-  }
 }
 
 export function createQueueProcessor(
@@ -474,9 +370,9 @@ export function createQueueProcessor(
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   eventBus: IEventBus,
-  autoRetryConfig?: Partial<AutoRetryConfig>
+  retryManager: IRetryManager
 ): QueueProcessor {
-  return new QueueProcessor(db, taskExecutor, capacityChecker, eventBus, autoRetryConfig)
+  return new QueueProcessor(db, taskExecutor, capacityChecker, eventBus, retryManager)
 }
 
 let queueProcessorInstance: QueueProcessor | null = null
@@ -486,10 +382,10 @@ export function getQueueProcessor(
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   eventBus: IEventBus,
-  autoRetryConfig?: Partial<AutoRetryConfig>
+  retryManager: IRetryManager
 ): QueueProcessor {
   if (!queueProcessorInstance) {
-    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, eventBus, autoRetryConfig)
+    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, eventBus, retryManager)
   }
   return queueProcessorInstance
 }

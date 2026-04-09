@@ -5,12 +5,13 @@ import { WorkflowResult } from './workflow-engine'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
+import type { IConcurrencyManager } from './interfaces/concurrency-manager.interface.js'
+import type { IMisfireHandler } from './interfaces/misfire-handler.interface.js'
 import { 
   CronJob, 
   CreateExecutionLog, 
   ExecutionStatus,
   TriggerType,
-  MisfirePolicy
 } from '../database/types'
 import { TASK_TIMEOUTS } from '../config/timeouts.js'
 
@@ -29,7 +30,6 @@ export interface WorkflowEngine {
 
 export interface CronSchedulerOptions {
   timezone?: string
-  maxConcurrent?: number
   defaultTimeoutMs?: number
 }
 
@@ -40,20 +40,29 @@ export class CronScheduler {
   private taskExecutor: ITaskExecutor | null = null
   private notificationService: NotificationService | null = null
   private eventBus: IEventBus
+  private concurrencyManager: IConcurrencyManager
+  private misfireHandler: IMisfireHandler
   private timezone: string
-  private maxConcurrent: number
   private defaultTimeoutMs: number
-  private runningJobs: Set<string> = new Set()
-  private isShuttingDown: boolean = false
 
-  constructor(db: DatabaseService, workflowEngine: WorkflowEngine, taskExecutor: ITaskExecutor | null, notificationService: NotificationService | null, eventBus: IEventBus, options?: CronSchedulerOptions) {
+  constructor(
+    db: DatabaseService,
+    workflowEngine: WorkflowEngine,
+    taskExecutor: ITaskExecutor | null,
+    notificationService: NotificationService | null,
+    eventBus: IEventBus,
+    concurrencyManager: IConcurrencyManager,
+    misfireHandler: IMisfireHandler,
+    options?: CronSchedulerOptions
+  ) {
     this.db = db
     this.workflowEngine = workflowEngine
     this.taskExecutor = taskExecutor
     this.notificationService = notificationService
     this.eventBus = eventBus
+    this.concurrencyManager = concurrencyManager
+    this.misfireHandler = misfireHandler
     this.timezone = options?.timezone ?? process.env.CRON_TIMEZONE ?? 'Asia/Shanghai'
-    this.maxConcurrent = options?.maxConcurrent ?? 5
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? TASK_TIMEOUTS.DEFAULT_CRON_MS
   }
 
@@ -68,7 +77,7 @@ export class CronScheduler {
       }
     }
 
-    await this.checkAndHandleMisfires(activeJobs)
+    await this.misfireHandler.checkAndHandleMisfires(activeJobs)
   }
 
   calculateNextRun(expression: string): Date | null {
@@ -111,27 +120,14 @@ export class CronScheduler {
     this.jobs.set(job.id, task)
   }
 
-  private async acquireExecutionSlot(jobId: string): Promise<boolean> {
-    if (this.runningJobs.size >= this.maxConcurrent) {
-      console.warn(`[CronScheduler] Max concurrent jobs (${this.maxConcurrent}) reached, skipping job ${jobId}`)
-      return false
-    }
-    this.runningJobs.add(jobId)
-    return true
-  }
-
-  private releaseExecutionSlot(jobId: string): void {
-    this.runningJobs.delete(jobId)
-  }
-
   async executeJobTick(job: CronJob): Promise<void> {
     // Check for shutdown
-    if (this.isShuttingDown) {
+    if (this.concurrencyManager.isShuttingDown()) {
       return
     }
 
     // Check concurrent execution limit
-    if (!(await this.acquireExecutionSlot(job.id))) {
+    if (!(await this.concurrencyManager.acquireSlot(job.id))) {
       console.warn(`[CronScheduler] Job "${job.name}" (${job.id}) skipped due to concurrency limit`)
       return
     }
@@ -264,7 +260,7 @@ export class CronScheduler {
         timestamp: new Date().toISOString(),
       }).catch(err => console.error('[CronScheduler] Failed to send on_failure notification:', err))
     } finally {
-      this.releaseExecutionSlot(job.id)
+      this.concurrencyManager.releaseSlot(job.id)
       this.eventBus.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
     }
   }
@@ -279,55 +275,6 @@ export class CronScheduler {
         setTimeout(() => reject(new Error(`Execution timed out after ${timeoutMs}ms`)), timeoutMs)
       ),
     ])
-  }
-
-  private async handleMisfire(job: CronJob): Promise<void> {
-    if (job.misfire_policy === MisfirePolicy.IGNORE) {
-      console.info(`[CronScheduler] Job "${job.name}" (${job.id}) misfire ignored per policy`)
-      return
-    }
-
-    console.info(`[CronScheduler] Misfire detected for job "${job.name}" (${job.id}), executing catch-up...`)
-
-    try {
-      await this.executeJobTick(job)
-      console.info(`[CronScheduler] Catch-up execution completed for job "${job.name}" (${job.id})`)
-    } catch (error) {
-      console.error(`[CronScheduler] Catch-up execution failed for job "${job.name}" (${job.id}):`, error)
-    }
-
-    if (job.misfire_policy === MisfirePolicy.FIRE_ALL) {
-      console.warn(`[CronScheduler] Job "${job.name}" (${job.id}) has 'fire_all' policy but only single catch-up executed to prevent startup storm`)
-    }
-  }
-
-  private async checkAndHandleMisfires(jobs: CronJob[]): Promise<void> {
-    const now = new Date()
-    const misfiredJobs: CronJob[] = []
-
-    for (const job of jobs) {
-      if (job.is_active && job.next_run_at) {
-        const nextRun = new Date(job.next_run_at)
-        if (nextRun < now) {
-          misfiredJobs.push(job)
-        }
-      }
-    }
-
-    if (misfiredJobs.length === 0) {
-      return
-    }
-
-    console.info(`[CronScheduler] Detected ${misfiredJobs.length} misfired jobs, handling asynchronously...`)
-
-    const delayBetweenJobs = 500
-    
-    for (let i = 0; i < misfiredJobs.length; i++) {
-      const job = misfiredJobs[i]
-      setTimeout(async () => {
-        await this.handleMisfire(job)
-      }, i * delayBetweenJobs)
-    }
   }
 
   unscheduleJob(jobId: string): boolean {
@@ -392,17 +339,17 @@ export class CronScheduler {
   }
 
   async gracefulShutdown(timeoutMs: number = 30000): Promise<void> {
-    this.isShuttingDown = true
+    this.concurrencyManager.setShuttingDown(true)
 
     const startTime = Date.now()
     
     // Wait for running jobs to complete
-    while (this.runningJobs.size > 0) {
+    while (this.concurrencyManager.getRunningCount() > 0) {
       const elapsed = Date.now() - startTime
       const remaining = timeoutMs - elapsed
       
       if (remaining <= 0) {
-        console.warn(`[CronScheduler] Graceful shutdown timed out with ${this.runningJobs.size} jobs still running`)
+        console.warn(`[CronScheduler] Graceful shutdown timed out with ${this.concurrencyManager.getRunningCount()} jobs still running`)
         break
       }
       
@@ -411,15 +358,15 @@ export class CronScheduler {
 
     // Force stop remaining jobs
     this.stopAll()
-    this.isShuttingDown = false
+    this.concurrencyManager.setShuttingDown(false)
   }
 
   getRunningJobs(): Set<string> {
-    return this.runningJobs
+    return this.concurrencyManager.getRunningJobs()
   }
 
   getRunningJobCount(): number {
-    return this.runningJobs.size
+    return this.concurrencyManager.getRunningCount()
   }
 
   getJobCount(): number {
