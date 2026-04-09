@@ -4,6 +4,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import { getDatabaseService } from '../service-registration.js'
 import { getServiceNodeRegistryService } from '../service-registration.js'
+import { WorkflowService } from '../services/domain'
 import {
   workflowIdParamsSchema,
   createWorkflowSchema,
@@ -52,6 +53,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
 
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   
   let isPublicFilter: boolean | undefined
   if (is_public === 'true') {
@@ -60,22 +62,18 @@ router.get('/', asyncHandler(async (req, res) => {
     isPublicFilter = false
   }
 
-  const result = await db.getWorkflowTemplatesPaginated({
-    ownerId,
-    isTemplate: isPublicFilter,
-    limit,
-    offset,
-  })
+  const result = await workflowService.getPaginated(page, limit, ownerId)
 
   successResponse(res, createPaginatedResponse(result.templates, result.total, page, limit))
 }))
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   const userId = req.user!.userId
   const userRole = req.user!.role
 
-  const workflow = await db.getWorkflowTemplateById(req.params.id)
+  const workflow = await workflowService.getById(req.params.id)
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
     return
@@ -97,6 +95,7 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   const userRole = req.user!.role
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
@@ -106,7 +105,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
 
   if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
 
-  const workflow = await db.createWorkflowTemplate({
+  const workflow = await workflowService.create({
     name: req.body.name,
     description: req.body.description,
     nodes_json: req.body.nodes_json,
@@ -118,10 +117,11 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   const userId = req.user!.userId
   const userRole = req.user!.role
 
-  const existing = await db.getWorkflowTemplateById(req.params.id)
+  const existing = await workflowService.getById(req.params.id)
   if (!existing) {
     errorResponse(res, 'Workflow not found', 404)
     return
@@ -139,16 +139,17 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
     if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
   }
 
-  const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
+  const workflow = await workflowService.update(req.params.id, req.body)
   successResponse(res, workflow)
 }))
 
 router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   const userId = req.user!.userId
   const userRole = req.user!.role
 
-  const existing = await db.getWorkflowTemplateById(req.params.id)
+  const existing = await workflowService.getById(req.params.id)
   if (!existing) {
     errorResponse(res, 'Workflow not found', 404)
     return
@@ -166,15 +167,18 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
     if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
   }
 
-  const workflow = await db.updateWorkflowTemplate(req.params.id, req.body)
+  const workflow = await workflowService.update(req.params.id, req.body)
   successResponse(res, workflow)
 }))
 
 router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
   const ownerId = buildOwnerFilter(req).params[0]
-  const success = await db.deleteWorkflowTemplate(req.params.id, ownerId)
-  if (!success) {
+
+  try {
+    await workflowService.delete(req.params.id, ownerId)
+  } catch {
     errorResponse(res, 'Workflow not found', 404)
     return
   }
@@ -187,8 +191,9 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
 
   const db = getDatabaseService()
+  const workflowService = new WorkflowService(db)
 
-  const workflow = await db.getWorkflowTemplateById(id, ownerId)
+  const workflow = await workflowService.getById(id, ownerId)
   if (!workflow) {
     return errorResponse(res, 'Workflow not found', 404)
   }
