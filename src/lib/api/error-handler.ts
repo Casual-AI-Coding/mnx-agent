@@ -1,25 +1,21 @@
 import { isAxiosError, type AxiosError } from 'axios'
+import { ApiError, isApiError } from './errors'
+
+export { isApiError } from './errors'
 
 /**
- * Unified API Error interface for consistent error handling across the application.
+ * Unified error handler for API calls.
+ * Handles both AxiosError and regular Error objects consistently.
  */
-export interface ApiError {
-  message: string
-  statusCode?: number
-  code?: string
-  context?: string
+export function handleApiError(error: unknown, context: string): ApiError {
+  const message = extractErrorMessage(error)
+  const statusCode = extractStatusCode(error)
+
+  console.error(`[API Error] ${context}:`, { message, statusCode, originalError: error })
+
+  return new ApiError(message, statusCode)
 }
 
-/**
- * Type guard to check if an unknown error is an ApiError
- */
-export function isApiError(error: unknown): error is ApiError {
-  return (error as ApiError)?.message !== undefined
-}
-
-/**
- * Extract error message from various error types (AxiosError, Error, plain objects)
- */
 function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
     const axiosError = error as AxiosError<{ error?: string; message?: string; data?: { error?: string }; base_resp?: { status_msg?: string } }>
@@ -44,9 +40,6 @@ function extractErrorMessage(error: unknown): string {
   return 'Unknown error'
 }
 
-/**
- * Extract status code from an error (primarily AxiosError)
- */
 function extractStatusCode(error: unknown): number | undefined {
   if (isAxiosError(error)) {
     return error.response?.status
@@ -55,23 +48,6 @@ function extractStatusCode(error: unknown): number | undefined {
     return error.statusCode
   }
   return undefined
-}
-
-/**
- * Unified error handler for API calls.
- * Handles both AxiosError and regular Error objects consistently.
- */
-export function handleApiError(error: unknown, context: string): ApiError {
-  const message = extractErrorMessage(error)
-  const statusCode = extractStatusCode(error)
-
-  console.error(`[API Error] ${context}:`, { message, statusCode, originalError: error })
-
-  return {
-    message,
-    statusCode,
-    context,
-  }
 }
 
 /**
@@ -109,7 +85,6 @@ export async function callApiRaw<T>(
   try {
     const response = await apiCall()
 
-    // Check if response has success wrapper (common backend pattern)
     if (typeof response === 'object' && response !== null && 'success' in response) {
       const typedResponse = response as { success: boolean; data?: T; error?: string }
       if (!typedResponse.success || typedResponse.data === undefined) {

@@ -2,18 +2,9 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { API_HOSTS } from '@/types'
+import { TIMEOUTS } from '@/lib/config'
 import { refreshToken } from './auth'
-
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public code?: string
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
+import { ApiError } from './errors'
 
 class InternalAPIClient {
   private client: AxiosInstance
@@ -23,7 +14,7 @@ class InternalAPIClient {
   constructor() {
     this.client = axios.create({
       baseURL: '/api',
-      timeout: 30000,
+      timeout: TIMEOUTS.API_REQUEST,
       withCredentials: true,
       headers: {
         'Content-Type': 'application/json',

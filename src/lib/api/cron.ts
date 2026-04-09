@@ -1,5 +1,5 @@
 import { internalAxios } from './client'
-import { AxiosError, isAxiosError } from 'axios'
+import { toApiResponse } from './errors'
 import type {
   CronJob,
   BackendJob,
@@ -39,23 +39,6 @@ interface WorkflowValidationResponse {
 
 const cronClient = internalAxios
 
-function handleApiError(error: unknown, context: string): ApiResponse<never> {
-  if (isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ error?: string; message?: string; data?: { error?: string } }>
-    const message = axiosError.response?.data?.error 
-      || axiosError.response?.data?.data?.error
-      || axiosError.response?.data?.message 
-      || axiosError.message 
-      || 'Unknown error'
-    console.error(`[Cron API] ${context}:`, message)
-    return { success: false, error: message }
-  }
-  
-  const message = error instanceof Error ? error.message : 'Unknown error'
-  console.error(`[Cron API] ${context}:`, message)
-  return { success: false, error: message }
-}
-
 // ============================================
 // Cron Jobs API - Fixed endpoints to match backend
 // ============================================
@@ -65,7 +48,7 @@ export async function getCronJobs(): Promise<ApiResponse<{ jobs: BackendJob[]; t
     const response = await cronClient.get('/cron/jobs')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getCronJobs')
+    return toApiResponse(error)
   }
 }
 
@@ -82,7 +65,7 @@ export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<
     const response = await cronClient.post('/cron/jobs', backendJob)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'createCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -91,7 +74,7 @@ export async function getCronJob(id: string): Promise<ApiResponse<BackendJob>> {
     const response = await cronClient.get(`/cron/jobs/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -108,7 +91,7 @@ export async function updateCronJob(id: string, updates: UpdateCronJobDTO): Prom
     const response = await cronClient.put(`/cron/jobs/${id}`, backendUpdates)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'updateCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -117,7 +100,7 @@ export async function deleteCronJob(id: string): Promise<ApiResponse<void>> {
     await cronClient.delete(`/cron/jobs/${id}`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'deleteCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -126,7 +109,7 @@ export async function runCronJob(id: string): Promise<ApiResponse<{ message: str
     const response = await cronClient.post(`/cron/jobs/${id}/run`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'runCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -135,7 +118,7 @@ export async function toggleCronJob(id: string): Promise<ApiResponse<{ job: Back
     const response = await cronClient.post(`/cron/jobs/${id}/toggle`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'toggleCronJob')
+    return toApiResponse(error)
   }
 }
 
@@ -154,7 +137,7 @@ export async function getTasks(filter?: TaskQueueFilter & { page?: number; limit
     const response = await cronClient.get('/cron/queue', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getTasks')
+    return toApiResponse(error)
   }
 }
 
@@ -170,7 +153,7 @@ export async function createTask(task: CreateTaskDTO): Promise<ApiResponse<TaskQ
     const response = await cronClient.post('/cron/queue', backendTask)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'createTask')
+    return toApiResponse(error)
   }
 }
 
@@ -179,7 +162,7 @@ export async function updateTask(id: string, updates: UpdateTaskDTO): Promise<Ap
     const response = await cronClient.put(`/cron/queue/${id}`, updates)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'updateTask')
+    return toApiResponse(error)
   }
 }
 
@@ -188,7 +171,7 @@ export async function deleteTask(id: string): Promise<ApiResponse<void>> {
     await cronClient.delete(`/cron/queue/${id}`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'deleteTask')
+    return toApiResponse(error)
   }
 }
 
@@ -197,7 +180,7 @@ export async function retryTask(id: string): Promise<ApiResponse<TaskQueueItem>>
     const response = await cronClient.post(`/cron/queue/${id}/retry`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'retryTask')
+    return toApiResponse(error)
   }
 }
 
@@ -215,7 +198,7 @@ export async function getLogs(filter?: { jobId?: string; status?: string; limit?
     const response = await cronClient.get('/cron/logs', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getLogs')
+    return toApiResponse(error)
   }
 }
 
@@ -224,7 +207,7 @@ export async function getLogById(id: string): Promise<ApiResponse<ExecutionLog>>
     const response = await cronClient.get(`/cron/logs/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getLogById')
+    return toApiResponse(error)
   }
 }
 
@@ -233,7 +216,7 @@ export async function getLogDetails(id: string): Promise<ApiResponse<{ log: Exec
     const response = await cronClient.get(`/cron/logs/${id}/details`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getLogDetails')
+    return toApiResponse(error)
   }
 }
 
@@ -246,7 +229,7 @@ export async function validateWorkflow(workflow: { nodes: unknown[]; edges: unkn
     const response = await cronClient.post('/cron/workflow/validate', workflow)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'validateWorkflow')
+    return toApiResponse(error)
   }
 }
 
@@ -255,7 +238,7 @@ export async function getWorkflowTemplates(): Promise<ApiResponse<{ templates: W
     const response = await cronClient.get('/cron/workflow/templates')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getWorkflowTemplates')
+    return toApiResponse(error)
   }
 }
 
@@ -271,7 +254,7 @@ export async function createWorkflowTemplate(template: { name: string; descripti
     const response = await cronClient.post('/cron/workflow/templates', backendTemplate)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'createWorkflowTemplate')
+    return toApiResponse(error)
   }
 }
 
@@ -286,7 +269,7 @@ export async function updateWorkflowTemplate(id: string, updates: UpdateWorkflow
     const response = await cronClient.put(`/cron/workflow/templates/${id}`, backendUpdates)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'updateWorkflowTemplate')
+    return toApiResponse(error)
   }
 }
 
@@ -295,7 +278,7 @@ export async function deleteWorkflowTemplate(id: string): Promise<ApiResponse<vo
     await cronClient.delete(`/cron/workflow/templates/${id}`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'deleteWorkflowTemplate')
+    return toApiResponse(error)
   }
 }
 
@@ -308,7 +291,7 @@ export async function addJobTag(jobId: string, tag: string): Promise<ApiResponse
     const response = await cronClient.post(`/cron/jobs/${jobId}/tags`, { tag })
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'addJobTag')
+    return toApiResponse(error)
   }
 }
 
@@ -317,7 +300,7 @@ export async function removeJobTag(jobId: string, tag: string): Promise<ApiRespo
     const response = await cronClient.delete(`/cron/jobs/${jobId}/tags/${encodeURIComponent(tag)}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'removeJobTag')
+    return toApiResponse(error)
   }
 }
 
@@ -326,7 +309,7 @@ export async function getJobTags(jobId: string): Promise<ApiResponse<{ tags: str
     const response = await cronClient.get(`/cron/jobs/${jobId}/tags`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getJobTags')
+    return toApiResponse(error)
   }
 }
 
@@ -335,7 +318,7 @@ export async function getJobsByTag(tag: string): Promise<ApiResponse<{ jobs: Bac
     const response = await cronClient.get(`/cron/tags/${encodeURIComponent(tag)}/jobs`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getJobsByTag')
+    return toApiResponse(error)
   }
 }
 
@@ -344,7 +327,7 @@ export async function getAllTags(): Promise<ApiResponse<{ tags: { tag: string; c
     const response = await cronClient.get('/cron/tags')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getAllTags')
+    return toApiResponse(error)
   }
 }
 
@@ -357,7 +340,7 @@ export async function addJobDependency(jobId: string, dependsOnJobId: string): P
     const response = await cronClient.post(`/cron/jobs/${jobId}/dependencies`, { depends_on_job_id: dependsOnJobId })
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'addJobDependency')
+    return toApiResponse(error)
   }
 }
 
@@ -366,7 +349,7 @@ export async function removeJobDependency(jobId: string, dependsOnJobId: string)
     const response = await cronClient.delete(`/cron/jobs/${jobId}/dependencies/${dependsOnJobId}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'removeJobDependency')
+    return toApiResponse(error)
   }
 }
 
@@ -375,7 +358,7 @@ export async function getJobDependencies(jobId: string): Promise<ApiResponse<{ d
     const response = await cronClient.get(`/cron/jobs/${jobId}/dependencies`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getJobDependencies')
+    return toApiResponse(error)
   }
 }
 
@@ -384,7 +367,7 @@ export async function getJobDependents(jobId: string): Promise<ApiResponse<{ dep
     const response = await cronClient.get(`/cron/jobs/${jobId}/dependents`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getJobDependents')
+    return toApiResponse(error)
   }
 }
 
@@ -405,7 +388,7 @@ export async function getDeadLetterQueue(limit?: number): Promise<ApiResponse<DL
     const response = await cronClient.get('/cron/dlq', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getDeadLetterQueue')
+    return toApiResponse(error)
   }
 }
 
@@ -414,7 +397,7 @@ export async function retryDeadLetterQueueItem(id: string): Promise<ApiResponse<
     const response = await cronClient.post(`/cron/dlq/${id}/retry`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'retryDeadLetterQueueItem')
+    return toApiResponse(error)
   }
 }
 
@@ -423,7 +406,7 @@ export async function deleteDeadLetterQueueItem(id: string): Promise<ApiResponse
     await cronClient.delete(`/cron/dlq/${id}`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'deleteDeadLetterQueueItem')
+    return toApiResponse(error)
   }
 }
 
@@ -450,7 +433,7 @@ export async function getAutoRetryStats(): Promise<ApiResponse<AutoRetryStats>> 
     const response = await cronClient.get('/cron/dlq/auto-retry/stats')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getAutoRetryStats')
+    return toApiResponse(error)
   }
 }
 
@@ -465,7 +448,7 @@ export async function updateAutoRetryConfig(config: {
     await cronClient.patch('/cron/dlq/auto-retry/config', config)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'updateAutoRetryConfig')
+    return toApiResponse(error)
   }
 }
 
@@ -474,7 +457,7 @@ export async function startAutoRetry(): Promise<ApiResponse<{ message: string }>
     const response = await cronClient.post('/cron/dlq/auto-retry/start')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'startAutoRetry')
+    return toApiResponse(error)
   }
 }
 
@@ -483,7 +466,7 @@ export async function stopAutoRetry(): Promise<ApiResponse<{ message: string }>>
     const response = await cronClient.post('/cron/dlq/auto-retry/stop')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'stopAutoRetry')
+    return toApiResponse(error)
   }
 }
 
@@ -492,7 +475,7 @@ export async function getWebhooks(): Promise<ApiResponse<{ webhooks: WebhookConf
     const response = await cronClient.get('/cron/webhooks')
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getWebhooks')
+    return toApiResponse(error)
   }
 }
 
@@ -510,7 +493,7 @@ export async function createWebhook(data: CreateWebhookConfig): Promise<ApiRespo
     const response = await cronClient.post('/cron/webhooks', backendData)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'createWebhook')
+    return toApiResponse(error)
   }
 }
 
@@ -528,7 +511,7 @@ export async function updateWebhook(id: string, data: UpdateWebhookConfig): Prom
     const response = await cronClient.patch(`/cron/webhooks/${id}`, backendData)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'updateWebhook')
+    return toApiResponse(error)
   }
 }
 
@@ -537,7 +520,7 @@ export async function deleteWebhook(id: string): Promise<ApiResponse<void>> {
     await cronClient.delete(`/cron/webhooks/${id}`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'deleteWebhook')
+    return toApiResponse(error)
   }
 }
 
@@ -546,7 +529,7 @@ export async function testWebhook(id: string): Promise<ApiResponse<{ success: bo
     const response = await cronClient.post(`/cron/webhooks/${id}/test`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'testWebhook')
+    return toApiResponse(error)
   }
 }
 
@@ -555,7 +538,7 @@ export async function getWebhookDeliveries(webhookId: string): Promise<ApiRespon
     const response = await cronClient.get(`/cron/webhooks/${webhookId}/deliveries`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getWebhookDeliveries')
+    return toApiResponse(error)
   }
 }
 
@@ -573,7 +556,7 @@ export async function pauseExecution(id: string): Promise<ApiResponse<void>> {
     await cronClient.post(`/cron/executions/${id}/pause`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'pauseExecution')
+    return toApiResponse(error)
   }
 }
 
@@ -582,7 +565,7 @@ export async function resumeExecution(id: string): Promise<ApiResponse<void>> {
     await cronClient.post(`/cron/executions/${id}/resume`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'resumeExecution')
+    return toApiResponse(error)
   }
 }
 
@@ -591,7 +574,7 @@ export async function cancelExecution(id: string): Promise<ApiResponse<void>> {
     await cronClient.post(`/cron/executions/${id}/cancel`)
     return { success: true }
   } catch (error) {
-    return handleApiError(error, 'cancelExecution')
+    return toApiResponse(error)
   }
 }
 
@@ -600,7 +583,7 @@ export async function getExecutionState(id: string): Promise<ApiResponse<Executi
     const response = await cronClient.get(`/cron/executions/${id}`)
     return { success: true, data: response.data.data }
   } catch (error) {
-    return handleApiError(error, 'getExecutionState')
+    return toApiResponse(error)
   }
 }
 

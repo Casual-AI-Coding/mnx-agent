@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 
 export class ApiError extends Error {
   constructor(
@@ -88,4 +89,25 @@ export function isRateLimitError(error: unknown): boolean {
 
 export function isAuthError(error: unknown): boolean {
   return isApiError(error) && error.statusCode === 401
+}
+
+/**
+ * Convert an error to an ApiResponse error format (for cron.ts pattern).
+ * Returns { success: false, error: message } instead of throwing.
+ */
+export function toApiResponse(error: unknown): { success: false; error: string } {
+  if (isApiError(error)) {
+    return { success: false, error: error.message }
+  }
+  if (isAxiosError(error)) {
+    const axiosError = error as AxiosError<{ error?: string; message?: string; data?: { error?: string } }>
+    const message = axiosError.response?.data?.error
+      || axiosError.response?.data?.data?.error
+      || axiosError.response?.data?.message
+      || axiosError.message
+      || 'Unknown error'
+    return { success: false, error: message }
+  }
+  const message = error instanceof Error ? error.message : 'Unknown error'
+  return { success: false, error: message }
 }
