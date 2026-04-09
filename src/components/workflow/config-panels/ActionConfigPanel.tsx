@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { apiClient } from '@/lib/api/client'
 import {
   Select,
   SelectContent,
@@ -39,15 +40,11 @@ async function fetchAvailableActions(): Promise<GroupedActionNodes> {
     return actionsCache.promise
   }
 
-  actionsCache.promise = fetch('/api/workflows/available-actions')
-    .then(r => r.json())
+  actionsCache.promise = apiClient.get<GroupedActionNodes>('/workflows/available-actions')
     .then(data => {
-      if (data.success && data.data) {
-        actionsCache.data = data.data
-        actionsCache.timestamp = now
-        return data.data
-      }
-      throw new Error('Failed to load available actions')
+      actionsCache.data = data
+      actionsCache.timestamp = now
+      return data
     })
     .finally(() => {
       actionsCache.promise = null
