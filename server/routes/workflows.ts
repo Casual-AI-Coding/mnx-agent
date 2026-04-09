@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
-import { getDatabaseService } from '../service-registration.js'
+import { getDatabaseService, getEventBus } from '../service-registration.js'
 import { getServiceNodeRegistryService } from '../service-registration.js'
 import { WorkflowService } from '../services/domain'
 import {
@@ -14,7 +14,6 @@ import {
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import { WorkflowEngine } from '../services/workflow-engine'
-import { cronEvents } from '../services/websocket-service'
 import {
   getPaginationParams,
   createPaginatedResponse,
@@ -204,8 +203,9 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
 
   const serviceRegistry = getServiceNodeRegistryService()
   const workflowEngine = new WorkflowEngine(db, serviceRegistry)
+  const eventBus = getEventBus()
 
-  cronEvents.emitWorkflowTestStarted(id, executionId)
+  eventBus.emitWorkflowTestStarted(id, executionId)
 
   try {
     const workflowJson = JSON.stringify({ nodes, edges })
@@ -221,7 +221,7 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
       })
     })
 
-    cronEvents.emitWorkflowTestCompleted(id, executionId, { nodeResults, success: result.success })
+    eventBus.emitWorkflowTestCompleted(id, executionId, { nodeResults, success: result.success })
 
     successResponse(res, {
       executionId,
@@ -231,7 +231,7 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
     })
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Test run failed'
-    cronEvents.emitWorkflowTestCompleted(id, executionId, null, errorMessage)
+    eventBus.emitWorkflowTestCompleted(id, executionId, null, errorMessage)
     errorResponse(res, errorMessage, 500)
   }
 }))
