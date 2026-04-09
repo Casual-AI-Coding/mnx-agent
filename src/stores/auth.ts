@@ -16,37 +16,36 @@ export interface AuthUser {
 interface AuthState {
   user: AuthUser | null
   accessToken: string | null
-  refreshToken: string | null
   isAuthenticated: boolean
-  login: (user: AuthUser, accessToken: string, refreshToken: string) => void
+  login: (user: AuthUser, accessToken: string) => void
   logout: () => void
+  updateAccessToken: (accessToken: string) => void
 }
 
-// SECURITY NOTE: Tokens are persisted to localStorage for convenience.
-// This is vulnerable to XSS attacks. For production with higher security requirements:
-// 1. Use httpOnly cookies for refresh tokens (server-set via Set-Cookie header)
-// 2. Keep access tokens in memory only (remove from persist)
-// 3. Implement token rotation on each refresh
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
-      login: (user, accessToken, refreshToken) => set({
+      login: (user, accessToken) => set({
         user,
         accessToken,
-        refreshToken,
         isAuthenticated: true,
       }),
       logout: () => set({
         user: null,
         accessToken: null,
-        refreshToken: null,
         isAuthenticated: false,
       }),
+      updateAccessToken: (accessToken) => set({ accessToken }),
     }),
-    { name: 'auth-storage' }
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
   )
 )

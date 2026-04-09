@@ -237,11 +237,11 @@ export class UserService {
     return secret
   }
 
-  private generateAccessToken(payload: TokenPayload): string {
+  generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, this.getSecret(), { expiresIn: '15m' })
   }
 
-  private generateRefreshToken(payload: TokenPayload): string {
+  generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign({ ...payload, type: 'refresh' }, this.getSecret(), { expiresIn: '7d' })
   }
 
@@ -251,7 +251,29 @@ export class UserService {
       if (!secret) {
         throw new Error('JWT_SECRET environment variable is required')
       }
-      return jwt.verify(token, secret) as TokenPayload
+      const payload = jwt.verify(token, secret) as TokenPayload
+      // Reject refresh tokens when expecting access tokens
+      if ((payload as RefreshTokenPayload).type === 'refresh') {
+        return null
+      }
+      return payload
+    } catch {
+      return null
+    }
+  }
+
+  static verifyRefreshToken(token: string): RefreshTokenPayload | null {
+    try {
+      const secret = process.env.JWT_SECRET
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required')
+      }
+      const payload = jwt.verify(token, secret) as RefreshTokenPayload
+      // Must be a refresh token
+      if (payload.type !== 'refresh') {
+        return null
+      }
+      return payload
     } catch {
       return null
     }

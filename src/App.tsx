@@ -6,6 +6,7 @@ import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import AuthGuard from '@/components/AuthGuard'
 import analytics from '@/lib/analytics'
 import { useThemeEffect } from '@/hooks/useThemeEffect'
+import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 
 // Lazy load page components for code splitting
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
@@ -67,6 +68,11 @@ function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactN
   )
 }
 
+function TokenRefreshProvider({ children }: { children: React.ReactNode }) {
+  useTokenRefresh()
+  return <>{children}</>
+}
+
 function AppContent() {
   const location = useLocation()
 
@@ -106,7 +112,8 @@ function AppContent() {
   }, [])
 
   return (
-    <Routes>
+    <TokenRefreshProvider>
+      <Routes>
       <Route
         path="/login"
         element={
@@ -342,6 +349,7 @@ function AppContent() {
         />
       </Route>
     </Routes>
+    </TokenRefreshProvider>
   )
 }
 

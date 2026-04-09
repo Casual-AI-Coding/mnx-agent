@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
+import { logout as logoutApi } from '@/lib/api/auth'
 import { status, roles } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
@@ -21,12 +22,19 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
   const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
   const setRegion = (region: 'cn' | 'intl') => setCategory('api', { region })
   const setApiMode = (mode: 'direct' | 'proxy') => setCategory('api', { mode })
-  const { user, logout } = useAuthStore()
+  const { user, accessToken, logout } = useAuthStore()
   const [showRegionDropdown, setShowRegionDropdown] = useState(false)
   const [showModeDropdown, setShowModeDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (accessToken) {
+        await logoutApi(accessToken)
+      }
+    } catch {
+      // Backend logout failed, still proceed with local logout
+    }
     logout()
     navigate('/login', { replace: true })
   }

@@ -6,3 +6,4 @@ export { useAnalytics, usePageView, usePerformanceTracker } from './useAnalytics
 export { useWebSocket } from './useWebSocket'
 export { useWorkflowUpdates, type UseWorkflowUpdatesOptions, type UseWorkflowUpdatesReturn } from './useWorkflowUpdates'
 export { createWebSocketHook, type WebSocketHookOptions } from './useWebSocketSubscription'
+export { useTokenRefresh } from './useTokenRefresh'

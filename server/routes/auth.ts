@@ -44,10 +44,17 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
     return
   }
 
+  res.cookie('refreshToken', result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+
   successResponse(res, {
     user: result.user,
     accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
   })
 }))
 
@@ -65,11 +72,75 @@ router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler
 
   const loginResult = await userService.login(username, password)
 
+  res.cookie('refreshToken', loginResult.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+
   successResponse(res, {
     user: result.user,
     accessToken: loginResult.accessToken,
-    refreshToken: loginResult.refreshToken,
   }, 201)
+}))
+
+router.post('/refresh', asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken
+
+  if (!refreshToken) {
+    errorResponse(res, '未提供刷新令牌', 401)
+    return
+  }
+
+  const payload = UserService.verifyRefreshToken(refreshToken)
+  if (!payload) {
+    errorResponse(res, '刷新令牌无效或已过期', 401)
+    return
+  }
+
+  const conn = getConnection()
+  const userService = new UserService(conn)
+  const user = await userService.getUserById(payload.userId)
+
+  if (!user || !user.is_active) {
+    errorResponse(res, '用户不存在或已被禁用', 401)
+    return
+  }
+
+  const newAccessToken = userService.generateAccessToken({
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+  })
+  const newRefreshToken = userService.generateRefreshToken({
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+  })
+
+  res.cookie('refreshToken', newRefreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+
+  successResponse(res, { accessToken: newAccessToken })
+}))
+
+router.post('/logout', authenticateJWT, asyncHandler(async (req: Request, res) => {
+  res.cookie('refreshToken', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth',
+    maxAge: 0,
+  })
+
+  successResponse(res, { message: '已登出' })
 }))
 
 router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {

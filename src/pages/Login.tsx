@@ -46,7 +46,7 @@ export default function LoginPage() {
     try {
       const result = await loginApi(loginForm.username, loginForm.password)
       if (result.success && result.data) {
-        login(result.data.user, result.data.accessToken, result.data.refreshToken)
+        login(result.data.user, result.data.accessToken)
         toastSuccess('登录成功')
         navigate(from, { replace: true })
       } else {
@@ -83,7 +83,7 @@ export default function LoginPage() {
         registerForm.email || null
       )
       if (result.success && result.data) {
-        login(result.data.user, result.data.accessToken, result.data.refreshToken)
+        login(result.data.user, result.data.accessToken)
         toastSuccess('注册成功')
         navigate(from, { replace: true })
       } else {

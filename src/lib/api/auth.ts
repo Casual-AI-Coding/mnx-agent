@@ -4,11 +4,24 @@ import type { AuthUser } from '@/stores/auth'
 const authApi = axios.create({
   baseURL: '/api/auth',
   timeout: 10000,
+  withCredentials: true,
 })
 
 export interface LoginResponse {
   success: boolean
-  data?: { user: AuthUser; accessToken: string; refreshToken: string }
+  data?: { user: AuthUser; accessToken: string }
+  error?: string
+}
+
+export interface RefreshResponse {
+  success: boolean
+  data?: { accessToken: string }
+  error?: string
+}
+
+export interface LogoutResponse {
+  success: boolean
+  data?: { message: string }
   error?: string
 }
 
@@ -25,6 +38,18 @@ export async function register(
 ): Promise<LoginResponse> {
   const response = await authApi.post<LoginResponse>('/register', {
     username, password, invitationCode, email,
+  })
+  return response.data
+}
+
+export async function refreshToken(): Promise<RefreshResponse> {
+  const response = await authApi.post<RefreshResponse>('/refresh')
+  return response.data
+}
+
+export async function logout(accessToken: string): Promise<LogoutResponse> {
+  const response = await authApi.post<LogoutResponse>('/logout', {}, {
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
   return response.data
 }

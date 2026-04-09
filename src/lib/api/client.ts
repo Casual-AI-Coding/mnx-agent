@@ -1,7 +1,8 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { API_HOSTS } from '@/types'
+import { refreshToken } from './auth'
 
 export class ApiError extends Error {
   constructor(
@@ -14,14 +15,16 @@ export class ApiError extends Error {
   }
 }
 
-// Internal API client - for backend routes (uses Vite proxy)
 class InternalAPIClient {
   private client: AxiosInstance
+  private isRefreshing = false
+  private refreshSubscribers: Array<(token: string) => void> = []
 
   constructor() {
     this.client = axios.create({
       baseURL: '/api',
       timeout: 30000,
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -42,11 +45,51 @@ class InternalAPIClient {
 
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError<{ error?: string; base_resp?: { status_code: number; status_msg: string } }>) => {
-        if (error.response?.status === 401) {
+      async (error: AxiosError<{ error?: string; base_resp?: { status_code: number; status_msg: string } }>) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+          if (originalRequest.url?.includes('/auth/refresh')) {
+            useAuthStore.getState().logout()
+            window.location.href = '/login'
+            return Promise.reject(error)
+          }
+
+          if (this.isRefreshing) {
+            return new Promise((resolve) => {
+              this.refreshSubscribers.push((token: string) => {
+                originalRequest.headers['Authorization'] = `Bearer ${token}`
+                resolve(this.client.request(originalRequest))
+              })
+            })
+          }
+
+          this.isRefreshing = true
+          originalRequest._retry = true
+
+          try {
+            const response = await refreshToken()
+            if (response.success && response.data?.accessToken) {
+              const newToken = response.data.accessToken
+              useAuthStore.getState().updateAccessToken(newToken)
+              this.refreshSubscribers.forEach((cb) => cb(newToken))
+              this.refreshSubscribers = []
+              this.isRefreshing = false
+              originalRequest.headers['Authorization'] = `Bearer ${newToken}`
+              return this.client.request(originalRequest)
+            }
+          } catch {
+            useAuthStore.getState().logout()
+            window.location.href = '/login'
+          }
+
+          this.isRefreshing = false
+          this.refreshSubscribers = []
           useAuthStore.getState().logout()
           window.location.href = '/login'
+          return Promise.reject(error)
         }
+
         const statusCode = error.response?.status
         const apiCode = error.response?.data?.base_resp?.status_code
         const message =
