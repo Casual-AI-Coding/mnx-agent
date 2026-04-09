@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { useMediaManagement } from '@/hooks/useMediaManagement'
-import { MediaCard } from '@/components/media/MediaCard'
+import { AnimatedMediaGrid } from '@/components/media/AnimatedMediaGrid'
 import { TimelineItem } from '@/components/media/TimelineItem'
 import { MediaTableView } from '@/components/media/MediaTableView'
 import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/BatchOperationsToolbar'
@@ -163,20 +163,15 @@ export default function MediaManagement() {
                 {searchQuery ? '没有找到匹配的文件' : '暂无媒体文件'}
               </div>
             ) : viewMode === 'card' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredRecords.map((record) => (
-                  <MediaCard
-                    key={record.id}
-                    record={record}
-                    signedUrl={signedUrls[record.id]}
-                    isSelected={selectedIds.has(record.id)}
-                    onSelect={() => handleSelect(record.id)}
-                    onPreview={() => handlePreview(record)}
-                    onDownload={() => handleDownload(record)}
-                    onDelete={() => setDeleteDialog({ isOpen: true, record })}
-                  />
-                ))}
-              </div>
+              <AnimatedMediaGrid
+                records={filteredRecords}
+                signedUrls={signedUrls}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                onPreview={handlePreview}
+                onDownload={handleDownload}
+                onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
+              />
             ) : viewMode === 'timeline' ? (
               <div className="border rounded-lg overflow-hidden">
                 {timelineRecords.length === 0 && isLoadingMore ? (

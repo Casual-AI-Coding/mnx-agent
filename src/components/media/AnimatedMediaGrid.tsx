@@ -11,7 +11,7 @@ interface AnimatedMediaGridProps {
   records: MediaRecord[]
   signedUrls: Record<string, string>
   selectedIds: Set<string>
-  onSelect: (record: MediaRecord) => void
+  onSelect: (id: string) => void
   onPreview: (record: MediaRecord) => void
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
@@ -45,7 +45,7 @@ export function AnimatedMediaGrid({
               record={record}
               signedUrl={signedUrls[record.id]}
               isSelected={selectedIds.has(record.id)}
-              onSelect={() => onSelect(record)}
+              onSelect={() => onSelect(record.id)}
               onPreview={() => onPreview(record)}
               onDownload={() => onDownload(record)}
               onDelete={() => onDelete(record)}

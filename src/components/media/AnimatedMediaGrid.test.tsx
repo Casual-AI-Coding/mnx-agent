@@ -171,7 +171,7 @@ describe('AnimatedMediaGrid', () => {
 
     const selectButtons = screen.getAllByTestId('select-btn')
     fireEvent.click(selectButtons[0])
-    expect(mockCallbacks.onSelect).toHaveBeenCalledWith(mockRecords[0])
+    expect(mockCallbacks.onSelect).toHaveBeenCalledWith('1')
   })
 
   it('applies correct CSS grid classes', () => {
