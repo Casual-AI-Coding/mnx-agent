@@ -2,6 +2,113 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1] - 2026-04-09
+
+### Added
+
+**Backend DI & Event System**
+
+- **IEventBus Interface** - Domain event bus for decoupled communication
+  - `server/services/interfaces/event-bus.interface.ts` - Event bus interface
+  - `server/services/domain/interfaces/` - Domain interfaces split into 8 files
+  - Workflow node execution events (`node_started`, `node_completed`, `node_failed`)
+
+- **Domain Services** - Entity encapsulation layer
+  - `server/services/domain/capacity.service.ts` - Capacity service
+  - `server/services/domain/media.service.ts` - Media service
+  - `server/services/domain/webhook.service.ts` - Webhook service
+  - `server/services/domain/workflow.service.ts` - Workflow service
+
+- **Route Helpers** - Reduce route duplication
+  - `withEntityNotFound` - Entity existence validation
+  - `createPaginationMeta` - Pagination response builder
+  - `requireOwnerId` - Data isolation helper
+
+**Frontend Improvements**
+
+- **Unified API Error Handling** - Centralized error handling
+  - `src/lib/api/errors.ts` - Error classes (NetworkError, ValidationError, AuthError)
+  - Consistent error response format across all API calls
+
+- **Centralized Constants** - Shared constants module
+  - `src/lib/constants/` - Centralized constant definitions
+  - Migrated hardcoded values to shared constants
+
+### Changed
+
+**Backend Refactoring**
+
+- **CronScheduler Split** - Modular scheduler architecture
+  - `server/services/concurrency-manager.ts` - Concurrency control extracted
+  - `server/services/misfire-handler.ts` - Misfire handling logic
+  - `server/services/retry-manager.ts` - Retry logic extracted
+  - `server/services/dlq-auto-retry-scheduler.ts` - Dead letter queue retry
+
+- **QueueProcessor Split** - Queue processing modularized
+  - Extracted retry logic into `RetryManager`
+  - Extracted concurrency control into `ConcurrencyManager`
+
+- **Domain Interfaces Split** - Modular interface definitions
+  - `server/services/domain/interfaces.ts` (492 lines) → 8 separate files
+  - Each domain entity has its own interface file
+
+- **Route Updates** - Use domain services and helpers
+  - `routes/cron/jobs.ts` - Use `withEntityNotFound`, `JobService`
+  - `routes/cron/logs.ts` - Use `LogService`
+  - `routes/cron/queue.ts` - Use `TaskService`
+  - `routes/cron/webhooks.ts` - Use `WebhookService`
+  - `routes/media.ts` - Use route helpers
+  - `routes/capacity.ts` - Use `CapacityService`
+  - `routes/workflows.ts` - Use DI event bus
+
+- **Workflow Executors** - Use IEventBus for events
+  - All 7 workflow executors now emit events via IEventBus
+  - Decoupled from direct WebSocket dependencies
+
+**Frontend Refactoring**
+
+- **Component Splits** - Large components modularized
+  - `WorkflowBuilder.tsx` (2080 lines) → 8 smaller components
+  - `CronManagement.tsx` (1314 lines) → 7 smaller components
+  - `MediaManagement.tsx` (985 lines) → 4 smaller components
+  - `ServiceNodeManagement.tsx` (523 lines) → 6 modules
+  - `WorkflowMarketplace.tsx` (558 lines) → 8 modules
+  - `VoiceAsync.tsx` → Multiple components
+  - `VoiceSync.tsx` → Multiple components
+  - `WebhookManagement.tsx` → Multiple components
+
+- **API Migration** - Use centralized apiClient
+  - `capacity.ts` store migrated to apiClient
+  - `ActionConfigPanel` migrated to apiClient
+
+- **Data Split** - Modular data definitions
+  - `workflow-templates.ts` → `workflow/templates/` module
+  - `Select.tsx` → `Select/` module directory
+
+### Performance
+
+**Code Quality Improvements**
+- 151 files changed (+14,358 insertions, -7,630 deletions)
+- Maximum file size reduced: 2080 lines → ~300 lines per component
+- Domain interfaces: 1 file (492 lines) → 8 files (~60 lines avg)
+- Eliminated ~500 lines of duplicate code via route helpers
+- Test coverage maintained with updated mocks
+
+### Documentation
+
+- `docs/superpowers/plans/2026-04-09-frontend-component-split.md` - Frontend splitting plan
+- `docs/superpowers/plans/2026-04-09-split-cron-scheduler.md` - CronScheduler split plan
+- `docs/superpowers/plans/2026-04-09-queue-processor-split.md` - QueueProcessor split plan
+- Architecture spec updated with Phase 4-1, 6, 7 progress
+
+### Backward Compatibility
+
+- ✅ All API endpoints unchanged
+- ✅ No breaking changes to public interfaces
+- ✅ Domain services wrap existing database operations
+- ✅ IEventBus is additive, existing code still works
+- ✅ Frontend component splits preserve public props
+
 ## [1.7.0] - 2026-04-09
 
 ### Added
