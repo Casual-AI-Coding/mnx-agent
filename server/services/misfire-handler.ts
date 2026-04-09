@@ -4,6 +4,16 @@ import type { IMisfireHandler, ExecuteJobCallback } from './interfaces/misfire-h
 import type { CronJob } from '../database/types'
 import { MisfirePolicy } from '../database/types'
 
+/**
+ * Creates a fully initialized MisfireHandler with the callback set immediately.
+ * This prevents temporal coupling issues where the callback might be called before being set.
+ */
+export function createMisfireHandler(callback: ExecuteJobCallback): MisfireHandler {
+  const handler = new MisfireHandler()
+  handler.setExecuteJobCallback(callback)
+  return handler
+}
+
 export class MisfireHandler implements IMisfireHandler {
   private executeJobCallback: ExecuteJobCallback | null = null
 

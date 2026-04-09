@@ -10,11 +10,11 @@ import { getServiceNodeRegistry, type ServiceNodeRegistry } from './services/ser
 import { WebSocketService } from './services/websocket-service.js'
 import { NotificationService } from './services/notification-service.js'
 import { ExecutionStateManager } from './services/execution-state-manager.js'
-import { WorkflowService } from './services/domain/index.js'
+import { WorkflowService, JobService, TaskService, LogService, MediaService, WebhookService, CapacityService } from './services/domain/index.js'
 import { cronEvents, CronEventEmitter } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
-import { MisfireHandler } from './services/misfire-handler.js'
+import { createMisfireHandler } from './services/misfire-handler.js'
 import { RetryManager } from './services/retry-manager.js'
 import { DLQAutoRetryScheduler } from './services/dlq-auto-retry-scheduler.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
@@ -40,6 +40,12 @@ export const TOKENS = {
   MISFIRE_HANDLER: 'misfireHandler',
   RETRY_MANAGER: 'retryManager',
   DLQ_AUTO_RETRY_SCHEDULER: 'dlqAutoRetryScheduler',
+  JOB_SERVICE: 'jobService',
+  TASK_SERVICE: 'taskService',
+  LOG_SERVICE: 'logService',
+  MEDIA_SERVICE: 'mediaService',
+  WEBHOOK_SERVICE: 'webhookService',
+  CAPACITY_SERVICE: 'capacityService',
 } as const
 
 export async function registerServices(): Promise<void> {
@@ -65,10 +71,6 @@ export async function registerServices(): Promise<void> {
 
   container.registerSingleton(TOKENS.CONCURRENCY_MANAGER, () => {
     return new ConcurrencyManager()
-  })
-
-  container.registerSingleton(TOKENS.MISFIRE_HANDLER, () => {
-    return new MisfireHandler()
   })
 
   container.registerSingleton(TOKENS.RETRY_MANAGER, () => {
@@ -100,12 +102,16 @@ export async function registerServices(): Promise<void> {
       c.resolve(TOKENS.TASK_EXECUTOR),
       c.resolve(TOKENS.NOTIFICATION_SERVICE),
       c.resolve(TOKENS.EVENT_BUS),
-      c.resolve(TOKENS.CONCURRENCY_MANAGER),
-      c.resolve(TOKENS.MISFIRE_HANDLER)
+      c.resolve(TOKENS.CONCURRENCY_MANAGER)
     )
-    const handler = c.resolve<MisfireHandler>(TOKENS.MISFIRE_HANDLER)
-    handler.setExecuteJobCallback((job) => scheduler.executeJobTick(job))
+    const handler = createMisfireHandler((job) => scheduler.executeJobTick(job))
+    scheduler.setMisfireHandler(handler)
     return scheduler
+  })
+
+  container.registerSingleton(TOKENS.MISFIRE_HANDLER, (c) => {
+    const scheduler = c.resolve<CronScheduler>(TOKENS.CRON_SCHEDULER)
+    return scheduler.getMisfireHandler()!
   })
 
   container.registerSingleton(TOKENS.WEBSOCKET_SERVICE, () => {
@@ -122,6 +128,30 @@ export async function registerServices(): Promise<void> {
 
   container.registerSingleton(TOKENS.DLQ_AUTO_RETRY_SCHEDULER, (c) => {
     return new DLQAutoRetryScheduler(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.JOB_SERVICE, (c) => {
+    return new JobService(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.TASK_SERVICE, (c) => {
+    return new TaskService(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.LOG_SERVICE, (c) => {
+    return new LogService(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.MEDIA_SERVICE, (c) => {
+    return new MediaService(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.WEBHOOK_SERVICE, (c) => {
+    return new WebhookService(c.resolve(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.CAPACITY_SERVICE, (c) => {
+    return new CapacityService(c.resolve(TOKENS.DATABASE))
   })
 
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
@@ -190,4 +220,28 @@ export function getRetryManager(): IRetryManager {
 
 export function getDLQAutoRetryScheduler(): IDLQAutoRetryScheduler {
   return getGlobalContainer().resolve<IDLQAutoRetryScheduler>(TOKENS.DLQ_AUTO_RETRY_SCHEDULER)
+}
+
+export function getJobService(): JobService {
+  return getGlobalContainer().resolve<JobService>(TOKENS.JOB_SERVICE)
+}
+
+export function getTaskService(): TaskService {
+  return getGlobalContainer().resolve<TaskService>(TOKENS.TASK_SERVICE)
+}
+
+export function getLogService(): LogService {
+  return getGlobalContainer().resolve<LogService>(TOKENS.LOG_SERVICE)
+}
+
+export function getMediaService(): MediaService {
+  return getGlobalContainer().resolve<MediaService>(TOKENS.MEDIA_SERVICE)
+}
+
+export function getWebhookService(): WebhookService {
+  return getGlobalContainer().resolve<WebhookService>(TOKENS.WEBHOOK_SERVICE)
+}
+
+export function getCapacityService(): CapacityService {
+  return getGlobalContainer().resolve<CapacityService>(TOKENS.CAPACITY_SERVICE)
 }

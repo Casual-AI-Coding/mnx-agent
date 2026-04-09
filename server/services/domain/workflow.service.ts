@@ -7,7 +7,7 @@
 
 import type { DatabaseService } from '../../database/service-async.js'
 import type { WorkflowTemplate, WorkflowVersion, CreateWorkflowTemplate, UpdateWorkflowTemplate, CreateWorkflowVersion } from '../../database/types.js'
-import type { IWorkflowService } from './interfaces.js'
+import type { IWorkflowService } from './interfaces/index.js'
 
 export class WorkflowService implements IWorkflowService {
   constructor(private readonly db: DatabaseService) {}

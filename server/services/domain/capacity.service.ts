@@ -7,7 +7,7 @@
 
 import type { DatabaseService } from '../../database/service-async.js'
 import type { CapacityRecord, UpdateCapacityRecord } from '../../database/types.js'
-import type { ICapacityService } from './interfaces.js'
+import type { ICapacityService } from './interfaces/index.js'
 
 export class CapacityService implements ICapacityService {
   constructor(private readonly db: DatabaseService) {}

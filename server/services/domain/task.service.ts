@@ -8,7 +8,7 @@
 import type { DatabaseService } from '../../database/service-async.js'
 import type { TaskQueueItem, CreateTaskQueueItem, UpdateTaskQueueItem, DeadLetterQueueItem } from '../../database/types.js'
 import type { TaskStatus } from '../../database/types.js'
-import type { ITaskService, TaskQueryFilter, TaskQueryResult } from './interfaces.js'
+import type { ITaskService, TaskQueryFilter, TaskQueryResult } from './interfaces/index.js'
 
 export class TaskService implements ITaskService {
   constructor(private readonly db: DatabaseService) {}

@@ -7,7 +7,7 @@
 
 import type { DatabaseService } from '../../database/service-async.js'
 import type { WebhookConfig, WebhookDelivery, CreateWebhookConfig, UpdateWebhookConfig, CreateWebhookDelivery } from '../../database/types.js'
-import type { IWebhookService } from './interfaces.js'
+import type { IWebhookService } from './interfaces/index.js'
 
 export class WebhookService implements IWebhookService {
   constructor(private readonly db: DatabaseService) {}

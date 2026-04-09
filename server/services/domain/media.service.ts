@@ -7,7 +7,7 @@
 
 import type { DatabaseService } from '../../database/service-async.js'
 import type { MediaRecord, CreateMediaRecord } from '../../database/types.js'
-import type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces.js'
+import type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces/index.js'
 
 export class MediaService implements IMediaService {
   constructor(private readonly db: DatabaseService) {}

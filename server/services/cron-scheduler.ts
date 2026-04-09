@@ -41,7 +41,7 @@ export class CronScheduler {
   private notificationService: NotificationService | null = null
   private eventBus: IEventBus
   private concurrencyManager: IConcurrencyManager
-  private misfireHandler: IMisfireHandler
+  private misfireHandler: IMisfireHandler | undefined
   private timezone: string
   private defaultTimeoutMs: number
 
@@ -52,7 +52,7 @@ export class CronScheduler {
     notificationService: NotificationService | null,
     eventBus: IEventBus,
     concurrencyManager: IConcurrencyManager,
-    misfireHandler: IMisfireHandler,
+    misfireHandler?: IMisfireHandler,
     options?: CronSchedulerOptions
   ) {
     this.db = db
@@ -66,6 +66,14 @@ export class CronScheduler {
     this.defaultTimeoutMs = options?.defaultTimeoutMs ?? TASK_TIMEOUTS.DEFAULT_CRON_MS
   }
 
+  setMisfireHandler(handler: IMisfireHandler): void {
+    this.misfireHandler = handler
+  }
+
+  getMisfireHandler(): IMisfireHandler | undefined {
+    return this.misfireHandler
+  }
+
   async init(): Promise<void> {
     const activeJobs = await this.db.getActiveCronJobs()
     
@@ -77,7 +85,7 @@ export class CronScheduler {
       }
     }
 
-    await this.misfireHandler.checkAndHandleMisfires(activeJobs)
+    await this.misfireHandler!.checkAndHandleMisfires(activeJobs)
   }
 
   calculateNextRun(expression: string): Date | null {

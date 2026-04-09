@@ -38,7 +38,7 @@ import { initCronWebSocket } from './services/websocket-service'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from './lib/media-storage'
 import { toCSV } from './lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from './lib/media-token'
-import { registerServices, TOKENS, getCronSchedulerService } from './service-registration.js'
+import { registerServices, TOKENS, getCronSchedulerService, getDLQAutoRetryScheduler } from './service-registration.js'
 import { getGlobalContainer } from './container.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
 import type { DatabaseService } from './database/service-async.js'
@@ -240,6 +240,9 @@ async function initializeServices() {
 
   const cronScheduler = getCronSchedulerService()
   await cronScheduler.init()
+
+  const dlqScheduler = getDLQAutoRetryScheduler()
+  dlqScheduler.start()
   
   logger.info({ msg: 'Services initialized successfully via DI Container' })
 }

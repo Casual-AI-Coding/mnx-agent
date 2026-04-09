@@ -7,7 +7,7 @@
 
 import type { DatabaseService } from '../../database/service-async.js'
 import type { CronJob, CreateCronJob, UpdateCronJob, RunStats } from '../../database/types.js'
-import type { IJobService } from './interfaces.js'
+import type { IJobService } from './interfaces/index.js'
 
 export class JobService implements IJobService {
   constructor(private readonly db: DatabaseService) {}

@@ -2,8 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse } from '../../middleware/api-response'
-import { getDatabaseService } from '../../service-registration.js'
-import { TaskService } from '../../services/domain/task.service.js'
+import { getTaskService } from '../../service-registration.js'
 import {
   createTaskSchema,
   updateTaskSchema,
@@ -18,8 +17,7 @@ import { withEntityNotFound } from '../../utils/index.js'
 const router = Router()
 
 router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { status?: TaskStatus; job_id?: string; page: number; limit: number }
   const { status, job_id, page, limit } = query
@@ -29,8 +27,7 @@ router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (re
 }))
 
 router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const taskData = req.body
   const task = await taskService.create({
@@ -45,8 +42,7 @@ router.post('/queue', validate(createTaskSchema), asyncHandler(async (req, res) 
 }))
 
 router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTaskSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await taskService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(task, res, 'Task')) return
@@ -59,8 +55,7 @@ router.put('/queue/:id', validateParams(taskIdParamsSchema), validate(updateTask
 }))
 
 router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await taskService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(task, res, 'Task')) return
@@ -69,8 +64,7 @@ router.delete('/queue/:id', validateParams(taskIdParamsSchema), asyncHandler(asy
 }))
 
 router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const task = await taskService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(task, res, 'Task')) return
@@ -87,8 +81,7 @@ router.post('/queue/:id/retry', validateParams(taskIdParamsSchema), asyncHandler
 }))
 
 router.get('/dlq', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50
   const items = await taskService.getDeadLetterQueue(ownerId, limit)
@@ -96,8 +89,7 @@ router.get('/dlq', asyncHandler(async (req, res) => {
 }))
 
 router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const item = await taskService.getDeadLetterItemById(req.params.id, ownerId)
   if (!withEntityNotFound(item, res, 'DLQ item')) return
@@ -106,8 +98,7 @@ router.post('/dlq/:id/retry', asyncHandler(async (req, res) => {
 }))
 
 router.delete('/dlq/:id', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const taskService = new TaskService(db)
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const item = await taskService.getDeadLetterItemById(req.params.id, ownerId)
   if (!withEntityNotFound(item, res, 'DLQ item')) return

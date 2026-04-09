@@ -3,11 +3,8 @@ import { validate, validateQuery, validateParams } from '../../middleware/valida
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { withEntityNotFound } from '../../utils/index.js'
-import { getDatabaseService } from '../../service-registration.js'
-import { LogService } from '../../services/domain/log.service.js'
-import { TaskService } from '../../services/domain/task.service.js'
+import { getDatabaseService, getLogService, getTaskService, getExecutionStateManagerInstance } from '../../service-registration.js'
 import { WorkflowEngine } from '../../services/workflow-engine'
-import { getExecutionStateManagerInstance } from '../../service-registration.js'
 import {
   executionLogQuerySchema,
   executionLogIdParamsSchema,
@@ -22,8 +19,7 @@ import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-iso
 const router = Router()
 
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const logService = new LogService(db)
+  const logService = getLogService()
   const ownerId = buildOwnerFilter(req).params[0]
   const query = req.query as unknown as { job_id?: string; status?: string; limit: number }
   const { job_id, status, limit } = query
@@ -33,9 +29,8 @@ router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (
 }))
 
 router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const logService = new LogService(db)
-  const taskService = new TaskService(db)
+  const logService = getLogService()
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await logService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(log, res, 'Log')) return
@@ -51,8 +46,7 @@ router.get('/logs/:id', validateParams(executionLogIdParamsSchema), asyncHandler
 }))
 
 router.get('/logs/:id/details', validateParams(executionLogIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const logService = new LogService(db)
+  const logService = getLogService()
   const ownerId = buildOwnerFilter(req).params[0]
   const log = await logService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(log, res, 'Log')) return
@@ -71,7 +65,6 @@ router.post('/executions/:id/pause', asyncHandler(async (req, res) => {
 }))
 
 router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
@@ -96,7 +89,6 @@ router.post('/executions/:id/resume', asyncHandler(async (req, res) => {
 }))
 
 router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   
@@ -115,7 +107,6 @@ router.post('/executions/:id/cancel', asyncHandler(async (req, res) => {
 }))
 
 router.get('/executions/:id', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const stateManager = getExecutionStateManagerInstance()
   const state = await stateManager.getById(req.params.id)
   

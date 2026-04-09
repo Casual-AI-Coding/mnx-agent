@@ -2,8 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
-import { getDatabaseService } from '../service-registration.js'
-import { MediaService } from '../services/domain'
+import { getMediaService } from '../service-registration.js'
 import {
   listMediaQuerySchema,
   mediaIdParamsSchema,
@@ -32,7 +31,7 @@ const upload = multer({
 })
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const { type, source, includeDeleted } = req.query
   const { page, limit, offset } = getPaginationParams(req.query)
   const ownerId = buildOwnerFilter(req).params[0]
@@ -50,7 +49,7 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 }))
 
 router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getById(req.params.id, ownerId)
   const includeDeleted = req.query.includeDeleted === 'true'
@@ -64,14 +63,14 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
 }))
 
 router.post('/', validate(createMediaRecordSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const record = await db.create(req.body, ownerId)
   createdResponse(res, record)
 }))
 
 router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaRecordSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.update(req.params.id, req.body, ownerId)
   if (!withEntityNotFound(record, res, 'Media record')) return
@@ -79,7 +78,7 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
 }))
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const { ids } = req.body as { ids: string[] }
   const ownerId = buildOwnerFilter(req).params[0]
 
@@ -98,7 +97,7 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
 }))
 
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
 
   const record = await db.getById(req.params.id, ownerId)
@@ -119,7 +118,7 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
 }))
 
 router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   if (!req.file) {
     errorResponse(res, 'No file uploaded', 400)
     return
@@ -149,7 +148,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
 }))
 
 router.post('/upload-from-url', asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const { url, filename, type, source } = req.body
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
@@ -182,7 +181,7 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
 }))
 
 router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   if (!req.user) {
     errorResponse(res, 'Unauthorized', 401)
     return
@@ -201,7 +200,7 @@ router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async
 }))
 
 router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const { token } = req.query
 
   if (!token || typeof token !== 'string') {
@@ -233,7 +232,7 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
 }))
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
-  const db = new MediaService(getDatabaseService())
+  const db = getMediaService()
   const { ids } = req.body as { ids: string[] }
   const records = await db.getByIds(ids)
 

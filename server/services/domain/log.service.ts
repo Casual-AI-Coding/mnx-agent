@@ -6,7 +6,7 @@ import type {
   CreateExecutionLogDetail,
   UpdateExecutionLog,
 } from '../../database/types.js'
-import type { ILogService, LogFilter, LogStats } from './interfaces.js'
+import type { ILogService, LogFilter, LogStats } from './interfaces/index.js'
 
 export class LogService implements ILogService {
   constructor(private readonly db: DatabaseService) {}
