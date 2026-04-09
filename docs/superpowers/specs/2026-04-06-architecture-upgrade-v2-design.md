@@ -3,7 +3,7 @@
 > 版本: 2.0.0
 > 日期: 2026-04-06
 > 作者: P8架构师
-> 状态: **实施中** - Phase 8 完成，Phase 4/6/7 待实施
+> 状态: **实施中** - Phase 8/4-2/6/7 完成，剩余 Phase 5/7-优化 待实施
 
 ## 一、现状分析总结
 
@@ -51,37 +51,43 @@
 | jobs.ts (路由) | 424 | 需提取通用模式 |
 
 **前端**:
-| 文件 | 行数 | 问题 |
-|------|------|------|
-| workflow-templates.ts | 982 | 模板数据应分离 |
-| VoiceAsync.tsx | 965 | 页面职责过多 |
-| DeadLetterQueue.tsx | 938 | 多个Modal内嵌 |
-| TestRunPanel.tsx | 834 | 多个子组件内嵌 |
-| InvitationCodes.tsx | 774 | 功能堆叠 |
-| WebhookManagement.tsx | 765 | Modal过重 |
-| VoiceSync.tsx | 733 | 页面职责过多 |
-| cron.ts (API) | 607 | 需按领域拆分 |
+| 文件 | 行数 | 问题 | 状态 |
+|------|------|------|------|
+| workflow-templates.ts | ~~982~~ | ~~模板数据应分离~~ | ✅ 已拆分为模块 |
+| VoiceAsync.tsx | ~~965~~ | ~~页面职责过多~~ | ✅ 已拆分为3组件 |
+| DeadLetterQueue.tsx | ~~938~~ | ~~多个Modal内嵌~~ | ✅ 已拆分为6组件 |
+| TestRunPanel.tsx | 834 | 多个子组件内嵌 | 待拆分 |
+| InvitationCodes.tsx | ~~774~~ | ~~功能堆叠~~ | ✅ 已拆分为4组件 |
+| WebhookManagement.tsx | ~~765~~ | ~~Modal过重~~ | ✅ 已拆分为5组件 |
+| VoiceSync.tsx | ~~733~~ | ~~页面职责过多~~ | ✅ 已拆分为6组件 |
+| WorkflowMarketplace.tsx | ~~558~~ | ~~组件过大~~ | ✅ 已拆分为10组件 |
+| ServiceNodeManagement.tsx | ~~523~~ | ~~组件过大~~ | ✅ 已拆分为5组件 |
+| cron.ts (API) | 607 | 需按领域拆分 | 待拆分 |
 
-#### 1.0.4 硬编码重复
+#### 1.0.4 硬编码重复 ✅ 已解决
 
-| 常量 | 重复位置 | 问题 |
-|------|----------|------|
-| BALANCE_CACHE_TTL_MS | timeouts.ts + capacity-checker.ts | 30000重复定义 |
-| HEARTBEAT_INTERVAL | websocket-service.ts | 未使用WEBSOCKET_TIMEOUTS |
-| concurrency: 5 | settings-service.ts + defaults.ts | 前后端重复 |
-| timeout: 30000 | settings-service.ts + defaults.ts | 前后端重复 |
-| storagePath | settings-service.ts + defaults.ts | 前后端重复 |
+创建了 `src/lib/config/constants.ts` 统一管理前端常量：
+- `TIMEOUTS` - API请求超时配置
+- `WEBSOCKET` - 心跳、重连配置
+- `PAGINATION` - 分页默认值
+- `QUEUE` - 队列配置
+- `CHARACTER_LIMITS` - 字符限制
+- `WORKFLOW` - 工作流配置
 
-#### 1.0.5 代码重复模式 (~440行)
+**已更新文件**: client.ts, websocket-client.ts, Pagination.tsx, useWorkflowHistory.ts, CreateJobModal.tsx, EditJobModal.tsx, form-schemas.ts, defaults.ts, TemplateSelectorModal.tsx
 
-| 模式 | 影响文件 | 重复行数 |
-|------|----------|----------|
-| CRUD not-found检查 | 15+路由 | ~100行 |
-| Pagination计算 | 6文件 | ~30行 |
-| Workflow权限检查 | workflows.ts (3x) | ~135行 |
-| Domain Service样板 | 3服务 | ~60行 |
-| Repository create逻辑 | 6仓库 | ~80行 |
-| JSON验证 | 4文件 | ~32行 |
+#### 1.0.5 代码重复模式 ✅ 已解决
+
+创建了 `server/utils/route-helpers.ts` 提取通用模式：
+- `withEntityNotFound<T>()` - 类型安全的404检查
+- `getPaginationParams()` - 分页参数提取
+- `createPaginatedResponse()` - 标准化分页响应
+- `createPaginationMeta()` - 自定义键的分页元数据
+- `parseJsonField()` - JSON字段验证
+
+**已重构文件**: workflows.ts, media.ts, templates.ts, cron/jobs.ts, cron/webhooks.ts, cron/queue.ts, cron/logs.ts, system-config.ts, audit.ts
+
+**减少重复代码**: ~187行
 
 ### 1.1 核心问题清单
 
@@ -98,11 +104,46 @@
 
 ### 1.2 已完成的改进
 
+**架构基础设施:**
 - ✅ `packages/shared-types` 包已创建
 - ✅ `server/repositories/` 目录已存在
 - ✅ `server/infrastructure/` 目录已存在
 - ✅ `server/services/domain/` 目录已存在
 - ✅ `server/services/workflow/executors/` 已实现Strategy模式
+
+**Phase 8: 服务层重构:**
+- ✅ IEventBus 接口创建，所有服务通过 DI 注入事件总线
+- ✅ CronScheduler 拆分为 CronScheduler + ConcurrencyManager + MisfireHandler
+- ✅ QueueProcessor 拆分为 QueueProcessor + RetryManager + DLQAutoRetryScheduler
+
+**Phase 3: 路由层重构:**
+- ✅ 创建 `server/utils/route-helpers.ts` 提取通用模式
+- ✅ 重构 9 个路由文件，减少 ~187 行重复代码
+- ✅ 创建 `server/utils/permission-validator.ts` 提取权限检查
+
+**Phase 9: 领域服务:**
+- ✅ 创建 MediaService, WorkflowService, WebhookService, CapacityService
+- ✅ 更新 5 个路由使用领域服务
+
+**Phase 4-2: 前端API迁移:**
+- ✅ ActionConfigPanel.tsx 迁移到 apiClient
+- ✅ capacity.ts 迁移到 apiClient
+
+**Phase 6: 常量去重:**
+- ✅ 创建 `src/lib/config/constants.ts` 统一前端常量
+- ✅ 更新 10 个文件使用集中常量
+
+**Phase 7: 大文件拆分:**
+- ✅ workflow-templates.ts (982行) → 3 文件
+- ✅ VoiceAsync.tsx (965行) → 3 组件
+- ✅ DeadLetterQueue.tsx (938行) → 6 组件
+- ✅ InvitationCodes.tsx (774行) → 4 组件
+- ✅ WebhookManagement.tsx (765行) → 5 组件
+- ✅ VoiceSync.tsx (733行) → 6 组件
+- ✅ WorkflowMarketplace.tsx (558行) → 10 组件
+- ✅ ServiceNodeManagement.tsx (523行) → 5 组件
+- ✅ Select.tsx (596行) → 11 组件
+- ✅ ActionConfigPanel.tsx 字段定义提取
 
 ### 1.3 架构现状图
 
