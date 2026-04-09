@@ -1,8 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CapacityRecord, ServiceType } from '../types/cron'
-import { useSettingsStore } from '@/settings/store'
-import { useAuthStore } from './auth'
+import { apiClient } from '@/lib/api/client'
 
 interface MiniMaxModelRemain {
   model_name: string
@@ -30,45 +29,18 @@ interface CapacityState {
 }
 
 async function fetchCapacityFromApi(): Promise<{ records: CapacityRecord[]; codingPlan: CodingPlanResponse | null }> {
-  const { settings } = useSettingsStore.getState()
-  const { minimaxKey: apiKey, region } = settings.api
-  const { accessToken } = useAuthStore.getState()
-  
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`
-  }
-  
-  if (apiKey && apiKey.trim()) {
-    const cleanKey = apiKey.trim()
-    if (/^[\x00-\x7F]*$/.test(cleanKey)) {
-      headers['X-API-Key'] = cleanKey
-      headers['X-Region'] = region === 'cn' ? 'cn' : 'intl'
-    }
-  }
-  
-  const response = await fetch('/api/capacity', {
-    method: 'GET',
-    headers,
-  })
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch capacity: ${response.status}`)
-  }
-  
-  const data = await response.json()
-  
-  const codingPlan = data?.data?.codingPlan as CodingPlanResponse | null
-  const records = data?.data?.records || []
-  
+  const response = await apiClient.get<{ success: boolean; data: { records: Record<string, unknown>[]; codingPlan: CodingPlanResponse } }>('/capacity')
+
+  const codingPlan = response.data?.codingPlan as CodingPlanResponse | null
+  const records = response.data?.records || []
+
   return {
     records: records.map((r: Record<string, unknown>) => ({
       id: String(r.id || ''),
       serviceType: r.service_type as ServiceType,
       remainingQuota: Number(r.remaining_quota) || 0,
       totalQuota: Number(r.total_quota) || 0,
-      resetAt: r.reset_at as string | null,
+      resetAt: (r.reset_at as string | null) || '',
       lastCheckedAt: r.last_checked_at as string || new Date().toISOString(),
     })),
     codingPlan,
