@@ -19,6 +19,7 @@ import { TaskQueueItem } from '../../database/types'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
 import { formatDuration } from './utils'
 import { JobService } from '../../services/domain/job.service.js'
+import { withEntityNotFound } from '../../utils/index.js'
 
 const router = Router()
 
@@ -70,10 +71,7 @@ router.get('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(asyn
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   successResponse(res, job)
 }))
 
@@ -82,10 +80,7 @@ router.put('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(updateCr
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const existingJob = await jobService.getById(req.params.id, ownerId)
-  if (!existingJob) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(existingJob, res, 'Job')) return
   const job = await jobService.update(req.params.id, req.body, ownerId)
   successResponse(res, job)
 }))
@@ -95,10 +90,7 @@ router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(update
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const existingJob = await jobService.getById(req.params.id, ownerId)
-  if (!existingJob) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(existingJob, res, 'Job')) return
   const job = await jobService.update(req.params.id, req.body, ownerId)
   successResponse(res, job)
 }))
@@ -108,10 +100,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const tasks: TaskQueueItem[] = await db.getTasksByJobId(req.params.id, ownerId)
   for (const task of tasks) {
     await db.deleteTask(task.id, ownerId)
@@ -126,10 +115,7 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
 
   try {
     await scheduler.executeJobTick(job)
@@ -146,10 +132,7 @@ router.post('/jobs/:id/toggle', validateParams(cronJobIdParamsSchema), asyncHand
   const scheduler = getCronSchedulerService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const updatedJob = await jobService.toggle(req.params.id, ownerId)
 
   if (updatedJob) {
@@ -168,10 +151,7 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   
   const clonedJob = await jobService.create({
     name: `${job.name} (Copy)`,
@@ -191,10 +171,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   
   const scheduler = getCronSchedulerService()
   
@@ -296,10 +273,7 @@ router.post('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), validate(ad
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const { tag } = req.body
   await jobService.addTag(req.params.id, tag)
   const tags = await jobService.getTags(req.params.id)
@@ -311,10 +285,7 @@ router.delete('/jobs/:id/tags/:tag', validateParams(jobTagParamsSchema), asyncHa
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   await jobService.removeTag(req.params.id, req.params.tag)
   const tags = await jobService.getTags(req.params.id)
   successResponse(res, { tags })
@@ -325,10 +296,7 @@ router.get('/jobs/:id/tags', validateParams(cronJobIdParamsSchema), asyncHandler
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const tags = await jobService.getTags(req.params.id)
   successResponse(res, { tags })
 }))
@@ -353,10 +321,7 @@ router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), val
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const { depends_on_job_id } = req.body
 
   if (req.params.id === depends_on_job_id) {
@@ -365,10 +330,7 @@ router.post('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), val
   }
 
   const dependsOnJob = await jobService.getById(depends_on_job_id, ownerId)
-  if (!dependsOnJob) {
-    errorResponse(res, 'Dependent job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(dependsOnJob, res, 'Dependent job')) return
 
   const hasCircular = await jobService.hasCircularDependency(req.params.id, depends_on_job_id)
   if (hasCircular) {
@@ -386,10 +348,7 @@ router.delete('/jobs/:id/dependencies/:depId', validateParams(jobDependencyParam
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   await jobService.removeDependency(req.params.id, req.params.depId)
   const dependencies = await jobService.getDependencies(req.params.id)
   successResponse(res, { dependencies })
@@ -400,10 +359,7 @@ router.get('/jobs/:id/dependencies', validateParams(cronJobIdParamsSchema), asyn
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const dependencies = await jobService.getDependencies(req.params.id)
   successResponse(res, { dependencies })
 }))
@@ -413,10 +369,7 @@ router.get('/jobs/:id/dependents', validateParams(cronJobIdParamsSchema), asyncH
   const jobService = new JobService(db)
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
-  if (!job) {
-    errorResponse(res, 'Job not found', 404)
-    return
-  }
+  if (!withEntityNotFound(job, res, 'Job')) return
   const dependents = await jobService.getDependents(req.params.id)
   successResponse(res, { dependents })
 }))
