@@ -17,6 +17,11 @@ import multer from 'multer'
 import axios from 'axios'
 import archiver from 'archiver'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
+import {
+  getPaginationParams,
+  createPaginatedResponse,
+  withEntityNotFound,
+} from '../utils/index.js'
 
 const router = Router()
 
@@ -27,28 +32,20 @@ const upload = multer({
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const { type, source, page, limit, includeDeleted } = req.query
-  const offset = (Number(page) - 1) * Number(limit)
+  const { type, source, includeDeleted } = req.query
+  const { page, limit, offset } = getPaginationParams(req.query)
   const ownerId = buildOwnerFilter(req).params[0]
 
   const result = await db.getMediaRecords({
     type: type as any,
     source: source as any,
-    limit: Number(limit),
+    limit,
     offset,
     includeDeleted: !!includeDeleted,
     ownerId,
   })
 
-  successResponse(res, {
-    records: result.records,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total: result.total,
-      totalPages: Math.ceil(result.total / Number(limit)),
-    }
-  })
+  successResponse(res, createPaginatedResponse(result.records, result.total, page, limit))
 }))
 
 router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
@@ -56,7 +53,9 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.getMediaRecordById(req.params.id, ownerId)
   const includeDeleted = req.query.includeDeleted === 'true'
-  if (!record || (!includeDeleted && record.is_deleted)) {
+  
+  if (!withEntityNotFound(record, res, 'Media record')) return
+  if (!includeDeleted && record.is_deleted) {
     errorResponse(res, 'Media record not found', 404)
     return
   }
@@ -74,10 +73,7 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
   const db = getDatabaseService()
   const ownerId = buildOwnerFilter(req).params[0]
   const record = await db.updateMediaRecord(req.params.id, req.body, ownerId)
-  if (!record) {
-    errorResponse(res, 'Media record not found', 404)
-    return
-  }
+  if (!withEntityNotFound(record, res, 'Media record')) return
   successResponse(res, record)
 }))
 
@@ -105,7 +101,8 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
   const ownerId = buildOwnerFilter(req).params[0]
 
   const record = await db.getMediaRecordById(req.params.id, ownerId)
-  if (!record || record.is_deleted) {
+  if (!withEntityNotFound(record, res, 'Media record')) return
+  if (record.is_deleted) {
     errorResponse(res, 'Media record not found', 404)
     return
   }
