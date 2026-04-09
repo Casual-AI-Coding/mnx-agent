@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { TYPE_GRADIENTS, TYPE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import type { MediaRecord } from '@/types/media'
+import { MediaCardPreview } from './MediaCardPreview'
 
 interface MediaCardProps {
   record: MediaRecord
@@ -26,14 +27,27 @@ export function MediaCard({
   onDelete,
 }: MediaCardProps) {
   const [showActions, setShowActions] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   return (
     <div
       className={`relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
         isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
       } hover:scale-[1.02] hover:shadow-xl`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseEnter={() => {
+        setShowActions(true)
+        if (record.type === 'image' && signedUrl) {
+          setShowPreview(true)
+        }
+      }}
+      onMouseLeave={() => {
+        setShowActions(false)
+        setShowPreview(false)
+      }}
+      onMouseMove={(e) => {
+        setMousePosition({ x: e.clientX, y: e.clientY })
+      }}
       onClick={() => onSelect()}
     >
       {record.type === 'image' && signedUrl ? (
@@ -125,6 +139,14 @@ export function MediaCard({
           </div>
         </div>
       </div>
+      {record.type === 'image' && signedUrl && (
+        <MediaCardPreview
+          record={record}
+          signedUrl={signedUrl}
+          mousePosition={mousePosition}
+          visible={showPreview}
+        />
+      )}
     </div>
   )
 }
