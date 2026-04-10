@@ -2,6 +2,71 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2026-04-10
+
+### Added
+
+**Media Management UX Enhancements**
+
+- **AnimatedMediaGrid Component** - Elastic fly-in animation for media cards
+  - `src/components/media/AnimatedMediaGrid.tsx` (58 lines) - Motion grid container
+  - `src/components/media/AnimatedMediaGrid.test.tsx` (194 lines) - Test coverage
+  - 4-direction random fly-in with stagger effect (0.06s per card)
+  - Smooth transitions using Framer Motion spring physics
+
+- **MediaCard Hover Preview** - Mouse-following tooltip for image preview
+  - `src/components/media/MediaCardPreview.tsx` (84 lines) - Preview portal
+  - `src/components/media/MediaCardPreview.test.tsx` (69 lines) - Test coverage
+  - Smart positioning (avoids viewport edges)
+  - Real-time mouse tracking with 280px preview width
+
+- **Animation Variants Library** - Reusable animation configurations
+  - `src/lib/animations/media-variants.ts` (61 lines) - Animation variants
+  - `src/lib/animations/media-variants.test.ts` (53 lines) - Test coverage
+  - `getRandomFlyInDirection()` - Random start position generator
+  - `gridContainerVariants` - Container stagger configuration
+  - `cardVariants` - Spring-based card animations
+
+- **Smart Pagination Refill** - Auto-refill when deleting last item
+  - `src/hooks/useMediaManagement.ts` (+69/-14) - Refill logic
+  - `src/hooks/useMediaManagement.refill.test.ts` (160 lines) - Test coverage
+  - Auto-fetch previous page when last item deleted on page > 1
+  - Update pagination metadata after batch delete
+  - Avoid stale closure issues with paginationRef
+
+### Fixed
+
+- **ConfirmDialog Parameter Bug** - Pass record to handleDelete correctly
+  - `src/pages/MediaManagement.tsx` - Fix delete callback parameter
+  - Prevents undefined error when confirming deletion
+
+### Changed
+
+- **MediaManagement Page Refactor** - Use AnimatedMediaGrid component
+  - Replaced static grid with animated version
+  - Cleaner code: -16 lines, +11 lines net change
+  - Improved UX with smooth load animations
+
+### Performance
+
+**Code Quality Metrics**
+- 13 files changed (+2,859 insertions, -32 deletions)
+- Test coverage: 3 new test files (427 lines total)
+- Animation system: Reusable variants reduce duplication
+- Smart refill: Better pagination UX, fewer edge cases
+
+### Backward Compatibility
+
+- ✅ All API endpoints unchanged
+- ✅ No breaking changes to public interfaces
+- ✅ AnimatedMediaGrid wraps existing MediaCard component
+- ✅ MediaCardPreview is additive (optional feature)
+
+### Documentation
+
+- `docs/superpowers/specs/2026-04-09-media-management-enhancements-design.md` - Design specification
+- `docs/superpowers/plans/2026-04-09-media-management-enhancements.md` - Implementation plan
+
 ## [1.7.1] - 2026-04-09
 
 ### Added
