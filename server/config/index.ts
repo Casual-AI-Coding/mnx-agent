@@ -68,6 +68,30 @@ const REQUIRED_ENV_VARS = [
 type RequiredEnvVar = typeof REQUIRED_ENV_VARS[number]
 
 // ============================================================================
+// JWT_SECRET Validation
+// ============================================================================
+
+const JWT_SECRET_MIN_LENGTH = 32
+
+function validateJwtSecret(): void {
+  const jwtSecret = process.env.JWT_SECRET
+
+  if (!jwtSecret) {
+    throw new Error(
+      'JWT_SECRET environment variable is required. ' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    )
+  }
+
+  if (jwtSecret.length < JWT_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters (got ${jwtSecret.length}). ` +
+      'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    )
+  }
+}
+
+// ============================================================================
 // Config Loading
 // ============================================================================
 
@@ -104,6 +128,7 @@ function validateRequiredEnvVars(): void {
 export function loadConfig(): AppConfig {
   if (process.env.NODE_ENV !== 'test') {
     validateRequiredEnvVars()
+    validateJwtSecret()
   }
 
   const nodeEnv = (process.env.NODE_ENV as AppConfig['server']['nodeEnv']) || 'development'
@@ -125,7 +150,7 @@ export function loadConfig(): AppConfig {
       connectionTimeout: parseInteger(process.env.DB_CONNECTION_TIMEOUT, 5000),
     },
     auth: {
-      jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+      jwtSecret: process.env.JWT_SECRET!,
       bcryptRounds: parseInteger(process.env.BCRYPT_ROUNDS, 12),
     },
     minimax: {

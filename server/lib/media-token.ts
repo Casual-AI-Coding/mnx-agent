@@ -1,10 +1,21 @@
 import { createHash, randomBytes } from 'crypto'
 
-function getMediaTokenSecret(): string {
-  const secret = process.env.JWT_SECRET
+export function getMediaTokenSecret(): string {
+  const secret = process.env.MEDIA_TOKEN_SECRET
+  
   if (!secret) {
-    throw new Error('JWT_SECRET environment variable is required')
+    throw new Error(
+      'MEDIA_TOKEN_SECRET environment variable is required. ' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    )
   }
+  
+  if (secret.length < 32) {
+    throw new Error(
+      `MEDIA_TOKEN_SECRET must be at least 32 characters (got ${secret.length})`
+    )
+  }
+  
   return secret
 }
 
