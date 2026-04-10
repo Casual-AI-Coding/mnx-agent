@@ -2,6 +2,207 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-04-10
+
+### Added
+
+**Security Enhancements - 全面安全加固**
+
+- **Environment Configuration Template** - `.env.example` 模板文件
+  - 新增完整的配置示例，包含所有必需和可选环境变量
+  - 包含数据库、JWT、API 密钥、Cron 等配置项说明
+  - 52 行变更，提升开发者配置体验
+
+- **Separate Media Token Secret** - 分离媒体令牌密钥
+  - `MEDIA_TOKEN_SECRET` 环境变量独立于 `JWT_SECRET`
+  - 媒体下载令牌和用户认证令牌使用不同密钥
+  - 提升安全性，防止密钥泄露影响范围扩大
+  - `server/lib/media-token.ts` (+19/-0)
+
+- **JWT_SECRET Fail-fast Validation** - JWT 密钥快速验证
+  - 服务启动时验证 `JWT_SECRET` 存在且长度 >= 32 字符
+  - 防止弱密钥配置导致的安全风险
+  - `server/config/index.ts` (+61/-0)
+
+- **Atomic Invitation Code Validation** - 邀请码原子化验证
+  - 使用数据库事务确保邀请码验证和使用操作的原子性
+  - 防止并发请求导致的邀请码重复使用风险
+  - `server/services/user-service.ts` (+82/-0)
+
+- **Atomic Capacity Tracking** - 容量追踪原子化
+  - 使用数据库事务确保容量检查和更新操作的原子性
+  - 防止并发请求导致的容量计数错误
+  - `server/repositories/capacity-repository.ts` (+29/-0)
+
+- **IDOR Prevention in Job Stats Updates** - 任务统计 IDOR 防护
+  - 确保只有任务创建者可以更新任务统计数据
+  - 防止用户通过 IDOR 攻击修改他人任务的统计信息
+  - `server/repositories/job-repository.ts` (+23/-0)
+
+- **Remove Query Parameter Token Support** - 移除不安全的 token 查询参数
+  - 移除 `?token=` 查询参数认证方式，仅使用 httpOnly Cookie + Bearer Token
+  - 防止 token 通过 URL 参数泄露（URL 日志、浏览器历史记录）
+  - 提升认证安全性
+  - `server/middleware/auth-middleware.ts` (+16/-0)
+
+- **Comprehensive Test Coverage** - 安全相关测试覆盖
+  - `server/services/__tests__/user-service-race.test.ts` (283行) - 用户服务竞态条件测试
+  - `server/middleware/__tests__/auth-middleware.test.ts` (161行) - 认证中间件测试
+  - `server/repositories/__tests__/capacity-repository.test.ts` (163行) - 容量仓库安全测试
+  - `server/repositories/__tests__/job-repository-security.test.ts` (135行) - 任务仓库安全测试
+  - `server/lib/__tests__/media-token.test.ts` (76行) - 媒体令牌测试
+  - `server/config/__tests__/config-validation.test.ts` (82行) - 配置验证测试
+
+**Documentation Reorganization**
+
+- **Archive Structure** - 文档归档结构重组
+  - `docs/superpowers/archive/v1.3/` - v1.3 相关计划归档
+  - `docs/superpowers/archive/v1.4/` - v1.4 相关计划归档
+  - `docs/superpowers/archive/v1.6/` - v1.6 相关计划归档
+  - `docs/superpowers/archive/v1.7/` - v1.7 相关计划归档
+  - `docs/superpowers/specs/` - 规格文档集中存储
+  - 按版本归档历史计划，保持文档结构清晰
+
+**Audit Logs Enhancements**
+
+- **Username Column & User Filter** - 用户名列和用户筛选
+  - `server/routes/audit.ts` (+20/-0) - `/api/audit/unique-users` API
+  - `server/repositories/user-repository.ts` - 新增 username 字段查询
+  - `packages/shared-types/entities/audit-log.ts` (+1/-0) - username 字段
+  - `src/lib/api/audit.ts` (+22/-0) - 前端 API 客户端
+  - 管理员可按用户名筛选审计日志
+
+### Changed
+
+**Audit Logs UI Refactoring**
+
+- **Redesigned Filter Bar & List Layout** - 筛选栏和列表布局重构
+  - `src/pages/AuditLogs.tsx` (+430/-0) - 全面重构
+  - `refactor(audit): redesign filter bar and list layout` - 响应式 flexbox 布局
+  - `fix(audit): add time sort, use grid layout for better alignment` - 时间排序
+  - `fix(audit): adjust grid columns for better distribution` - 网格列优化
+  - `fix(audit): add unique paths API and fix list layout` - 独立路径 API
+  - `fix(audit): use flex justify-between for responsive column distribution` - 响应式列分布
+  - `fix(audit): increase non-path column widths` - 非路径列宽度优化
+  - `fix(audit): use table layout like UserManagement` - 统一表格布局
+  - `fix(audit): wrap table in CardContent` - CardContent 包装
+  - `fix(audit): single line path display` - 单行路径显示
+  - `fix(audit): merge path info into single line` - 路径信息合并
+
+- **Layout & UX Improvements** - 布局和用户体验改进
+  - `fix: uniform grid columns, reduce capacity card height` - 网格列统一
+  - `src/pages/CapacityMonitor.tsx` (+20/-0) - 容量监控页面优化
+  - 更好的响应式布局和间距
+
+**UI/UX Animations**
+
+- **Smooth Select Dropdown Animations** - 下拉菜单流畅动画
+  - `src/components/ui/Select/SelectContent.tsx` (+53/-0) - Framer Motion 动画
+  - 平滑的打开/关闭过渡效果
+  - 更好的视觉反馈
+
+**Media View Visual Improvements**
+
+- **Border Removal** - 移除视觉干扰边框
+  - `src/components/media/MediaTableView.tsx` (+14/-0) - 移除表格边框
+  - `src/components/media/TimelineItem.tsx` (+4/-0) - 移除时间轴边框
+  - `fix(media): remove borders from timeline view` - 时间轴边框移除
+  - `fix(media): remove row divider borders in list view` - 列表分隔线移除
+  - `fix(media): remove harsh borders from list and timeline views` - 硬边框移除
+  - 更简洁、现代的视觉设计
+
+**Backend Service Updates**
+
+- **Error Handling & Security Refinements** - 错误处理和安全优化
+  - `fix(security): improve error handling and refine security fixes` - 综合安全优化
+  - `server/middleware/auth-middleware.ts` - 更好的错误响应
+  - `server/services/notification-service.ts` (+22/-0) - 通知服务安全检查
+
+- **Async Database Operations** - 数据库异步化
+  - `server/database/service-async.ts` (+10/-0) - 异步数据库方法
+  - `server/services/domain/interfaces/job.interface.ts` (+5/-0) - 任务接口更新
+  - `server/services/domain/job.service.ts` (+2/-0) - 任务服务更新
+
+- **Route & Service Updates** - 路由和服务更新
+  - `server/routes/media.ts` (+9/-0) - 媒体路由优化
+  - 前端和后端同步更新
+
+### Fixed
+
+- **SQL Syntax Correction** - SQL 语法修正
+  - `fix(audit): correct SQL syntax for getUniqueAuditUsers query` - 修正 SQL 查询语法
+  - `server/repositories/user-repository.ts` - 正确的 SQL 查询
+
+- **UI Layout Issues** - UI 布局问题
+  - `fix(audit): close bg-gradient div properly` - 正确关闭渐变背景 div
+  - `fix(ui): update listboxRef directly in ref callback for proper outside click detection` - 正确的外部点击检测
+  - React ref 回调中直接更新 listboxRef
+
+- **Translation Updates** - 翻译更新
+  - `src/i18n/locales/en.json` (+2/-1) - 英文翻译调整
+
+- **Dev CLI Enhancement** - 开发 CLI 增强
+  - `scripts/dev.js` (+6/-0) - 新增调试命令支持
+
+### Performance
+
+**Code Quality Metrics**
+- **61 files changed** (+1847 insertions, -828 deletions)
+- **Test Coverage**: +7 test files (1,000+ lines total)
+  - Security tests: user-service-race, auth-middleware, capacity-repository, job-repository-security
+  - Media token test, config validation test
+  - User service test improvements (+303/-0)
+- **Security**: Comprehensive security hardening (atomic operations, fail-fast validation, IDOR prevention)
+- **Audit Logs**: Better UX, username column, responsive layout
+- **UI/UX**: Smooth animations, clean visual design (border removal)
+- **Documentation**: Organized archive structure, moved specs to dedicated directory
+
+### Backward Compatibility
+
+- ✅ All API endpoints unchanged (except new `/api/audit/unique-users`)
+- ✅ No breaking API changes
+- ✅ Environment variables backward compatible (`MEDIA_TOKEN_SECRET` optional)
+- ✅ Audit logs UI improvements backward compatible (no data structure changes)
+- ✅ Media view style changes不影响功能逻辑
+- ✅ Query parameter token removal is a **security improvement** (authentication still works via httpOnly cookie + bearer token)
+
+### Breaking Changes
+
+- ⚠️ **Query Parameter Token Authentication Removed** - 移除 `?token=` 查询参数认证
+  - 原因：安全风险（URL 泄露）
+  - 替代方案：httpOnly Cookie + Bearer Token
+  - 影响：如果之前使用 `?token=` 方式下载媒体文件，需改用 Cookie 认证
+
+- ⚠️ **Invitation Code Usage Atomic** - 邀请码使用改为原子化操作
+  - 原因：防止并发重复使用
+  - 影响：邀请码验证和使用在同一事务中，并发请求会失败
+
+- ⚠️ **Capacity Tracking Atomic** - 容量追踪改为原子化操作
+  - 原因：防止并发计数错误
+  - 影响：高并发场景下容量更新可能失败（需重试）
+
+### Security Improvements
+
+This release includes **8 security enhancements**:
+
+1. **Separate secrets** - Media token and JWT token use different secrets
+2. **Fail-fast validation** - Weak JWT secrets rejected at startup
+3. **Atomic operations** - Invitation codes, capacity tracking use transactions
+4. **IDOR prevention** - Job stats updates require ownership verification
+5. **Token removal** - Query parameter authentication removed (XSS/URL leak prevention)
+6. **Error handling** - Better error responses in auth middleware
+7. **Test coverage** - Comprehensive security tests (race conditions, auth flows, IDOR)
+8. **Config template** - `.env.example` with security best practices
+
+### Documentation
+
+- Documentation reorganized according to spec
+  - `docs/superpowers/archive/v1.3/` - v1.3 plans archived
+  - `docs/superpowers/archive/v1.4/` - v1.4 plans archived
+  - `docs/superpowers/archive/v1.6/` - v1.6 plans archived
+  - `docs/superpowers/archive/v1.7/` - v1.7 plans archived
+  - `docs/superpowers/specs/` - All specs in dedicated directory
+
 ## [1.7.3] - 2026-04-10
 
 ### Added
