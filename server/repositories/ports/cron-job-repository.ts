@@ -12,7 +12,7 @@ export interface CronJobRepositoryPort extends RepositoryWithOwner<CronJob> {
   findByTag(tag: string, params?: PaginationParams): Promise<PaginatedResult<CronJob>>
   getAllTags(): Promise<{ tag: string; count: number }[]>
   toggleActive(id: string): Promise<CronJob | null>
-  updateRunStats(id: string, stats: RunStats): Promise<CronJob | null>
+  updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null>
   updateLastRun(id: string, nextRun: string): Promise<CronJob | null>
   addTag(jobId: string, tag: string): Promise<void>
   removeTag(jobId: string, tag: string): Promise<void>
