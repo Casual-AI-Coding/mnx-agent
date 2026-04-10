@@ -373,7 +373,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               <span className="text-muted-foreground/50">/ {stats?.total || 0}</span>
             </div>
           </div>
-
+          </div>
           <CardContent className="p-0">
             <table className="w-full">
             <thead>
