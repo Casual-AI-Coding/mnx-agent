@@ -374,9 +374,8 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
           </div>
 
-          </div>
-
-          <table className="w-full">
+          <CardContent className="p-0">
+            <table className="w-full">
             <thead>
               <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
                 <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">类型</th>
