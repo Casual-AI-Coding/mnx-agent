@@ -374,12 +374,12 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
           </div>
 
-          <div className="grid grid-cols-[80px_240px_120px_140px_90px] items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
-            <span>类型</span>
-            <span className="px-2">路径</span>
-            <span className="text-right">耗时</span>
-            <span className="text-right">时间</span>
-            <span className="text-right">状态</span>
+          <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
+            <span className="w-[60px]">类型</span>
+            <span className="flex-1 text-center">路径</span>
+            <span className="w-[80px] text-right">耗时</span>
+            <span className="w-[100px] text-right">时间</span>
+            <span className="w-[60px] text-right">状态</span>
           </div>
         </div>
         <CardContent>
@@ -400,26 +400,26 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                   key={log.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="grid grid-cols-[80px_240px_120px_140px_90px] items-center px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
-                  <Badge className={cn('justify-center capitalize text-xs', getActionConfig(log.action).color)}>
+                  <Badge className={cn('w-[60px] justify-center capitalize text-xs', getActionConfig(log.action).color)}>
                     {getActionConfig(log.action).label}
                   </Badge>
-                  <div className="min-w-0 px-2">
+                  <div className="flex-1 min-w-0 text-center px-4">
                     <p className="text-sm font-medium truncate">{log.request_path || '-'}</p>
                     <p className="text-muted-foreground/50 text-xs">
                       {log.request_method || '-'} · {log.resource_type || '-'}
                     </p>
                   </div>
-                  <span className="text-right text-muted-foreground/70 text-sm tabular-nums">
+                  <span className="w-[80px] text-right text-muted-foreground/70 text-sm tabular-nums">
                     {formatDuration(log.duration_ms)}
                   </span>
-                  <span className="text-right text-muted-foreground/50 text-xs tabular-nums">
+                  <span className="w-[100px] text-right text-muted-foreground/50 text-xs tabular-nums">
                     {formatTime(log.created_at)}
                   </span>
                   <span className={cn(
-                    'text-right text-sm tabular-nums',
+                    'w-[60px] text-right text-sm tabular-nums',
                     STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70'
                   )}>
                     {log.response_status || '-'}
