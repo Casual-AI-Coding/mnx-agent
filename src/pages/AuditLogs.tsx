@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Shield, Search, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react'
+import { Shield, RefreshCw, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Copy, Check, ArrowUpDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
@@ -56,7 +56,22 @@ export default function AuditLogs() {
 
   useEffect(() => {
     loadData()
+    loadAllPaths()
+  }, [])
+
+  useEffect(() => {
+    loadData()
   }, [page, filters, sortBy, sortOrder])
+
+  const loadAllPaths = async () => {
+    try {
+      const res = await getAuditLogs({ limit: 1000 })
+      if (res.success && res.data) {
+        const paths = [...new Set(res.data.logs.map(l => l.request_path).filter(Boolean))] as string[]
+        setUniquePaths(paths.sort())
+      }
+    } catch {}
+  }
 
   const loadData = async () => {
     setIsLoading(true)
@@ -69,8 +84,6 @@ export default function AuditLogs() {
       if (logsRes.success && logsRes.data) {
         setLogs(logsRes.data.logs)
         setTotalPages(logsRes.data.pagination.totalPages)
-        const paths = [...new Set(logsRes.data.logs.map(l => l.request_path).filter(Boolean))] as string[]
-        setUniquePaths(paths)
       }
       if (statsRes.success && statsRes.data) {
         setStats(statsRes.data)
@@ -173,87 +186,174 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
         </div>
       )}
 
-      <Card className="border-border">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <Card className="border-border overflow-hidden">
+        <div className="bg-gradient-to-r from-card via-card to-muted/20 border-b border-border/50">
+          <div className="flex flex-wrap items-center gap-3 p-4">
             <CardTitle className="text-lg">{t('audit.logList', '日志列表')}</CardTitle>
-            
-            {/* Filter Controls */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Tabs value={filters.status_filter || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, status_filter: v as 'all' | 'success' | 'error' }))}>
-                <TabsList className="h-8 bg-muted/50">
-                  <TabsTrigger value="all" className="text-xs px-3 h-6">全部</TabsTrigger>
-                  <TabsTrigger value="success" className="text-xs px-3 h-6 text-success">成功</TabsTrigger>
-                  <TabsTrigger value="error" className="text-xs px-3 h-6 text-destructive">错误</TabsTrigger>
-                </TabsList>
-              </Tabs>
 
-              {uniquePaths.length > 0 && (
-                <Tabs value={filters.request_path || ''} onValueChange={(v) => setFilters(f => ({ ...f, request_path: v || undefined }))}>
-                  <TabsList className="h-8 bg-muted/50">
-                    <TabsTrigger value="" className="text-xs px-3 h-6">全部路径</TabsTrigger>
-                    {uniquePaths.slice(0, 5).map(path => (
-                      <TabsTrigger key={path} value={path} className="text-xs px-3 h-6 max-w-[100px] truncate" title={path}>
-                        {path.split('/').pop() || path}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+            <div className="h-8 w-px bg-border/60 hidden sm:block" />
+
+            <div className="flex items-center gap-1.5">
+              <SlidersHorizontal className="w-4 h-4 text-muted-foreground/70" />
+            </div>
+
+            <Select
+              value={filters.request_path || '__all__'}
+              onValueChange={(v) => setFilters(f => ({ ...f, request_path: v === '__all__' ? undefined : v }))}
+            >
+              <SelectTrigger className="w-[180px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground/70 text-sm">路径</span>
+                  <span className={cn(
+                    'text-sm font-medium truncate max-w-[80px]',
+                    filters.request_path ? 'text-foreground' : 'text-muted-foreground/60'
+                  )}>
+                    {filters.request_path ? filters.request_path.split('/').pop() || filters.request_path : '全部'}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                    全部路径
+                  </div>
+                </SelectItem>
+                {uniquePaths.map(path => (
+                  <SelectItem key={path} value={path}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary/60" />
+                      <span className="truncate max-w-[200px]" title={path}>{path}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.status_filter || 'all'}
+              onValueChange={(v) => setFilters(f => ({ ...f, status_filter: v as 'all' | 'success' | 'error' }))}
+            >
+              <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground/70 text-sm">状态</span>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    filters.status_filter === 'success' && 'text-success',
+                    filters.status_filter === 'error' && 'text-destructive',
+                    !filters.status_filter && 'text-muted-foreground/60'
+                  )}>
+                    {filters.status_filter === 'success' ? '成功' : filters.status_filter === 'error' ? '失败' : '全部'}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                    全部状态
+                  </div>
+                </SelectItem>
+                <SelectItem value="success">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-success" />
+                    成功
+                  </div>
+                </SelectItem>
+                <SelectItem value="error">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-destructive" />
+                    失败
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.action || 'all'}
+              onValueChange={(v) => setFilters(f => ({ ...f, action: v === 'all' ? undefined : v as AuditAction }))}
+            >
+              <SelectTrigger className="w-[130px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground/70 text-sm">类型</span>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    filters.action ? 'text-foreground' : 'text-muted-foreground/60'
+                  )}>
+                    {filters.action ? ACTION_CONFIG[filters.action]?.label : '全部'}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                    全部类型
+                  </div>
+                </SelectItem>
+                {(Object.keys(ACTION_CONFIG) as AuditAction[]).map((action) => (
+                  <SelectItem key={action} value={action}>
+                    <div className="flex items-center gap-2">
+                      <div className={cn('w-2 h-2 rounded-full', ACTION_CONFIG[action].color.replace(/text-\S+|border-\S+/g, '').trim() || 'bg-muted-foreground/40')} />
+                      {ACTION_CONFIG[action].label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex-1" />
+
+            <div className="h-8 w-px bg-border/60 hidden md:block" />
+
+            <ArrowUpDown className="w-4 h-4 text-muted-foreground/60" />
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                if (sortBy === 'duration_ms') {
+                  setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+                } else {
+                  setSortBy('duration_ms')
+                  setSortOrder('desc')
+                }
+              }}
+              className={cn(
+                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                sortBy === 'duration_ms'
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               )}
+            >
+              耗时
+              {sortBy === 'duration_ms' && (
+                <motion.div
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: sortOrder === 'asc' ? 0 : 180 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </motion.div>
+              )}
+            </motion.button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (sortBy === 'duration_ms') {
-                    setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
-                  } else {
-                    setSortBy('duration_ms')
-                    setSortOrder('desc')
-                  }
-                }}
-                className={cn(
-                  'h-8 px-3 text-xs',
-                  sortBy === 'duration_ms' && 'bg-accent text-accent-foreground'
-                )}
-              >
-                <Clock className="w-3.5 h-3.5 mr-1.5" />
-                耗时
-                {sortBy === 'duration_ms' && (
-                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />
-                )}
-              </Button>
+            <div className="h-8 w-px bg-border/60 hidden lg:block" />
+
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground/70">结果</span>
+              <span className="font-semibold text-foreground">{logs.length}</span>
+              <span className="text-muted-foreground/50">/ {stats?.total || 0}</span>
             </div>
           </div>
 
-          {/* Action Filter */}
-          <div className="flex items-center gap-2 pt-3 border-t border-border mt-3">
-            <span className="text-xs text-muted-foreground mr-2">操作:</span>
-            <Tabs value={filters.action || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, action: v === 'all' ? undefined : v as AuditAction }))}>
-              <TabsList className="h-8 bg-muted/50">
-                <TabsTrigger value="all" className="text-xs px-3 h-6">全部</TabsTrigger>
-                {(Object.keys(ACTION_CONFIG) as AuditAction[]).map((action) => (
-                  <TabsTrigger
-                    key={action}
-                    value={action}
-                    className={cn(
-                      'text-xs px-3 h-6 capitalize',
-                      ACTION_CONFIG[action].color
-                    )}
-                  >
-                    {ACTION_CONFIG[action].label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+          <div className="flex items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
+            <span className="w-[56px]">类型</span>
+            <span className="flex-1">路径</span>
+            <span className="w-[72px] text-right">耗时</span>
+            <span className="w-[88px] text-right">时间</span>
+            <span className="w-[48px] text-right">状态</span>
           </div>
-
-          <div className="flex items-center gap-8 pt-3 text-xs text-muted-foreground/50 border-t border-border mt-3">
-            <span className="w-16">耗时</span>
-            <span className="w-20">时间</span>
-            <span className="w-8">状态</span>
-          </div>
-        </CardHeader>
+        </div>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -272,28 +372,31 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                   key={log.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-between py-3 hover:bg-card/secondary/50 px-2 -mx-2 rounded cursor-pointer"
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
-<div className="flex items-center gap-4">
-              <Badge className={cn('capitalize', getActionConfig(log.action).color)}>
-                {getActionConfig(log.action).label}
-              </Badge>
-              <div className="flex-1 min-w-0">
-                <p className="text-foreground/80 text-sm font-medium truncate">{log.request_path || '-'}</p>
-                <p className="text-muted-foreground/50 text-xs">{log.resource_type || '-'} {log.resource_id && `• ${log.resource_id.slice(0, 8)}`}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6 text-sm">
-              <span className="text-muted-foreground/70 w-16">{formatDuration(log.duration_ms)}</span>
-              <span className="text-muted-foreground/50 w-20">{formatTime(log.created_at)}</span>
-              <span className={cn('w-8', STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70')}>
-                {log.response_status || '-'}
-              </span>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <Eye className="w-4 h-4" />
-              </Button>
-            </div>
+                  <Badge className={cn('w-[56px] justify-center capitalize text-xs', getActionConfig(log.action).color)}>
+                    {getActionConfig(log.action).label}
+                  </Badge>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{log.request_path || '-'}</p>
+                    <p className="text-muted-foreground/50 text-xs">
+                      {log.request_method || '-'} · {log.resource_type || '-'}
+                      {log.resource_id && ` · ${log.resource_id.slice(0, 8)}`}
+                    </p>
+                  </div>
+                  <span className="w-[72px] text-right text-muted-foreground/70 text-sm tabular-nums">
+                    {formatDuration(log.duration_ms)}
+                  </span>
+                  <span className="w-[88px] text-right text-muted-foreground/50 text-xs tabular-nums">
+                    {formatTime(log.created_at)}
+                  </span>
+                  <span className={cn(
+                    'w-[48px] text-right text-sm tabular-nums',
+                    STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70'
+                  )}>
+                    {log.response_status || '-'}
+                  </span>
                 </motion.div>
               ))}
             </div>
