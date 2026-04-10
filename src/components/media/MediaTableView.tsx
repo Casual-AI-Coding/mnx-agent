@@ -34,14 +34,14 @@ export function MediaTableView({
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-lg overflow-hidden bg-muted/30">
       <table className="w-full">
-        <thead className="bg-muted">
+        <thead className="bg-muted/50">
           <tr>
             <th className="px-4 py-3 text-left">
               <button
                 onClick={onSelectAll}
-                className="flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 hover:border-primary/50 transition-colors"
+                className="flex items-center justify-center w-5 h-5 rounded hover:bg-muted transition-colors"
                 disabled={records.length === 0}
                 aria-label={isAllSelected ? '取消全选' : '全选'}
               >
@@ -71,7 +71,7 @@ export function MediaTableView({
               <td className="px-4 py-3 text-foreground">
                 <button
                   onClick={() => onSelect(record.id)}
-                  className="flex items-center justify-center w-5 h-5 rounded border border-muted-foreground/30 hover:border-primary/50 transition-colors"
+                  className="flex items-center justify-center w-5 h-5 rounded hover:bg-muted transition-colors"
                   aria-label={selectedIds.has(record.id) ? '取消选择' : '选择'}
                 >
                   {selectedIds.has(record.id) ? (
@@ -87,7 +87,7 @@ export function MediaTableView({
                     <img
                       src={signedUrls[record.id] || ''}
                       alt={record.original_name || record.filename}
-                      className="w-10 h-10 object-cover rounded border border-border cursor-pointer"
+                      className="w-10 h-10 object-cover rounded cursor-pointer"
                       onMouseEnter={(e) => {
                         setPreviewRecord(record)
                         setMousePosition({ x: e.clientX, y: e.clientY })
@@ -96,7 +96,7 @@ export function MediaTableView({
                       onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
                     />
                   ) : (
-                    <div className="w-10 h-10 flex items-center justify-center rounded border border-border bg-muted/50">
+                    <div className="w-10 h-10 flex items-center justify-center rounded bg-muted/50">
                       {getTypeIcon(record.type)}
                     </div>
                   )}

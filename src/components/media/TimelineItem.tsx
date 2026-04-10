@@ -53,7 +53,7 @@ export function TimelineItem({
         <img
           src={signedUrl}
           alt={record.original_name || record.filename}
-          className="w-14 h-14 object-cover rounded border border-border flex-shrink-0 cursor-pointer"
+          className="w-14 h-14 object-cover rounded flex-shrink-0 cursor-pointer"
           onMouseEnter={(e) => {
             setShowPreview(true)
             setMousePosition({ x: e.clientX, y: e.clientY })
@@ -62,7 +62,7 @@ export function TimelineItem({
           onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
         />
       ) : (
-        <div className={`w-14 h-14 rounded border border-border flex items-center justify-center flex-shrink-0 ${TYPE_GRADIENTS[record.type]}`}>
+        <div className={`w-14 h-14 rounded flex items-center justify-center flex-shrink-0 ${TYPE_GRADIENTS[record.type]}`}>
           {getTypeIcon(record.type)}
         </div>
       )}
