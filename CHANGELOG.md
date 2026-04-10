@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.3] - 2026-04-10
+
+### Added
+
+**Audit Logs Enhancements**
+
+- **Duration & Path Sorting** - Sort audit logs by creation time or response duration
+  - `server/repositories/user-repository.ts` - Sort by `created_at` or `duration_ms`
+  - `server/validation/audit-schemas.ts` - New `sort_by` and `sort_order` query params
+  - `packages/shared-types/entities/audit-log.ts` - Added sort fields to interface
+  - `src/lib/api/audit.ts` - API client updated with sorting params
+
+- **Status Filter Tabs** - Quick filter by success/error/all status
+  - `src/pages/AuditLogs.tsx` - Tabs component for status filtering
+  - `server/routes/audit.ts` - `status_filter` query param (200/400 range matching)
+  - `server/repositories/user-repository.ts` - Status range queries
+
+- **Path Filter** - Filter audit logs by request path pattern
+  - `server/validation/audit-schemas.ts` - `request_path` query param (LIKE match)
+  - `server/routes/audit.ts` - Path filter propagation
+  - `server/repositories/user-repository.ts` - `request_path LIKE` condition
+
+### Changed
+
+**Audit Logs UI Redesign**
+
+- **Filter UI with Tabs** - Replaced button group with Tabs component
+  - `src/pages/AuditLogs.tsx` - Modern Tabs for action/resource/status filters
+  - Dynamic path filter tabs based on actual data
+  - Sort controls with up/down arrows
+
+### Fixed
+
+**Media Management Bug Fixes**
+
+- **Preview Tooltip Size** - Increased preview for better visibility
+  - `src/components/media/MediaCardPreview.tsx` - Width 280px → 600px
+  - `src/components/media/MediaCardPreview.tsx` - Max height 20rem → 32rem
+
+- **Pagination Refill Logic** - Smart page refill when deleting items
+  - `src/hooks/useMediaManagement.ts` - Fixed refill condition logic
+  - Correctly calculates remaining items vs limit
+  - Handles both single delete and batch delete scenarios
+
+### Performance
+
+- 13 files changed (+255/-59)
+- Added hover preview to MediaTableView and TimelineItem
+- Improved pagination state management
+
 ## [1.7.2] - 2026-04-10
 
 ### Added
