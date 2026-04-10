@@ -14,6 +14,7 @@ export interface AuditLog {
   resource_type: string
   resource_id: string | null
   user_id: string | null
+  username: string | null
   ip_address: string | null
   user_agent: string | null
   request_method: string
@@ -45,6 +46,7 @@ export interface AuditLogQuery {
   action?: AuditAction
   resource_type?: string
   resource_id?: string
+  user_id?: string
   response_status?: number
   request_path?: string
   status_filter?: 'all' | 'success' | 'error'
@@ -98,6 +100,16 @@ export async function getUniqueRequestPaths(): Promise<ApiResponse<string[]>> {
   try {
     const response = await internalAxios.get('/audit/paths')
     return { success: true, data: response.data.data.paths }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export async function getUniqueAuditUsers(): Promise<ApiResponse<{ id: string; username: string }[]>> {
+  try {
+    const response = await internalAxios.get('/audit/users')
+    return { success: true, data: response.data.data.users }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }

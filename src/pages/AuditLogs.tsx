@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { getAuditLogs, getAuditStats, getUniqueRequestPaths, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
+import { getAuditLogs, getAuditStats, getUniqueRequestPaths, getUniqueAuditUsers, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
@@ -48,15 +48,18 @@ export default function AuditLogs() {
     action?: AuditAction
     resource_type?: string
     request_path?: string
+    user_id?: string
     status_filter?: 'all' | 'success' | 'error'
   }>({})
   const [sortBy, setSortBy] = useState<'created_at' | 'duration_ms'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [uniquePaths, setUniquePaths] = useState<string[]>([])
+  const [uniqueUsers, setUniqueUsers] = useState<{ id: string; username: string }[]>([])
 
   useEffect(() => {
     loadData()
     loadAllPaths()
+    loadAllUsers()
   }, [])
 
   useEffect(() => {
@@ -68,6 +71,15 @@ export default function AuditLogs() {
       const res = await getUniqueRequestPaths()
       if (res.success && res.data) {
         setUniquePaths(res.data.sort())
+      }
+    } catch {}
+  }
+
+  const loadAllUsers = async () => {
+    try {
+      const res = await getUniqueAuditUsers()
+      if (res.success && res.data) {
+        setUniqueUsers(res.data)
       }
     } catch {}
   }
@@ -230,6 +242,39 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </Select>
 
             <Select
+              value={filters.user_id || '__all__'}
+              onValueChange={(v) => setFilters(f => ({ ...f, user_id: v === '__all__' ? undefined : v }))}
+            >
+              <SelectTrigger className="w-[140px] h-10 border-border/50 bg-background/50 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground/70 text-sm">用户</span>
+                  <span className={cn(
+                    'text-sm font-medium truncate max-w-[60px]',
+                    filters.user_id ? 'text-foreground' : 'text-muted-foreground/60'
+                  )}>
+                    {filters.user_id ? uniqueUsers.find(u => u.id === filters.user_id)?.username || '未知' : '全部'}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                    全部用户
+                  </div>
+                </SelectItem>
+                {uniqueUsers.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary/60" />
+                      {user.username}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
               value={filters.status_filter || 'all'}
               onValueChange={(v) => setFilters(f => ({ ...f, status_filter: v as 'all' | 'success' | 'error' }))}
             >
@@ -380,6 +425,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
                 <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">类型</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">路径</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">用户</th>
                 <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">耗时</th>
                 <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">时间</th>
                 <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">状态</th>
@@ -388,7 +434,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             <tbody className="divide-y divide-border/30">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center">
+                  <td colSpan={6} className="py-12 text-center">
                     <div className="flex items-center justify-center">
                       <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     </div>
@@ -396,7 +442,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center">
+                  <td colSpan={6} className="py-12 text-center">
                     <EmptyState
                       icon={Shield}
                       title={t('audit.noLogs', '暂无审计日志')}
@@ -423,6 +469,9 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm truncate block">{log.request_path || '-'} <span className="text-muted-foreground/50">({log.request_method || '-'} · {log.resource_type || '-'})</span></span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground/70">
+                      {log.username || '-'}
                     </td>
                     <td className="py-3 px-4 text-right text-muted-foreground/70 text-sm tabular-nums">
                       {formatDuration(log.duration_ms)}

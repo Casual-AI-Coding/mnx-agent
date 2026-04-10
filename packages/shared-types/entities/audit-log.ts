@@ -10,6 +10,7 @@ export interface AuditLog {
   resource_type: string
   resource_id: string | null
   user_id: string | null
+  username: string | null
   ip_address: string | null
   user_agent: string | null
   request_method: string | null

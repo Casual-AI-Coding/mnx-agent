@@ -13,10 +13,11 @@ import type {
 import { AuditAction } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function rowToAuditLog(row: AuditLogRow): AuditLog {
+function rowToAuditLog(row: AuditLogRow, usernameMap: Map<string, string>): AuditLog {
   return {
     ...row,
     action: row.action as AuditAction,
+    username: row.user_id ? usernameMap.get(row.user_id) ?? null : null,
   }
 }
 
@@ -128,8 +129,20 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
       params
     )
 
+    // Batch query usernames
+    const userIds = rows.map(r => r.user_id).filter(Boolean) as string[]
+    const usernameMap = new Map<string, string>()
+    if (userIds.length > 0) {
+      const uniqueUserIds = [...new Set(userIds)]
+      const userRows = await this.conn.query<{ id: string; username: string }>(
+        `SELECT id, username FROM users WHERE id = ANY($1)`,
+        [uniqueUserIds]
+      )
+      userRows.forEach(u => usernameMap.set(u.id, u.username))
+    }
+
     return {
-      logs: rows.map(rowToAuditLog),
+      logs: rows.map(row => rowToAuditLog(row, usernameMap)),
       total,
     }
   }
@@ -186,6 +199,22 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
       params
     )
     return rows.map(row => row.request_path).filter(Boolean)
+  }
+
+  async getUniqueAuditUsers(userId?: string): Promise<{ id: string; username: string }[]> {
+    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
+    const params = userId ? [userId] : []
+    const rows = await this.conn.query<{ user_id: string }>(
+      `SELECT DISTINCT user_id FROM audit_logs ${ownerFilter} AND user_id IS NOT NULL`,
+      params
+    )
+    const userIds = rows.map(r => r.user_id).filter(Boolean)
+    if (userIds.length === 0) return []
+    const userRows = await this.conn.query<{ id: string; username: string }>(
+      `SELECT id, username FROM users WHERE id = ANY($1) ORDER BY username`,
+      [userIds]
+    )
+    return userRows
   }
 
   async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> {

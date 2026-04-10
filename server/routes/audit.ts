@@ -90,6 +90,16 @@ router.get('/paths', asyncHandler(async (req, res) => {
   successResponse(res, { paths })
 }))
 
+router.get('/users', asyncHandler(async (req, res) => {
+  const db = getDatabaseService()
+  const userId = req.user?.role === 'admin' || req.user?.role === 'super'
+    ? undefined
+    : req.user?.userId
+
+  const users = await db.getUniqueAuditUsers(userId)
+  successResponse(res, { users })
+}))
+
 router.get('/:id', asyncHandler(async (req, res) => {
   const db = getDatabaseService()
   const log = await db.getAuditLogById(req.params.id)
