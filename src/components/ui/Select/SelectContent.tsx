@@ -1,17 +1,29 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import { useSelectContext } from './SelectContext'
 import { selectContentVariants } from './variants'
 
+const selectAnimation = {
+  initial: { opacity: 0, scale: 0.95, y: -8 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.95, y: -8 },
+  transition: { duration: 0.15, ease: [0.4, 0, 0.2, 1] }
+}
+
 export interface SelectContentProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof selectContentVariants> {}
+  extends VariantProps<typeof selectContentVariants> {
+  className?: string
+  children?: React.ReactNode
+}
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, variant, children, ...props }, ref) => {
+  ({ className, variant, children }, ref) => {
+    const { open } = useSelectContext()
+    
     return (
       <ErrorBoundary
         fallback={
@@ -22,9 +34,13 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
           />
         }
       >
-        <SelectContentInner ref={ref} className={className} variant={variant} {...props}>
-          {children}
-        </SelectContentInner>
+        <AnimatePresence>
+          {open && (
+            <SelectContentInner ref={ref} className={className} variant={variant}>
+              {children}
+            </SelectContentInner>
+          )}
+        </AnimatePresence>
       </ErrorBoundary>
     )
   }
@@ -32,8 +48,8 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
 SelectContent.displayName = 'SelectContent'
 
 const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, variant, children, ...props }, forwardedRef) => {
-    const { open, selectId, listboxRef, highlightedIndex, itemIds, triggerRef } = useSelectContext()
+  ({ className, variant, children }, forwardedRef) => {
+    const { selectId, listboxRef, highlightedIndex, itemIds, triggerRef } = useSelectContext()
     const innerRef = React.useRef<HTMLDivElement | null>(null)
     const listboxId = `${selectId}-listbox`
     const activeDescendantId = highlightedIndex >= 0 ? itemIds[highlightedIndex] : undefined
@@ -46,7 +62,7 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
     )
 
     React.useEffect(() => {
-      if (open && triggerRef.current) {
+      if (triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect()
         setPosition({
           top: rect.bottom + window.scrollY,
@@ -54,21 +70,18 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
           width: rect.width,
         })
       }
-    }, [open, triggerRef])
+    }, [triggerRef])
 
     React.useEffect(() => {
-      if (open && innerRef.current) {
+      if (innerRef.current) {
         innerRef.current.focus()
       }
-    }, [open])
-
-    if (!open) return null
+    }, [])
 
     return createPortal(
-      <div
+      <motion.div
         ref={(node) => {
           innerRef.current = node
-          // Also update the context's listboxRef directly
           if (listboxRef) {
             (listboxRef as React.MutableRefObject<HTMLDivElement | null>).current = node
           }
@@ -83,7 +96,7 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
         aria-activedescendant={activeDescendantId}
         tabIndex={0}
         className={cn(
-          'fixed z-50 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md',
+          'fixed z-50 max-h-60 overflow-auto rounded-md bg-popover text-popover-foreground shadow-lg',
           className
         )}
         style={{
@@ -91,10 +104,10 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
           left: position.left,
           minWidth: position.width,
         }}
-        {...props}
+        {...selectAnimation}
       >
         <div className="p-1">{children}</div>
-      </div>,
+      </motion.div>,
       document.body
     )
   }
