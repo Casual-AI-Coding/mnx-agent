@@ -68,12 +68,12 @@ const REQUIRED_ENV_VARS = [
 type RequiredEnvVar = typeof REQUIRED_ENV_VARS[number]
 
 // ============================================================================
-// JWT_SECRET Validation
+// JWT_SECRET Validation (Fail-Fast)
 // ============================================================================
 
 const JWT_SECRET_MIN_LENGTH = 32
 
-function validateJwtSecret(): void {
+export function validateJwtSecret(): void {
   const jwtSecret = process.env.JWT_SECRET
 
   if (!jwtSecret) {
@@ -126,9 +126,11 @@ function validateRequiredEnvVars(): void {
 }
 
 export function loadConfig(): AppConfig {
+  // JWT_SECRET validation runs ALWAYS (fail-fast) - even in test mode
+  validateJwtSecret()
+
   if (process.env.NODE_ENV !== 'test') {
     validateRequiredEnvVars()
-    validateJwtSecret()
   }
 
   const nodeEnv = (process.env.NODE_ENV as AppConfig['server']['nodeEnv']) || 'development'
