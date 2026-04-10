@@ -60,7 +60,7 @@ export function MediaCardPreview({
             position: 'fixed',
             left: position.x,
             top: position.y,
-            width: 280,
+            width: 450,
             zIndex: 9999,
             pointerEvents: 'none',
           }}
@@ -69,7 +69,7 @@ export function MediaCardPreview({
           <img
             src={signedUrl}
             alt={record.original_name || record.filename}
-            className="w-full h-auto max-h-80 object-contain"
+            className="w-full h-auto max-h-96 object-contain"
           />
           <div className="p-2 bg-card/95">
             <p className="text-xs text-muted-foreground truncate">
