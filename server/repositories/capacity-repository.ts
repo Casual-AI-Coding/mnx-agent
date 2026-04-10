@@ -69,15 +69,44 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
     )
   }
 
-  async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> {
-    const existing = await this.getByService(serviceType)
-    if (!existing) return null
+  /**
+   * Atomically decrement capacity using a single UPDATE with WHERE clause.
+   * This prevents race conditions where concurrent requests could read the
+   * same quota value and both decrement, exceeding the actual capacity.
+   * 
+   * @returns Object with success status, remaining quota, and optional message
+   */
+  async decrementCapacity(
+    serviceType: string,
+    amount: number = 1
+  ): Promise<{ success: boolean; remaining: number; message?: string }> {
+    const now = this.toISODate()
 
-    const newRemaining = Math.max(0, existing.remaining_quota - amount)
-    await this.conn.execute(
-      'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [newRemaining, this.toISODate(), serviceType]
+    // Atomic UPDATE with WHERE clause - only succeeds if remaining_quota >= amount
+    // This prevents race conditions by doing read+write in a single atomic operation
+    const result = await this.conn.query<{ remaining_quota: number }>(
+      `UPDATE capacity_tracking 
+       SET remaining_quota = remaining_quota - $1, last_checked_at = $2
+       WHERE service_type = $3 AND remaining_quota >= $1
+       RETURNING remaining_quota`,
+      [amount, now, serviceType]
     )
-    return this.getByService(serviceType)
+
+    if (result.length === 0) {
+      // Either service_type doesn't exist OR insufficient quota
+      // Check which case it is
+      const existing = await this.getByService(serviceType)
+      if (!existing) {
+        return { success: false, remaining: 0, message: 'Service type not found' }
+      }
+      // Service exists but insufficient quota
+      return {
+        success: false,
+        remaining: existing.remaining_quota,
+        message: `Insufficient capacity: have ${existing.remaining_quota}, need ${amount}`,
+      }
+    }
+
+    return { success: true, remaining: result[0].remaining_quota }
   }
 }
