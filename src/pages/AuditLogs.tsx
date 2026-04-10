@@ -422,7 +422,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm font-medium truncate block">{log.request_path || '-'}</span>
+                      <span className="text-sm truncate block">{log.request_path || '-'} <span className="text-muted-foreground/50">({log.request_method || '-'} · {log.resource_type || '-'})</span></span>
                     </td>
                     <td className="py-3 px-4 text-right text-muted-foreground/70 text-sm tabular-nums">
                       {formatDuration(log.duration_ms)}
