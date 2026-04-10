@@ -532,6 +532,10 @@ export class DatabaseService {
     return this.userRepo.getAuditStats(userId)
   }
 
+  async getUniqueRequestPaths(userId?: string): Promise<string[]> {
+    return this.userRepo.getUniqueRequestPaths(userId)
+  }
+
   // =====================================================================
   // Service Node Permissions
   // =====================================================================

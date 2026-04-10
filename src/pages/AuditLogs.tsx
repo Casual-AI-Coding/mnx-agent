@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
+import { getAuditLogs, getAuditStats, getUniqueRequestPaths, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
@@ -65,10 +65,9 @@ export default function AuditLogs() {
 
   const loadAllPaths = async () => {
     try {
-      const res = await getAuditLogs({ limit: 5000 })
+      const res = await getUniqueRequestPaths()
       if (res.success && res.data) {
-        const paths = [...new Set(res.data.logs.map(l => l.request_path).filter(Boolean))] as string[]
-        setUniquePaths(paths.sort())
+        setUniquePaths(res.data.sort())
       }
     } catch {}
   }

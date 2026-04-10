@@ -80,6 +80,16 @@ router.get('/stats', asyncHandler(async (req, res) => {
   successResponse(res, stats)
 }))
 
+router.get('/paths', asyncHandler(async (req, res) => {
+  const db = getDatabaseService()
+  const userId = req.user?.role === 'admin' || req.user?.role === 'super'
+    ? undefined
+    : req.user?.userId
+
+  const paths = await db.getUniqueRequestPaths(userId)
+  successResponse(res, { paths })
+}))
+
 router.get('/:id', asyncHandler(async (req, res) => {
   const db = getDatabaseService()
   const log = await db.getAuditLogById(req.params.id)

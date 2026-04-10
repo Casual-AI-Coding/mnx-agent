@@ -93,3 +93,13 @@ export async function getAuditStats(): Promise<ApiResponse<AuditStats>> {
     return { success: false, error: message }
   }
 }
+
+export async function getUniqueRequestPaths(): Promise<ApiResponse<string[]>> {
+  try {
+    const response = await internalAxios.get('/audit/paths')
+    return { success: true, data: response.data.data.paths }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}

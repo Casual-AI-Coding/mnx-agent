@@ -66,7 +66,7 @@ async function start() {
     }
   })
 
-  log('Frontend: http://localhost:5173')
+  log('Frontend: http://localhost:4411')
   log('Backend:  http://localhost:4511')
 }
 
@@ -115,10 +115,10 @@ async function status() {
   }
 
   log(`Status: Running (PID ${pid})`)
-  log('Frontend: http://localhost:5173')
+  log('Frontend: http://localhost:4411')
   log('Backend:  http://localhost:4511')
 
-  exec('curl -s -o /dev/null -w "%{http_code}" http://localhost:5173', (err, stdout) => {
+  exec('curl -s -o /dev/null -w "%{http_code}" http://localhost:4411', (err, stdout) => {
     if (!err && stdout === '200') {
       log('Frontend health: OK')
     } else {

@@ -177,6 +177,17 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
     }
   }
 
+  async getUniqueRequestPaths(userId?: string): Promise<string[]> {
+    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
+    const params = userId ? [userId] : []
+    
+    const rows = await this.conn.query<{ request_path: string }>(
+      `SELECT DISTINCT request_path FROM audit_logs WHERE request_path IS NOT NULL AND request_path != '' ${userId ? 'AND user_id = $1' : ''} ORDER BY request_path`,
+      params
+    )
+    return rows.map(row => row.request_path).filter(Boolean)
+  }
+
   async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> {
     const rows = await this.conn.query<ServiceNodePermissionRow>(
       'SELECT * FROM service_node_permissions ORDER BY category, display_name'
