@@ -62,7 +62,7 @@ export function MediaTableView({
             <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
           </tr>
         </thead>
-        <tbody className="divide-y">
+        <tbody>
           {records.map((record) => (
             <tr
               key={record.id}
