@@ -68,6 +68,10 @@ const SelectContentInner = React.forwardRef<HTMLDivElement, SelectContentProps>(
       <div
         ref={(node) => {
           innerRef.current = node
+          // Also update the context's listboxRef directly
+          if (listboxRef) {
+            (listboxRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+          }
           if (typeof forwardedRef === 'function') {
             forwardedRef(node)
           } else if (forwardedRef) {
