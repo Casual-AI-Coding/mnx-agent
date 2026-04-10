@@ -49,36 +49,66 @@ export class UserService {
       return { success: false, error: '密码至少6位' }
     }
 
-    const codeValidation = await this.validateInvitationCode(input.invitationCode)
-    if (!codeValidation.valid) {
-      return { success: false, error: codeValidation.error }
-    }
+    // Atomic invitation code consumption with transaction
+    // This prevents race conditions where concurrent registrations
+    // could exceed max_uses limit
+    return this.conn.transaction(async (tx) => {
+      // Attempt to atomically consume the invitation code
+      // Single UPDATE with WHERE clause: only increments if used_count < max_uses
+      // Returns null if code is invalid, expired, inactive, or fully used
+      const consumedCode = await tx.query<{
+        id: string
+        code: string
+        max_uses: number
+        used_count: number
+        expires_at: string | null
+        is_active: boolean
+      }>(
+        `UPDATE invitation_codes
+         SET used_count = used_count + 1
+         WHERE code = $1
+           AND is_active = true
+           AND (expires_at IS NULL OR expires_at > NOW())
+           AND used_count < max_uses
+         RETURNING id, code, max_uses, used_count, expires_at, is_active`,
+        [input.invitationCode]
+      )
 
-    const existing = await this.conn.query<UserRow>(
-      'SELECT id FROM users WHERE username = $1',
-      [input.username]
-    )
-    if (existing.length > 0) {
-      return { success: false, error: '用户名已存在' }
-    }
+      if (consumedCode.length === 0) {
+        // Check why it failed - code invalid vs fully used
+        const existingCode = await tx.query<{ used_count: number; max_uses: number }>(
+          'SELECT used_count, max_uses FROM invitation_codes WHERE code = $1',
+          [input.invitationCode]
+        )
+        if (existingCode.length === 0) {
+          return { success: false, error: '邀请码无效' }
+        }
+        return { success: false, error: '邀请码已用完' }
+      }
 
-    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
-    const id = uuidv4()
-    const now = new Date().toISOString()
+      // Check if username already exists (inside transaction for proper rollback)
+      const existingUser = await tx.query<UserRow>(
+        'SELECT id FROM users WHERE username = $1',
+        [input.username]
+      )
+      if (existingUser.length > 0) {
+        // Transaction will be rolled back automatically
+        return { success: false, error: '用户名已存在' }
+      }
 
-    await this.conn.execute(
-      `INSERT INTO users (id, username, email, password_hash, minimax_api_key, minimax_region, role, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [id, input.username, input.email ?? null, passwordHash, null, 'cn', 'user', true, now, now]
-    )
+      const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
+      const id = uuidv4()
+      const now = new Date().toISOString()
 
-    await this.conn.execute(
-      'UPDATE invitation_codes SET used_count = used_count + 1 WHERE id = $1',
-      [codeValidation.codeId]
-    )
+      await tx.execute(
+        `INSERT INTO users (id, username, email, password_hash, minimax_api_key, minimax_region, role, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [id, input.username, input.email ?? null, passwordHash, null, 'cn', 'user', true, now, now]
+      )
 
-    const user = await this.getUserById(id)
-    return { success: true, user: user! }
+      const user = await this.getUserById(id)
+      return { success: true, user: user! }
+    })
   }
 
   async login(username: string, password: string): Promise<LoginResult> {
