@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
+import logger from '../lib/logger.js'
 import { getMediaService } from '../service-registration.js'
 import {
   listMediaQuerySchema,
@@ -89,7 +90,9 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
   await Promise.all(
     records
       .filter((r): r is NonNullable<typeof r> => r !== null && !r.is_deleted)
-      .map(r => deleteMediaFile(r.filepath).catch(() => {}))
+      .map(r => deleteMediaFile(r.filepath).catch(error => {
+        logger.error({ filepath: r.filepath, recordId: r.id, error }, 'Failed to delete media file during batch delete')
+      }))
   )
 
   await Promise.all(ids.map(id => db.softDelete(id, ownerId)))
@@ -107,7 +110,9 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
     return
   }
 
-  await deleteMediaFile(record.filepath).catch(() => {})
+  await deleteMediaFile(record.filepath).catch(error => {
+    logger.error({ filepath: record.filepath, recordId: record.id, error }, 'Failed to delete media file')
+  })
 
   const success = await db.softDelete(req.params.id, ownerId)
   if (!success) {

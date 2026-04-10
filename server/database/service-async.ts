@@ -190,7 +190,7 @@ export class DatabaseService {
     return this.jobRepo.toggleActive(id, ownerId)
   }
 
-  async updateCronJobRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
+  async updateCronJobRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null> {
     return this.jobRepo.updateRunStats(id, stats, ownerId)
   }
 

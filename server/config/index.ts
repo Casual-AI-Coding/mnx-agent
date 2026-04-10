@@ -31,6 +31,7 @@ export interface AppConfig {
   }
   auth: {
     jwtSecret: string
+    mediaTokenSecret: string
     bcryptRounds: number
   }
   minimax: {
@@ -59,6 +60,7 @@ export interface AppConfig {
 
 const REQUIRED_ENV_VARS = [
   'JWT_SECRET',
+  'MEDIA_TOKEN_SECRET',
   'DB_HOST',
   'DB_USER',
   'DB_PASSWORD',
@@ -86,6 +88,30 @@ export function validateJwtSecret(): void {
   if (jwtSecret.length < JWT_SECRET_MIN_LENGTH) {
     throw new Error(
       `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters (got ${jwtSecret.length}). ` +
+      'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    )
+  }
+}
+
+// ============================================================================
+// MEDIA_TOKEN_SECRET Validation (Fail-Fast)
+// ============================================================================
+
+const MEDIA_TOKEN_SECRET_MIN_LENGTH = 32
+
+export function validateMediaTokenSecret(): void {
+  const mediaTokenSecret = process.env.MEDIA_TOKEN_SECRET
+
+  if (!mediaTokenSecret) {
+    throw new Error(
+      'MEDIA_TOKEN_SECRET environment variable is required. ' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    )
+  }
+
+  if (mediaTokenSecret.length < MEDIA_TOKEN_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `MEDIA_TOKEN_SECRET must be at least ${MEDIA_TOKEN_SECRET_MIN_LENGTH} characters (got ${mediaTokenSecret.length}). ` +
       'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
     )
   }
@@ -129,6 +155,9 @@ export function loadConfig(): AppConfig {
   // JWT_SECRET validation runs ALWAYS (fail-fast) - even in test mode
   validateJwtSecret()
 
+  // MEDIA_TOKEN_SECRET validation runs ALWAYS (fail-fast) - even in test mode
+  validateMediaTokenSecret()
+
   if (process.env.NODE_ENV !== 'test') {
     validateRequiredEnvVars()
   }
@@ -153,6 +182,7 @@ export function loadConfig(): AppConfig {
     },
     auth: {
       jwtSecret: process.env.JWT_SECRET!,
+      mediaTokenSecret: process.env.MEDIA_TOKEN_SECRET!,
       bcryptRounds: parseInteger(process.env.BCRYPT_ROUNDS, 12),
     },
     minimax: {

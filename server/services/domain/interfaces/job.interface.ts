@@ -94,8 +94,11 @@ export interface IJobService {
 
   /**
    * Update job run statistics
+   * @param id - Job ID
+   * @param stats - Run statistics
+   * @param ownerId - Owner ID (required for authorization)
    */
-  updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null>
+  updateRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null>
 
   /**
    * Update job last run timestamp and next scheduled run

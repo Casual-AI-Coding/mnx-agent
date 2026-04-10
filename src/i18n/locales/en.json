@@ -291,7 +291,7 @@
     "apiConfig": "API Configuration",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "Enter your MiniMax API Key",
-    "apiKeyHint": "Your API Key will be securely stored in your local browser",
+    "apiKeyHint": "Your API Key is stored locally in your browser. Keep your browser secure and do not share your device.",
     "region": "Region",
     "regionCn": "China Mainland (CN)",
     "regionIntl": "International",

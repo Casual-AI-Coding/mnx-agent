@@ -207,36 +207,22 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     return this.getById(id)
   }
 
-  async updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
-    const existing = await this.getById(id, ownerId)
-    if (!existing) return null
-
-    const newTotalRuns = existing.total_runs + 1
-    const newTotalFailures = stats.success ? existing.total_failures : existing.total_failures + 1
+  async updateRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null> {
+    const newTotalRuns = stats.tasksExecuted
+    const newTotalFailures = stats.tasksFailed
     const now = toISODate()
 
-    let result: { changes: number }
-    if (ownerId) {
-      result = await this.conn.execute(
-        'UPDATE cron_jobs SET total_runs = $1, total_failures = $2, last_run_at = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6',
-        [newTotalRuns, newTotalFailures, now, now, id, ownerId]
-      )
-      if (result.changes === 0) {
-        // This shouldn't happen if getById succeeded, but indicates potential IDOR attempt
-        console.warn(`Security: updateRunStats authorization failed for job ${id}, owner ${ownerId}`)
-        return null
-      }
-    } else {
-      result = await this.conn.execute(
-        'UPDATE cron_jobs SET total_runs = $1, total_failures = $2, last_run_at = $3, updated_at = $4 WHERE id = $5',
-        [newTotalRuns, newTotalFailures, now, now, id]
-      )
-      if (result.changes === 0) {
-        return null
-      }
-    }
-    return this.getById(id, ownerId)
+    const result = await this.conn.execute(
+      'UPDATE cron_jobs SET total_runs = $1, total_failures = $2, last_run_at = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6',
+      [newTotalRuns, newTotalFailures, now, now, id, ownerId]
+    )
 
+    if (result.changes === 0) {
+      console.warn(`[JobRepository] updateRunStats: No job found with id=${id} and owner_id=${ownerId}`)
+      return null
+    }
+
+    return this.getById(id, ownerId)
   }
 
   async updateLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> {

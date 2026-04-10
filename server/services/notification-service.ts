@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import logger from '../lib/logger.js'
 import type { DatabaseService } from '../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../database/types.js'
 import { WEBHOOK_RATE_LIMITS } from '../config/rate-limits.js'
@@ -93,7 +94,11 @@ export class NotificationService {
 
       clearTimeout(timeoutId)
       responseStatus = response.status
-      responseBody = await response.text().catch(() => null)
+      try {
+        responseBody = await response.text()
+      } catch (error) {
+        logger.warn({ webhookId: config.id, error }, 'Failed to read webhook response body')
+      }
 
       if (!response.ok) {
         errorMessage = `HTTP ${response.status}: ${(responseBody || '').slice(0, 200)}`
@@ -177,10 +182,21 @@ export class NotificationService {
       clearTimeout(timeoutId)
 
       if (response.ok) {
-        await this.recordDelivery(config.id, null, testPayload, response.status, await response.text().catch(() => null), null)
+        let responseBody: string | null = null
+        try {
+          responseBody = await response.text()
+        } catch (error) {
+          logger.warn({ webhookId: config.id, error }, 'Failed to read webhook test response body')
+        }
+        await this.recordDelivery(config.id, null, testPayload, response.status, responseBody, null)
         return { success: true }
       } else {
-        const errorBody = await response.text().catch(() => null)
+        let errorBody: string | null = null
+        try {
+          errorBody = await response.text()
+        } catch (error) {
+          logger.warn({ webhookId: config.id, error }, 'Failed to read webhook test error response body')
+        }
         await this.recordDelivery(config.id, null, testPayload, response.status, errorBody, `HTTP ${response.status}`)
         return { success: false, error: `HTTP ${response.status}: ${errorBody || 'Unknown error'}` }
       }
