@@ -192,14 +192,14 @@ export default function CapacityMonitor() {
                   transition={{ duration: 0.3 }}
                 >
                   <Card className="h-full">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn('p-2 rounded-lg', services.text.bg)}>
-                            <FileText className={cn('w-5 h-5', services.text.icon)} />
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn('p-1.5 rounded-lg', services.text.bg)}>
+                            <FileText className={cn('w-4 h-4', services.text.icon)} />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-foreground">
+                            <h4 className="font-semibold text-foreground text-sm">
                               {model.model_name}
                             </h4>
                             <p className="text-xs text-muted-foreground/50">{model.model_name}</p>
@@ -210,7 +210,7 @@ export default function CapacityMonitor() {
                         </Badge>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground/70">Quota</span>
                           <span className="text-foreground font-medium">
@@ -230,8 +230,8 @@ export default function CapacityMonitor() {
                           </span>
                         </div>
 
-                        <div className="pt-2">
-                          <div className="h-2 bg-card/secondary rounded-full overflow-hidden">
+                        <div className="pt-1.5">
+                          <div className="h-1.5 bg-card/secondary rounded-full overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${percentage}%` }}
@@ -241,7 +241,7 @@ export default function CapacityMonitor() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/50">
+                        <div className="flex items-center justify-between pt-1.5 text-xs text-muted-foreground/50">
                           <span>Weekly: {model.current_weekly_usage_count.toLocaleString()}</span>
                           <span>Reset: {formatDate(new Date(model.end_time).toISOString())}</span>
                         </div>

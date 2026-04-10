@@ -374,7 +374,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
           </div>
 
-          <div className="grid grid-cols-[70px_1fr_90px_100px_70px] items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
+          <div className="grid grid-cols-[80px_240px_120px_140px_90px] items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
             <span>类型</span>
             <span className="px-2">路径</span>
             <span className="text-right">耗时</span>
@@ -400,7 +400,7 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                   key={log.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="grid grid-cols-[70px_1fr_90px_100px_70px] items-center px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
+                  className="grid grid-cols-[80px_240px_120px_140px_90px] items-center px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
                   <Badge className={cn('justify-center capitalize text-xs', getActionConfig(log.action).color)}>
