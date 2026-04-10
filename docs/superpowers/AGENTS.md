@@ -49,12 +49,17 @@ docs/superpowers/
 
 **重要规则**: 
 - specs 永不归档，始终保留在 `specs/` 目录
-- plans 完成后归档到 `archive/v{MAJOR}.{MINOR}/`
+- plans 完成后归档到 `archive/v{MAJOR}.{MINOR}/`（如 v1.3, v1.4, v1.7）
+- 子版本 plans 归档到对应主版本目录（如 v1.3.1 → v1.3/）
 
 ## 版本历史
 
 | 版本 | 日期 | 主要特性 |
 |------|------|----------|
+| v1.7.0 | 2026-04-09 | Architecture Upgrade Phase 4-7, Media Enhancements |
+| v1.6.0 | 2026-04-06 | Architecture Upgrade v2 (DDD) |
+| v1.5.0 | 2026-04-05 | Architecture Refactoring, Settings, Delay Node, Cron Optimization |
+| v1.4.0 | 2026-04-05 | Architecture Upgrade, Workflow Cron Scheduling |
 | v1.3.0 | 2026-04-03 | Workflow System Refactoring |
 | v1.2.0 | 2026-04-02 | Theme System |
 | v1.1.0 | 2026-04-01 | Authentication |
