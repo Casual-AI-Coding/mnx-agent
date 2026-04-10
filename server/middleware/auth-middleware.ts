@@ -4,16 +4,20 @@ import { UserService, TokenPayload, RefreshTokenPayload } from '../services/user
 
 export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
-  const queryToken = req.query.token as string | undefined
 
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice(7)
-    : queryToken
+  // Query parameter tokens rejected per RFC 6750 security recommendations:
+  // - Leaks via server logs, browser history, Referer headers, CDN logs
+  // - Authorization header provides better security isolation
 
-  if (!token) {
-    res.status(401).json({ success: false, error: '未提供认证令牌' })
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({
+      success: false,
+      error: 'Access token required in Authorization header (Bearer scheme)',
+    })
     return
   }
+
+  const token = authHeader.slice(7)
 
   const payload = UserService.verifyToken(token)
   if (!payload) {
