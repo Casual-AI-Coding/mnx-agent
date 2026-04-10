@@ -374,60 +374,77 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
-            <span className="w-[100px]">类型</span>
-            <span className="flex-1 text-center">路径</span>
-            <span className="w-[120px] text-right">耗时</span>
-            <span className="w-[140px] text-right">时间</span>
-            <span className="w-[100px] text-right">状态</span>
           </div>
-        </div>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : logs.length === 0 ? (
-            <EmptyState
-              icon={Shield}
-              title={t('audit.noLogs', '暂无审计日志')}
-              description={t('audit.noLogsHint', '系统操作将自动记录在此')}
-            />
-          ) : (
-            <div className="divide-y divide-border">
-              {logs.map((log) => (
-                <motion.div
-                  key={log.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => setSelectedLog(log)}
-                >
-                  <Badge className={cn('w-[100px] justify-center capitalize text-xs', getActionConfig(log.action).color)}>
-                    {getActionConfig(log.action).label}
-                  </Badge>
-                  <div className="flex-1 min-w-0 text-center px-4">
-                    <p className="text-sm font-medium truncate">{log.request_path || '-'}</p>
-                    <p className="text-muted-foreground/50 text-xs">
-                      {log.request_method || '-'} · {log.resource_type || '-'}
-                    </p>
-                  </div>
-                  <span className="w-[120px] text-right text-muted-foreground/70 text-sm tabular-nums">
-                    {formatDuration(log.duration_ms)}
-                  </span>
-                  <span className="w-[140px] text-right text-muted-foreground/50 text-xs tabular-nums">
-                    {formatTime(log.created_at)}
-                  </span>
-                  <span className={cn(
-                    'w-[100px] text-right text-sm tabular-nums',
-                    STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70'
-                  )}>
-                    {log.response_status || '-'}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          )}
+
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
+                <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">类型</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">路径</th>
+                <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">耗时</th>
+                <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">时间</th>
+                <th className="py-3 px-4 text-right text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">状态</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  </td>
+                </tr>
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <EmptyState
+                      icon={Shield}
+                      title={t('audit.noLogs', '暂无审计日志')}
+                      description={t('audit.noLogsHint', '系统操作将自动记录在此')}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log) => (
+                  <motion.tr
+                    key={log.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="hover:bg-muted/30 cursor-pointer"
+                    onClick={() => setSelectedLog(log)}
+                  >
+                    <td className="py-3 px-4">
+                      <Badge className={cn('capitalize text-xs', getActionConfig(log.action).color)}>
+                        {getActionConfig(log.action).label}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="text-sm font-medium truncate">{log.request_path || '-'}</p>
+                      <p className="text-xs text-muted-foreground/50">
+                        {log.request_method || '-'} · {log.resource_type || '-'}
+                      </p>
+                    </td>
+                    <td className="py-3 px-4 text-right text-muted-foreground/70 text-sm tabular-nums">
+                      {formatDuration(log.duration_ms)}
+                    </td>
+                    <td className="py-3 px-4 text-right text-muted-foreground/50 text-xs tabular-nums">
+                      {formatTime(log.created_at)}
+                    </td>
+                    <td className={cn(
+                      'py-3 px-4 text-right text-sm tabular-nums',
+                      STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70'
+                    )}>
+                      {log.response_status || '-'}
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
