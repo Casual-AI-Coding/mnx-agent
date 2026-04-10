@@ -253,25 +253,26 @@ export function useMediaManagement(): UseMediaManagementReturn {
     try {
       await deleteMediaApi(record.id)
 
-      const remainingRecords = records.filter(r => r.id !== record.id)
-      setRecords(remainingRecords)
-      const currentPage = paginationRef.current.page
-
       setSelectedIds(prev => {
         const next = new Set(prev)
         next.delete(record.id)
         return next
       })
 
-      if (remainingRecords.length === 0 && currentPage > 1) {
+      const remainingRecords = records.filter(r => r.id !== record.id)
+      const limit = paginationRef.current.limit
+      const currentPage = paginationRef.current.page
+
+      if (remainingRecords.length < limit && currentPage > 1) {
         await fetchMedia(false)
       } else if (remainingRecords.length === 0 && currentPage === 1) {
+        setRecords([])
         setPagination(prev => ({
           ...prev,
-          total: 0,
-          totalPages: 0,
+          total: Math.max(0, prev.total - 1),
         }))
       } else {
+        setRecords(remainingRecords)
         setPagination(prev => ({
           ...prev,
           total: Math.max(0, prev.total - 1),
@@ -337,22 +338,23 @@ export function useMediaManagement(): UseMediaManagementReturn {
     try {
       await batchDeleteMedia(Array.from(selectedIds))
 
-      const remainingRecords = records.filter(r => !selectedIds.has(r.id))
-      const deleteCount = records.length - remainingRecords.length
-      setRecords(remainingRecords)
+      const deleteCount = selectedIds.size
       setSelectedIds(new Set())
 
-      if (remainingRecords.length === 0) {
-        if (paginationRef.current.page > 1) {
-          await fetchMedia(false)
-        } else {
-          setPagination(prev => ({
-            ...prev,
-            total: 0,
-            totalPages: 0,
-          }))
-        }
+      const remainingRecords = records.filter(r => !selectedIds.has(r.id))
+      const limit = paginationRef.current.limit
+      const currentPage = paginationRef.current.page
+
+      if (remainingRecords.length < limit && currentPage > 1) {
+        await fetchMedia(false)
+      } else if (remainingRecords.length === 0 && currentPage === 1) {
+        setRecords([])
+        setPagination(prev => ({
+          ...prev,
+          total: Math.max(0, prev.total - deleteCount),
+        }))
       } else {
+        setRecords(remainingRecords)
         setPagination(prev => ({
           ...prev,
           total: Math.max(0, prev.total - deleteCount),
@@ -360,7 +362,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       }
 
       setBatchDeleteDialogOpen(false)
-      toastSuccess('批量删除成功', `已删除 ${selectedIds.size} 个文件`)
+      toastSuccess('批量删除成功', `已删除 ${deleteCount} 个文件`)
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量删除失败')
     } finally {
