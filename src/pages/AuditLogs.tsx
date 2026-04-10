@@ -65,7 +65,7 @@ export default function AuditLogs() {
 
   const loadAllPaths = async () => {
     try {
-      const res = await getAuditLogs({ limit: 1000 })
+      const res = await getAuditLogs({ limit: 5000 })
       if (res.success && res.data) {
         const paths = [...new Set(res.data.logs.map(l => l.request_path).filter(Boolean))] as string[]
         setUniquePaths(paths.sort())
@@ -311,6 +311,35 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
+                if (sortBy === 'created_at') {
+                  setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+                } else {
+                  setSortBy('created_at')
+                  setSortOrder('desc')
+                }
+              }}
+              className={cn(
+                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                sortBy === 'created_at'
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              )}
+            >
+              时间
+              {sortBy === 'created_at' && (
+                <motion.div
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: sortOrder === 'asc' ? 0 : 180 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </motion.div>
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
                 if (sortBy === 'duration_ms') {
                   setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
                 } else {
@@ -346,12 +375,12 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
             </div>
           </div>
 
-          <div className="flex items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
-            <span className="w-[56px]">类型</span>
-            <span className="flex-1">路径</span>
-            <span className="w-[72px] text-right">耗时</span>
-            <span className="w-[88px] text-right">时间</span>
-            <span className="w-[48px] text-right">状态</span>
+          <div className="grid grid-cols-[60px_1fr_100px_100px_60px] items-center px-4 py-2 text-xs text-muted-foreground/60 border-t border-border/50 bg-muted/30">
+            <span>类型</span>
+            <span>路径</span>
+            <span className="text-right">耗时</span>
+            <span className="text-right">时间</span>
+            <span className="text-right">状态</span>
           </div>
         </div>
         <CardContent>
@@ -372,27 +401,26 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                   key={log.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
+                  className="grid grid-cols-[60px_1fr_100px_100px_60px] items-center px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
-                  <Badge className={cn('w-[56px] justify-center capitalize text-xs', getActionConfig(log.action).color)}>
+                  <Badge className={cn('justify-center capitalize text-xs', getActionConfig(log.action).color)}>
                     {getActionConfig(log.action).label}
                   </Badge>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 px-2">
                     <p className="text-sm font-medium truncate">{log.request_path || '-'}</p>
                     <p className="text-muted-foreground/50 text-xs">
                       {log.request_method || '-'} · {log.resource_type || '-'}
-                      {log.resource_id && ` · ${log.resource_id.slice(0, 8)}`}
                     </p>
                   </div>
-                  <span className="w-[72px] text-right text-muted-foreground/70 text-sm tabular-nums">
+                  <span className="text-right text-muted-foreground/70 text-sm tabular-nums">
                     {formatDuration(log.duration_ms)}
                   </span>
-                  <span className="w-[88px] text-right text-muted-foreground/50 text-xs tabular-nums">
+                  <span className="text-right text-muted-foreground/50 text-xs tabular-nums">
                     {formatTime(log.created_at)}
                   </span>
                   <span className={cn(
-                    'w-[48px] text-right text-sm tabular-nums',
+                    'text-right text-sm tabular-nums',
                     STATUS_COLORS[Math.floor((log.response_status || 0) / 100).toString()] || 'text-muted-foreground/70'
                   )}>
                     {log.response_status || '-'}
