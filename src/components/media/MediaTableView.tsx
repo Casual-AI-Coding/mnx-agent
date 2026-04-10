@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TYPE_VARIANTS, TYPE_LABELS, SOURCE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, formatDate, getTypeIcon } from '@/lib/utils/media'
+import { MediaCardPreview } from './MediaCardPreview'
 import type { MediaRecord } from '@/types/media'
 
 interface MediaTableViewProps {
@@ -28,6 +30,8 @@ export function MediaTableView({
 }: MediaTableViewProps) {
   const isAllSelected = selectedIds.size === records.length && records.length > 0
   const isIndeterminate = selectedIds.size > 0 && selectedIds.size < records.length
+  const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -83,7 +87,13 @@ export function MediaTableView({
                     <img
                       src={signedUrls[record.id] || ''}
                       alt={record.original_name || record.filename}
-                      className="w-10 h-10 object-cover rounded border border-border"
+                      className="w-10 h-10 object-cover rounded border border-border cursor-pointer"
+                      onMouseEnter={(e) => {
+                        setPreviewRecord(record)
+                        setMousePosition({ x: e.clientX, y: e.clientY })
+                      }}
+                      onMouseLeave={() => setPreviewRecord(null)}
+                      onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
                     />
                   ) : (
                     <div className="w-10 h-10 flex items-center justify-center rounded border border-border bg-muted/50">
@@ -144,6 +154,14 @@ export function MediaTableView({
           ))}
         </tbody>
       </table>
+      {previewRecord && (
+        <MediaCardPreview
+          record={previewRecord}
+          signedUrl={signedUrls[previewRecord.id] || ''}
+          mousePosition={mousePosition}
+          visible={!!previewRecord}
+        />
+      )}
     </div>
   )
 }

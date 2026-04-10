@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TYPE_VARIANTS, TYPE_LABELS, TYPE_GRADIENTS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
+import { MediaCardPreview } from './MediaCardPreview'
 import type { MediaRecord } from '@/types/media'
 
 interface TimelineItemProps {
@@ -24,6 +26,8 @@ export function TimelineItem({
   onDownload,
   onDelete,
 }: TimelineItemProps) {
+  const [showPreview, setShowPreview] = useState(false)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors ${
@@ -49,7 +53,13 @@ export function TimelineItem({
         <img
           src={signedUrl}
           alt={record.original_name || record.filename}
-          className="w-14 h-14 object-cover rounded border border-border flex-shrink-0"
+          className="w-14 h-14 object-cover rounded border border-border flex-shrink-0 cursor-pointer"
+          onMouseEnter={(e) => {
+            setShowPreview(true)
+            setMousePosition({ x: e.clientX, y: e.clientY })
+          }}
+          onMouseLeave={() => setShowPreview(false)}
+          onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
         />
       ) : (
         <div className={`w-14 h-14 rounded border border-border flex items-center justify-center flex-shrink-0 ${TYPE_GRADIENTS[record.type]}`}>
@@ -87,6 +97,15 @@ export function TimelineItem({
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
+
+      {record.type === 'image' && signedUrl && (
+        <MediaCardPreview
+          record={record}
+          signedUrl={signedUrl}
+          mousePosition={mousePosition}
+          visible={showPreview}
+        />
+      )}
     </div>
   )
 }
