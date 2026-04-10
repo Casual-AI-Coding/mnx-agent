@@ -69,7 +69,7 @@ export interface UseMediaManagementReturn {
   handleBatchDownload: () => Promise<void>
   fetchMedia: (isInitial?: boolean) => Promise<void>
   fetchTimelineMedia: (page: number, reset?: boolean) => Promise<void>
-  handleDelete: () => Promise<void>
+  handleDelete: (record: MediaRecord) => Promise<void>
   handleDownload: (record: MediaRecord) => void
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
@@ -90,6 +90,9 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
+
+  // Ref to track pagination values (to avoid dependency issues with setPagination)
+  const paginationRef = useRef(pagination)
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     isOpen: false,
     record: null,
@@ -113,6 +116,9 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track fetched IDs to avoid duplicate requests
   const fetchedIdsRef = useRef<Set<string>>(new Set())
+
+  // Track previous page to avoid unnecessary fetches
+  const prevPageRef = useRef(pagination.page)
 
   // Derived: filtered records based on search query
   const filteredRecords = useMemo(() => {
@@ -181,6 +187,11 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setSelectedIds(new Set())
   }, [activeTab, pagination.page])
 
+  // Sync pagination ref when pagination changes
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
+
   // Fetch media records
   const fetchMedia = useCallback(async (isInitial = false) => {
     setIsLoading(true)
@@ -191,8 +202,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const type = activeTab === 'all' ? undefined : (activeTab as MediaType)
       const response = await listMedia({
         type,
-        page: pagination.page,
-        limit: pagination.limit,
+        page: paginationRef.current.page,
+        limit: paginationRef.current.limit,
       })
 
       if (response.success) {
@@ -205,7 +216,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, pagination.page, pagination.limit])
+  }, [activeTab])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -238,18 +249,40 @@ export function useMediaManagement(): UseMediaManagementReturn {
   }, [activeTab, isLoadingMore])
 
   // Handle single delete
-  const handleDelete = useCallback(async () => {
-    if (!deleteDialog.record) return
-
+  const handleDelete = useCallback(async (record: MediaRecord) => {
     try {
-      await deleteMediaApi(deleteDialog.record.id)
-      setRecords((prev) => prev.filter((r) => r.id !== deleteDialog.record!.id))
-      setDeleteDialog({ isOpen: false, record: null })
+      await deleteMediaApi(record.id)
+
+      const remainingRecords = records.filter(r => r.id !== record.id)
+      setRecords(remainingRecords)
+      const currentPage = paginationRef.current.page
+
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(record.id)
+        return next
+      })
+
+      if (remainingRecords.length === 0 && currentPage > 1) {
+        await fetchMedia(false)
+      } else if (remainingRecords.length === 0 && currentPage === 1) {
+        setPagination(prev => ({
+          ...prev,
+          total: 0,
+          totalPages: 0,
+        }))
+      } else {
+        setPagination(prev => ({
+          ...prev,
+          total: Math.max(0, prev.total - 1),
+        }))
+      }
+
       toastSuccess('删除成功')
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败')
     }
-  }, [deleteDialog.record])
+  }, [records, fetchMedia])
 
   // Handle download
   const handleDownload = useCallback((record: MediaRecord) => {
@@ -303,8 +336,29 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setIsBatchDeleting(true)
     try {
       await batchDeleteMedia(Array.from(selectedIds))
-      setRecords((prev) => prev.filter((r) => !selectedIds.has(r.id)))
+
+      const remainingRecords = records.filter(r => !selectedIds.has(r.id))
+      const deleteCount = records.length - remainingRecords.length
+      setRecords(remainingRecords)
       setSelectedIds(new Set())
+
+      if (remainingRecords.length === 0) {
+        if (paginationRef.current.page > 1) {
+          await fetchMedia(false)
+        } else {
+          setPagination(prev => ({
+            ...prev,
+            total: 0,
+            totalPages: 0,
+          }))
+        }
+      } else {
+        setPagination(prev => ({
+          ...prev,
+          total: Math.max(0, prev.total - deleteCount),
+        }))
+      }
+
       setBatchDeleteDialogOpen(false)
       toastSuccess('批量删除成功', `已删除 ${selectedIds.size} 个文件`)
     } catch (err) {
@@ -312,7 +366,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsBatchDeleting(false)
     }
-  }, [selectedIds])
+  }, [records, selectedIds, fetchMedia])
 
   // Handle batch download
   const handleBatchDownload = useCallback(async () => {
@@ -352,7 +406,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Fetch data when tab or page changes
   useEffect(() => {
-    if (!isInitialLoad) {
+    if (!isInitialLoad && pagination.page !== prevPageRef.current) {
+      prevPageRef.current = pagination.page
       fetchMedia(false)
     }
   }, [fetchMedia, isInitialLoad, activeTab, pagination.page])
