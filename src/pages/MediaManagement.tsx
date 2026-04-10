@@ -173,7 +173,7 @@ export default function MediaManagement() {
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
               />
             ) : viewMode === 'timeline' ? (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="rounded-lg overflow-hidden bg-muted/30">
                 {timelineRecords.length === 0 && isLoadingMore ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -195,7 +195,7 @@ export default function MediaManagement() {
                         return (
                           <div key={record.id}>
                             {showDateHeader && (
-                              <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-2 bg-muted border-b text-sm font-medium">
+                              <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-2 bg-muted/50 text-sm font-medium">
                                 <Calendar className="w-4 h-4 text-muted-foreground" />
                                 <span>{formatDateHeader(record.created_at)}</span>
                               </div>
