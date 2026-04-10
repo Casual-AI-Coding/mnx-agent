@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Shield, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Shield, Search, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { getAuditLogs, getAuditStats, type AuditLog, type AuditAction, type AuditStats } from '@/lib/api/audit'
 import { toastError } from '@/lib/toast'
@@ -175,30 +175,34 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
 
       <Card className="border-border">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle className="text-lg">{t('audit.logList', '日志列表')}</CardTitle>
-            <div className="flex items-center gap-3">
-              <select
-                value={filters.status_filter || 'all'}
-                onChange={(e) => setFilters(f => ({ ...f, status_filter: e.target.value as 'all' | 'success' | 'error' }))}
-                className="px-3 py-1.5 rounded-md text-sm border border-border bg-background"
-              >
-                <option value="all">全部状态</option>
-                <option value="success">成功</option>
-                <option value="error">错误</option>
-              </select>
-              <select
-                value={filters.request_path || ''}
-                onChange={(e) => setFilters(f => ({ ...f, request_path: e.target.value || undefined }))}
-                className="px-3 py-1.5 rounded-md text-sm border border-border bg-background min-w-[150px]"
-              >
-                <option value="">全部路径</option>
-                {uniquePaths.map(path => (
-                  <option key={path} value={path}>{path.slice(0, 30)}{path.length > 30 ? '...' : ''}</option>
-                ))}
-              </select>
+            
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={filters.status_filter || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, status_filter: v as 'all' | 'success' | 'error' }))}>
+                <TabsList className="h-8 bg-muted/50">
+                  <TabsTrigger value="all" className="text-xs px-3 h-6">全部</TabsTrigger>
+                  <TabsTrigger value="success" className="text-xs px-3 h-6 text-success">成功</TabsTrigger>
+                  <TabsTrigger value="error" className="text-xs px-3 h-6 text-destructive">错误</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {uniquePaths.length > 0 && (
+                <Tabs value={filters.request_path || ''} onValueChange={(v) => setFilters(f => ({ ...f, request_path: v || undefined }))}>
+                  <TabsList className="h-8 bg-muted/50">
+                    <TabsTrigger value="" className="text-xs px-3 h-6">全部路径</TabsTrigger>
+                    {uniquePaths.slice(0, 5).map(path => (
+                      <TabsTrigger key={path} value={path} className="text-xs px-3 h-6 max-w-[100px] truncate" title={path}>
+                        {path.split('/').pop() || path}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              )}
+
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   if (sortBy === 'duration_ms') {
@@ -208,42 +212,42 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
                     setSortOrder('desc')
                   }
                 }}
-                className={cn(sortBy === 'duration_ms' && 'border-primary')}
+                className={cn(
+                  'h-8 px-3 text-xs',
+                  sortBy === 'duration_ms' && 'bg-accent text-accent-foreground'
+                )}
               >
-                耗时排序
+                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                耗时
                 {sortBy === 'duration_ms' && (
-                  sortOrder === 'asc' ? <ArrowUp className="w-4 h-4 ml-1" /> : <ArrowDown className="w-4 h-4 ml-1" />
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />
                 )}
               </Button>
-              <div className="flex gap-1 p-1 bg-secondary rounded-lg">
-                <button
-                  onClick={() => setFilters(f => ({ ...f, action: undefined }))}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-                    !filters.action
-                      ? 'bg-primary text-foreground'
-                      : 'text-muted-foreground/70 hover:text-foreground/80 hover:bg-card/secondary'
-                  )}
-                >
-                  全部
-                </button>
+            </div>
+          </div>
+
+          {/* Action Filter */}
+          <div className="flex items-center gap-2 pt-3 border-t border-border mt-3">
+            <span className="text-xs text-muted-foreground mr-2">操作:</span>
+            <Tabs value={filters.action || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, action: v === 'all' ? undefined : v as AuditAction }))}>
+              <TabsList className="h-8 bg-muted/50">
+                <TabsTrigger value="all" className="text-xs px-3 h-6">全部</TabsTrigger>
                 {(Object.keys(ACTION_CONFIG) as AuditAction[]).map((action) => (
-                  <button
+                  <TabsTrigger
                     key={action}
-                    onClick={() => setFilters(f => ({ ...f, action }))}
+                    value={action}
                     className={cn(
-                      'px-3 py-1.5 rounded-md text-sm font-medium transition-all border',
-                      filters.action === action
-                        ? cn(ACTION_CONFIG[action].color, 'border-current')
-                        : 'text-muted-foreground/70 hover:text-foreground/80 border-border/80'
+                      'text-xs px-3 h-6 capitalize',
+                      ACTION_CONFIG[action].color
                     )}
                   >
                     {ACTION_CONFIG[action].label}
-                  </button>
+                  </TabsTrigger>
                 ))}
-              </div>
-            </div>
+              </TabsList>
+            </Tabs>
           </div>
+
           <div className="flex items-center gap-8 pt-3 text-xs text-muted-foreground/50 border-t border-border mt-3">
             <span className="w-16">耗时</span>
             <span className="w-20">时间</span>
