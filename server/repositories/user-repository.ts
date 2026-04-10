@@ -58,7 +58,7 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
   }
 
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {
-    const { action, resource_type, resource_id, user_id, response_status, start_date, end_date, page = 1, limit = 20 } = query
+    const { action, resource_type, resource_id, user_id, response_status, request_path, status_filter, start_date, end_date, page = 1, limit = 20, sort_by = 'created_at', sort_order = 'desc' } = query
     const offset = (page - 1) * limit
 
     const conditions: string[] = []
@@ -90,6 +90,16 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
       params.push(response_status)
       paramIndex++
     }
+    if (request_path) {
+      conditions.push(`request_path LIKE $${paramIndex}`)
+      params.push(`%${request_path}%`)
+      paramIndex++
+    }
+    if (status_filter === 'success') {
+      conditions.push(`response_status >= 200 AND response_status < 300`)
+    } else if (status_filter === 'error') {
+      conditions.push(`response_status >= 400`)
+    }
     if (start_date) {
       conditions.push(`created_at >= $${paramIndex}`)
       params.push(start_date)
@@ -109,9 +119,12 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
     )
     const total = parseInt(countRows[0]?.count ?? '0', 10)
 
+    const orderBy = sort_by === 'duration_ms' ? 'duration_ms' : 'created_at'
+    const order = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+
     params.push(limit, offset)
     const rows = await this.conn.query<AuditLogRow>(
-      `SELECT * FROM audit_logs ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      `SELECT * FROM audit_logs ${whereClause} ORDER BY ${orderBy} ${order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       params
     )
 

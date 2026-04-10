@@ -16,10 +16,14 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     resource_id,
     user_id,
     response_status,
+    request_path,
+    status_filter,
     start_date,
     end_date,
     page,
     limit,
+    sort_by,
+    sort_order,
   } = req.query
 
   // Non-admin users can only see their own audit logs
@@ -27,17 +31,29 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     ? (user_id as string | undefined)
     : req.user?.userId
 
+  let responseStatusFilter: number | undefined
+  if (status_filter === 'success') {
+    responseStatusFilter = 200
+  } else if (status_filter === 'error') {
+    responseStatusFilter = 400
+  } else if (response_status) {
+    responseStatusFilter = Number(response_status)
+  }
+
   const db = getDatabaseService()
   const result = await db.getAuditLogs({
     action: action as AuditAction | undefined,
     resource_type: resource_type as string | undefined,
     resource_id: resource_id as string | undefined,
     user_id: effectiveUserId,
-    response_status: response_status ? Number(response_status) : undefined,
+    response_status: responseStatusFilter,
+    request_path: request_path as string | undefined,
     start_date: start_date as string | undefined,
     end_date: end_date as string | undefined,
     page: Number(page),
     limit: Number(limit),
+    sort_by: sort_by as 'created_at' | 'duration_ms' | undefined,
+    sort_order: sort_order as 'asc' | 'desc' | undefined,
   })
 
   const currentLimit = Number(limit)

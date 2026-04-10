@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Shield, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check } from 'lucide-react'
+import { Shield, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, Clock, Activity, AlertCircle, CheckCircle2, XCircle, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -44,23 +44,33 @@ export default function AuditLogs() {
   const [copied, setCopied] = useState(false)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [filters, setFilters] = useState<{ action?: AuditAction; resource_type?: string }>({})
+  const [filters, setFilters] = useState<{
+    action?: AuditAction
+    resource_type?: string
+    request_path?: string
+    status_filter?: 'all' | 'success' | 'error'
+  }>({})
+  const [sortBy, setSortBy] = useState<'created_at' | 'duration_ms'>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [uniquePaths, setUniquePaths] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
-  }, [page, filters])
+  }, [page, filters, sortBy, sortOrder])
 
   const loadData = async () => {
     setIsLoading(true)
     try {
       const [logsRes, statsRes] = await Promise.all([
-        getAuditLogs({ ...filters, page, limit: 20 }),
+        getAuditLogs({ ...filters, page, limit: 20, sort_by: sortBy, sort_order: sortOrder }),
         getAuditStats()
       ])
 
       if (logsRes.success && logsRes.data) {
         setLogs(logsRes.data.logs)
         setTotalPages(logsRes.data.pagination.totalPages)
+        const paths = [...new Set(logsRes.data.logs.map(l => l.request_path).filter(Boolean))] as string[]
+        setUniquePaths(paths)
       }
       if (statsRes.success && statsRes.data) {
         setStats(statsRes.data)
@@ -167,7 +177,44 @@ ${log.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof log.request_body ==
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{t('audit.logList', '日志列表')}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <select
+                value={filters.status_filter || 'all'}
+                onChange={(e) => setFilters(f => ({ ...f, status_filter: e.target.value as 'all' | 'success' | 'error' }))}
+                className="px-3 py-1.5 rounded-md text-sm border border-border bg-background"
+              >
+                <option value="all">全部状态</option>
+                <option value="success">成功</option>
+                <option value="error">错误</option>
+              </select>
+              <select
+                value={filters.request_path || ''}
+                onChange={(e) => setFilters(f => ({ ...f, request_path: e.target.value || undefined }))}
+                className="px-3 py-1.5 rounded-md text-sm border border-border bg-background min-w-[150px]"
+              >
+                <option value="">全部路径</option>
+                {uniquePaths.map(path => (
+                  <option key={path} value={path}>{path.slice(0, 30)}{path.length > 30 ? '...' : ''}</option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (sortBy === 'duration_ms') {
+                    setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+                  } else {
+                    setSortBy('duration_ms')
+                    setSortOrder('desc')
+                  }
+                }}
+                className={cn(sortBy === 'duration_ms' && 'border-primary')}
+              >
+                耗时排序
+                {sortBy === 'duration_ms' && (
+                  sortOrder === 'asc' ? <ArrowUp className="w-4 h-4 ml-1" /> : <ArrowDown className="w-4 h-4 ml-1" />
+                )}
+              </Button>
               <div className="flex gap-1 p-1 bg-secondary rounded-lg">
                 <button
                   onClick={() => setFilters(f => ({ ...f, action: undefined }))}

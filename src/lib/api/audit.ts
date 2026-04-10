@@ -46,6 +46,10 @@ export interface AuditLogQuery {
   resource_type?: string
   resource_id?: string
   response_status?: number
+  request_path?: string
+  status_filter?: 'all' | 'success' | 'error'
+  sort_by?: 'created_at' | 'duration_ms'
+  sort_order?: 'asc' | 'desc'
   page?: number
   limit?: number
 }

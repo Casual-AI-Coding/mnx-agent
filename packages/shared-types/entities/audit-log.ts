@@ -59,10 +59,14 @@ export interface AuditLogQuery {
   resource_id?: string
   user_id?: string
   response_status?: number
+  request_path?: string
+  status_filter?: 'all' | 'success' | 'error'
   start_date?: string
   end_date?: string
   page?: number
   limit?: number
+  sort_by?: 'created_at' | 'duration_ms'
+  sort_order?: 'asc' | 'desc'
 }
 
 export interface AuditStats {
