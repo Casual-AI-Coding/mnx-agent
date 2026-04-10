@@ -202,10 +202,12 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
   }
 
   async getUniqueAuditUsers(userId?: string): Promise<{ id: string; username: string }[]> {
-    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
+    const whereClause = userId
+      ? 'WHERE user_id = $1 AND user_id IS NOT NULL'
+      : 'WHERE user_id IS NOT NULL'
     const params = userId ? [userId] : []
     const rows = await this.conn.query<{ user_id: string }>(
-      `SELECT DISTINCT user_id FROM audit_logs ${ownerFilter} AND user_id IS NOT NULL`,
+      `SELECT DISTINCT user_id FROM audit_logs ${whereClause}`,
       params
     )
     const userIds = rows.map(r => r.user_id).filter(Boolean)
