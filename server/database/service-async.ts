@@ -461,6 +461,10 @@ export class DatabaseService {
     return this.mediaRepo.hardDelete(id, ownerId)
   }
 
+  async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
+    return this.mediaRepo.toggleFavorite(userId, mediaId)
+  }
+
   async getExecutionStatsOverview(ownerId?: string): Promise<{
     totalExecutions: number
     successRate: number

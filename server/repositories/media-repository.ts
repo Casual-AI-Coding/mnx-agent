@@ -4,6 +4,8 @@ import type {
   MediaRecord,
   MediaRecordRow,
   CreateMediaRecord,
+  FavoriteRecord,
+  FavoriteRecordRow,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 import type { MediaType, MediaSource } from '../database/types.js'
@@ -31,6 +33,8 @@ export interface MediaListOptions {
   offset?: number
   includeDeleted?: boolean
   ownerId?: string
+  favorite?: boolean
+  favoriteUserId?: string
 }
 
 export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaRecord, Partial<MediaRecord>> {
@@ -64,34 +68,52 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, limit = 50, offset = 0, includeDeleted = false, ownerId } = options
+    const { type, source, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId } = options
 
+    let selectClause = 'm.*'
+    let joinClause = ''
     let whereClause = ''
-    const params: (string | number)[] = []
+    const params: (string | number | boolean)[] = []
     let paramIndex = 1
 
+    // Handle favorite filtering
+    if (favoriteUserId) {
+      selectClause += ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
+      if (favorite) {
+        // INNER JOIN - only return favorited records
+        joinClause = 'INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1 AND f.is_deleted = false'
+        params.push(favoriteUserId)
+        paramIndex++
+      } else {
+        // LEFT JOIN - return all records with is_favorite status
+        joinClause = 'LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1'
+        params.push(favoriteUserId)
+        paramIndex++
+      }
+    }
+
     if (ownerId) {
-      whereClause = `owner_id = $${paramIndex}`
+      whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
       params.push(ownerId)
       paramIndex++
     }
 
     if (!includeDeleted) {
       if (this.isPostgres()) {
-        whereClause += whereClause ? ` AND is_deleted = false` : `is_deleted = false`
+        whereClause += whereClause ? ` AND m.is_deleted = false` : `m.is_deleted = false`
       } else {
-        whereClause += whereClause ? ` AND is_deleted = 0` : `is_deleted = 0`
+        whereClause += whereClause ? ` AND m.is_deleted = 0` : `m.is_deleted = 0`
       }
     }
 
     if (type) {
-      whereClause += whereClause ? ` AND type = $${paramIndex}` : `type = $${paramIndex}`
+      whereClause += whereClause ? ` AND m.type = $${paramIndex}` : `m.type = $${paramIndex}`
       params.push(type)
       paramIndex++
     }
 
     if (source) {
-      whereClause += whereClause ? ` AND source = $${paramIndex}` : `source = $${paramIndex}`
+      whereClause += whereClause ? ` AND m.source = $${paramIndex}` : `m.source = $${paramIndex}`
       params.push(source)
       paramIndex++
     }
@@ -101,19 +123,25 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     }
 
     const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM media_records ${whereClause}`,
+      `SELECT COUNT(*) as count FROM media_records m ${joinClause} ${whereClause}`,
       params
     )
     const total = parseInt(countRows[0]?.count ?? '0', 10)
 
     params.push(limit, offset)
-    const rows = await this.conn.query<MediaRecordRow>(
-      `SELECT * FROM media_records ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+    const rows = await this.conn.query<MediaRecordRow & { is_favorite?: boolean }>(
+      `SELECT ${selectClause} FROM media_records m ${joinClause} ${whereClause} ORDER BY m.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       params
     )
 
     return {
-      items: rows.map(rowToMediaRecord),
+      items: rows.map(row => {
+        const record = rowToMediaRecord(row)
+        if (favoriteUserId) {
+          record.is_favorite = row.is_favorite ?? false
+        }
+        return record
+      }),
       total,
     }
   }
@@ -244,5 +272,56 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       )
       return rows.map(rowToMediaRecord)
     }
+  }
+
+  async findFavorite(userId: string, mediaId: string): Promise<FavoriteRecord | null> {
+    const rows = await this.conn.query<FavoriteRecordRow>(
+      `SELECT id, user_id, media_id, is_deleted, created_at, updated_at
+       FROM user_media_favorites
+       WHERE user_id = $1 AND media_id = $2`,
+      [userId, mediaId]
+    )
+    return rows.length > 0 ? rows[0] : null
+  }
+
+  async insertFavorite(userId: string, mediaId: string): Promise<FavoriteRecord> {
+    const now = toISODate()
+    await this.conn.execute(
+      `INSERT INTO user_media_favorites (user_id, media_id, is_deleted, created_at, updated_at)
+       VALUES ($1, $2, FALSE, $3, $3)`,
+      [userId, mediaId, now]
+    )
+    const result = await this.findFavorite(userId, mediaId)
+    if (!result) {
+      throw new Error(`Failed to insert favorite for user ${userId} and media ${mediaId}`)
+    }
+    return result
+  }
+
+  async updateFavorite(id: number, isDeleted: boolean): Promise<void> {
+    const now = toISODate()
+    await this.conn.execute(
+      `UPDATE user_media_favorites
+       SET is_deleted = $1, updated_at = $2
+       WHERE id = $3`,
+      [isDeleted, now, id]
+    )
+  }
+
+  async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
+    const existing = await this.findFavorite(userId, mediaId)
+
+    if (!existing) {
+      await this.insertFavorite(userId, mediaId)
+      return { isFavorite: true, action: 'added' }
+    }
+
+    if (existing.is_deleted) {
+      await this.updateFavorite(existing.id, false)
+      return { isFavorite: true, action: 'added' }
+    }
+
+    await this.updateFavorite(existing.id, true)
+    return { isFavorite: false, action: 'removed' }
   }
 }

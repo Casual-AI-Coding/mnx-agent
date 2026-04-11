@@ -55,4 +55,8 @@ export class MediaService implements IMediaService {
   async getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> {
     return this.db.getMediaRecordsByIds(ids)
   }
+
+  async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
+    return this.db.toggleFavorite(userId, mediaId)
+  }
 }
