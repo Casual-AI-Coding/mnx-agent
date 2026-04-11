@@ -526,6 +526,86 @@ export default function MusicGeneration() {
                 </div>
               )}
 
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <CollapsibleTrigger icon={<Settings2 className="w-4 h-4" />}>
+                  高级设置
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        采样率
+                      </label>
+                      <Select
+                        value={sampleRate.toString()}
+                        onValueChange={(v) => setSampleRate(Number(v) as 44100 | 48000)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="44100">44100 Hz</SelectItem>
+                          <SelectItem value="48000">48000 Hz</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        比特率
+                      </label>
+                      <Select
+                        value={bitrate}
+                        onValueChange={(v) => setBitrate(v as '128k' | '192k' | '256k' | '320k')}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="128k">128 kbps</SelectItem>
+                          <SelectItem value="192k">192 kbps</SelectItem>
+                          <SelectItem value="256k">256 kbps</SelectItem>
+                          <SelectItem value="320k">320 kbps</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        输出格式
+                      </label>
+                      <Select
+                        value={format}
+                        onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mp3">MP3</SelectItem>
+                          <SelectItem value="wav">WAV</SelectItem>
+                          <SelectItem value="flac">FLAC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Seed {isSeedAvailable ? '' : '(仅 music-2.6)'}
+                      </label>
+                      <Input
+                        type="number"
+                        value={seed}
+                        onChange={(e) => setSeed(e.target.value)}
+                        placeholder="留空则随机"
+                        disabled={!isSeedAvailable}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
               <Button
                 onClick={handleGenerate}
                 disabled={!lyrics.trim() || isGenerating}
