@@ -2,6 +2,115 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.1] - 2026-04-11
+
+### Added
+
+**Music Generation Enhancements - 音乐生成功能增强**
+
+- **纯音乐模式 (Instrumental Mode)** - 无需歌词即可生成纯音乐
+  - `src/pages/MusicGeneration.tsx` - 新增 instrumental 模式 checkbox 和表单逻辑
+  - `src/types/music.ts` - 新增 `instrumental` 字段
+  - 纯音乐模式下歌词字段隐藏且不提交
+
+- **Seed 复现参数** - 支持通过 seed 值复现音乐生成结果
+  - `src/pages/MusicGeneration.tsx` - 高级设置面板新增 seed 输入
+  - `src/types/music.ts` - 新增 `seed` 参数
+  - 仅 music-2.6 模型支持
+
+- **Music-Cover 翻唱模式** - 支持一步和两步翻唱
+  - `src/pages/MusicGeneration.tsx` - 新增翻唱面板（一步/两步 Tabs）
+  - `server/routes/music.ts` - 新增 reference_audio_url, use_original_lyrics 参数
+  - `server/lib/minimax.ts` - 新增 `musicPreprocess()` 方法
+  - `src/lib/api/music.ts` - 新增 `preprocessMusic()` API 函数
+  - 后端新增 `/music/preprocess` 路由（multer 文件上传）
+
+- **高级设置面板 (Collapsible)** - 折叠面板组织高级参数
+  - `src/components/ui/Collapsible.tsx` (107行) - 新增折叠面板组件
+  - 包含 seed、bitrate、format、sample_rate 等高级参数
+
+- **字符计数器** - 风格提示和歌词输入的字符计数
+  - 风格提示: 最大 2000 字符
+  - 歌词: 最大 3500 字符
+
+- **全局音频播放器** - 全局持久化音乐播放
+  - `src/components/media/AudioPlayer.tsx` (231行) - Spotify 风格播放器
+  - `src/stores/audio.ts` (89行) - Zustand 全局音频状态管理
+  - `src/components/layout/AppLayout.tsx` - 集成全局播放器
+  - 支持播放列表、上下曲、音量控制、拖拽进度条、全局鼠标事件
+
+- **模型常量集中化** - 所有模型定义迁移到 `src/lib/config/constants.ts`
+  - TEXT_MODELS, SPEECH_MODELS, IMAGE_MODELS, MUSIC_MODELS, VIDEO_MODELS
+  - ASPECT_RATIOS, EMOTIONS 统一导出
+
+- **AI 歌词优化范围扩展** - 2.5 / 2.5+ / 2.6 模型均支持歌词优化
+
+- **文档** 
+  - `docs/superpowers/specs/2026-04-11-music-generation-enhancements-design.md` (426行)
+  - `docs/superpowers/plans/2026-04-11-music-generation-enhancements.md` (1271行)
+
+### Changed
+
+- **音乐 API 参数对齐官方规范** - `server/routes/music.ts`
+  - `lyrics` 改为可选（纯音乐模式）
+  - `bitrate` 从 number 改为 string（'128k', '192k', '320k'）
+  - 新增 `seed`, `reference_audio_url`, `use_original_lyrics` 参数
+  - `music_generation_timeout` 从 180s 增至 300s
+  - `voice_ids` 从 string[] 改为 string
+
+- **音乐超时延长** - 前后端均增至 5 分钟
+  - `server/lib/minimax.ts` - music_generation timeout: 300s
+  - `src/pages/MusicGeneration.tsx` - 前端超时同步
+
+- **音乐默认值修正** - `server/services/settings-service.ts`
+  - `optimizeLyrics` 默认值从 `true` 改为 `false`
+
+- **GenerationSettingsPanel 重构** - 使用集中化模型常量
+  - 移除硬编码 options，使用 TEXT_MODELS, SPEECH_MODELS 等
+  - 减少 44 行重复代码
+
+- **CostEstimator 更新** - `estimateMusicCost()` 新增 model 参数
+
+- **媒体管理扩展** - audio/music 类型加入可预览媒体
+  - `MediaCard.tsx`, `MediaTableView.tsx`, `TimelineItem.tsx`
+  - 音频/音乐记录支持预览按钮
+
+- **VoiceResult 集成全局播放器** - `src/pages/VoiceSync/VoiceResult.tsx`
+  - 直接 URL 音频支持全局播放
+
+- **类型扩展** - 统一扩展 image/text/video/voice 类型定义
+  - `src/types/image.ts` (+30行)
+  - `src/types/text.ts` (+27行)
+  - `src/types/video.ts` (+79行)
+  - `src/types/voice.ts` (+50行)
+
+- **国际化** - 新增英文/中文翻译条目
+
+### Fixed
+
+- **音乐 CORS 问题** - 强制音乐生成走后端代理，避免前端直接请求 MiniMax API
+- **JWT Token 注入** - 音乐 API 使用 apiClient 自动注入 JWT token
+- **API 响应解析** - 修复音乐 API 扁平化响应结构解析
+- **music_duration 单位** - 从毫秒转换为秒
+- **音频播放器** - 自动播放、seek 精度、拖拽防抖、按钮样式修复
+- **分页刷新逻辑** - tab 切换时正确触发数据获取
+- **User Repository** - `rowToAuditLog` usernameMap 改为可选参数
+
+### Performance
+
+- **33 文件变更** (+3,233 insertions, -401 deletions)
+- 新增 2 个核心组件（AudioPlayer, Collapsible）
+- 新增 1 个 Zustand store（audio store）
+- 前端新增 ~1,200 行音乐/UI 逻辑
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（仅新增 `/music/preprocess`）
+- ✅ 音乐生成 `/music/generate` 参数向后兼容（新增可选参数）
+- ✅ `lyrics` 改为可选，不影响现有传歌词的调用
+- ✅ 样式变更不影响功能逻辑
+- ✅ 全局音频播放器为增量功能，无破坏性变更
+
 ## [1.8.0] - 2026-04-10
 
 ### Added
