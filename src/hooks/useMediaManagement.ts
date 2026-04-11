@@ -8,6 +8,7 @@ import {
   batchDownloadMedia,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
+import { useAudioStore } from '@/stores/audio'
 
 export interface DeleteDialogState {
   isOpen: boolean
@@ -112,7 +113,15 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [isBatchDownloading, setIsBatchDownloading] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'timeline' | 'card'>('table')
   const [pageInput, setPageInput] = useState('')
-  const [audioPreviewRecord, setAudioPreviewRecord] = useState<MediaRecord | null>(null)
+  
+  // Global audio store
+  const {
+    currentRecord: audioPreviewRecord,
+    setCurrentRecord: setAudioPreviewRecord,
+    setPlaylist,
+    setSignedUrls: setGlobalSignedUrls,
+    setSignedUrl,
+  } = useAudioStore()
 
   // Timeline state
   const [timelineRecords, setTimelineRecords] = useState<MediaRecord[]>([])
@@ -145,6 +154,19 @@ export function useMediaManagement(): UseMediaManagementReturn {
     const source = viewMode === 'timeline' ? timelineRecords : filteredRecords
     return source.filter(r => r.type === 'audio' || r.type === 'music').filter(r => signedUrls[r.id])
   }, [viewMode, timelineRecords, filteredRecords, signedUrls])
+
+  // Sync playlist and signedUrls with global audio store
+  useEffect(() => {
+    setPlaylist(audioRecords)
+    setGlobalSignedUrls(signedUrls)
+  }, [audioRecords, signedUrls, setPlaylist, setGlobalSignedUrls])
+
+  // Set signedUrl when user selects an audio to play
+  useEffect(() => {
+    if (audioPreviewRecord && signedUrls[audioPreviewRecord.id]) {
+      setSignedUrl(signedUrls[audioPreviewRecord.id])
+    }
+  }, [audioPreviewRecord, signedUrls, setSignedUrl])
 
   // Derived: lightbox slides (only include images that have signed URLs)
   const lightboxSlides = useMemo(() =>
@@ -193,23 +215,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
     return pages
   }, [pagination.page, pagination.totalPages])
-
-  const audioPreviewIndex = useMemo(() => {
-    if (!audioPreviewRecord) return undefined
-    return audioRecords.findIndex(r => r.id === audioPreviewRecord.id)
-  }, [audioPreviewRecord, audioRecords])
-
-  const handleAudioPrev = useCallback(() => {
-    if (audioPreviewIndex === undefined || audioPreviewIndex <= 0) return
-    const prevRecord = audioRecords[audioPreviewIndex - 1]
-    setAudioPreviewRecord(prevRecord)
-  }, [audioPreviewIndex, audioRecords])
-
-  const handleAudioNext = useCallback(() => {
-    if (audioPreviewIndex === undefined || audioPreviewIndex >= audioRecords.length - 1) return
-    const nextRecord = audioRecords[audioPreviewIndex + 1]
-    setAudioPreviewRecord(nextRecord)
-  }, [audioPreviewIndex, audioRecords])
 
   // Clear selection when tab or page changes
   useEffect(() => {
@@ -594,7 +599,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
     filteredRecords,
     imageRecords,
     audioRecords,
-    audioPreviewIndex,
     lightboxSlides,
     pageNumbers,
 
@@ -609,7 +613,5 @@ export function useMediaManagement(): UseMediaManagementReturn {
     handleDownload,
     handlePreview,
     handlePageChange,
-    handleAudioPrev,
-    handleAudioNext,
   }
 }

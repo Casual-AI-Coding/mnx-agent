@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import HistoryPanel from './HistoryPanel'
+import { AudioPlayer } from '@/components/media/AudioPlayer'
 import { useSettingsStore } from '@/settings/store'
+import { useAudioStore } from '@/stores/audio'
 import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +21,16 @@ export default function AppLayout() {
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  
+  const {
+    currentRecord,
+    playlist,
+    currentIndex,
+    signedUrl,
+    playPrev,
+    playNext,
+    close,
+  } = useAudioStore()
 
   useEffect(() => {
     initialize()
@@ -48,6 +60,18 @@ export default function AppLayout() {
         </div>
       </main>
       <HistoryPanel isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
+      
+      {currentRecord && signedUrl && (
+        <AudioPlayer
+          record={currentRecord}
+          signedUrl={signedUrl}
+          onClose={close}
+          playlist={playlist}
+          currentIndex={currentIndex}
+          onPrev={playPrev}
+          onNext={playNext}
+        />
+      )}
 
       {showKeyModal && (
         <div
