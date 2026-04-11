@@ -14,12 +14,17 @@ export function AudioPlayer({ record, signedUrl, onClose }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const isSeekingRef = useRef(false)
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleTimeUpdate = () => {
+      if (!isSeekingRef.current) {
+        setCurrentTime(audio.currentTime)
+      }
+    }
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => setIsPlaying(false)
 
@@ -53,13 +58,23 @@ export function AudioPlayer({ record, signedUrl, onClose }: AudioPlayerProps) {
     setIsPlaying(!isPlaying)
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value)
+    setCurrentTime(time)
+  }
+
+  const handleSeekStart = () => {
+    isSeekingRef.current = true
+  }
+
+  const handleSeekEnd = (e: React.PointerEvent<HTMLInputElement>) => {
     const audio = audioRef.current
     if (!audio) return
 
-    const time = parseFloat(e.target.value)
+    const time = parseFloat((e.target as HTMLInputElement).value)
     audio.currentTime = time
     setCurrentTime(time)
+    isSeekingRef.current = false
   }
 
   const formatTime = (time: number) => {
@@ -93,8 +108,10 @@ export function AudioPlayer({ record, signedUrl, onClose }: AudioPlayerProps) {
               min={0}
               max={duration || 0}
               value={currentTime}
-              onChange={handleSeek}
               step={0.1}
+              onChange={handleSeekChange}
+              onPointerDown={handleSeekStart}
+              onPointerUp={handleSeekEnd}
               className="flex-1 h-2 bg-muted rounded-full cursor-pointer 
                 [&::-webkit-slider-thumb]:appearance-none 
                 [&::-webkit-slider-thumb]:w-4 
