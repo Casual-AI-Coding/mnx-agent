@@ -79,26 +79,38 @@ export default function MusicGeneration() {
       })
 
       const audioData = response.data.audio
-      const byteArray = new Uint8Array(audioData.length / 2)
-      for (let i = 0; i < audioData.length; i += 2) {
-        byteArray[i / 2] = parseInt(audioData.substring(i, i + 2), 16)
+      let finalAudioUrl: string
+      let finalDuration: number
+
+      if (audioData.startsWith('http')) {
+        finalAudioUrl = audioData
+        finalDuration = response.extra_info?.music_duration 
+          ? Math.floor(response.extra_info.music_duration / 1000)
+          : response.data.duration
+        saveMusicToMedia(audioData)
+      } else {
+        const byteArray = new Uint8Array(audioData.length / 2)
+        for (let i = 0; i < audioData.length; i += 2) {
+          byteArray[i / 2] = parseInt(audioData.substring(i, i + 2), 16)
+        }
+        const blob = new Blob([byteArray], { type: 'audio/mp3' })
+        finalAudioUrl = URL.createObjectURL(blob)
+        finalDuration = response.data.duration
       }
-      const blob = new Blob([byteArray], { type: 'audio/mp3' })
-      const url = URL.createObjectURL(blob)
-      setAudioUrl(url)
-      setAudioDuration(response.data.duration)
-      saveMusicToMedia(url)
+
+      setAudioUrl(finalAudioUrl)
+      setAudioDuration(finalDuration)
 
       addUsage('musicRequests', 1)
       addItem({
         type: 'music',
         input: lyrics.trim(),
-        outputUrl: url,
+        outputUrl: finalAudioUrl,
         metadata: {
           model,
           stylePrompt,
           optimizeLyrics,
-          duration: response.data.duration,
+          duration: finalDuration,
         },
       })
     } catch (err) {
