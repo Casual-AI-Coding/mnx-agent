@@ -501,36 +501,21 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_i
   migration_021,
   migration_024,
   {
-    id: 22,
-    name: 'migration_022_cron_jobs_misfire_policy',
+    id: 25,
+    name: 'migration_025_media_favorites',
     sql: `
-      ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS misfire_policy VARCHAR(20) DEFAULT 'fire_once';
-    `,
-  },
-  {
-    id: 23,
-    name: 'migration_023_execution_states',
-    sql: `
-      CREATE TABLE IF NOT EXISTS execution_states (
-        id TEXT PRIMARY KEY,
-        execution_log_id TEXT NOT NULL,
-        workflow_id TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        current_layer INTEGER DEFAULT 0,
-        completed_nodes TEXT NOT NULL DEFAULT '[]',
-        failed_nodes TEXT NOT NULL DEFAULT '[]',
-        node_outputs TEXT NOT NULL DEFAULT '{}',
-        context TEXT NOT NULL DEFAULT '{}',
-        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        paused_at TIMESTAMP,
-        resumed_at TIMESTAMP,
-        completed_at TIMESTAMP,
-        created_by TEXT
-      );
+    CREATE TABLE IF NOT EXISTS user_media_favorites (
+      id SERIAL PRIMARY KEY,
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      media_id VARCHAR(36) NOT NULL REFERENCES media_records(id),
+      is_deleted BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT unique_user_media UNIQUE(user_id, media_id)
+    );
 
-      CREATE INDEX IF NOT EXISTS idx_execution_states_status ON execution_states(status);
-      CREATE INDEX IF NOT EXISTS idx_execution_states_log_id ON execution_states(execution_log_id);
+    CREATE INDEX IF NOT EXISTS idx_favorites_user_active ON user_media_favorites(user_id, is_deleted);
+    CREATE INDEX IF NOT EXISTS idx_favorites_media ON user_media_favorites(media_id);
     `,
   },
 ]
