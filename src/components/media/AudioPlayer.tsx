@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Play, Pause, X, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { MediaRecord } from '@/types/media'
 
@@ -26,8 +26,8 @@ export function AudioPlayer({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.8)
+  const [isMuted, setIsMuted] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragValue, setDragValue] = useState(0)
 
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -41,18 +41,13 @@ export function AudioPlayer({
       }
     }
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration)
-    }
-
+    const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
       setIsPlaying(false)
-      setCurrentTime(0)
       if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) {
         onNext()
       }
     }
-
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
 
@@ -61,7 +56,6 @@ export function AudioPlayer({
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('pause', handlePause)
-
     audio.volume = volume
 
     return () => {
@@ -78,15 +72,14 @@ export function AudioPlayer({
       audioRef.current.src = signedUrl
       audioRef.current.load()
       setCurrentTime(0)
-      setDuration(0)
     }
   }, [signedUrl])
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = volume
+      audioRef.current.volume = isMuted ? 0 : volume
     }
-  }, [volume])
+  }, [volume, isMuted])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
@@ -98,168 +91,118 @@ export function AudioPlayer({
     }
   }, [isPlaying])
 
-  const handleSeekInput = useCallback((value: number) => {
+  const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true)
-    setDragValue(value)
-    setCurrentTime(value)
-  }, [])
+    const rect = e.currentTarget.getBoundingClientRect()
+    const percent = (e.clientX - rect.left) / rect.width
+    setCurrentTime(percent * duration)
+  }, [duration])
 
-  const handleSeekCommit = useCallback((value: number) => {
-    const audio = audioRef.current
-    if (audio) {
-      audio.currentTime = value
+  const handleSeekMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    setCurrentTime(percent * duration)
+  }, [isDragging, duration])
+
+  const handleSeekEnd = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = currentTime
     }
     setIsDragging(false)
-    setCurrentTime(value)
+  }, [currentTime])
+
+  const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    setVolume(percent)
+    setIsMuted(false)
   }, [])
 
-  const handleVolumeChange = useCallback((value: number) => {
-    setVolume(value)
-  }, [])
+  const toggleMute = useCallback(() => setIsMuted(!isMuted), [isMuted])
 
   const canGoPrev = currentIndex !== undefined && currentIndex > 0
   const canGoNext = currentIndex !== undefined && playlist && currentIndex < playlist.length - 1
 
-  const formatTime = useCallback((time: number) => {
-    if (!time || time < 0 || !Number.isFinite(time)) return '0:00'
-    const m = Math.floor(time / 60)
-    const s = Math.floor(time % 60)
+  const formatTime = (t: number) => {
+    if (!t || t < 0) return '0:00'
+    const m = Math.floor(t / 60)
+    const s = Math.floor(t % 60)
     return `${m}:${s.toString().padStart(2, '0')}`
-  }, [])
+  }
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/95 to-black/80 backdrop-blur-xl border-t border-white/10">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-lg rounded-lg p-3 w-[420px] max-w-[calc(100vw-32px)]">
       <audio ref={audioRef} preload="metadata" />
 
-      <div className="max-w-4xl mx-auto px-6 py-4">
-        <div className="flex items-center gap-6">
-          {playlist && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPrev}
-              disabled={!canGoPrev}
-              className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 h-10 w-10"
-            >
-              <SkipBack className="w-5 h-5" />
-            </Button>
-          )}
-
-          <Button
-            onClick={togglePlay}
-            className="h-14 w-14 rounded-full bg-white text-black hover:bg-white/90 shadow-lg flex items-center justify-center"
-          >
-            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+      <div className="flex items-center gap-2">
+        {playlist && (
+          <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-8 w-8">
+            <SkipBack className="w-4 h-4" />
           </Button>
+        )}
 
-          {playlist && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onNext}
-              disabled={!canGoNext}
-              className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 h-10 w-10"
-            >
-              <SkipForward className="w-5 h-5" />
-            </Button>
-          )}
+        <Button onClick={togglePlay} className="h-9 w-9 rounded-full flex items-center justify-center">
+          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+        </Button>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate mb-2">
-              {record.original_name || record.filename}
-            </p>
+        {playlist && (
+          <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-8 w-8">
+            <SkipForward className="w-4 h-4" />
+          </Button>
+        )}
 
-            <div className="flex items-center gap-3">
-              <span className="text-white/60 text-sm w-12 text-right font-mono">
-                {formatTime(currentTime)}
-              </span>
-
-              <div
-                className="flex-1 h-1.5 bg-white/20 rounded-full relative cursor-pointer group"
-                onMouseDown={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const percent = (e.clientX - rect.left) / rect.width
-                  const time = percent * duration
-                  handleSeekInput(time)
-                }}
-                onMouseMove={(e) => {
-                  if (!isDragging) return
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-                  const time = percent * duration
-                  handleSeekInput(time)
-                }}
-                onMouseUp={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-                  const time = percent * duration
-                  handleSeekCommit(time)
-                }}
-                onMouseLeave={() => {
-                  if (isDragging) {
-                    handleSeekCommit(dragValue)
-                  }
-                }}
-              >
-                <div
-                  className="absolute left-0 top-0 h-full bg-white rounded-full transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ left: `${progressPercent}%`, marginLeft: -6 }}
-                />
-              </div>
-
-              <span className="text-white/60 text-sm w-12 font-mono">
-                {formatTime(duration)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-24">
-            <svg className="w-4 h-4 text-white/60" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.7 7-8.77s-2.99-7.86-7-8.77z"/>
-            </svg>
+        <div className="flex-1 min-w-0 ml-2">
+          <p className="text-sm font-medium truncate">{record.original_name || record.filename}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground w-10">{formatTime(currentTime)}</span>
             <div
-              className="flex-1 h-1 bg-white/20 rounded-full relative cursor-pointer"
-              onMouseDown={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect()
-                const percent = (e.clientX - rect.left) / rect.width
-                handleVolumeChange(Math.max(0, Math.min(1, percent)))
-              }}
-              onMouseMove={(e) => {
-                if (e.buttons !== 1) return
-                const rect = e.currentTarget.getBoundingClientRect()
-                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-                handleVolumeChange(percent)
-              }}
+              className="flex-1 h-2 bg-muted rounded-full cursor-pointer relative"
+              onMouseDown={handleSeekStart}
+              onMouseMove={handleSeekMove}
+              onMouseUp={handleSeekEnd}
+              onMouseLeave={() => isDragging && handleSeekEnd()}
             >
               <div
-                className="absolute left-0 top-0 h-full bg-white/60 rounded-full"
-                style={{ width: `${volume * 100}%` }}
+                className="absolute left-0 top-0 h-full bg-primary rounded-full"
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
+            <span className="text-xs text-muted-foreground w-10 text-right">{formatTime(duration)}</span>
           </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10"
-          >
-            <X className="w-5 h-5" />
-          </Button>
         </div>
 
-        {playlist && currentIndex !== undefined && (
-          <div className="text-white/40 text-xs text-center mt-2">
-            {currentIndex + 1} / {playlist.length}
+        <div className="flex items-center gap-1 ml-2">
+          <Button variant="ghost" size="icon" onClick={toggleMute} className="h-8 w-8">
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <Volume2 className="w-4 h-4" />
+            )}
+          </Button>
+          <div
+            className="w-16 h-2 bg-muted rounded-full cursor-pointer relative"
+            onClick={handleVolumeChange}
+          >
+            <div
+              className="absolute left-0 top-0 h-full bg-primary rounded-full"
+              style={{ width: `${volume * 100}%` }}
+            />
           </div>
-        )}
+        </div>
+
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <X className="w-4 h-4" />
+        </Button>
       </div>
+
+      {playlist && currentIndex !== undefined && (
+        <div className="text-xs text-muted-foreground text-center mt-1">
+          {currentIndex + 1} / {playlist.length}
+        </div>
+      )}
     </div>
   )
 }
