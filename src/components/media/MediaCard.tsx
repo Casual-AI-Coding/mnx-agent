@@ -101,7 +101,7 @@ export function MediaCard({
               showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
-            {record.type === 'image' && (
+            {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
               <Button
                 variant="secondary"
                 size="sm"

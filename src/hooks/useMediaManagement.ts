@@ -44,6 +44,8 @@ export interface UseMediaManagementReturn {
   setViewMode: (mode: 'table' | 'timeline' | 'card') => void
   pageInput: string
   setPageInput: (input: string) => void
+  audioPreviewRecord: MediaRecord | null
+  setAudioPreviewRecord: (record: MediaRecord | null) => void
 
   // Timeline state
   timelineRecords: MediaRecord[]
@@ -106,6 +108,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [isBatchDownloading, setIsBatchDownloading] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'timeline' | 'card'>('table')
   const [pageInput, setPageInput] = useState('')
+  const [audioPreviewRecord, setAudioPreviewRecord] = useState<MediaRecord | null>(null)
 
   // Timeline state
   const [timelineRecords, setTimelineRecords] = useState<MediaRecord[]>([])
@@ -300,6 +303,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
         setLightboxIndex(index)
         setLightboxOpen(true)
       }
+    } else if ((record.type === 'audio' || record.type === 'music') && signedUrls[record.id]) {
+      setAudioPreviewRecord(record)
     }
   }, [imageRecords, signedUrls])
 
@@ -406,11 +411,20 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [activeTab, isInitialLoad])
 
+  // Track previous activeTab to detect changes
+  const prevActiveTabRef = useRef(activeTab)
+
   // Fetch data when tab or page changes
   useEffect(() => {
-    if (!isInitialLoad && pagination.page !== prevPageRef.current) {
-      prevPageRef.current = pagination.page
-      fetchMedia(false)
+    if (!isInitialLoad) {
+      const tabChanged = activeTab !== prevActiveTabRef.current
+      const pageChanged = pagination.page !== prevPageRef.current
+      
+      if (tabChanged || pageChanged) {
+        prevActiveTabRef.current = activeTab
+        prevPageRef.current = pagination.page
+        fetchMedia(false)
+      }
     }
   }, [fetchMedia, isInitialLoad, activeTab, pagination.page])
 
@@ -448,20 +462,19 @@ export function useMediaManagement(): UseMediaManagementReturn {
     return () => observer.disconnect()
   }, [hasMore, isLoadingMore, timelinePage, viewMode, fetchTimelineMedia])
 
-  // Fetch signed URLs for images in records
+  // Fetch signed URLs for playable media (image, audio, music) in records
   useEffect(() => {
     if (records.length === 0) return
 
-    const imageRecords = records.filter(r =>
-      r.type === 'image' && !fetchedIdsRef.current.has(r.id)
+    const playableRecords = records.filter(r =>
+      (r.type === 'image' || r.type === 'audio' || r.type === 'music') && !fetchedIdsRef.current.has(r.id)
     )
-    if (imageRecords.length === 0) return
+    if (playableRecords.length === 0) return
 
-    // Mark IDs as fetched immediately to prevent duplicate requests
-    imageRecords.forEach(r => fetchedIdsRef.current.add(r.id))
+    playableRecords.forEach(r => fetchedIdsRef.current.add(r.id))
 
     Promise.all(
-      imageRecords.map(async (r) => {
+      playableRecords.map(async (r) => {
         try {
           const url = await getMediaDownloadUrl(r.id)
           return { id: r.id, url }
@@ -478,20 +491,19 @@ export function useMediaManagement(): UseMediaManagementReturn {
     })
   }, [records])
 
-  // Fetch signed URLs for images in timeline records
+  // Fetch signed URLs for playable media (image, audio, music) in timeline records
   useEffect(() => {
     if (timelineRecords.length === 0) return
 
-    const imageRecords = timelineRecords.filter(r =>
-      r.type === 'image' && !fetchedIdsRef.current.has(r.id)
+    const playableRecords = timelineRecords.filter(r =>
+      (r.type === 'image' || r.type === 'audio' || r.type === 'music') && !fetchedIdsRef.current.has(r.id)
     )
-    if (imageRecords.length === 0) return
+    if (playableRecords.length === 0) return
 
-    // Mark IDs as fetched immediately to prevent duplicate requests
-    imageRecords.forEach(r => fetchedIdsRef.current.add(r.id))
+    playableRecords.forEach(r => fetchedIdsRef.current.add(r.id))
 
     Promise.all(
-      imageRecords.map(async (r) => {
+      playableRecords.map(async (r) => {
         try {
           const url = await getMediaDownloadUrl(r.id)
           return { id: r.id, url }
@@ -538,6 +550,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setViewMode,
     pageInput,
     setPageInput,
+    audioPreviewRecord,
+    setAudioPreviewRecord,
 
     // Timeline state
     timelineRecords,

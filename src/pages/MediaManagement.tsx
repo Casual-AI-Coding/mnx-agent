@@ -9,6 +9,7 @@ import { useMediaManagement } from '@/hooks/useMediaManagement'
 import { AnimatedMediaGrid } from '@/components/media/AnimatedMediaGrid'
 import { TimelineItem } from '@/components/media/TimelineItem'
 import { MediaTableView } from '@/components/media/MediaTableView'
+import { AudioPlayer } from '@/components/media/AudioPlayer'
 import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/BatchOperationsToolbar'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -61,6 +62,8 @@ export default function MediaManagement() {
     handleDownload,
     handlePreview,
     handlePageChange,
+    audioPreviewRecord,
+    setAudioPreviewRecord,
   } = useMediaManagement()
 
   return (
@@ -343,6 +346,14 @@ export default function MediaManagement() {
         on={{ view: ({ index }) => setLightboxIndex(index) }}
         slides={lightboxSlides}
       />
+
+      {audioPreviewRecord && signedUrls[audioPreviewRecord.id] && (
+        <AudioPlayer
+          record={audioPreviewRecord}
+          signedUrl={signedUrls[audioPreviewRecord.id]}
+          onClose={() => setAudioPreviewRecord(null)}
+        />
+      )}
     </div>
   )
 }

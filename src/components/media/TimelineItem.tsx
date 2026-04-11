@@ -85,7 +85,7 @@ export function TimelineItem({
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
-        {record.type === 'image' && (
+        {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }}>
             <Eye className="w-4 h-4" />
           </Button>
