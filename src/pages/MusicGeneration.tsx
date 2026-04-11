@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -52,16 +52,17 @@ export default function MusicGeneration() {
   const [preprocessLoading, setPreprocessLoading] = useState(false)
   const [preprocessResult, setPreprocessResult] = useState<{ lyrics: string; audio_url: string } | null>(null)
 
+  const blobUrlsRef = useRef<Set<string>>(new Set())
+
   // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      tasks.forEach(task => {
-        if (task.audioUrl && task.audioUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(task.audioUrl)
-        }
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url)
       })
+      blobUrlsRef.current.clear()
     }
-  }, [tasks])
+  }, [])
 
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
@@ -205,6 +206,7 @@ export default function MusicGeneration() {
         updateTask(index, { progress: 60 })
 
         const url = await decodeAudioData(audioData)
+        blobUrlsRef.current.add(url)
         
         const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
 
@@ -269,6 +271,7 @@ export default function MusicGeneration() {
       updateTask(index, { progress: 60 })
 
       const url = await decodeAudioData(audioData)
+      blobUrlsRef.current.add(url)
       const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
 
       updateTask(index, {
@@ -297,11 +300,10 @@ export default function MusicGeneration() {
   }, [])
 
   const clearAll = () => {
-    tasks.forEach(task => {
-      if (task.audioUrl && task.audioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(task.audioUrl)
-      }
+    blobUrlsRef.current.forEach(url => {
+      URL.revokeObjectURL(url)
     })
+    blobUrlsRef.current.clear()
     setTasks([])
     setCurrentIndex(0)
     setLyrics('')
