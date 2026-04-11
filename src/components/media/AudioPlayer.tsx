@@ -139,13 +139,13 @@ export function AudioPlayer({
       <audio ref={audioRef} preload="metadata" />
 
       <div className="flex items-center gap-1.5 mb-2">
-        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6">
+        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6 hover:bg-transparent">
           <SkipBack className="w-4 h-4" />
         </Button>
-        <Button onClick={togglePlay} className="h-7 w-7 rounded-full p-0">
+        <button onClick={togglePlay} className="h-7 w-7 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center">
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-6 w-6">
+        </button>
+        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-6 w-6 hover:bg-transparent">
           <SkipForward className="w-4 h-4" />
         </Button>
 
@@ -154,9 +154,9 @@ export function AudioPlayer({
         </span>
 
         <div className="relative" ref={volumeRef}>
-          <Button variant="ghost" size="icon" onClick={() => setShowVolume(!showVolume)} className="h-6 w-6">
+          <button onClick={() => setShowVolume(!showVolume)} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent">
             {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-muted-foreground" /> : <Volume2 className="w-4 h-4" />}
-          </Button>
+          </button>
           {showVolume && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border rounded-lg shadow-lg" onClick={handleVolumeChange}>
               <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer">
@@ -166,9 +166,9 @@ export function AudioPlayer({
           )}
         </div>
 
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
+        <button onClick={onClose} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent">
           <X className="w-4 h-4" />
-        </Button>
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
