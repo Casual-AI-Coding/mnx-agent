@@ -96,23 +96,27 @@ export function AudioPlayer({
   const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true)
     const rect = e.currentTarget.getBoundingClientRect()
-    setCurrentTime((e.clientX - rect.left) / rect.width * duration)
+    const percent = (e.clientX - rect.left) / rect.width
+    setCurrentTime(percent * duration)
   }, [duration])
 
   const handleSeekMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging) return
     const rect = e.currentTarget.getBoundingClientRect()
-    setCurrentTime(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * duration)
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    setCurrentTime(percent * duration)
   }, [isDragging, duration])
 
   const handleSeekEnd = useCallback(() => {
-    if (audioRef.current) audioRef.current.currentTime = currentTime
+    const audio = audioRef.current
+    if (audio) audio.currentTime = currentTime
     setIsDragging(false)
   }, [currentTime])
 
   const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
-    setVolume(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)))
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    setVolume(percent)
     setIsMuted(false)
   }, [])
 
@@ -131,18 +135,17 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border shadow-xl rounded-xl p-3 w-[300px]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border shadow-xl rounded-xl p-3 w-[320px]">
       <audio ref={audioRef} preload="metadata" />
 
-      {/* Row 1: Controls + Title + Volume + Close */}
       <div className="flex items-center gap-1.5 mb-2">
-        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-7 w-7">
+        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6">
           <SkipBack className="w-4 h-4" />
         </Button>
-        <Button onClick={togglePlay} className="h-9 w-9 rounded-full">
+        <Button onClick={togglePlay} className="h-7 w-7 rounded-full p-0">
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </Button>
-        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-7 w-7">
+        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-6 w-6">
           <SkipForward className="w-4 h-4" />
         </Button>
 
@@ -151,18 +154,11 @@ export function AudioPlayer({
         </span>
 
         <div className="relative" ref={volumeRef}>
-          <Button variant="ghost" size="icon" onClick={() => setShowVolume(!showVolume)} className="h-7 w-7">
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
+          <Button variant="ghost" size="icon" onClick={() => setShowVolume(!showVolume)} className="h-6 w-6">
+            {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-muted-foreground" /> : <Volume2 className="w-4 h-4" />}
           </Button>
           {showVolume && (
-            <div
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border rounded-lg shadow-lg"
-              onClick={handleVolumeChange}
-            >
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border rounded-lg shadow-lg" onClick={handleVolumeChange}>
               <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${volume * 100}%` }} />
               </div>
@@ -170,22 +166,21 @@ export function AudioPlayer({
           )}
         </div>
 
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
           <X className="w-4 h-4" />
         </Button>
       </div>
 
-      {/* Row 2: Progress + Counter */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground w-7 text-right">{formatTime(currentTime)}</span>
         <div
-          className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer"
+          className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer relative"
           onMouseDown={handleSeekStart}
           onMouseMove={handleSeekMove}
           onMouseUp={handleSeekEnd}
           onMouseLeave={() => isDragging && handleSeekEnd()}
         >
-          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+          <div className="absolute h-full bg-primary rounded-full" style={{ width: `${progressPercent}%` }} />
         </div>
         <span className="text-[10px] text-muted-foreground w-7">{formatTime(duration)}</span>
         {playlist && currentIndex !== undefined && (
