@@ -36,17 +36,12 @@ export function AudioPlayer({
     if (!audio) return
 
     const handleTimeUpdate = () => {
-      if (!isDragging) {
-        setCurrentTime(audio.currentTime)
-      }
+      if (!isDragging) setCurrentTime(audio.currentTime)
     }
-
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
       setIsPlaying(false)
-      if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) {
-        onNext()
-      }
+      if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) onNext()
     }
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
@@ -76,46 +71,36 @@ export function AudioPlayer({
   }, [signedUrl])
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume
-    }
+    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume
   }, [volume, isMuted])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
-    if (isPlaying) {
-      audio.pause()
-    } else {
-      audio.play().catch(() => setIsPlaying(false))
-    }
+    if (isPlaying) audio.pause()
+    else audio.play().catch(() => setIsPlaying(false))
   }, [isPlaying])
 
   const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true)
     const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (e.clientX - rect.left) / rect.width
-    setCurrentTime(percent * duration)
+    setCurrentTime((e.clientX - rect.left) / rect.width * duration)
   }, [duration])
 
   const handleSeekMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    setCurrentTime(percent * duration)
+    setCurrentTime(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * duration)
   }, [isDragging, duration])
 
   const handleSeekEnd = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = currentTime
-    }
+    if (audioRef.current) audioRef.current.currentTime = currentTime
     setIsDragging(false)
   }, [currentTime])
 
   const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    setVolume(percent)
+    setVolume(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)))
     setIsMuted(false)
   }, [])
 
@@ -134,75 +119,59 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-lg rounded-lg p-3 w-[420px] max-w-[calc(100vw-32px)]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border shadow-xl rounded-xl p-4 w-[320px]">
       <audio ref={audioRef} preload="metadata" />
 
-      <div className="flex items-center gap-2">
-        {playlist && (
-          <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-8 w-8">
-            <SkipBack className="w-4 h-4" />
-          </Button>
-        )}
-
-        <Button onClick={togglePlay} className="h-9 w-9 rounded-full flex items-center justify-center">
+      {/* Row 1: Controls + Title */}
+      <div className="flex items-center gap-2 mb-3">
+        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-7 w-7 shrink-0">
+          <SkipBack className="w-4 h-4" />
+        </Button>
+        <Button onClick={togglePlay} className="h-10 w-10 rounded-full shrink-0">
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </Button>
-
-        {playlist && (
-          <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-8 w-8">
-            <SkipForward className="w-4 h-4" />
-          </Button>
-        )}
-
-        <div className="flex-1 min-w-0 ml-2">
-          <p className="text-sm font-medium truncate">{record.original_name || record.filename}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-muted-foreground w-10">{formatTime(currentTime)}</span>
-            <div
-              className="flex-1 h-2 bg-muted rounded-full cursor-pointer relative"
-              onMouseDown={handleSeekStart}
-              onMouseMove={handleSeekMove}
-              onMouseUp={handleSeekEnd}
-              onMouseLeave={() => isDragging && handleSeekEnd()}
-            >
-              <div
-                className="absolute left-0 top-0 h-full bg-primary rounded-full"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground w-10 text-right">{formatTime(duration)}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 ml-2">
-          <Button variant="ghost" size="icon" onClick={toggleMute} className="h-8 w-8">
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
-          </Button>
-          <div
-            className="w-16 h-2 bg-muted rounded-full cursor-pointer relative"
-            onClick={handleVolumeChange}
-          >
-            <div
-              className="absolute left-0 top-0 h-full bg-primary rounded-full"
-              style={{ width: `${volume * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-7 w-7 shrink-0">
+          <SkipForward className="w-4 h-4" />
         </Button>
+        <span className="text-xs font-medium truncate ml-2" title={record.original_name || record.filename}>
+          {record.original_name || record.filename}
+        </span>
       </div>
 
-      {playlist && currentIndex !== undefined && (
-        <div className="text-xs text-muted-foreground text-center mt-1">
-          {currentIndex + 1} / {playlist.length}
+      {/* Row 2: Progress */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[10px] text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
+        <div
+          className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer"
+          onMouseDown={handleSeekStart}
+          onMouseMove={handleSeekMove}
+          onMouseUp={handleSeekEnd}
+          onMouseLeave={() => isDragging && handleSeekEnd()}
+        >
+          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
         </div>
-      )}
+        <span className="text-[10px] text-muted-foreground w-8">{formatTime(duration)}</span>
+      </div>
+
+      {/* Row 3: Volume + Playlist + Close */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleMute} className="h-6 w-6">
+            {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </Button>
+          <div className="w-16 h-1 bg-muted rounded-full cursor-pointer" onClick={handleVolumeChange}>
+            <div className="h-full bg-primary rounded-full" style={{ width: `${volume * 100}%` }} />
+          </div>
+        </div>
+
+        {playlist && currentIndex !== undefined ? (
+          <span className="text-[10px] text-muted-foreground">{currentIndex + 1} / {playlist.length}</span>
+        ) : null}
+
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
+          <X className="w-3.5 h-3.5" />
+        </Button>
+      </div>
     </div>
   )
 }
