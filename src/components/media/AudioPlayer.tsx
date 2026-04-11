@@ -33,6 +33,12 @@ export function AudioPlayer({
   const volumeRef = useRef<HTMLDivElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const dragTimeRef = useRef(0)
+  const durationRef = useRef(0)
+
+  // Keep durationRef synced
+  useEffect(() => {
+    durationRef.current = duration
+  }, [duration])
 
   const hasPlaylist = playlist && playlist.length > 0 && currentIndex !== undefined
   const canGoPrev = hasPlaylist && currentIndex > 0
@@ -115,8 +121,8 @@ export function AudioPlayer({
     if (!progressRef.current) return 0
     const rect = progressRef.current.getBoundingClientRect()
     const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    return percent * duration
-  }, [duration])
+    return percent * durationRef.current
+  }, [])
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -141,7 +147,7 @@ export function AudioPlayer({
       document.removeEventListener('mouseup', handleGlobalMouseUp)
       document.removeEventListener('mousemove', handleGlobalMouseMove)
     }
-  }, [isDragging, calculateTime])
+  }, [isDragging])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
