@@ -41,6 +41,8 @@ export type {
   MediaRecord,
   CreateMediaRecord,
   MediaRecordRow,
+  FavoriteRecord,
+  FavoriteRecordRow,
 } from '@mnx/shared-types/entities'
 
 export type {
