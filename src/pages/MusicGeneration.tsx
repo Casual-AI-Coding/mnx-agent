@@ -162,8 +162,9 @@ export default function MusicGeneration() {
       const url = URL.createObjectURL(blob)
       setAudioUrl(url)
       
-      const duration = response.data.extra_info?.music_duration || 0
-      setAudioDuration(duration)
+      // music_duration from API is in milliseconds, convert to seconds
+      const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
+      setAudioDuration(durationSec)
       
       saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
 
@@ -176,7 +177,7 @@ export default function MusicGeneration() {
           model,
           stylePrompt,
           optimizeLyrics,
-          duration,
+          duration: durationSec,
           instrumental,
           seed: seed ? parseInt(seed, 10) : undefined,
         },
