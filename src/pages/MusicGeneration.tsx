@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2, Upload, Link, Settings2 } from 'lucide-react'
+import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/Switch'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/Collapsible'
+import { Slider } from '@/components/ui/Slider'
 import { cn } from '@/lib/utils'
 import { generateMusic, preprocessMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
@@ -19,6 +20,7 @@ import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 import { DEFAULT_MODELS } from '@/models'
+import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
 
 export default function MusicGeneration() {
   const { t } = useTranslation()
@@ -28,29 +30,38 @@ export default function MusicGeneration() {
   const validModel = MUSIC_MODELS.some(m => m.id === musicSettings.model)
   const [model, setModel] = useState<MusicModel>(validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music)
   const [optimizeLyrics, setOptimizeLyrics] = useState(musicSettings.optimizeLyrics)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [audioDuration, setAudioDuration] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
-  // 纯音乐模式
+  const [tasks, setTasks] = useState<MusicTask[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [parallelCount, setParallelCount] = useState(1)
+
   const [instrumental, setInstrumental] = useState(false)
 
-  // 高级设置
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [sampleRate, setSampleRate] = useState<16000 | 24000 | 32000 | 44100>(44100)
   const [bitrate, setBitrate] = useState<32000 | 64000 | 128000 | 256000>(256000)
   const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
   const [seed, setSeed] = useState<string>('')
 
-  // 翻唱模式
   const [coverMode, setCoverMode] = useState<'one-step' | 'two-step'>('one-step')
   const [referenceAudioUrl, setReferenceAudioUrl] = useState('')
   const [useOriginalLyrics, setUseOriginalLyrics] = useState(true)
   const [preprocessLoading, setPreprocessLoading] = useState(false)
   const [preprocessResult, setPreprocessResult] = useState<{ lyrics: string; audio_url: string } | null>(null)
+
+  // Cleanup blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      tasks.forEach(task => {
+        if (task.audioUrl && task.audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(task.audioUrl)
+        }
+      })
+    }
+  }, [tasks])
 
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
@@ -87,151 +98,222 @@ export default function MusicGeneration() {
     }
   }
 
-  const handleGenerate = async () => {
-    if (isSubmitDisabled()) return
+  const updateTask = useCallback((index: number, updates: Partial<MusicTask>) => {
+    setTasks(prev => {
+      const newTasks = [...prev]
+      newTasks[index] = { ...newTasks[index], ...updates }
+      return newTasks
+    })
+  }, [])
 
-    setIsGenerating(true)
-    setError(null)
-    setAudioUrl(null)
-
-    try {
-      const request: MusicGenerationRequest = {
-        model,
-        output_format: 'url',
-      }
-
-      // 翻唱模式
-      if (isCoverModel) {
-        request.reference_audio_url = referenceAudioUrl
-        if (!useOriginalLyrics && lyrics.trim()) {
-          request.lyrics = lyrics.trim()
-        }
-        if (stylePrompt.trim()) {
-          request.style_prompt = stylePrompt.trim()
-        }
-      } else {
-        // 普通模式 / 纯音乐模式
-        if (lyrics.trim()) {
-          request.lyrics = lyrics.trim()
-        }
-        if (stylePrompt.trim()) {
-          request.prompt = stylePrompt.trim()
-        }
-      }
-
-      // 高级设置
-      request.audio_setting = {
-        sample_rate: sampleRate,
-        bitrate: bitrate,
-        format: format,
-      }
-
-      // AI 歌词优化
-      if (optimizeLyrics && isOptimizeLyricsAvailable && !instrumental && !isCoverModel) {
-        request.optimize_lyrics = true
-      }
-
-      // Seed (仅 music-2.6)
-      if (isSeedAvailable && seed.trim()) {
-        request.seed = parseInt(seed, 10)
-      }
-
-      const response = await generateMusic(request)
-
-      const audioData = response.data.audio
-      if (!audioData) {
-        throw new Error('No audio data in response')
-      }
-      const mimeType = format === 'mp3' ? 'audio/mp3' 
-        : format === 'wav' ? 'audio/wav' 
-        : 'audio/flac'
-      
-      let blob: Blob
-      if (audioData.startsWith('http')) {
-        // URL 格式：直接使用
-        blob = await fetch(audioData).then(r => r.blob())
-      } else {
-        // hex 格式：解码
-        const byteArray = new Uint8Array(audioData.length / 2)
-        for (let i = 0; i < audioData.length; i += 2) {
-          byteArray[i / 2] = parseInt(audioData.substring(i, i + 2), 16)
-        }
-        blob = new Blob([byteArray], { type: mimeType })
-      }
-      
-      const url = URL.createObjectURL(blob)
-      setAudioUrl(url)
-      
-      // music_duration from API is in milliseconds, convert to seconds
-      const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
-      setAudioDuration(durationSec)
-      
-      saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
-
-      addUsage('musicRequests', 1)
-      addItem({
-        type: 'music',
-        input: isCoverModel ? referenceAudioUrl : lyrics.trim(),
-        outputUrl: url,
-        metadata: {
-          model,
-          stylePrompt,
-          optimizeLyrics,
-          duration: durationSec,
-          instrumental,
-          seed: seed ? parseInt(seed, 10) : undefined,
-        },
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('musicGeneration.musicGenFailed'))
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleDownload = () => {
-    if (!audioUrl) return
-    const a = document.createElement('a')
-    a.href = audioUrl
-    a.download = `music-${Date.now()}.mp3`
-    a.click()
-  }
-
-  const clearAll = () => {
-    setLyrics('')
-    setStylePrompt('')
-    setAudioUrl(null)
-    setAudioDuration(null)
-    setError(null)
-  }
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // 字符限制常量
-  const STYLE_PROMPT_MAX = 2000
-  const LYRICS_MAX = 3500
-
-  // 验证函数
-  const isStylePromptOverLimit = stylePrompt.length > STYLE_PROMPT_MAX
-  const isLyricsOverLimit = lyrics.length > LYRICS_MAX
-
-  // 纯音乐模式可用模型
   const instrumentalModels = ['music-2.6', 'music-2.5+']
   const isInstrumentalAvailable = instrumentalModels.includes(model)
 
-  // Seed 可用模型
   const seedModels = ['music-2.6']
   const isSeedAvailable = seedModels.includes(model)
 
-  // AI 歌词优化可用模型（修正为 2.5/2.5+/2.6）
   const optimizeLyricsModels = ['music-2.5', 'music-2.5+', 'music-2.6']
   const isOptimizeLyricsAvailable = optimizeLyricsModels.includes(model)
 
   const isCoverModel = model === 'music-cover'
+
+  const buildRequest = useCallback((): MusicGenerationRequest => {
+    const request: MusicGenerationRequest = {
+      model,
+      output_format: 'url',
+    }
+
+    if (isCoverModel) {
+      request.reference_audio_url = referenceAudioUrl
+      if (!useOriginalLyrics && lyrics.trim()) {
+        request.lyrics = lyrics.trim()
+      }
+      if (stylePrompt.trim()) {
+        request.style_prompt = stylePrompt.trim()
+      }
+    } else {
+      if (lyrics.trim()) {
+        request.lyrics = lyrics.trim()
+      }
+      if (stylePrompt.trim()) {
+        request.prompt = stylePrompt.trim()
+      }
+    }
+
+    request.audio_setting = {
+      sample_rate: sampleRate,
+      bitrate: bitrate,
+      format: format,
+    }
+
+    if (optimizeLyrics && isOptimizeLyricsAvailable && !instrumental && !isCoverModel) {
+      request.optimize_lyrics = true
+    }
+
+    if (isSeedAvailable && seed.trim()) {
+      request.seed = parseInt(seed, 10)
+    }
+
+    return request
+  }, [model, lyrics, stylePrompt, sampleRate, bitrate, format, optimizeLyrics, seed, instrumental, isCoverModel, referenceAudioUrl, useOriginalLyrics])
+
+  const decodeAudioData = useCallback(async (audioData: string): Promise<string> => {
+    const mimeType = format === 'mp3' ? 'audio/mp3' 
+      : format === 'wav' ? 'audio/wav' 
+      : 'audio/flac'
+    
+    let blob: Blob
+    if (audioData.startsWith('http')) {
+      blob = await fetch(audioData).then(r => r.blob())
+    } else {
+      const byteArray = new Uint8Array(audioData.length / 2)
+      for (let i = 0; i < audioData.length; i += 2) {
+        byteArray[i / 2] = parseInt(audioData.substring(i, i + 2), 16)
+      }
+      blob = new Blob([byteArray], { type: mimeType })
+    }
+    
+    return URL.createObjectURL(blob)
+  }, [format])
+
+  const handleGenerate = async () => {
+    if (isSubmitDisabled()) return
+
+    setError(null)
+
+    const newTasks: MusicTask[] = Array.from({ length: parallelCount }, (_, i) => ({
+      id: `${Date.now()}-${i}`,
+      status: 'idle' as const,
+      progress: 0,
+      retryCount: 0,
+    }))
+    setTasks(newTasks)
+    setCurrentIndex(0)
+
+    const request = buildRequest()
+
+    const promises = newTasks.map(async (task, index) => {
+      updateTask(index, { status: 'generating', progress: 25 })
+
+      try {
+        const response = await generateMusic(request)
+        const audioData = response.data.audio
+        if (!audioData) {
+          throw new Error('No audio data in response')
+        }
+
+        updateTask(index, { progress: 60 })
+
+        const url = await decodeAudioData(audioData)
+        
+        const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
+
+        updateTask(index, {
+          status: 'completed',
+          progress: 100,
+          audioUrl: url,
+          audioDuration: durationSec,
+        })
+
+        saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
+
+        addUsage('musicRequests', 1)
+        addItem({
+          type: 'music',
+          input: isCoverModel ? referenceAudioUrl : lyrics.trim(),
+          outputUrl: url,
+          metadata: {
+            model,
+            stylePrompt,
+            optimizeLyrics,
+            duration: durationSec,
+            instrumental,
+            seed: seed ? parseInt(seed, 10) : undefined,
+          },
+        })
+
+        return { success: true, index }
+      } catch (err) {
+        updateTask(index, {
+          status: 'failed',
+          progress: 100,
+          error: err instanceof Error ? err.message : t('musicGeneration.musicGenFailed'),
+        })
+        return { success: false, index }
+      }
+    })
+
+    await Promise.allSettled(promises)
+  }
+
+  const retryTask = async (index: number) => {
+    const task = tasks[index]
+    if (task.status !== 'failed') return
+
+    updateTask(index, {
+      status: 'generating',
+      progress: 25,
+      error: undefined,
+      retryCount: task.retryCount + 1,
+    })
+
+    const request = buildRequest()
+
+    try {
+      const response = await generateMusic(request)
+      const audioData = response.data.audio
+      if (!audioData) {
+        throw new Error('No audio data in response')
+      }
+
+      updateTask(index, { progress: 60 })
+
+      const url = await decodeAudioData(audioData)
+      const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
+
+      updateTask(index, {
+        status: 'completed',
+        progress: 100,
+        audioUrl: url,
+        audioDuration: durationSec,
+      })
+
+      saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
+      addUsage('musicRequests', 1)
+    } catch (err) {
+      updateTask(index, {
+        status: 'failed',
+        progress: 100,
+        error: err instanceof Error ? err.message : t('musicGeneration.musicGenFailed'),
+      })
+    }
+  }
+
+  const handleDownload = useCallback((audioUrl: string, filename: string) => {
+    const a = document.createElement('a')
+    a.href = audioUrl
+    a.download = filename
+    a.click()
+  }, [])
+
+  const clearAll = () => {
+    tasks.forEach(task => {
+      if (task.audioUrl && task.audioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(task.audioUrl)
+      }
+    })
+    setTasks([])
+    setCurrentIndex(0)
+    setLyrics('')
+    setStylePrompt('')
+    setError(null)
+  }
+
+  const STYLE_PROMPT_MAX = 2000
+  const LYRICS_MAX = 3500
+
+  const isStylePromptOverLimit = stylePrompt.length > STYLE_PROMPT_MAX
+  const isLyricsOverLimit = lyrics.length > LYRICS_MAX
 
   const handlePreprocess = async (file: File) => {
     setPreprocessLoading(true)
@@ -250,9 +332,8 @@ export default function MusicGeneration() {
     }
   }
 
-  // 提交按钮禁用逻辑
   const isSubmitDisabled = () => {
-    if (isGenerating) return true
+    if (tasks.some(t => t.status === 'generating')) return true
     if (isStylePromptOverLimit || isLyricsOverLimit) return true
 
     if (isCoverModel) {
@@ -267,6 +348,8 @@ export default function MusicGeneration() {
 
     return !lyrics.trim()
   }
+
+  const isGenerating = tasks.some(t => t.status === 'generating')
 
   return (
     <div className="space-y-6">
@@ -359,6 +442,29 @@ export default function MusicGeneration() {
               <CardTitle>{t('musicGeneration.paramsTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">
+                    并发生成数量
+                  </label>
+                  <span className="text-sm text-muted-foreground">
+                    {parallelCount} 个
+                  </span>
+                </div>
+                <Slider
+                  value={[parallelCount]}
+                  onValueChange={(v) => setParallelCount(v[0])}
+                  min={1}
+                  max={10}
+                  step={1}
+                  disabled={isGenerating}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  同时生成多个音乐副本，相同参数，不同随机性
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
                 <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
@@ -684,32 +790,14 @@ export default function MusicGeneration() {
             </Card>
           )}
 
-          {audioUrl && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mic2 className="w-5 h-5" />
-                  {t('musicGeneration.resultTitle')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <audio
-                  src={audioUrl}
-                  controls
-                  className="w-full"
-                />
-                {audioDuration && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    {t('musicGeneration.duration', { duration: formatDuration(audioDuration) })}
-                  </div>
-                )}
-                <Button onClick={handleDownload} variant="outline" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('musicGeneration.downloadMusic')}
-                </Button>
-              </CardContent>
-            </Card>
+          {tasks.length > 0 && (
+            <MusicCarousel
+              tasks={tasks}
+              currentIndex={currentIndex}
+              onIndexChange={setCurrentIndex}
+              onRetry={retryTask}
+              onDownload={handleDownload}
+            />
           )}
 
           <Card>
@@ -729,25 +817,5 @@ export default function MusicGeneration() {
         </div>
       </div>
     </div>
-  )
-}
-
-function Clock(props: { className?: string }) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
   )
 }

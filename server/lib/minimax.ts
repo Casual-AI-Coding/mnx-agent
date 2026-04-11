@@ -157,6 +157,11 @@ export class MiniMaxClient {
   }
 
   async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
+    console.log('[MiniMax] Music Generation Request:', {
+      body,
+      timestamp: new Date().toISOString()
+    })
+    
     return retryWithBackoff(async () => {
       try {
         const response = await this.client.post('/v1/music_generation', body, {
