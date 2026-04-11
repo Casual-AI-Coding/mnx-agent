@@ -2,6 +2,77 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.2] - 2026-04-11
+
+### Added
+
+**Music Generation - Parallel Generation Mode - 音乐并行生成模式**
+
+- **并行音乐生成** - 支持同时生成多首音乐 (1-10首)
+  - `src/pages/MusicGeneration.tsx` (+398/-119) - 新增并行生成面板和数量选择
+  - `src/components/music/MusicCarousel.tsx` (190行) - 音乐轮播展示组件
+  - `src/components/music/MusicTaskCard.tsx` (253行) - 任务卡片组件，显示生成进度
+  - `src/types/music.ts` - 新增 `count` 参数
+  - 用户可配置生成数量，批量创作音乐
+
+- **媒体重命名功能** - 支持卡片、时间轴、表格视图重命名
+  - `src/components/media/MediaCard.tsx` (+152/-25) - 卡片视图重命名
+  - `src/components/media/TimelineItem.tsx` (+48/-10) - 时间轴视图重命名
+  - `src/components/media/MediaTableView.tsx` (+98/-10) - 表格视图重命名
+  - `src/hooks/useMediaManagement.ts` (+13) - 重命名逻辑 hook
+  - `src/pages/MediaManagement.tsx` (+9/-5) - 页面集成
+  - `server/routes/media.ts` (+20/-10) - 后端重命名 API 增强
+
+- **文档**
+  - `docs/superpowers/plans/2026-04-11-parallel-music-generation.md` (149行)
+  - `docs/superpowers/specs/2026-04-11-parallel-music-generation-design.md` (109行)
+
+### Changed
+
+- **媒体卡片布局优化** - 操作按钮移至右上角
+  - `src/components/media/MediaCard.tsx` - 重构操作按钮布局
+  - 更符合用户直觉，减少误触
+
+- **媒体标题显示优化** - 单行截断 + 增加显示宽度
+  - `src/components/media/MediaCard.tsx` - 标题单行 truncate
+  - `src/components/media/MediaTableView.tsx` - 表格标题宽度增加
+  - `src/components/media/TimelineItem.tsx` - 时间轴标题宽度增加
+  - 更清晰的标题展示
+
+### Fixed
+
+- **音频播放器修复** - Range 请求 + Seek 拖拽系列修复
+  - `src/components/media/AudioPlayer.tsx` (+121/-30) - 多项修复
+  - `fix(media): add Range request support for audio seeking` - 支持 Range 请求，实现精确 seek
+  - `fix(media): correct audio seek timing in player` - 修正 seek 时序
+  - `fix(audio): use ref for duration to prevent seek reset on mouse release` - duration ref 防止释放重置
+  - `fix(audio): use ref for isDragging to prevent closure capture bug` - isDragging ref 防止闭包捕获
+  - `fix(audio): remove conditional event registration, always use refs` - 统一使用 refs 注册事件
+  - `fix(audio): prevent seek drag breaking due to effect dependency changes` - 修复 effect 依赖导致的拖拽失效
+
+- **音乐生成修复**
+  - `fix(music): prevent blob URL premature cleanup in parallel generation` - 防止并行生成时 blob URL 过早清理
+  - `fix(music): use 'prompt' parameter name per MiniMax API spec` - API 参数名称对齐官方规范
+  - `fix(music): handle both prompt and style_prompt from frontend` - 同时处理两种参数名
+  - `server/routes/music.ts` (+4/-2) - 后端参数处理
+
+- **媒体组件**
+  - `src/components/media/AnimatedMediaGrid.tsx` (+3) - 动画组件小修复
+
+### Performance
+
+- **16 files changed** (+1,292 insertions, -283 deletions)
+- 新增 2 个核心组件（MusicCarousel, MusicTaskCard）
+- 音频播放器重构 (+121/-30)
+- 媒体卡片重构 (+152/-25)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 音乐生成参数向后兼容（新增可选 `count` 参数）
+- ✅ 媒体重命名为增量功能
+- ✅ 样式变更不影响功能逻辑
+
 ## [1.8.1] - 2026-04-11
 
 ### Added
