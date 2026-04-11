@@ -17,7 +17,7 @@ import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
-import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel } from '@/types'
+import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 
 export default function MusicGeneration() {
   const { t } = useTranslation()
@@ -86,53 +86,93 @@ export default function MusicGeneration() {
   }
 
   const handleGenerate = async () => {
-    if (!lyrics.trim()) return
+    if (isSubmitDisabled()) return
 
     setIsGenerating(true)
     setError(null)
     setAudioUrl(null)
 
     try {
-      const response = await generateMusic({
+      const request: MusicGenerationRequest = {
         model,
-        lyrics: lyrics.trim(),
-        style_prompt: stylePrompt.trim() || undefined,
-        optimize_lyrics: optimizeLyrics,
-      })
+        output_format: 'url',
+      }
+
+      // 翻唱模式
+      if (isCoverModel) {
+        request.reference_audio_url = referenceAudioUrl
+        if (!useOriginalLyrics && lyrics.trim()) {
+          request.lyrics = lyrics.trim()
+        }
+        if (stylePrompt.trim()) {
+          request.style_prompt = stylePrompt.trim()
+        }
+      } else {
+        // 普通模式 / 纯音乐模式
+        if (lyrics.trim()) {
+          request.lyrics = lyrics.trim()
+        }
+        if (stylePrompt.trim()) {
+          request.style_prompt = stylePrompt.trim()
+        }
+        if (optimizeLyrics && isOptimizeLyricsAvailable) {
+          request.optimize_lyrics = true
+        }
+      }
+
+      // 高级设置
+      request.audio_setting = {
+        sample_rate: sampleRate,
+        bitrate: bitrate,
+        format: format,
+      }
+
+      // Seed (仅 music-2.6)
+      if (isSeedAvailable && seed.trim()) {
+        request.seed = parseInt(seed, 10)
+      }
+
+      const response = await generateMusic(request)
 
       const audioData = response.data.audio
-      let finalAudioUrl: string
-      let finalDuration: number
-
+      const mimeType = format === 'mp3' ? 'audio/mp3' 
+        : format === 'wav' ? 'audio/wav' 
+        : 'audio/flac'
+      
+      let blob: Blob
       if (audioData.startsWith('http')) {
-        finalAudioUrl = audioData
-        finalDuration = response.extra_info?.music_duration 
-          ? Math.floor(response.extra_info.music_duration / 1000)
-          : response.data.duration
-        saveMusicToMedia(audioData)
+        // URL 格式：直接使用
+        blob = await fetch(audioData).then(r => r.blob())
       } else {
+        // hex 格式：解码
         const byteArray = new Uint8Array(audioData.length / 2)
         for (let i = 0; i < audioData.length; i += 2) {
           byteArray[i / 2] = parseInt(audioData.substring(i, i + 2), 16)
         }
-        const blob = new Blob([byteArray], { type: 'audio/mp3' })
-        finalAudioUrl = URL.createObjectURL(blob)
-        finalDuration = response.data.duration
+        blob = new Blob([byteArray], { type: mimeType })
       }
-
-      setAudioUrl(finalAudioUrl)
-      setAudioDuration(finalDuration)
+      
+      const url = URL.createObjectURL(blob)
+      setAudioUrl(url)
+      
+      // Use extra_info for duration if available
+      const duration = response.extra_info?.music_duration || response.data.duration
+      setAudioDuration(duration)
+      
+      saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
 
       addUsage('musicRequests', 1)
       addItem({
         type: 'music',
-        input: lyrics.trim(),
-        outputUrl: finalAudioUrl,
+        input: isCoverModel ? referenceAudioUrl : lyrics.trim(),
+        outputUrl: url,
         metadata: {
           model,
           stylePrompt,
           optimizeLyrics,
-          duration: finalDuration,
+          duration,
+          instrumental,
+          seed: seed ? parseInt(seed, 10) : undefined,
         },
       })
     } catch (err) {
@@ -608,7 +648,7 @@ export default function MusicGeneration() {
 
               <Button
                 onClick={handleGenerate}
-                disabled={!lyrics.trim() || isGenerating}
+                disabled={isSubmitDisabled()}
                 className="w-full"
                 size="lg"
               >
