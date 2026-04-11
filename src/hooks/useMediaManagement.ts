@@ -61,6 +61,8 @@ export interface UseMediaManagementReturn {
   // Derived state
   filteredRecords: MediaRecord[]
   imageRecords: MediaRecord[]
+  audioRecords: MediaRecord[]
+  audioPreviewIndex: number | undefined
   lightboxSlides: { src: string }[]
   pageNumbers: (number | string)[]
 
@@ -75,6 +77,8 @@ export interface UseMediaManagementReturn {
   handleDownload: (record: MediaRecord) => void
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
+  handleAudioPrev: () => void
+  handleAudioNext: () => void
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
@@ -137,6 +141,11 @@ export function useMediaManagement(): UseMediaManagementReturn {
     return source.filter(r => r.type === 'image')
   }, [viewMode, timelineRecords, filteredRecords])
 
+  const audioRecords = useMemo(() => {
+    const source = viewMode === 'timeline' ? timelineRecords : filteredRecords
+    return source.filter(r => r.type === 'audio' || r.type === 'music').filter(r => signedUrls[r.id])
+  }, [viewMode, timelineRecords, filteredRecords, signedUrls])
+
   // Derived: lightbox slides (only include images that have signed URLs)
   const lightboxSlides = useMemo(() =>
     imageRecords
@@ -184,6 +193,23 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
     return pages
   }, [pagination.page, pagination.totalPages])
+
+  const audioPreviewIndex = useMemo(() => {
+    if (!audioPreviewRecord) return undefined
+    return audioRecords.findIndex(r => r.id === audioPreviewRecord.id)
+  }, [audioPreviewRecord, audioRecords])
+
+  const handleAudioPrev = useCallback(() => {
+    if (audioPreviewIndex === undefined || audioPreviewIndex <= 0) return
+    const prevRecord = audioRecords[audioPreviewIndex - 1]
+    setAudioPreviewRecord(prevRecord)
+  }, [audioPreviewIndex, audioRecords])
+
+  const handleAudioNext = useCallback(() => {
+    if (audioPreviewIndex === undefined || audioPreviewIndex >= audioRecords.length - 1) return
+    const nextRecord = audioRecords[audioPreviewIndex + 1]
+    setAudioPreviewRecord(nextRecord)
+  }, [audioPreviewIndex, audioRecords])
 
   // Clear selection when tab or page changes
   useEffect(() => {
@@ -567,6 +593,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
     // Derived state
     filteredRecords,
     imageRecords,
+    audioRecords,
+    audioPreviewIndex,
     lightboxSlides,
     pageNumbers,
 
@@ -581,5 +609,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     handleDownload,
     handlePreview,
     handlePageChange,
+    handleAudioPrev,
+    handleAudioNext,
   }
 }

@@ -64,6 +64,10 @@ export default function MediaManagement() {
     handlePageChange,
     audioPreviewRecord,
     setAudioPreviewRecord,
+    audioRecords,
+    audioPreviewIndex,
+    handleAudioPrev,
+    handleAudioNext,
   } = useMediaManagement()
 
   return (
@@ -352,6 +356,10 @@ export default function MediaManagement() {
           record={audioPreviewRecord}
           signedUrl={signedUrls[audioPreviewRecord.id]}
           onClose={() => setAudioPreviewRecord(null)}
+          playlist={audioRecords}
+          currentIndex={audioPreviewIndex}
+          onPrev={handleAudioPrev}
+          onNext={handleAudioNext}
         />
       )}
     </div>
