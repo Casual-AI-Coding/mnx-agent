@@ -75,22 +75,73 @@ export function MediaCard({
       )}
 
       <div
-        className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${
+        className={`absolute top-2 left-2 right-2 z-10 flex items-center justify-between transition-opacity duration-200 ${
           showActions || isSelected ? 'opacity-100' : 'opacity-0'
         }`}
-        onClick={(e) => {
-          e.stopPropagation()
-          onSelect()
-        }}
       >
-        <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${
-          isSelected ? 'bg-primary' : 'bg-muted/50 hover:bg-muted/70'
-        }`}>
+        <div
+          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${
+            isSelected ? 'bg-primary' : 'bg-muted/50 hover:bg-muted/70'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect()
+          }}
+        >
           {isSelected ? (
             <CheckSquare className="w-4 h-4 text-foreground" />
           ) : (
             <Square className="w-4 h-4 text-foreground/70" />
           )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsEditing(true)
+            }}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </Button>
+          {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPreview()
+              }}
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDownload()
+            }}
+          >
+            <Download className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-error hover:text-error/80 border-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
@@ -131,59 +182,6 @@ export function MediaCard({
             <p className="text-foreground/60 text-xs mt-0.5">
               {formatFileSize(record.size_bytes)}
             </p>
-          </div>
-
-          <div
-            className={`flex items-center gap-1 transition-all duration-200 flex-shrink-0 ${
-              showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`}
-          >
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsEditing(true)
-              }}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </Button>
-            {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onPreview()
-                }}
-              >
-                <Eye className="w-3.5 h-3.5" />
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDownload()
-              }}
-            >
-              <Download className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-error hover:text-error/80 border-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
           </div>
         </div>
       </div>
