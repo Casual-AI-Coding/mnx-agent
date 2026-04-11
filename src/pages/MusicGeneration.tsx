@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2 } from 'lucide-react'
+import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2, Upload, Link, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Switch } from '@/components/ui/Switch'
-import { generateMusic } from '@/lib/api/music'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/Collapsible'
+import { cn } from '@/lib/utils'
+import { generateMusic, preprocessMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
@@ -27,6 +30,23 @@ export default function MusicGeneration() {
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
+
+  // 纯音乐模式
+  const [instrumental, setInstrumental] = useState(false)
+
+  // 高级设置
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [sampleRate, setSampleRate] = useState<44100 | 48000>(44100)
+  const [bitrate, setBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('256k')
+  const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
+  const [seed, setSeed] = useState<string>('')
+
+  // 翻唱模式
+  const [coverMode, setCoverMode] = useState<'one-step' | 'two-step'>('one-step')
+  const [referenceAudioUrl, setReferenceAudioUrl] = useState('')
+  const [useOriginalLyrics, setUseOriginalLyrics] = useState(true)
+  const [preprocessLoading, setPreprocessLoading] = useState(false)
+  const [preprocessResult, setPreprocessResult] = useState<{ lyrics: string; audio_url: string } | null>(null)
 
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
@@ -140,6 +160,47 @@ export default function MusicGeneration() {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // 字符限制常量
+  const STYLE_PROMPT_MAX = 2000
+  const LYRICS_MAX = 3500
+
+  // 验证函数
+  const isStylePromptOverLimit = stylePrompt.length > STYLE_PROMPT_MAX
+  const isLyricsOverLimit = lyrics.length > LYRICS_MAX
+
+  // 纯音乐模式可用模型
+  const instrumentalModels = ['music-2.6', 'music-2.5+']
+  const isInstrumentalAvailable = instrumentalModels.includes(model)
+
+  // Seed 可用模型
+  const seedModels = ['music-2.6']
+  const isSeedAvailable = seedModels.includes(model)
+
+  // AI 歌词优化可用模型（修正为 2.5/2.5+/2.6）
+  const optimizeLyricsModels = ['music-2.5', 'music-2.5+', 'music-2.6']
+  const isOptimizeLyricsAvailable = optimizeLyricsModels.includes(model)
+
+  // 是否为翻唱模式
+  const isCoverModel = model === 'music-cover'
+
+  // 提交按钮禁用逻辑
+  const isSubmitDisabled = () => {
+    if (isGenerating) return true
+    if (isStylePromptOverLimit || isLyricsOverLimit) return true
+
+    if (isCoverModel) {
+      if (coverMode === 'one-step' && !referenceAudioUrl.trim()) return true
+      if (coverMode === 'two-step' && !preprocessResult) return true
+      return false
+    }
+
+    if (instrumental) {
+      return !stylePrompt.trim()
+    }
+
+    return !lyrics.trim()
   }
 
   return (
