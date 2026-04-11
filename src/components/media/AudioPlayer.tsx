@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 import type { MediaRecord } from '@/types/media'
 
 interface AudioPlayerProps {
@@ -35,6 +34,7 @@ export function AudioPlayer({
   const progressRef = useRef<HTMLDivElement>(null)
   const dragTimeRef = useRef(0)
 
+  // Audio event handlers
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -45,7 +45,9 @@ export function AudioPlayer({
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
       setIsPlaying(false)
-      if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) onNext()
+      if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) {
+        onNext()
+      }
     }
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
@@ -66,18 +68,31 @@ export function AudioPlayer({
     }
   }, [isDragging, onNext, playlist, currentIndex])
 
+  // Load new audio and auto-play
   useEffect(() => {
     if (signedUrl && audioRef.current) {
-      audioRef.current.src = signedUrl
-      audioRef.current.load()
+      const audio = audioRef.current
+      audio.src = signedUrl
+      audio.load()
       setCurrentTime(0)
+      setIsPlaying(false)
+      // Auto play after load
+      audio.play().then(() => {
+        setIsPlaying(true)
+      }).catch(() => {
+        setIsPlaying(false)
+      })
     }
   }, [signedUrl])
 
+  // Sync volume
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume
+    }
   }, [volume, isMuted])
 
+  // Close volume popup on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (volumeRef.current && !volumeRef.current.contains(e.target as Node)) {
@@ -88,6 +103,7 @@ export function AudioPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showVolume])
 
+  // Global mouse events for seek
   const calculateTime = useCallback((clientX: number) => {
     if (!progressRef.current) return 0
     const rect = progressRef.current.getBoundingClientRect()
@@ -123,8 +139,11 @@ export function AudioPlayer({
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
-    if (isPlaying) audio.pause()
-    else audio.play().catch(() => setIsPlaying(false))
+    if (isPlaying) {
+      audio.pause()
+    } else {
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    }
   }, [isPlaying])
 
   const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
