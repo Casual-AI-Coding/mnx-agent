@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Input } from '@/components/ui/Input'
 import { TYPE_GRADIENTS, TYPE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import type { MediaRecord } from '@/types/media'
@@ -15,6 +16,7 @@ interface MediaCardProps {
   onPreview: () => void
   onDownload: () => void
   onDelete: () => void
+  onRename?: (id: string, newName: string) => void
 }
 
 export function MediaCard({
@@ -25,10 +27,20 @@ export function MediaCard({
   onPreview,
   onDownload,
   onDelete,
+  onRename,
 }: MediaCardProps) {
   const [showActions, setShowActions] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState(record.original_name || record.filename)
+
+  const handleRename = () => {
+    if (editName.trim() && editName !== (record.original_name || record.filename)) {
+      onRename?.(record.id, editName.trim())
+    }
+    setIsEditing(false)
+  }
 
   return (
     <div
@@ -88,9 +100,34 @@ export function MediaCard({
             <Badge variant="secondary" className="text-xs mb-1.5">
               {TYPE_LABELS[record.type]}
             </Badge>
-            <p className="text-foreground text-sm font-medium truncate" title={record.original_name || record.filename}>
-              {record.original_name || record.filename}
-            </p>
+            {isEditing ? (
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRename()
+                  if (e.key === 'Escape') {
+                    setEditName(record.original_name || record.filename)
+                    setIsEditing(false)
+                  }
+                }}
+                className="h-6 text-sm bg-card/80"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <p
+                className="text-foreground text-sm font-medium truncate cursor-pointer hover:underline"
+                title={record.original_name || record.filename}
+                onDoubleClick={(e) => {
+                  e.stopPropagation()
+                  setIsEditing(true)
+                }}
+              >
+                {record.original_name || record.filename}
+              </p>
+            )}
             <p className="text-foreground/60 text-xs mt-0.5">
               {formatFileSize(record.size_bytes)}
             </p>
@@ -101,6 +138,17 @@ export function MediaCard({
               showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsEditing(true)
+              }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
             {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
               <Button
                 variant="secondary"

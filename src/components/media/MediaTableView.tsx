@@ -18,7 +18,7 @@ interface MediaTableViewProps {
   onPreview: (record: MediaRecord) => void
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
-  onRename?: (record: MediaRecord, newName: string) => void
+  onRename?: (id: string, newName: string) => void
 }
 
 export function MediaTableView({
@@ -58,7 +58,7 @@ export function MediaTableView({
     setIsSaving(true)
     try {
       if (onRename) {
-        onRename(record, trimmedName)
+        onRename(record.id, trimmedName)
       } else {
         await updateMedia(record.id, { original_name: trimmedName })
       }

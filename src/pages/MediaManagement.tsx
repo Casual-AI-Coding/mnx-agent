@@ -172,6 +172,7 @@ handlePreview,
                 onPreview={handlePreview}
                 onDownload={handleDownload}
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
+                onRename={handleRename}
               />
             ) : viewMode === 'timeline' ? (
               <div className="rounded-lg overflow-hidden bg-muted/30">
@@ -209,6 +210,7 @@ handlePreview,
                               onPreview={() => handlePreview(record)}
                               onDownload={() => handleDownload(record)}
                               onDelete={() => setDeleteDialog({ isOpen: true, record })}
+                              onRename={handleRename}
                             />
                           </div>
                         )

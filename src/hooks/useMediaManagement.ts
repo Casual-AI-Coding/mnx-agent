@@ -78,7 +78,7 @@ export interface UseMediaManagementReturn {
   handleDownload: (record: MediaRecord) => void
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
-  handleRename: (record: MediaRecord, newName: string) => Promise<void>
+  handleRename: (id: string, newName: string) => Promise<void>
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
@@ -550,13 +550,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
     })
   }, [timelineRecords])
 
-  const handleRename = useCallback(async (record: MediaRecord, newName: string) => {
-    await updateMedia(record.id, { original_name: newName })
+  const handleRename = useCallback(async (id: string, newName: string) => {
+    await updateMedia(id, { original_name: newName })
     setRecords(prev => prev.map(r => 
-      r.id === record.id ? { ...r, original_name: newName } : r
+      r.id === id ? { ...r, original_name: newName } : r
     ))
     setTimelineRecords(prev => prev.map(r =>
-      r.id === record.id ? { ...r, original_name: newName } : r
+      r.id === id ? { ...r, original_name: newName } : r
     ))
   }, [setRecords, setTimelineRecords])
 

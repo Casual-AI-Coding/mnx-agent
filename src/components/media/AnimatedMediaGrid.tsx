@@ -15,6 +15,7 @@ interface AnimatedMediaGridProps {
   onPreview: (record: MediaRecord) => void
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
+  onRename?: (id: string, newName: string) => void
 }
 
 export function AnimatedMediaGrid({
@@ -25,6 +26,7 @@ export function AnimatedMediaGrid({
   onPreview,
   onDownload,
   onDelete,
+  onRename,
 }: AnimatedMediaGridProps) {
   return (
     <motion.div
@@ -49,6 +51,7 @@ export function AnimatedMediaGrid({
               onPreview={() => onPreview(record)}
               onDownload={() => onDownload(record)}
               onDelete={() => onDelete(record)}
+              onRename={onRename}
             />
           </motion.div>
         ))}

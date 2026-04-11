@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Input } from '@/components/ui/Input'
 import { TYPE_VARIANTS, TYPE_LABELS, TYPE_GRADIENTS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
@@ -15,6 +16,7 @@ interface TimelineItemProps {
   onPreview: () => void
   onDownload: () => void
   onDelete: () => void
+  onRename?: (id: string, newName: string) => void
 }
 
 export function TimelineItem({
@@ -25,9 +27,19 @@ export function TimelineItem({
   onPreview,
   onDownload,
   onDelete,
+  onRename,
 }: TimelineItemProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState(record.original_name || record.filename)
+
+  const handleRename = () => {
+    if (editName.trim() && editName !== (record.original_name || record.filename)) {
+      onRename?.(record.id, editName.trim())
+    }
+    setIsEditing(false)
+  }
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors ${
@@ -76,15 +88,43 @@ export function TimelineItem({
             {formatFileSize(record.size_bytes)}
           </span>
         </div>
-        <p className="font-medium truncate mt-1" title={record.original_name || record.filename}>
-          {record.original_name || record.filename}
-        </p>
+        {isEditing ? (
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRename()
+              if (e.key === 'Escape') {
+                setEditName(record.original_name || record.filename)
+                setIsEditing(false)
+              }
+            }}
+            className="h-6 text-sm mt-1"
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <p
+            className="font-medium truncate mt-1 cursor-pointer hover:underline"
+            title={record.original_name || record.filename}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              setIsEditing(true)
+            }}
+          >
+            {record.original_name || record.filename}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           {new Date(record.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}>
+          <Pencil className="w-4 h-4" />
+        </Button>
         {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }}>
             <Eye className="w-4 h-4" />
