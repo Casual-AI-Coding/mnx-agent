@@ -34,11 +34,13 @@ export function AudioPlayer({
   const progressRef = useRef<HTMLDivElement>(null)
   const dragTimeRef = useRef(0)
   const durationRef = useRef(0)
+  const isDraggingRef = useRef(false)
 
-  // Keep durationRef synced
+  // Keep refs synced
   useEffect(() => {
     durationRef.current = duration
-  }, [duration])
+    isDraggingRef.current = isDragging
+  }, [duration, isDragging])
 
   const hasPlaylist = playlist && playlist.length > 0 && currentIndex !== undefined
   const canGoPrev = hasPlaylist && currentIndex > 0
@@ -52,7 +54,7 @@ export function AudioPlayer({
     if (!audio) return
 
     const handleTimeUpdate = () => {
-      if (!isDragging) setCurrentTime(audio.currentTime)
+      if (!isDraggingRef.current) setCurrentTime(audio.currentTime)
     }
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
@@ -78,8 +80,7 @@ export function AudioPlayer({
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging]) // Only re-attach when isDragging changes, not onNext/playlist/currentIndex
+  }, [])  // No isDragging dependency - handler uses ref
 
   // Load new audio and auto-play
   useEffect(() => {
