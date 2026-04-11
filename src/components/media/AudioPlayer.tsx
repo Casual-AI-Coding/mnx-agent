@@ -3,7 +3,7 @@ import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-
 import type { MediaRecord } from '@/types/media'
 
 interface AudioPlayerProps {
-  record: MediaRecord
+  record?: MediaRecord
   signedUrl: string
   onClose: () => void
   playlist?: MediaRecord[]
@@ -34,6 +34,12 @@ export function AudioPlayer({
   const progressRef = useRef<HTMLDivElement>(null)
   const dragTimeRef = useRef(0)
 
+  const hasPlaylist = playlist && playlist.length > 0 && currentIndex !== undefined
+  const canGoPrev = hasPlaylist && currentIndex > 0
+  const canGoNext = hasPlaylist && currentIndex < playlist.length - 1
+
+  const displayTitle = record?.original_name || record?.filename || '音频播放'
+
   // Audio event handlers
   useEffect(() => {
     const audio = audioRef.current
@@ -45,7 +51,7 @@ export function AudioPlayer({
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
       setIsPlaying(false)
-      if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) {
+      if (onNext && canGoNext) {
         onNext()
       }
     }
@@ -160,11 +166,6 @@ export function AudioPlayer({
     setIsMuted(false)
   }, [])
 
-  const toggleMute = useCallback(() => setIsMuted(!isMuted), [isMuted])
-
-  const canGoPrev = currentIndex !== undefined && currentIndex > 0
-  const canGoNext = currentIndex !== undefined && playlist && currentIndex < playlist.length - 1
-
   const formatTime = (t: number) => {
     if (!t || t < 0) return '0:00'
     const m = Math.floor(t / 60)
@@ -189,8 +190,8 @@ export function AudioPlayer({
           <SkipForward className="w-4 h-4" />
         </button>
 
-        <span className="text-xs font-medium truncate flex-1 ml-1" title={record.original_name || record.filename}>
-          {record.original_name || record.filename}
+        <span className="text-xs font-medium truncate flex-1 ml-1" title={displayTitle}>
+          {displayTitle}
         </span>
 
         <div className="relative" ref={volumeRef}>

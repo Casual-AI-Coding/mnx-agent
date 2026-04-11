@@ -7,11 +7,13 @@ interface AudioState {
   currentIndex: number | undefined
   signedUrls: Record<string, string>
   signedUrl: string | null
+  directUrl: string | null
 
   setCurrentRecord: (record: MediaRecord | null) => void
   setPlaylist: (records: MediaRecord[]) => void
   setSignedUrls: (urls: Record<string, string>) => void
   setSignedUrl: (url: string | null) => void
+  playDirectUrl: (url: string) => void
   playPrev: () => void
   playNext: () => void
   close: () => void
@@ -23,11 +25,12 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   currentIndex: undefined,
   signedUrls: {},
   signedUrl: null,
+  directUrl: null,
 
   setCurrentRecord: (record) => {
     const { playlist } = get()
     const index = record ? playlist.findIndex(r => r.id === record.id) : undefined
-    set({ currentRecord: record, currentIndex: index })
+    set({ currentRecord: record, currentIndex: index, directUrl: null })
   },
 
   setPlaylist: (records) => {
@@ -42,6 +45,16 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   setSignedUrls: (urls) => set({ signedUrls: urls }),
 
   setSignedUrl: (url) => set({ signedUrl: url }),
+
+  playDirectUrl: (url) => {
+    set({
+      currentRecord: null,
+      currentIndex: undefined,
+      playlist: [],
+      signedUrl: url,
+      directUrl: url,
+    })
+  },
 
   playPrev: () => {
     const { currentIndex, playlist, signedUrls } = get()
@@ -71,5 +84,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     currentRecord: null,
     currentIndex: undefined,
     signedUrl: null,
+    directUrl: null,
   }),
 }))

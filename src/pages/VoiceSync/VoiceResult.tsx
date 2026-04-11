@@ -1,9 +1,10 @@
-import { useRef, useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Play, Download, Music2, Check } from 'lucide-react'
+import { Play, Download, Music2, Check, ExternalLink } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { services } from '@/themes/tokens'
+import { useAudioStore } from '@/stores/audio'
 
 interface VoiceWaveformProps {
   isPlaying: boolean
@@ -42,47 +43,16 @@ interface GlassAudioPlayerProps {
 }
 
 function GlassAudioPlayer({ audioUrl, onDownload }: GlassAudioPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const { playDirectUrl } = useAudioStore()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setDuration(audio.duration)
-    const handleEnded = () => setIsPlaying(false)
-
-    audio.addEventListener('timeupdate', updateTime)
-    audio.addEventListener('loadedmetadata', updateDuration)
-    audio.addEventListener('ended', handleEnded)
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime)
-      audio.removeEventListener('loadedmetadata', updateDuration)
-      audio.removeEventListener('ended', handleEnded)
-    }
-  }, [])
 
   const togglePlay = () => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play()
-    }
     setIsPlaying(!isPlaying)
   }
 
-  const formatTime = (time: number) => {
-    const mins = Math.floor(time / 60)
-    const secs = Math.floor(time % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+  const playGlobal = () => {
+    playDirectUrl(audioUrl)
   }
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
     <div className="relative group">
@@ -111,21 +81,18 @@ function GlassAudioPlayer({ audioUrl, onDownload }: GlassAudioPlayerProps) {
 
           <div className="flex-1">
             <VoiceWaveform isPlaying={isPlaying} />
-
-            <div className="mt-3 relative h-1.5 bg-secondary rounded-full overflow-hidden">
-              <motion.div
-                className={cn('absolute inset-y-0 left-0 rounded-full', services.voice.bg)}
-                style={{ width: `${progress}%` }}
-                layoutId="progress"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-            </div>
-
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
           </div>
+
+          <button
+            onClick={playGlobal}
+            title="全局播放（切换页面后继续播放）"
+            className={cn(
+              'shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200',
+              'bg-secondary/80 hover:bg-secondary text-muted-foreground/70 hover:text-foreground'
+            )}
+          >
+            <ExternalLink className="w-5 h-5" />
+          </button>
 
           <button
             onClick={onDownload}
@@ -137,8 +104,6 @@ function GlassAudioPlayer({ audioUrl, onDownload }: GlassAudioPlayerProps) {
             <Download className="w-5 h-5" />
           </button>
         </div>
-
-        <audio ref={audioRef} src={audioUrl} className="hidden" />
       </div>
     </div>
   )
