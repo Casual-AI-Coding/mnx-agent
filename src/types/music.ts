@@ -4,7 +4,8 @@ import type { MusicModel } from '../models'
 export interface MusicGenerationRequest {
   model: MusicModel
   lyrics?: string
-  prompt?: string
+  prompt?: string           // 普通音乐生成的风格描述
+  style_prompt?: string     // 翻唱模式的风格描述
   optimize_lyrics?: boolean
   audio_setting?: {
     sample_rate?: 16000 | 24000 | 32000 | 44100

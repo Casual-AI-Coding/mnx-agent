@@ -63,7 +63,6 @@ export interface UseMediaManagementReturn {
   filteredRecords: MediaRecord[]
   imageRecords: MediaRecord[]
   audioRecords: MediaRecord[]
-  audioPreviewIndex: number | undefined
   lightboxSlides: { src: string }[]
   pageNumbers: (number | string)[]
 
@@ -78,8 +77,6 @@ export interface UseMediaManagementReturn {
   handleDownload: (record: MediaRecord) => void
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
-  handleAudioPrev: () => void
-  handleAudioNext: () => void
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {

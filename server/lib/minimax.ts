@@ -159,7 +159,9 @@ export class MiniMaxClient {
   async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
     return retryWithBackoff(async () => {
       try {
-        const response = await this.client.post('/v1/music_generation', body)
+        const response = await this.client.post('/v1/music_generation', body, {
+          timeout: 300000, // 5 minutes for music generation
+        })
         return response.data
       } catch (error) {
         return this.handleError(error as AxiosError<MiniMaxErrorResponse>)

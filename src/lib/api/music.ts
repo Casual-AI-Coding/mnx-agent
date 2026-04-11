@@ -1,13 +1,19 @@
 import { apiClient } from './client'
+import { TIMEOUTS } from '@/lib/config/constants'
 import type { MusicGenerationRequest, MusicGenerationResponse, MusicPreprocessResponse } from '@/types'
 
 export async function generateMusic(
   request: MusicGenerationRequest
 ): Promise<MusicGenerationResponse> {
-  return apiClient.post<MusicGenerationResponse>('/music/generate', {
-    ...request,
-    output_format: 'url',
-  })
+  const response = await apiClient.client_.post<MusicGenerationResponse>(
+    '/music/generate',
+    {
+      ...request,
+      output_format: 'url',
+    },
+    { timeout: TIMEOUTS.MUSIC_GENERATION }
+  )
+  return response.data
 }
 
 export async function preprocessMusic(

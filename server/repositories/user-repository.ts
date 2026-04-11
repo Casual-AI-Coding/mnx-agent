@@ -13,11 +13,11 @@ import type {
 import { AuditAction } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function rowToAuditLog(row: AuditLogRow, usernameMap: Map<string, string>): AuditLog {
+function rowToAuditLog(row: AuditLogRow, usernameMap?: Map<string, string>): AuditLog {
   return {
     ...row,
     action: row.action as AuditAction,
-    username: row.user_id ? usernameMap.get(row.user_id) ?? null : null,
+    username: row.user_id ? (usernameMap?.get(row.user_id) ?? null) : null,
   }
 }
 
