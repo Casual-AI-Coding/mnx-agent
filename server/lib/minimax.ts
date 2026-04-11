@@ -167,6 +167,19 @@ export class MiniMaxClient {
     })
   }
 
+  async musicPreprocess(formData: FormData): Promise<unknown> {
+    try {
+      const response = await this.client.post('/v1/music_cover_preprocess', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return response.data
+    } catch (error) {
+      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+    }
+  }
+
   async videoGeneration(body: Record<string, unknown>): Promise<unknown> {
     return retryWithBackoff(async () => {
       try {
@@ -325,6 +338,7 @@ class MockMiniMaxClient extends MiniMaxClient {
   async textToAudioAsyncStatus(): Promise<unknown> { return this.createErrorResponse('textToAudioAsyncStatus') }
   async imageGeneration(): Promise<unknown> { return this.createErrorResponse('imageGeneration') }
   async musicGeneration(): Promise<unknown> { return this.createErrorResponse('musicGeneration') }
+  async musicPreprocess(): Promise<unknown> { return this.createErrorResponse('musicPreprocess') }
   async videoGeneration(): Promise<unknown> { return this.createErrorResponse('videoGeneration') }
   async videoGenerationStatus(): Promise<unknown> { return this.createErrorResponse('videoGenerationStatus') }
   async videoAgentGenerate(): Promise<unknown> { return this.createErrorResponse('videoAgentGenerate') }
