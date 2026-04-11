@@ -56,7 +56,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     },
     music: {
       model: DEFAULT_MODELS.music,
-      optimizeLyrics: true,
+      optimizeLyrics: false,
       duration: 30,
     },
     video: {

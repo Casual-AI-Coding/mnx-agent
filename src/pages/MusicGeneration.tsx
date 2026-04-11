@@ -18,13 +18,15 @@ import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
+import { DEFAULT_MODELS } from '@/models'
 
 export default function MusicGeneration() {
   const { t } = useTranslation()
   const musicSettings = useSettingsStore(s => s.settings.generation.music)
   const [lyrics, setLyrics] = useState('')
   const [stylePrompt, setStylePrompt] = useState('')
-  const [model, setModel] = useState<MusicModel>(musicSettings.model as MusicModel)
+  const validModel = MUSIC_MODELS.some(m => m.id === musicSettings.model)
+  const [model, setModel] = useState<MusicModel>(validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music)
   const [optimizeLyrics, setOptimizeLyrics] = useState(musicSettings.optimizeLyrics)
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -38,8 +40,8 @@ export default function MusicGeneration() {
 
   // 高级设置
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [sampleRate, setSampleRate] = useState<44100 | 48000>(44100)
-  const [bitrate, setBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('256k')
+  const [sampleRate, setSampleRate] = useState<44100 | 48000>(48000)
+  const [bitrate, setBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('320k')
   const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
   const [seed, setSeed] = useState<string>('')
 
