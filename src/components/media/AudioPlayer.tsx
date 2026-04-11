@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, X, SkipBack, SkipForward } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { MediaRecord } from '@/types/media'
 
@@ -25,10 +25,9 @@ export function AudioPlayer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isSeeking, setIsSeeking] = useState(false)
-  const [seekTarget, setSeekTarget] = useState(0)
+  const [volume, setVolume] = useState(0.8)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragValue, setDragValue] = useState(0)
 
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -37,26 +36,21 @@ export function AudioPlayer({
     if (!audio) return
 
     const handleTimeUpdate = () => {
-      if (!isSeeking) {
+      if (!isDragging) {
         setCurrentTime(audio.currentTime)
       }
     }
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration)
-      setCurrentTime(0)
     }
 
     const handleEnded = () => {
       setIsPlaying(false)
+      setCurrentTime(0)
       if (onNext && playlist && currentIndex !== undefined && currentIndex < playlist.length - 1) {
         onNext()
       }
-    }
-
-    const handleSeeked = () => {
-      setCurrentTime(audio.currentTime)
-      setIsSeeking(false)
     }
 
     const handlePlay = () => setIsPlaying(true)
@@ -65,215 +59,207 @@ export function AudioPlayer({
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
     audio.addEventListener('ended', handleEnded)
-    audio.addEventListener('seeked', handleSeeked)
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('pause', handlePause)
+
+    audio.volume = volume
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('ended', handleEnded)
-      audio.removeEventListener('seeked', handleSeeked)
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [isSeeking, onNext, playlist, currentIndex])
+  }, [isDragging, onNext, playlist, currentIndex])
 
   useEffect(() => {
     if (signedUrl && audioRef.current) {
-      const audio = audioRef.current
-      audio.src = signedUrl
-      audio.load()
+      audioRef.current.src = signedUrl
+      audioRef.current.load()
       setCurrentTime(0)
-      setIsSeeking(false)
-      setSeekTarget(0)
+      setDuration(0)
     }
   }, [signedUrl])
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume
+      audioRef.current.volume = volume
     }
-  }, [volume, isMuted])
+  }, [volume])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
-
     if (isPlaying) {
       audio.pause()
     } else {
-      audio.play().catch(() => {
-        setIsPlaying(false)
-      })
+      audio.play().catch(() => setIsPlaying(false))
     }
   }, [isPlaying])
 
-  const handleSeekChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value)
-    setSeekTarget(time)
-    setCurrentTime(time)
+  const handleSeekInput = useCallback((value: number) => {
+    setIsDragging(true)
+    setDragValue(value)
+    setCurrentTime(value)
   }, [])
 
-  const handleSeekStart = useCallback(() => {
-    setIsSeeking(true)
-    if (audioRef.current && isPlaying) {
-      audioRef.current.pause()
-    }
-  }, [isPlaying])
-
-  const handleSeekEnd = useCallback(() => {
+  const handleSeekCommit = useCallback((value: number) => {
     const audio = audioRef.current
-    if (!audio) return
-
-    audio.currentTime = seekTarget
-
-    if (isPlaying) {
-      audio.play().catch(() => {})
+    if (audio) {
+      audio.currentTime = value
     }
-  }, [seekTarget, isPlaying])
-
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value)
-    setVolume(vol)
-    if (vol > 0) setIsMuted(false)
+    setIsDragging(false)
+    setCurrentTime(value)
   }, [])
 
-  const toggleMute = useCallback(() => {
-    setIsMuted(!isMuted)
-  }, [isMuted])
+  const handleVolumeChange = useCallback((value: number) => {
+    setVolume(value)
+  }, [])
 
   const canGoPrev = currentIndex !== undefined && currentIndex > 0
   const canGoNext = currentIndex !== undefined && playlist && currentIndex < playlist.length - 1
 
-  const formatTime = (time: number) => {
-    if (!time || time < 0) return '0:00'
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
+  const formatTime = useCallback((time: number) => {
+    if (!time || time < 0 || !Number.isFinite(time)) return '0:00'
+    const m = Math.floor(time / 60)
+    const s = Math.floor(time % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }, [])
+
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg p-4 w-[480px] max-w-[calc(100vw-32px)]">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/95 to-black/80 backdrop-blur-xl border-t border-white/10">
       <audio ref={audioRef} preload="metadata" />
 
-      <div className="flex items-center gap-3">
-        {playlist && (
+      <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="flex items-center gap-6">
+          {playlist && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onPrev}
+              disabled={!canGoPrev}
+              className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 h-10 w-10"
+            >
+              <SkipBack className="w-5 h-5" />
+            </Button>
+          )}
+
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPrev}
-            disabled={!canGoPrev}
-            className="w-8 h-8 p-0"
+            onClick={togglePlay}
+            className="h-14 w-14 rounded-full bg-white text-black hover:bg-white/90 shadow-lg flex items-center justify-center"
           >
-            <SkipBack className="w-4 h-4" />
+            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
           </Button>
-        )}
 
-        <Button
-          variant="default"
-          size="sm"
-          onClick={togglePlay}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-        >
-          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        </Button>
+          {playlist && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNext}
+              disabled={!canGoNext}
+              className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30 h-10 w-10"
+            >
+              <SkipForward className="w-5 h-5" />
+            </Button>
+          )}
 
-        {playlist && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onNext}
-            disabled={!canGoNext}
-            className="w-8 h-8 p-0"
-          >
-            <SkipForward className="w-4 h-4" />
-          </Button>
-        )}
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium truncate mb-2">
+              {record.original_name || record.filename}
+            </p>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" title={record.original_name || record.filename}>
-            {record.original_name || record.filename}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-muted-foreground w-10">{formatTime(currentTime)}</span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 100}
-              value={currentTime}
-              step={0.1}
-              onChange={handleSeekChange}
-              onMouseDown={handleSeekStart}
-              onMouseUp={handleSeekEnd}
-              onTouchStart={handleSeekStart}
-              onTouchEnd={handleSeekEnd}
-              className="flex-1 h-2 bg-muted rounded-full cursor-pointer 
-                [&::-webkit-slider-thumb]:appearance-none 
-                [&::-webkit-slider-thumb]:w-4 
-                [&::-webkit-slider-thumb]:h-4 
-                [&::-webkit-slider-thumb]:rounded-full 
-                [&::-webkit-slider-thumb]:bg-primary 
-                [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-moz-range-thumb]:appearance-none 
-                [&::-moz-range-thumb]:w-4 
-                [&::-moz-range-thumb]:h-4 
-                [&::-moz-range-thumb]:rounded-full 
-                [&::-moz-range-thumb]:bg-primary 
-                [&::-moz-range-thumb]:border-0 
-                [&::-moz-range-thumb]:cursor-pointer"
-            />
-            <span className="text-xs text-muted-foreground w-10 text-right">{formatTime(duration)}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white/60 text-sm w-12 text-right font-mono">
+                {formatTime(currentTime)}
+              </span>
+
+              <div
+                className="flex-1 h-1.5 bg-white/20 rounded-full relative cursor-pointer group"
+                onMouseDown={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const percent = (e.clientX - rect.left) / rect.width
+                  const time = percent * duration
+                  handleSeekInput(time)
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging) return
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                  const time = percent * duration
+                  handleSeekInput(time)
+                }}
+                onMouseUp={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                  const time = percent * duration
+                  handleSeekCommit(time)
+                }}
+                onMouseLeave={() => {
+                  if (isDragging) {
+                    handleSeekCommit(dragValue)
+                  }
+                }}
+              >
+                <div
+                  className="absolute left-0 top-0 h-full bg-white rounded-full transition-all"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ left: `${progressPercent}%`, marginLeft: -6 }}
+                />
+              </div>
+
+              <span className="text-white/60 text-sm w-12 font-mono">
+                {formatTime(duration)}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 w-24">
+            <svg className="w-4 h-4 text-white/60" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.7 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <div
+              className="flex-1 h-1 bg-white/20 rounded-full relative cursor-pointer"
+              onMouseDown={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                const percent = (e.clientX - rect.left) / rect.width
+                handleVolumeChange(Math.max(0, Math.min(1, percent)))
+              }}
+              onMouseMove={(e) => {
+                if (e.buttons !== 1) return
+                const rect = e.currentTarget.getBoundingClientRect()
+                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                handleVolumeChange(percent)
+              }}
+            >
+              <div
+                className="absolute left-0 top-0 h-full bg-white/60 rounded-full"
+                style={{ width: `${volume * 100}%` }}
+              />
+            </div>
+          </div>
+
           <Button
             variant="ghost"
-            size="sm"
-            onClick={toggleMute}
-            className="w-8 h-8 p-0"
+            size="icon"
+            onClick={onClose}
+            className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10"
           >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
+            <X className="w-5 h-5" />
           </Button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            value={isMuted ? 0 : volume}
-            step={0.05}
-            onChange={handleVolumeChange}
-            className="w-20 h-2 bg-muted rounded-full cursor-pointer 
-              [&::-webkit-slider-thumb]:appearance-none 
-              [&::-webkit-slider-thumb]:w-3 
-              [&::-webkit-slider-thumb]:h-3 
-              [&::-webkit-slider-thumb]:rounded-full 
-              [&::-webkit-slider-thumb]:bg-primary 
-              [&::-webkit-slider-thumb]:cursor-pointer
-              [&::-moz-range-thumb]:appearance-none 
-              [&::-moz-range-thumb]:w-3 
-              [&::-moz-range-thumb]:h-3 
-              [&::-moz-range-thumb]:rounded-full 
-              [&::-moz-range-thumb]:bg-primary 
-              [&::-moz-range-thumb]:border-0 
-              [&::-moz-range-thumb]:cursor-pointer"
-          />
         </div>
 
-        <Button variant="ghost" size="sm" onClick={onClose} className="w-8 h-8 p-0">
-          <X className="w-4 h-4" />
-        </Button>
+        {playlist && currentIndex !== undefined && (
+          <div className="text-white/40 text-xs text-center mt-2">
+            {currentIndex + 1} / {playlist.length}
+          </div>
+        )}
       </div>
-
-      {playlist && currentIndex !== undefined && (
-        <div className="text-xs text-muted-foreground text-center mt-2">
-          {currentIndex + 1} / {playlist.length}
-        </div>
-      )}
     </div>
   )
 }
