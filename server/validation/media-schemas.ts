@@ -12,6 +12,7 @@ export const listMediaQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
   includeDeleted: z.coerce.boolean().optional().default(false),
+  favorite: z.coerce.boolean().optional(), // 筛选已收藏
 })
 
 export const mediaIdParamsSchema = z.object({
