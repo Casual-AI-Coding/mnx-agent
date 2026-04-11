@@ -231,9 +231,27 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
   }
 
   const buffer = await readMediaFile(record.filepath)
+  const fileSize = buffer.length
+
   res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
   res.setHeader('Content-Disposition', `inline; filename="${record.original_name || record.filename}"`)
-  res.send(buffer)
+  res.setHeader('Accept-Ranges', 'bytes')
+
+  const range = req.headers.range
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-')
+    const start = parseInt(parts[0], 10)
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+    const chunkSize = end - start + 1
+
+    res.status(206)
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`)
+    res.setHeader('Content-Length', chunkSize)
+    res.send(buffer.slice(start, end + 1))
+  } else {
+    res.setHeader('Content-Length', fileSize)
+    res.send(buffer)
+  }
 }))
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {

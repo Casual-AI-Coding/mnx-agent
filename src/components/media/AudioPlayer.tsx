@@ -26,21 +26,14 @@ export function AudioPlayer({
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.8)
   const [isMuted, setIsMuted] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
+  const [bufferedPercent, setBufferedPercent] = useState(0)
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
-  const dragTimeRef = useRef(0)
-  const durationRef = useRef(0)
-  const isDraggingRef = useRef(false)
-
-  // Keep refs synced
-  useEffect(() => {
-    durationRef.current = duration
-    isDraggingRef.current = isDragging
-  }, [duration, isDragging])
+  const isSeekingRef = useRef(false)
+  const seekTargetRef = useRef<number | null>(null)
 
   const hasPlaylist = playlist && playlist.length > 0 && currentIndex !== undefined
   const canGoPrev = hasPlaylist && currentIndex > 0
@@ -48,65 +41,81 @@ export function AudioPlayer({
 
   const displayTitle = record?.original_name || record?.filename || '音频播放'
 
-  // Audio event handlers
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
     const handleTimeUpdate = () => {
-      if (!isDraggingRef.current) setCurrentTime(audio.currentTime)
-    }
-    const handleLoadedMetadata = () => setDuration(audio.duration)
-    const handleEnded = () => {
-      setIsPlaying(false)
-      if (onNext && canGoNext) {
-        onNext()
+      if (!isSeekingRef.current) {
+        setCurrentTime(audio.currentTime)
       }
     }
+    
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration)
+    }
+    
+    const handleProgress = () => {
+      if (audio.buffered.length > 0 && audio.duration > 0) {
+        const bufferedEnd = audio.buffered.end(audio.buffered.length - 1)
+        setBufferedPercent((bufferedEnd / audio.duration) * 100)
+      }
+    }
+    
+    const handleSeeked = () => {
+      isSeekingRef.current = false
+      if (seekTargetRef.current !== null) {
+        setCurrentTime(seekTargetRef.current)
+        seekTargetRef.current = null
+      }
+    }
+    
+    const handleEnded = () => {
+      setIsPlaying(false)
+      if (onNext && canGoNext) onNext()
+    }
+    
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('progress', handleProgress)
+    audio.addEventListener('seeked', handleSeeked)
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('pause', handlePause)
-    audio.volume = volume
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('progress', handleProgress)
+      audio.removeEventListener('seeked', handleSeeked)
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [])  // No isDragging dependency - handler uses ref
+  }, [canGoNext, onNext])
 
-  // Load new audio and auto-play
   useEffect(() => {
     if (signedUrl && audioRef.current) {
       const audio = audioRef.current
       audio.src = signedUrl
       audio.load()
       setCurrentTime(0)
-      setIsPlaying(false)
-      // Auto play after load
-      audio.play().then(() => {
-        setIsPlaying(true)
-      }).catch(() => {
-        setIsPlaying(false)
-      })
+      setBufferedPercent(0)
+      isSeekingRef.current = false
+      seekTargetRef.current = null
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
     }
   }, [signedUrl])
 
-  // Sync volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume
     }
   }, [volume, isMuted])
 
-  // Close volume popup on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (volumeRef.current && !volumeRef.current.contains(e.target as Node)) {
@@ -117,37 +126,51 @@ export function AudioPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showVolume])
 
-  // Global mouse events for seek
-  const calculateTime = useCallback((clientX: number) => {
-    if (!progressRef.current) return 0
+  const calculateSeekTime = useCallback((clientX: number): number => {
+    if (!progressRef.current || duration === 0) return 0
     const rect = progressRef.current.getBoundingClientRect()
     const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    return percent * durationRef.current
-  }, [])
+    return percent * duration
+  }, [duration])
 
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (isDraggingRef.current && audioRef.current) {
-        isDraggingRef.current = false
-        audioRef.current.currentTime = dragTimeRef.current
-        setCurrentTime(dragTimeRef.current)
-        setIsDragging(false)
-      }
+    const handleMouseMove = (e: MouseEvent) => {
+      const seekTime = calculateSeekTime(e.clientX)
+      setCurrentTime(seekTime)
     }
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return
-      const newTime = calculateTime(e.clientX)
-      dragTimeRef.current = newTime
-      setCurrentTime(newTime)
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      const audio = audioRef.current
+      if (audio) {
+        const seekTime = calculateSeekTime(e.clientX)
+        seekTargetRef.current = seekTime
+        isSeekingRef.current = true
+        audio.currentTime = seekTime
+      }
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
     }
 
-    document.addEventListener('mouseup', handleGlobalMouseUp)
-    document.addEventListener('mousemove', handleGlobalMouseMove)
-    return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp)
-      document.removeEventListener('mousemove', handleGlobalMouseMove)
+    const handleMouseDown = (e: MouseEvent) => {
+      const seekTime = calculateSeekTime(e.clientX)
+      setCurrentTime(seekTime)
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
     }
-  }, [calculateTime])
+
+    const progress = progressRef.current
+    if (progress) {
+      progress.addEventListener('mousedown', handleMouseDown)
+    }
+
+    return () => {
+      if (progress) {
+        progress.removeEventListener('mousedown', handleMouseDown)
+      }
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [calculateSeekTime])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
@@ -158,13 +181,6 @@ export function AudioPlayer({
       audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
     }
   }, [isPlaying])
-
-  const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const newTime = calculateTime(e.clientX)
-    dragTimeRef.current = newTime
-    setCurrentTime(newTime)
-    setIsDragging(true)
-  }, [calculateTime])
 
   const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -184,7 +200,7 @@ export function AudioPlayer({
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[320px]">
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="auto" />
 
       <div className="flex items-center gap-1.5 mb-2">
         <button onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50 disabled:opacity-30">
@@ -224,8 +240,8 @@ export function AudioPlayer({
         <div
           ref={progressRef}
           className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer relative"
-          onMouseDown={handleSeekStart}
         >
+          <div className="absolute h-full bg-primary/30 rounded-full" style={{ width: `${bufferedPercent}%` }} />
           <div className="absolute h-full bg-primary rounded-full" style={{ width: `${progressPercent}%` }} />
         </div>
         <span className="text-[10px] text-muted-foreground w-7">{formatTime(duration)}</span>
