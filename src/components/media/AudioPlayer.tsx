@@ -32,6 +32,7 @@ export function AudioPlayer({
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -86,6 +87,29 @@ export function AudioPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showVolume])
 
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleSeekEnd()
+      }
+    }
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !progressRef.current) return
+      const rect = progressRef.current.getBoundingClientRect()
+      const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+      setCurrentTime(percent * duration)
+    }
+
+    if (isDragging) {
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+      document.addEventListener('mousemove', handleGlobalMouseMove)
+    }
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp)
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+    }
+  }, [isDragging, duration])
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -97,15 +121,10 @@ export function AudioPlayer({
     setIsDragging(true)
     const rect = e.currentTarget.getBoundingClientRect()
     const percent = (e.clientX - rect.left) / rect.width
-    setCurrentTime(percent * duration)
+    const newTime = percent * duration
+    setCurrentTime(newTime)
+    if (audioRef.current) audioRef.current.currentTime = newTime
   }, [duration])
-
-  const handleSeekMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    setCurrentTime(percent * duration)
-  }, [isDragging, duration])
 
   const handleSeekEnd = useCallback(() => {
     const audio = audioRef.current
@@ -174,11 +193,9 @@ export function AudioPlayer({
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground w-7 text-right">{formatTime(currentTime)}</span>
         <div
+          ref={progressRef}
           className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer relative"
           onMouseDown={handleSeekStart}
-          onMouseMove={handleSeekMove}
-          onMouseUp={handleSeekEnd}
-          onMouseLeave={() => isDragging && handleSeekEnd()}
         >
           <div className="absolute h-full bg-primary rounded-full" style={{ width: `${progressPercent}%` }} />
         </div>
