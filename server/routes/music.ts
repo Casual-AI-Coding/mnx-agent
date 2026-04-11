@@ -72,8 +72,32 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (reference_audio_url) body.reference_audio_url = reference_audio_url
     if (use_original_lyrics !== undefined) body.use_original_lyrics = use_original_lyrics
 
-    const result = await client.musicGeneration(body)
-    successResponse(res, result)
+    const result = await client.musicGeneration(body) as {
+      data: {
+        audio: string
+        status: number
+      }
+      trace_id: string
+      extra_info?: {
+        music_duration?: number
+        music_sample_rate?: number
+        music_channel?: number
+        bitrate?: number
+        music_size?: number
+      }
+      base_resp?: {
+        status_code: number
+        status_msg: string
+      }
+    }
+
+    // Flatten the response structure
+    successResponse(res, {
+      audio: result.data.audio,
+      status: result.data.status,
+      trace_id: result.trace_id,
+      extra_info: result.extra_info,
+    })
   } catch (error) {
     handleApiError(res, error)
   }

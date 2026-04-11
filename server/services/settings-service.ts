@@ -72,7 +72,7 @@ const DEFAULT_SETTINGS: Record<SettingsCategory, Record<string, unknown>> = {
     },
     music: {
       model: 'music-01',
-      optimizeLyrics: true,
+      optimizeLyrics: false,
       duration: 30,
     },
     video: {

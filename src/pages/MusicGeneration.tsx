@@ -139,6 +139,9 @@ export default function MusicGeneration() {
       const response = await generateMusic(request)
 
       const audioData = response.data.audio
+      if (!audioData) {
+        throw new Error('No audio data in response')
+      }
       const mimeType = format === 'mp3' ? 'audio/mp3' 
         : format === 'wav' ? 'audio/wav' 
         : 'audio/flac'
@@ -159,8 +162,7 @@ export default function MusicGeneration() {
       const url = URL.createObjectURL(blob)
       setAudioUrl(url)
       
-      // Use extra_info for duration if available
-      const duration = response.extra_info?.music_duration || response.data.duration
+      const duration = response.data.extra_info?.music_duration || 0
       setAudioDuration(duration)
       
       saveMusicToMedia(audioData.startsWith('http') ? audioData : url)

@@ -22,18 +22,14 @@ export interface MusicGenerationResponse {
   trace_id: string
   data: {
     audio: string
-    duration: number
-  }
-  extra_info?: {
-    music_duration?: number
-    music_sample_rate?: number
-    music_channel?: number
-    bitrate?: number
-    music_size?: number
-  }
-  base_resp?: {
-    status_code: number
-    status_msg: string
+    status: number
+    extra_info?: {
+      music_duration?: number
+      music_sample_rate?: number
+      music_channel?: number
+      bitrate?: number
+      music_size?: number
+    }
   }
 }
 
