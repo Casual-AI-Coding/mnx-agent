@@ -33,6 +33,7 @@ export function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
+  const dragTimeRef = useRef(0)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -87,17 +88,26 @@ export function AudioPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showVolume])
 
+  const calculateTime = useCallback((clientX: number) => {
+    if (!progressRef.current) return 0
+    const rect = progressRef.current.getBoundingClientRect()
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    return percent * duration
+  }, [duration])
+
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      if (isDragging) {
-        handleSeekEnd()
+      if (isDragging && audioRef.current) {
+        audioRef.current.currentTime = dragTimeRef.current
+        setCurrentTime(dragTimeRef.current)
+        setIsDragging(false)
       }
     }
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !progressRef.current) return
-      const rect = progressRef.current.getBoundingClientRect()
-      const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-      setCurrentTime(percent * duration)
+      if (!isDragging) return
+      const newTime = calculateTime(e.clientX)
+      dragTimeRef.current = newTime
+      setCurrentTime(newTime)
     }
 
     if (isDragging) {
@@ -108,7 +118,7 @@ export function AudioPlayer({
       document.removeEventListener('mouseup', handleGlobalMouseUp)
       document.removeEventListener('mousemove', handleGlobalMouseMove)
     }
-  }, [isDragging, duration])
+  }, [isDragging, calculateTime])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
@@ -118,19 +128,11 @@ export function AudioPlayer({
   }, [isPlaying])
 
   const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    setIsDragging(true)
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (e.clientX - rect.left) / rect.width
-    const newTime = percent * duration
+    const newTime = calculateTime(e.clientX)
+    dragTimeRef.current = newTime
     setCurrentTime(newTime)
-    if (audioRef.current) audioRef.current.currentTime = newTime
-  }, [duration])
-
-  const handleSeekEnd = useCallback(() => {
-    const audio = audioRef.current
-    if (audio) audio.currentTime = currentTime
-    setIsDragging(false)
-  }, [currentTime])
+    setIsDragging(true)
+  }, [calculateTime])
 
   const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
