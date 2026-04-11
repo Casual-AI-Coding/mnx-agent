@@ -194,8 +194,10 @@ export function MusicTaskCard({ task, index, onRetry, onDownload }: MusicTaskCar
             >
               <div className={cn('relative rounded-lg p-3', services.music.bg)}>
                 <audio
+                  key={task.audioUrl}
                   src={task.audioUrl}
                   controls
+                  preload="metadata"
                   className="w-full"
                 />
                 {task.audioDuration && (

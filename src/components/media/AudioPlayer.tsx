@@ -128,6 +128,7 @@ export function AudioPlayer({
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDraggingRef.current && audioRef.current) {
+        isDraggingRef.current = false
         audioRef.current.currentTime = dragTimeRef.current
         setCurrentTime(dragTimeRef.current)
         setIsDragging(false)
