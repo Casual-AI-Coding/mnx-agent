@@ -72,7 +72,8 @@ export function AudioPlayer({
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
     }
-  }, [isDragging, onNext, playlist, currentIndex])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging]) // Only re-attach when isDragging changes, not onNext/playlist/currentIndex
 
   // Load new audio and auto-play
   useEffect(() => {
