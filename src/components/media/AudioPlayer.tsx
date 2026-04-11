@@ -135,30 +135,30 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border shadow-xl rounded-xl p-3 w-[320px]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[320px]">
       <audio ref={audioRef} preload="metadata" />
 
       <div className="flex items-center gap-1.5 mb-2">
-        <Button variant="ghost" size="icon" onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6 hover:bg-transparent">
+        <button onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50 disabled:opacity-30">
           <SkipBack className="w-4 h-4" />
-        </Button>
+        </button>
         <button onClick={togglePlay} className="h-7 w-7 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center">
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </button>
-        <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-6 w-6 hover:bg-transparent">
+        <button onClick={onNext} disabled={!canGoNext} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50 disabled:opacity-30">
           <SkipForward className="w-4 h-4" />
-        </Button>
+        </button>
 
         <span className="text-xs font-medium truncate flex-1 ml-1" title={record.original_name || record.filename}>
           {record.original_name || record.filename}
         </span>
 
         <div className="relative" ref={volumeRef}>
-          <button onClick={() => setShowVolume(!showVolume)} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent">
+          <button onClick={() => setShowVolume(!showVolume)} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50">
             {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-muted-foreground" /> : <Volume2 className="w-4 h-4" />}
           </button>
           {showVolume && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border rounded-lg shadow-lg" onClick={handleVolumeChange}>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border border-border rounded-lg shadow-lg" onClick={handleVolumeChange}>
               <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${volume * 100}%` }} />
               </div>
@@ -166,7 +166,7 @@ export function AudioPlayer({
           )}
         </div>
 
-        <button onClick={onClose} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent">
+        <button onClick={onClose} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50">
           <X className="w-4 h-4" />
         </button>
       </div>
