@@ -353,7 +353,7 @@ export default function MusicGeneration() {
                 </div>
               </div>
 
-              {model === 'music-2.5+' && (
+              {isOptimizeLyricsAvailable && !isCoverModel && !instrumental && (
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium text-foreground">{t('musicGeneration.aiOptimizeLabel')}</label>
