@@ -118,7 +118,7 @@ export function MediaCard({
               />
             ) : (
               <p
-                className="text-foreground text-sm font-medium truncate cursor-pointer hover:underline"
+                className="text-foreground text-sm font-medium line-clamp-2 cursor-pointer hover:underline"
                 title={record.original_name || record.filename}
                 onDoubleClick={(e) => {
                   e.stopPropagation()
