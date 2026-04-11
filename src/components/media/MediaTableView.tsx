@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Input } from '@/components/ui/Input'
 import { TYPE_VARIANTS, TYPE_LABELS, SOURCE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, formatDate, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
+import { updateMedia } from '@/lib/api/media'
 import type { MediaRecord } from '@/types/media'
 
 interface MediaTableViewProps {
@@ -16,6 +18,7 @@ interface MediaTableViewProps {
   onPreview: (record: MediaRecord) => void
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
+  onRename?: (record: MediaRecord, newName: string) => void
 }
 
 export function MediaTableView({
@@ -27,11 +30,49 @@ export function MediaTableView({
   onPreview,
   onDownload,
   onDelete,
+  onRename,
 }: MediaTableViewProps) {
   const isAllSelected = selectedIds.size === records.length && records.length > 0
   const isIndeterminate = selectedIds.size > 0 && selectedIds.size < records.length
   const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleStartEdit = (record: MediaRecord) => {
+    setEditingId(record.id)
+    setEditingName(record.original_name || record.filename)
+  }
+
+  const handleSaveEdit = async (record: MediaRecord) => {
+    const trimmedName = editingName.trim()
+    if (!trimmedName) return
+    
+    const originalName = record.original_name || record.filename
+    if (trimmedName === originalName) {
+      setEditingId(null)
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      if (onRename) {
+        onRename(record, trimmedName)
+      } else {
+        await updateMedia(record.id, { original_name: trimmedName })
+      }
+      setEditingId(null)
+    } catch (error) {
+      setEditingName(originalName)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+  }
 
   return (
     <div className="rounded-lg overflow-hidden bg-muted/30">
@@ -66,7 +107,7 @@ export function MediaTableView({
           {records.map((record) => (
             <tr
               key={record.id}
-              className={`hover:bg-muted/50 ${selectedIds.has(record.id) ? 'bg-primary/5' : ''}`}
+              className={`group hover:bg-muted/50 ${selectedIds.has(record.id) ? 'bg-primary/5' : ''}`}
             >
               <td className="px-4 py-3 text-foreground">
                 <button
@@ -100,9 +141,56 @@ export function MediaTableView({
                       {getTypeIcon(record.type)}
                     </div>
                   )}
-                  <span className="font-medium truncate max-w-[200px]" title={record.original_name || record.filename}>
-                    {record.original_name || record.filename}
-                  </span>
+                  {editingId === record.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(record)
+                          if (e.key === 'Escape') handleCancelEdit()
+                        }}
+                        className="h-7 text-sm"
+                        autoFocus
+                        disabled={isSaving}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSaveEdit(record)}
+                        disabled={isSaving}
+                        className="h-7 px-2"
+                      >
+                        {isSaving ? '...' : '✓'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelEdit}
+                        className="h-7 px-2"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1">
+                      <span 
+                        className="font-medium truncate max-w-[200px]" 
+                        title={record.original_name || record.filename}
+                        onDoubleClick={() => handleStartEdit(record)}
+                      >
+                        {record.original_name || record.filename}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleStartEdit(record)}
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </td>
               <td className="px-4 py-3 text-foreground">

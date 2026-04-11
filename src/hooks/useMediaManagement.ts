@@ -6,6 +6,7 @@ import {
   getMediaDownloadUrl,
   batchDeleteMedia,
   batchDownloadMedia,
+  updateMedia,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
@@ -77,6 +78,7 @@ export interface UseMediaManagementReturn {
   handleDownload: (record: MediaRecord) => void
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
+  handleRename: (record: MediaRecord, newName: string) => Promise<void>
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
@@ -548,6 +550,16 @@ export function useMediaManagement(): UseMediaManagementReturn {
     })
   }, [timelineRecords])
 
+  const handleRename = useCallback(async (record: MediaRecord, newName: string) => {
+    await updateMedia(record.id, { original_name: newName })
+    setRecords(prev => prev.map(r => 
+      r.id === record.id ? { ...r, original_name: newName } : r
+    ))
+    setTimelineRecords(prev => prev.map(r =>
+      r.id === record.id ? { ...r, original_name: newName } : r
+    ))
+  }, [setRecords, setTimelineRecords])
+
   return {
     // State
     records,
@@ -610,5 +622,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
     handleDownload,
     handlePreview,
     handlePageChange,
+    handleRename,
   }
 }

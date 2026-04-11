@@ -59,11 +59,9 @@ export default function MediaManagement() {
     fetchMedia,
     handleDelete,
     handleDownload,
-    handlePreview,
+handlePreview,
     handlePageChange,
-    audioPreviewRecord,
-    setAudioPreviewRecord,
-    audioRecords,
+    handleRename,
   } = useMediaManagement()
 
   return (
@@ -240,6 +238,7 @@ export default function MediaManagement() {
                 onPreview={handlePreview}
                 onDownload={handleDownload}
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
+                onRename={handleRename}
               />
             )}
           </div>
