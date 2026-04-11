@@ -249,6 +249,8 @@
     "tip3": "[Intro]/[Outro] 表示开头和结尾",
     "tip4": "风格描述帮助 AI 理解音乐情绪",
     "tip5": "music-2.5+ 支持歌词优化",
+    "tip6": "music-2.6 最新音乐生成模型，支持多样化风格",
+    "tip7": "music-cover 音乐翻唱/混音模型",
     "musicGenSuccess": "音乐生成成功",
     "musicGenFailed": "音乐生成失败",
     "clearBtn": "清空",

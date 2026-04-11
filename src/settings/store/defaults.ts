@@ -1,6 +1,7 @@
 // src/settings/store/defaults.ts
 import type { AllSettings, SettingsCategory } from '@/settings/types'
 import { TIMEOUTS } from '@/lib/config'
+import { DEFAULT_MODELS } from '@/models'
 
 export const DEFAULT_SETTINGS: AllSettings = {
   account: {
@@ -31,7 +32,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
   },
   generation: {
     text: {
-      model: 'MiniMax-Text-01',
+      model: DEFAULT_MODELS.text,
       temperature: 0.7,
       topP: 0.9,
       maxTokens: 2048,
@@ -39,7 +40,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
       streamOutput: true,
     },
     voice: {
-      model: 'speech-01-turbo',
+      model: DEFAULT_MODELS.voice,
       voiceId: 'male-qn-qingse',
       emotion: 'neutral',
       speed: 1.0,
@@ -47,19 +48,19 @@ export const DEFAULT_SETTINGS: AllSettings = {
       volume: 1.0,
     },
     image: {
-      model: 'image-01',
+      model: DEFAULT_MODELS.image,
       aspectRatio: '1:1',
       numImages: 1,
       promptOptimizer: true,
       style: '',
     },
     music: {
-      model: 'music-01',
+      model: DEFAULT_MODELS.music,
       optimizeLyrics: true,
       duration: 30,
     },
     video: {
-      model: 'video-01',
+      model: DEFAULT_MODELS.video,
       quality: 'standard',
       duration: 5,
     },

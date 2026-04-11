@@ -247,6 +247,8 @@
     "tip3": "[Intro]/[Outro] for beginning and ending",
     "tip4": "Style description helps AI understand the music mood",
     "tip5": "music-2.5+ supports lyrics optimization",
+    "tip6": "music-2.6 latest music generation model with diverse styles",
+    "tip7": "music-cover music cover/remix model",
     "musicGenSuccess": "Music Generated Successfully",
     "musicGenFailed": "Music Generation Failed",
     "clearBtn": "Clear",

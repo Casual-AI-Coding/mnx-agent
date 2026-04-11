@@ -33,7 +33,7 @@ export function CostEstimator({ model, inputLength, type, outputLength = 0 }: Co
         }
       }
       case 'music': {
-        const cost = estimateMusicCost(inputLength)
+        const cost = estimateMusicCost(model, inputLength)
         return {
           total: cost,
           formatted: formatCost(cost),

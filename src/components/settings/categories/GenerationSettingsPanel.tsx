@@ -7,43 +7,7 @@ import { Switch } from '@/components/ui/Switch'
 import { Slider } from '@/components/ui/Slider'
 import { useSettingsStore } from '@/settings/store'
 import { Sparkles } from 'lucide-react'
-
-const textModelOptions = [
-  { value: 'MiniMax-Text-01', label: 'MiniMax-Text-01' },
-  { value: 'abab6.5s-chat', label: 'abab6.5s-chat' },
-  { value: 'abab6-chat', label: 'abab6-chat' },
-]
-
-const voiceModelOptions = [
-  { value: 'speech-01-turbo', label: 'speech-01-turbo' },
-  { value: 'speech-01', label: 'speech-01' },
-]
-
-const emotionOptions = [
-  { value: 'neutral', label: '中性' },
-  { value: 'happy', label: '快乐' },
-  { value: 'sad', label: '悲伤' },
-  { value: 'excited', label: '兴奋' },
-]
-
-const imageModelOptions = [
-  { value: 'image-01', label: 'image-01' },
-]
-
-const aspectRatioOptions = [
-  { value: '1:1', label: '1:1 正方形' },
-  { value: '16:9', label: '16:9 宽屏' },
-  { value: '9:16', label: '9:16 竖屏' },
-  { value: '4:3', label: '4:3 标准' },
-]
-
-const musicModelOptions = [
-  { value: 'music-01', label: 'music-01' },
-]
-
-const videoModelOptions = [
-  { value: 'video-01', label: 'video-01' },
-]
+import { TEXT_MODELS, SPEECH_MODELS, EMOTIONS, IMAGE_MODELS, ASPECT_RATIOS, MUSIC_MODELS, VIDEO_MODELS } from '@/models'
 
 const videoQualityOptions = [
   { value: 'standard', label: '标准' },
@@ -82,7 +46,7 @@ function TextSettings() {
         <Select value={settings.model} onValueChange={(v: string) => update('model', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {textModelOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {TEXT_MODELS.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -125,7 +89,7 @@ function VoiceSettings() {
         <Select value={settings.model} onValueChange={(v: string) => update('model', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {voiceModelOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {SPEECH_MODELS.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -136,7 +100,7 @@ function VoiceSettings() {
         <Select value={settings.emotion} onValueChange={(v: string) => update('emotion', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {emotionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {EMOTIONS.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -176,7 +140,7 @@ function ImageSettings() {
         <Select value={settings.model} onValueChange={(v: string) => update('model', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {imageModelOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {IMAGE_MODELS.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -184,7 +148,7 @@ function ImageSettings() {
         <Select value={settings.aspectRatio} onValueChange={(v: string) => update('aspectRatio', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {aspectRatioOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {ASPECT_RATIOS.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -215,7 +179,7 @@ function MusicSettings() {
         <Select value={settings.model} onValueChange={(v: string) => update('model', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {musicModelOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {MUSIC_MODELS.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>
@@ -243,7 +207,7 @@ function VideoSettings() {
         <Select value={settings.model} onValueChange={(v: string) => update('model', v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {videoModelOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {VIDEO_MODELS.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </FieldRow>

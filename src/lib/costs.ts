@@ -18,7 +18,8 @@ export const MODEL_PRICING = {
   'image-01': 0.05,
   'image-01-live': 0.08,
   // Music model (per generation)
-  'music-01': 0.5,
+  'music-2.6': 0.5,
+  'music-cover': 0.5,
   // Voice models (per 1000 characters)
   'voice-sync': 0.1,
   'voice-async': 0.15,
@@ -28,7 +29,7 @@ export const MODEL_PRICING = {
 
 export type TextModel = 'MiniMax-M2.7' | 'MiniMax-Text-01'
 export type ImageModel = 'image-01' | 'image-01-live'
-export type MusicModel = 'music-01'
+export type MusicModel = 'music-2.6' | 'music-cover' | 'music-2.5' | 'music-2.5+'
 export type VoiceModel = 'voice-sync' | 'voice-async'
 export type VideoModel = 'video-01'
 
@@ -78,8 +79,12 @@ export function estimateImageCost(model: string, count: number): number {
  * Estimate music generation cost
  * @param count - Number of generations
  */
-export function estimateMusicCost(count: number): number {
-  return MODEL_PRICING['music-01'] * count
+export function estimateMusicCost(model: string, count: number): number {
+  const pricing = MODEL_PRICING[model as keyof typeof MODEL_PRICING]
+  if (typeof pricing !== 'number') {
+    return 0
+  }
+  return pricing * count
 }
 
 /**
