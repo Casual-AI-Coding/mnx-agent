@@ -127,28 +127,26 @@ export function AudioPlayer({
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      if (isDragging && audioRef.current) {
+      if (isDraggingRef.current && audioRef.current) {
         audioRef.current.currentTime = dragTimeRef.current
         setCurrentTime(dragTimeRef.current)
         setIsDragging(false)
       }
     }
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return
+      if (!isDraggingRef.current) return
       const newTime = calculateTime(e.clientX)
       dragTimeRef.current = newTime
       setCurrentTime(newTime)
     }
 
-    if (isDragging) {
-      document.addEventListener('mouseup', handleGlobalMouseUp)
-      document.addEventListener('mousemove', handleGlobalMouseMove)
-    }
+    document.addEventListener('mouseup', handleGlobalMouseUp)
+    document.addEventListener('mousemove', handleGlobalMouseMove)
     return () => {
       document.removeEventListener('mouseup', handleGlobalMouseUp)
       document.removeEventListener('mousemove', handleGlobalMouseMove)
     }
-  }, [isDragging])
+  }, [calculateTime])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
