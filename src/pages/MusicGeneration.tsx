@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Switch } from '@/components/ui/Switch'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/Collapsible'
 import { cn } from '@/lib/utils'
@@ -220,39 +221,48 @@ export default function MusicGeneration() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Music2 className="w-5 h-5" />
-                {t('musicGeneration.lyricsEditorTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {STRUCTURE_TAGS.map(tag => (
-                  <Button
-                    key={tag}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => insertTag(tag)}
-                  >
-                    {tag}
-                  </Button>
-                ))}
-              </div>
-              <Textarea
-                id="lyrics-editor"
-                value={lyrics}
-                onChange={(e) => setLyrics(e.target.value)}
-                placeholder={t('musicGeneration.lyricsPlaceholder')}
-                className="min-h-[300px] resize-none font-mono text-sm"
-              />
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{t('musicGeneration.charCount', { count: lyrics.length })}</span>
-                <span>{t('musicGeneration.useTags')}</span>
-              </div>
-            </CardContent>
-          </Card>
+          {(!instrumental || !isInstrumentalAvailable) && !isCoverModel && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Music2 className="w-5 h-5" />
+                  {t('musicGeneration.lyricsEditorTitle')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {STRUCTURE_TAGS.map(tag => (
+                    <Button
+                      key={tag}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => insertTag(tag)}
+                    >
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+                <Textarea
+                  id="lyrics-editor"
+                  value={lyrics}
+                  onChange={(e) => setLyrics(e.target.value)}
+                  placeholder={t('musicGeneration.lyricsPlaceholder')}
+                  className={cn(
+                    "min-h-[300px] resize-none font-mono text-sm",
+                    isLyricsOverLimit && "border-red-500"
+                  )}
+                />
+                <div className="flex items-center justify-between text-sm">
+                  <span className={cn(
+                    isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
+                  )}>
+                    {lyrics.length} / {LYRICS_MAX}
+                  </span>
+                  <span className="text-muted-foreground">{t('musicGeneration.useTags')}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -302,16 +312,45 @@ export default function MusicGeneration() {
                     ))}
                   </SelectContent>
                 </Select>
+                {isInstrumentalAvailable && (
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox
+                      id="instrumental"
+                      checked={instrumental}
+                      onCheckedChange={(checked) => setInstrumental(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="instrumental"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      纯音乐模式（无歌词）
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t('musicGeneration.styleDescription')}</label>
+                <label className="text-sm font-medium text-foreground">
+                  {instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')}
+                </label>
                 <Textarea
                   value={stylePrompt}
                   onChange={(e) => setStylePrompt(e.target.value)}
-                  placeholder={t('musicGeneration.stylePlaceholder')}
-                  className="min-h-[80px] resize-none"
+                  placeholder={instrumental
+                    ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
+                    : t('musicGeneration.stylePlaceholder')
+                  }
+                  className={cn(
+                    "min-h-[80px] resize-none",
+                    isStylePromptOverLimit && "border-red-500"
+                  )}
                 />
+                <div className={cn(
+                  "text-xs",
+                  isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
+                )}>
+                  {stylePrompt.length} / {STYLE_PROMPT_MAX}
+                </div>
               </div>
 
               {model === 'music-2.5+' && (
