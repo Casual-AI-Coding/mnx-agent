@@ -40,8 +40,8 @@ export default function MusicGeneration() {
 
   // 高级设置
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [sampleRate, setSampleRate] = useState<44100 | 48000>(48000)
-  const [bitrate, setBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('320k')
+  const [sampleRate, setSampleRate] = useState<16000 | 24000 | 32000 | 44100>(44100)
+  const [bitrate, setBitrate] = useState<32000 | 64000 | 128000 | 256000>(256000)
   const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
   const [seed, setSeed] = useState<string>('')
 
@@ -115,10 +115,7 @@ export default function MusicGeneration() {
           request.lyrics = lyrics.trim()
         }
         if (stylePrompt.trim()) {
-          request.style_prompt = stylePrompt.trim()
-        }
-        if (optimizeLyrics && isOptimizeLyricsAvailable) {
-          request.optimize_lyrics = true
+          request.prompt = stylePrompt.trim()
         }
       }
 
@@ -127,6 +124,11 @@ export default function MusicGeneration() {
         sample_rate: sampleRate,
         bitrate: bitrate,
         format: format,
+      }
+
+      // AI 歌词优化
+      if (optimizeLyrics && isOptimizeLyricsAvailable && !instrumental && !isCoverModel) {
+        request.optimize_lyrics = true
       }
 
       // Seed (仅 music-2.6)
@@ -580,14 +582,16 @@ export default function MusicGeneration() {
                       </label>
                       <Select
                         value={sampleRate.toString()}
-                        onValueChange={(v) => setSampleRate(Number(v) as 44100 | 48000)}
+                        onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
                       >
                         <SelectTrigger className="h-8">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="44100">44100 Hz</SelectItem>
-                          <SelectItem value="48000">48000 Hz</SelectItem>
+                          <SelectItem value="16000">16000 Hz</SelectItem>
+                          <SelectItem value="24000">24000 Hz</SelectItem>
+                          <SelectItem value="32000">32000 Hz</SelectItem>
+                          <SelectItem value="44100">44100 Hz (推荐)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -597,17 +601,17 @@ export default function MusicGeneration() {
                         比特率
                       </label>
                       <Select
-                        value={bitrate}
-                        onValueChange={(v) => setBitrate(v as '128k' | '192k' | '256k' | '320k')}
+                        value={bitrate.toString()}
+                        onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
                       >
                         <SelectTrigger className="h-8">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="128k">128 kbps</SelectItem>
-                          <SelectItem value="192k">192 kbps</SelectItem>
-                          <SelectItem value="256k">256 kbps</SelectItem>
-                          <SelectItem value="320k">320 kbps</SelectItem>
+                          <SelectItem value="32000">32 kbps</SelectItem>
+                          <SelectItem value="64000">64 kbps</SelectItem>
+                          <SelectItem value="128000">128 kbps</SelectItem>
+                          <SelectItem value="256000">256 kbps (推荐)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

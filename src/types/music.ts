@@ -4,11 +4,11 @@ import type { MusicModel } from '../models'
 export interface MusicGenerationRequest {
   model: MusicModel
   lyrics?: string
-  style_prompt?: string
+  prompt?: string
   optimize_lyrics?: boolean
   audio_setting?: {
-    sample_rate?: 44100 | 48000
-    bitrate?: '128k' | '192k' | '256k' | '320k'
+    sample_rate?: 16000 | 24000 | 32000 | 44100
+    bitrate?: 32000 | 64000 | 128000 | 256000
     format?: 'mp3' | 'wav' | 'flac'
   }
   output_format?: 'hex' | 'url'
