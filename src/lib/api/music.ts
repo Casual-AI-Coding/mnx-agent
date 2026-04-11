@@ -1,10 +1,13 @@
-import { getBaseUrl, getHeaders } from './config'
+import { getHeaders } from './config'
 import type { MusicGenerationRequest, MusicGenerationResponse, MusicPreprocessResponse } from '@/types'
+
+// 音乐 API 必须通过后端代理（需要预处理、文件上传等）
+const MUSIC_API_BASE = '/api'
 
 export async function generateMusic(
   request: MusicGenerationRequest
 ): Promise<MusicGenerationResponse> {
-  const response = await fetch(`${getBaseUrl()}/music/generate`, {
+  const response = await fetch(`${MUSIC_API_BASE}/music/generate`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ ...request, output_format: 'url' }),
@@ -24,7 +27,7 @@ export async function preprocessMusic(
   const formData = new FormData()
   formData.append('audio_file', audioFile)
 
-  const response = await fetch(`${getBaseUrl()}/music/preprocess`, {
+  const response = await fetch(`${MUSIC_API_BASE}/music/preprocess`, {
     method: 'POST',
     headers: {
       ...getHeaders(),
