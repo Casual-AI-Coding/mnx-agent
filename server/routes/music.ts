@@ -64,10 +64,10 @@ router.post('/generate', async (req: Request, res: Response) => {
       output_format: output_format || 'url',
     }
 
-    // Handle both prompt and style_prompt from frontend
-    const stylePromptValue = style_prompt || req.body.prompt
+    // Handle prompt from frontend (official MiniMax parameter name)
+    const promptValue = style_prompt || req.body.prompt
     if (lyrics) body.lyrics = lyrics
-    if (stylePromptValue) body.style_prompt = stylePromptValue
+    if (promptValue) body.prompt = promptValue
     if (optimize_lyrics !== undefined) body.optimize_lyrics = optimize_lyrics
     if (audio_setting) body.audio_setting = audio_setting
     if (seed !== undefined) body.seed = seed

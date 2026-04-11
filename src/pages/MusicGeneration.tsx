@@ -129,7 +129,7 @@ export default function MusicGeneration() {
         request.lyrics = lyrics.trim()
       }
       if (stylePrompt.trim()) {
-        request.style_prompt = stylePrompt.trim()
+        request.prompt = stylePrompt.trim()
       }
     } else {
       if (lyrics.trim()) {
