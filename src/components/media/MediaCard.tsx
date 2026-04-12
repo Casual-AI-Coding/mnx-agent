@@ -161,8 +161,8 @@ export function MediaCard({
           <div className={cn(
             'w-7 h-7 rounded-full flex items-center justify-center cursor-pointer',
             record.is_favorite
-              ? 'bg-yellow-500 text-white hover:bg-yellow-400'
-              : 'bg-card/50 text-foreground/70 hover:bg-card/70 hover:text-yellow-500'
+              ? 'text-yellow-500'
+              : 'text-foreground/70 hover:text-yellow-500'
           )}
             title={record.is_favorite ? '取消收藏' : '收藏'}
           >
