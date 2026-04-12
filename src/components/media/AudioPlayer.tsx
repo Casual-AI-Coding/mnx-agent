@@ -28,6 +28,8 @@ export function AudioPlayer({
   const [isMuted, setIsMuted] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [bufferedPercent, setBufferedPercent] = useState(0)
+  const [isTitleOverflow, setIsTitleOverflow] = useState(false)
+  const titleRef = useRef<HTMLDivElement>(null)
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
@@ -40,6 +42,13 @@ export function AudioPlayer({
   const canGoNext = hasPlaylist && currentIndex < playlist.length - 1
 
   const displayTitle = record?.original_name || record?.filename || '音频播放'
+
+  useEffect(() => {
+    if (titleRef.current) {
+      const { scrollWidth, clientWidth } = titleRef.current
+      setIsTitleOverflow(scrollWidth > clientWidth)
+    }
+  }, [displayTitle])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -199,7 +208,7 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[480px]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[400px]">
       <audio ref={audioRef} preload="auto" />
 
       <div className="flex items-center gap-1.5 mb-2">
@@ -213,9 +222,14 @@ export function AudioPlayer({
           <SkipForward className="w-4 h-4" />
         </button>
 
-        <span className="text-xs font-medium truncate flex-1 ml-1" title={displayTitle}>
-          {displayTitle}
-        </span>
+        <div ref={titleRef} className="flex-1 ml-1 overflow-hidden" title={displayTitle}>
+          <span 
+            className={`text-xs font-medium whitespace-nowrap inline-block ${isTitleOverflow ? 'animate-marquee' : ''}`}
+            style={isTitleOverflow ? { animationDuration: '8s' } : undefined}
+          >
+            {displayTitle}{isTitleOverflow ? `  ${displayTitle}` : ''}
+          </span>
+        </div>
 
         <div className="relative" ref={volumeRef}>
           <button onClick={() => setShowVolume(!showVolume)} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50">
