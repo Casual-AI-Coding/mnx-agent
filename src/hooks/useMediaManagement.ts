@@ -451,22 +451,24 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [activeTab, isInitialLoad])
 
-  // Track previous activeTab to detect changes
+  // Track previous activeTab and favoriteFilter to detect changes
   const prevActiveTabRef = useRef(activeTab)
+  const prevFavoriteFilterRef = useRef(favoriteFilter)
 
-  // Fetch data when tab or page changes
+  // Fetch data when tab, page, or favorite filter changes
   useEffect(() => {
     if (!isInitialLoad) {
       const tabChanged = activeTab !== prevActiveTabRef.current
       const pageChanged = pagination.page !== prevPageRef.current
+      const favoriteChanged = favoriteFilter !== prevFavoriteFilterRef.current
       
-      if (tabChanged || pageChanged) {
+      if (tabChanged || pageChanged || favoriteChanged) {
         prevActiveTabRef.current = activeTab
-        prevPageRef.current = pagination.page
+        prevFavoriteFilterRef.current = favoriteFilter
         fetchMedia(false)
       }
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilter])
 
   // Load timeline data when viewMode changes to timeline
   useEffect(() => {

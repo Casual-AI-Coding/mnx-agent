@@ -126,15 +126,17 @@ export default function MediaManagement() {
               </TabsList>
             </Tabs>
 
-            <Button
-              variant={favoriteFilter ? 'default' : 'outline'}
-              size="sm"
-              onClick={toggleFavoriteFilter}
-              className={cn('h-9', favoriteFilter && 'text-yellow-500')}
-            >
-              <Star className={cn('w-4 h-4', favoriteFilter && 'fill-current')} />
-              已收藏
-            </Button>
+            <div className="flex items-center bg-muted/50 rounded-lg p-1">
+              <Button
+                variant={favoriteFilter ? 'default' : 'ghost'}
+                size="sm"
+                onClick={toggleFavoriteFilter}
+                className={cn('h-8 px-3', favoriteFilter && 'text-yellow-500')}
+                title={favoriteFilter ? '取消收藏筛选' : '只看已收藏'}
+              >
+                <Star className={cn('w-4 h-4', favoriteFilter && 'fill-current')} />
+              </Button>
+            </div>
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
