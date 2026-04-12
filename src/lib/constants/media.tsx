@@ -1,4 +1,4 @@
-import { Image, Music, Video, FileAudio, RefreshCw, Star } from 'lucide-react'
+import { Image, Music, Video, FileAudio, RefreshCw } from 'lucide-react'
 import type { MediaType, MediaSource } from '@/types/media'
 import { services } from '@/themes/tokens'
 
@@ -8,7 +8,6 @@ export const MEDIA_TABS: { value: string; label: string; icon: React.ReactNode }
   { value: 'audio', label: '音频', icon: <FileAudio className="w-4 h-4" /> },
   { value: 'video', label: '视频', icon: <Video className="w-4 h-4" /> },
   { value: 'music', label: '音乐', icon: <Music className="w-4 h-4" /> },
-  { value: 'favorite', label: '已收藏', icon: <Star className="w-4 h-4" /> },
 ]
 
 export const TYPE_VARIANTS: Record<MediaType, 'default' | 'secondary' | 'destructive' | 'outline'> = {

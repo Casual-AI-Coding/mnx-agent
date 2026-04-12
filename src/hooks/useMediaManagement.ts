@@ -50,6 +50,7 @@ export interface UseMediaManagementReturn {
   audioPreviewRecord: MediaRecord | null
   setAudioPreviewRecord: (record: MediaRecord | null) => void
   favoriteFilter: boolean
+  toggleFavoriteFilter: () => void
 
   // Timeline state
   timelineRecords: MediaRecord[]
@@ -237,7 +238,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setError(null)
 
     try {
-      const type = activeTab === 'all' ? undefined : (activeTab as MediaType)
+      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
+      const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
       const response = await listMedia({
         type,
         page: paginationRef.current.page,
@@ -263,7 +265,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
     setIsLoadingMore(true)
     try {
-      const type = activeTab === 'all' ? undefined : (activeTab as MediaType)
+      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
+      const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
       const response = await listMedia({
         type,
         page,
@@ -619,11 +622,11 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab)
-    if (tab === 'favorite') {
-      setFavoriteFilter(true)
-    } else {
-      setFavoriteFilter(false)
-    }
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }, [])
+
+  const toggleFavoriteFilter = useCallback(() => {
+    setFavoriteFilter(prev => !prev)
     setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
@@ -659,7 +662,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setPageInput,
     audioPreviewRecord,
     setAudioPreviewRecord,
-    favoriteFilter,
+favoriteFilter,
+    toggleFavoriteFilter,
 
     // Timeline state
     timelineRecords,

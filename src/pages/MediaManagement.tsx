@@ -1,4 +1,4 @@
-import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive } from 'lucide-react'
+import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive, Star } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -64,6 +64,8 @@ export default function MediaManagement() {
     handleRename,
     handleToggleFavorite,
     handleTabChange,
+    favoriteFilter,
+    toggleFavoriteFilter,
   } = useMediaManagement()
 
   return (
@@ -123,6 +125,16 @@ export default function MediaManagement() {
                 ))}
               </TabsList>
             </Tabs>
+
+            <Button
+              variant={favoriteFilter ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleFavoriteFilter}
+              className={cn('h-9', favoriteFilter && 'text-yellow-500')}
+            >
+              <Star className={cn('w-4 h-4', favoriteFilter && 'fill-current')} />
+              已收藏
+            </Button>
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
