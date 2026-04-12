@@ -16,6 +16,7 @@ interface AnimatedMediaGridProps {
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
+  onToggleFavorite?: (mediaId: string) => void
 }
 
 export function AnimatedMediaGrid({
@@ -27,6 +28,7 @@ export function AnimatedMediaGrid({
   onDownload,
   onDelete,
   onRename,
+  onToggleFavorite,
 }: AnimatedMediaGridProps) {
   return (
     <motion.div
@@ -52,6 +54,7 @@ export function AnimatedMediaGrid({
               onDownload={() => onDownload(record)}
               onDelete={() => onDelete(record)}
               onRename={onRename}
+              onToggleFavorite={onToggleFavorite}
             />
           </motion.div>
         ))}

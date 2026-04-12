@@ -9,7 +9,7 @@ import {
   updateMedia,
   toggleFavorite,
 } from '@/lib/api/media'
-import { toastSuccess } from '@/lib/toast'
+import { toastSuccess, toastError } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
 
 export interface DeleteDialogState {
@@ -586,6 +586,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       toastSuccess(result.data.action === 'added' ? '已收藏' : '已取消收藏')
     } catch (error) {
       console.error('Toggle favorite failed:', error)
+      toastError('操作失败，请重试')
     }
   }, [])
 

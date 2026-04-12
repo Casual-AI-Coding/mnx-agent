@@ -7,6 +7,7 @@ import { TYPE_GRADIENTS, TYPE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import type { MediaRecord } from '@/types/media'
 import { MediaCardPreview } from './MediaCardPreview'
+import { FavoriteButton } from './FavoriteButton'
 
 interface MediaCardProps {
   record: MediaRecord
@@ -17,6 +18,7 @@ interface MediaCardProps {
   onDownload: () => void
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
+  onToggleFavorite?: (mediaId: string) => void
 }
 
 export function MediaCard({
@@ -28,6 +30,7 @@ export function MediaCard({
   onDownload,
   onDelete,
   onRename,
+  onToggleFavorite,
 }: MediaCardProps) {
   const [showActions, setShowActions] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -96,18 +99,25 @@ export function MediaCard({
         </div>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsEditing(true)
-            }}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </Button>
-          {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
+<Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsEditing(true)
+              }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            {onToggleFavorite && (
+              <FavoriteButton
+                mediaId={record.id}
+                isFavorite={record.is_favorite ?? false}
+                onToggle={onToggleFavorite}
+              />
+            )}
+            {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
             <Button
               variant="secondary"
               size="sm"

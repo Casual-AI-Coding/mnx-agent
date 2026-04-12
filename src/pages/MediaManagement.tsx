@@ -59,9 +59,11 @@ export default function MediaManagement() {
     fetchMedia,
     handleDelete,
     handleDownload,
-handlePreview,
+    handlePreview,
     handlePageChange,
     handleRename,
+    handleToggleFavorite,
+    handleTabChange,
   } = useMediaManagement()
 
   return (
@@ -109,7 +111,7 @@ handlePreview,
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList>
                 {MEDIA_TABS.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}>
@@ -173,6 +175,7 @@ handlePreview,
                 onDownload={handleDownload}
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
                 onRename={handleRename}
+                onToggleFavorite={handleToggleFavorite}
               />
             ) : viewMode === 'timeline' ? (
               <div className="rounded-lg overflow-hidden bg-muted/30">
@@ -211,6 +214,7 @@ handlePreview,
                               onDownload={() => handleDownload(record)}
                               onDelete={() => setDeleteDialog({ isOpen: true, record })}
                               onRename={handleRename}
+                              onToggleFavorite={handleToggleFavorite}
                             />
                           </div>
                         )
@@ -241,6 +245,7 @@ handlePreview,
                 onDownload={handleDownload}
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
                 onRename={handleRename}
+                onToggleFavorite={handleToggleFavorite}
               />
             )}
           </div>

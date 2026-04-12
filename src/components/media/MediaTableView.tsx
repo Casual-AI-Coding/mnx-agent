@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { TYPE_VARIANTS, TYPE_LABELS, SOURCE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, formatDate, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
+import { FavoriteButton } from './FavoriteButton'
 import { updateMedia } from '@/lib/api/media'
 import type { MediaRecord } from '@/types/media'
 
@@ -19,6 +20,7 @@ interface MediaTableViewProps {
   onDownload: (record: MediaRecord) => void
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
+  onToggleFavorite?: (mediaId: string) => void
 }
 
 export function MediaTableView({
@@ -31,6 +33,7 @@ export function MediaTableView({
   onDownload,
   onDelete,
   onRename,
+  onToggleFavorite,
 }: MediaTableViewProps) {
   const isAllSelected = selectedIds.size === records.length && records.length > 0
   const isIndeterminate = selectedIds.size > 0 && selectedIds.size < records.length
@@ -227,6 +230,13 @@ export function MediaTableView({
                   >
                     <Download className="w-4 h-4" />
                   </Button>
+                  {onToggleFavorite && (
+                    <FavoriteButton
+                      mediaId={record.id}
+                      isFavorite={record.is_favorite ?? false}
+                      onToggle={onToggleFavorite}
+                    />
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"

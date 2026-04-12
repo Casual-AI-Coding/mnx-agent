@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { TYPE_VARIANTS, TYPE_LABELS, TYPE_GRADIENTS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
+import { FavoriteButton } from './FavoriteButton'
 import type { MediaRecord } from '@/types/media'
 
 interface TimelineItemProps {
@@ -17,6 +18,7 @@ interface TimelineItemProps {
   onDownload: () => void
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
+  onToggleFavorite?: (mediaId: string) => void
 }
 
 export function TimelineItem({
@@ -28,6 +30,7 @@ export function TimelineItem({
   onDownload,
   onDelete,
   onRename,
+  onToggleFavorite,
 }: TimelineItemProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -122,6 +125,13 @@ export function TimelineItem({
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        {onToggleFavorite && (
+          <FavoriteButton
+            mediaId={record.id}
+            isFavorite={record.is_favorite ?? false}
+            onToggle={onToggleFavorite}
+          />
+        )}
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}>
           <Pencil className="w-4 h-4" />
         </Button>
