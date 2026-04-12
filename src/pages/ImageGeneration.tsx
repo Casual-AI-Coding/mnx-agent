@@ -689,14 +689,14 @@ export default function ImageGeneration() {
                           onClick={() => setCurrentIndex(idx)}
                           className={cn(
                             "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                            idx === currentIndex && task.status === 'generating' && "ring-2 ring-offset-1 ring-blue-500",
-                            idx === currentIndex && task.status === 'completed' && "ring-2 ring-offset-1 ring-green-500",
-                            idx === currentIndex && task.status === 'failed' && "ring-2 ring-offset-1 ring-red-500",
-                            idx === currentIndex && task.status === 'idle' && "ring-2 ring-offset-1 ring-muted-foreground",
-                            task.status === 'idle' && "bg-muted border border-muted-foreground/30 text-muted-foreground",
-                            task.status === 'generating' && "bg-blue-500/20 border border-blue-500 animate-pulse text-blue-500",
-                            task.status === 'completed' && "bg-green-500/20 border border-green-500 text-green-600",
-                            task.status === 'failed' && "bg-red-500/20 border border-red-500 text-red-600"
+                            idx === currentIndex && task.status === 'generating' && "ring-2 ring-offset-1 ring-blue-500 bg-blue-500/20 text-blue-500",
+                            idx === currentIndex && task.status === 'completed' && "ring-2 ring-offset-1 ring-green-500 bg-green-500/20 text-green-600",
+                            idx === currentIndex && task.status === 'failed' && "ring-2 ring-offset-1 ring-red-500 bg-red-500/20 text-red-600",
+                            idx === currentIndex && task.status === 'idle' && "ring-2 ring-offset-1 ring-muted-foreground bg-muted text-muted-foreground",
+                            idx !== currentIndex && task.status === 'idle' && "bg-muted border border-muted-foreground/30 text-muted-foreground",
+                            idx !== currentIndex && task.status === 'generating' && "bg-blue-500/20 border border-blue-500 animate-pulse text-blue-500",
+                            idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 border border-green-500 text-green-600",
+                            idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 border border-red-500 text-red-600"
                           )}
                         >
                           {task.status === 'generating' ? (
