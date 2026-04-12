@@ -553,14 +553,22 @@ export default function ImageGeneration() {
                       <button
                         key={n}
                         type="button"
-                        onClick={() => !isGenerating && tasks.length === 0 && setParallelCount(n)}
-                        disabled={isGenerating || tasks.length > 0}
+                        onClick={() => {
+                          if (!isGenerating) {
+                            setParallelCount(n)
+                            if (tasks.length > 0) {
+                              setTasks([])
+                              setCurrentIndex(0)
+                            }
+                          }
+                        }}
+                        disabled={isGenerating}
                         className={cn(
                           "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
                           parallelCount === n
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
-                          (isGenerating || tasks.length > 0) && "opacity-50 cursor-not-allowed"
+                          isGenerating && "opacity-50 cursor-not-allowed"
                         )}
                       >
                         {n}
