@@ -6,7 +6,6 @@ import {
   Loader2,
   Download,
   RotateCcw,
-  Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { status as statusTokens, services } from '@/themes/tokens'
@@ -185,7 +184,7 @@ export function ImageTaskCard({ task, index, onRetry, onDownload }: ImageTaskCar
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <div className={cn('relative rounded-lg p-3', services.music.bg)}>
+              <div className={cn('relative rounded-lg p-3', services.image.bg)}>
                 <img
                   key={task.imageUrl}
                   src={task.imageUrl}
@@ -197,7 +196,7 @@ export function ImageTaskCard({ task, index, onRetry, onDownload }: ImageTaskCar
               <Button
                 onClick={() => onDownload(task.imageUrl!, `image-${task.id}.png`)}
                 variant="outline"
-                className={cn('w-full', services.music.bg, services.music.text, 'hover:opacity-80')}
+                className={cn('w-full', services.image.bg, services.image.text, 'hover:opacity-80')}
               >
                 <Download className="w-4 h-4 mr-2" />
                 下载图片
