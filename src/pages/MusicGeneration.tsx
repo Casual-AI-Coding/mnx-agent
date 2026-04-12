@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Music, Download, Loader2, Wand2, RefreshCw, Lightbulb, Mic2, Music2, Settings2 } from 'lucide-react'
+import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, HelpCircle, X, Palette, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -10,8 +10,6 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Switch } from '@/components/ui/Switch'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/Collapsible'
-import { Slider } from '@/components/ui/Slider'
 import { cn } from '@/lib/utils'
 import { generateMusic, preprocessMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
@@ -41,10 +39,27 @@ export default function MusicGeneration() {
   const [instrumental, setInstrumental] = useState(false)
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [tipsOpen, setTipsOpen] = useState(false)
+  const advancedRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (advancedRef.current && !advancedRef.current.contains(e.target as Node)) {
+        setAdvancedOpen(false)
+      }
+    }
+    if (advancedOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [advancedOpen])
   const [sampleRate, setSampleRate] = useState<16000 | 24000 | 32000 | 44100>(44100)
   const [bitrate, setBitrate] = useState<32000 | 64000 | 128000 | 256000>(256000)
   const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
   const [seed, setSeed] = useState<string>('')
+  
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState('')
 
   const [coverMode, setCoverMode] = useState<'one-step' | 'two-step'>('one-step')
   const [referenceAudioUrl, setReferenceAudioUrl] = useState('')
@@ -67,7 +82,6 @@ export default function MusicGeneration() {
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
     if (template) {
-      setLyrics(template.lyrics)
       setStylePrompt(template.style)
     }
   }
@@ -360,13 +374,48 @@ export default function MusicGeneration() {
         title="音乐生成"
         description="AI 音乐创作与生成"
         gradient="violet-purple"
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTipsOpen(!tipsOpen)}
+                className="h-8 w-8"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+              {tipsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-96 z-50 bg-card border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
+                  <div className="flex items-center justify-between p-3 border-b border-border">
+                    <span className="text-sm font-medium">{t('musicGeneration.creationTipsTitle')}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setTipsOpen(false)} className="h-6 w-6">
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="p-3">
+                    <ul className="text-xs text-muted-foreground space-y-2">
+                      <li className="whitespace-normal">• {t('musicGeneration.tip1')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip2')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip3')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip4')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip5')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip6')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip7')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip8')}</li>
+                      <li className="whitespace-normal">• {t('musicGeneration.tip9')}</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={clearAll}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              {t('musicGeneration.clearBtn')}
+            </Button>
+          </div>
+        }
       />
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={clearAll}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          {t('musicGeneration.clearBtn')}
-        </Button>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
@@ -379,63 +428,143 @@ export default function MusicGeneration() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
                   {STRUCTURE_TAGS.map(tag => (
                     <Button
                       key={tag}
                       variant="outline"
                       size="sm"
                       onClick={() => insertTag(tag)}
+                      className="h-7 px-2 text-xs shrink-0"
                     >
                       {tag}
                     </Button>
                   ))}
                 </div>
-                <Textarea
-                  id="lyrics-editor"
-                  value={lyrics}
-                  onChange={(e) => setLyrics(e.target.value)}
-                  placeholder={t('musicGeneration.lyricsPlaceholder')}
-                  className={cn(
-                    "min-h-[300px] resize-none font-mono text-sm",
-                    isLyricsOverLimit && "border-red-500"
-                  )}
-                />
-                <div className="flex items-center justify-between text-sm">
-                  <span className={cn(
-                    isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
-                  )}>
-                    {lyrics.length} / {LYRICS_MAX}
-                  </span>
-                  <span className="text-muted-foreground">{t('musicGeneration.useTags')}</span>
+                <div className="relative">
+                  <Textarea
+                    id="lyrics-editor"
+                    value={lyrics}
+                    onChange={(e) => setLyrics(e.target.value)}
+                    placeholder={t('musicGeneration.lyricsPlaceholder')}
+                    className={cn(
+                      "min-h-[300px] resize-none font-mono text-sm pb-6",
+                      isLyricsOverLimit && "border-red-500"
+                    )}
+                  />
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{t('musicGeneration.useTags')}</span>
+                    <span className={cn(
+                      isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
+                    )}>
+                      {lyrics.length} / {LYRICS_MAX}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="w-5 h-5" />
-                {t('musicGeneration.musicTemplatesTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {MUSIC_TEMPLATES.map(template => (
+          {!isCoverModel && (
+            <Card>
+<CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="w-5 h-5" />
+                  {instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 relative">
+                  <Select value="" onValueChange={handleTemplateSelect}>
+                    <SelectTrigger className="w-[400px]">
+                      <SelectValue placeholder="选择风格模板..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MUSIC_TEMPLATES.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{t.name}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">{t.style}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
-                    key={template.id}
-                    variant="outline"
-                    onClick={() => handleTemplateSelect(template.id)}
-                    className="justify-start"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+                    disabled={!stylePrompt.trim()}
+                    title="保存为模板"
                   >
-                    <Music className="w-4 h-4 mr-2" />
-                    {template.name}
+                    <Save className="w-4 h-4" />
                   </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  {showSaveTemplate && (
+                    <div className="absolute top-full mt-2 right-0 w-72 bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                      <div className="p-3 space-y-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium">模板名称</label>
+                          <Input
+                            value={newTemplateName}
+                            onChange={(e) => setNewTemplateName(e.target.value)}
+                            placeholder="输入模板名称..."
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7"
+                            onClick={() => {
+                              setShowSaveTemplate(false)
+                              setNewTemplateName('')
+                            }}
+                          >
+                            取消
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7"
+                            disabled={!newTemplateName.trim()}
+                            onClick={() => {
+                              // TODO: 实现保存模板到 localStorage 或后端
+                              console.log('Save template:', newTemplateName, stylePrompt)
+                              setShowSaveTemplate(false)
+                              setNewTemplateName('')
+                            }}
+                          >
+                            保存
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <Textarea
+                    value={stylePrompt}
+                    onChange={(e) => setStylePrompt(e.target.value)}
+                    placeholder={instrumental
+                      ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
+                      : t('musicGeneration.stylePlaceholder')
+                    }
+                    className={cn(
+                      "min-h-[80px] resize-none pb-5",
+                      isStylePromptOverLimit && "border-red-500"
+                    )}
+                  />
+                  <div className={cn(
+                    "absolute bottom-1.5 right-2 text-xs",
+                    isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
+                  )}>
+                    {stylePrompt.length} / {STYLE_PROMPT_MAX}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -443,63 +572,146 @@ export default function MusicGeneration() {
             <CardHeader>
               <CardTitle>{t('musicGeneration.paramsTitle')}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-foreground">
-                    并发生成数量
-                  </label>
-                  <span className="text-sm text-muted-foreground">
-                    {parallelCount} 个
-                  </span>
-                </div>
-                <Slider
-                  value={[parallelCount]}
-                  onValueChange={(v) => setParallelCount(v[0])}
-                  min={1}
-                  max={10}
-                  step={1}
-                  disabled={isGenerating}
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  同时生成多个音乐副本，相同参数，不同随机性
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
-                <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MUSIC_MODELS.map(m => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <div className="flex flex-col">
+            <CardContent className="space-y-4">
+              <div className="flex gap-6">
+                <div className="space-y-2 flex-1 pr-6 border-r border-border">
+                  <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
+                  <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MUSIC_MODELS.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
                           <span>{m.name}</span>
-                          <span className="text-xs text-muted-foreground">{m.description}</span>
-                        </div>
-                      </SelectItem>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 flex-1">
+                  <label className="text-sm font-medium text-foreground">并发生成数量</label>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => !isGenerating && setParallelCount(n)}
+                        disabled={isGenerating}
+                        className={cn(
+                          "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
+                          parallelCount === n
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {n}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
-                {isInstrumentalAvailable && (
-                  <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox
-                      id="instrumental"
-                      checked={instrumental}
-                      onCheckedChange={(checked) => setInstrumental(checked as boolean)}
-                    />
-                    <label
-                      htmlFor="instrumental"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      纯音乐模式（无歌词）
-                    </label>
                   </div>
-                )}
+                </div>
               </div>
+              {(isInstrumentalAvailable || isOptimizeLyricsAvailable) && !isCoverModel && (
+                <div className="flex items-center justify-between gap-4">
+                  {isInstrumentalAvailable && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="instrumental"
+                        checked={instrumental}
+                        onCheckedChange={(checked) => setInstrumental(checked as boolean)}
+                      />
+                      <label htmlFor="instrumental" className="text-sm">
+                        纯音乐模式
+                      </label>
+                    </div>
+                  )}
+                  {isOptimizeLyricsAvailable && !instrumental && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="optimize-lyrics"
+                        checked={optimizeLyrics}
+                        onCheckedChange={(checked) => setOptimizeLyrics(checked as boolean)}
+                      />
+                      <label htmlFor="optimize-lyrics" className="text-sm">
+                        AI歌词优化
+                      </label>
+                    </div>
+                  )}
+<div className="relative" ref={advancedRef}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAdvancedOpen(!advancedOpen)}
+                      className="h-8 px-2.5 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <Settings2 className="w-4 h-4 mr-1" />
+                      高级设置
+                    </Button>
+                    {advancedOpen && (
+                      <div className="absolute top-full mt-2 right-0 w-[360px] bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                        <div className="p-3 grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">采样率</label>
+                            <Select
+                              value={sampleRate.toString()}
+                              onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="16000">16000 Hz</SelectItem>
+                                <SelectItem value="24000">24000 Hz</SelectItem>
+                                <SelectItem value="32000">32000 Hz</SelectItem>
+                                <SelectItem value="44100">44100 Hz (推荐)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">比特率</label>
+                            <Select
+                              value={bitrate.toString()}
+                              onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="32000">32 kbps</SelectItem>
+                                <SelectItem value="64000">64 kbps</SelectItem>
+                                <SelectItem value="128000">128 kbps</SelectItem>
+                                <SelectItem value="256000">256 kbps (推荐)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">格式</label>
+                            <Select value={format} onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}>
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mp3">MP3</SelectItem>
+                                <SelectItem value="wav">WAV</SelectItem>
+                                <SelectItem value="flac">FLAC</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">随机种子</label>
+                            <Input
+                              value={seed}
+                              onChange={(e) => setSeed(e.target.value)}
+                              placeholder="留空则随机"
+                              className="h-8"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {isCoverModel && (
                 <Card className="mt-4">
@@ -644,125 +856,6 @@ export default function MusicGeneration() {
                 </Card>
               )}
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  {instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')}
-                </label>
-                <Textarea
-                  value={stylePrompt}
-                  onChange={(e) => setStylePrompt(e.target.value)}
-                  placeholder={instrumental
-                    ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
-                    : t('musicGeneration.stylePlaceholder')
-                  }
-                  className={cn(
-                    "min-h-[80px] resize-none",
-                    isStylePromptOverLimit && "border-red-500"
-                  )}
-                />
-                <div className={cn(
-                  "text-xs",
-                  isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
-                )}>
-                  {stylePrompt.length} / {STYLE_PROMPT_MAX}
-                </div>
-              </div>
-
-              {isOptimizeLyricsAvailable && !isCoverModel && !instrumental && (
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <label className="text-sm font-medium text-foreground">{t('musicGeneration.aiOptimizeLabel')}</label>
-                    <p className="text-xs text-muted-foreground">{t('musicGeneration.autoOptimizeLyrics')}</p>
-                  </div>
-                  <Switch
-                    checked={optimizeLyrics}
-                    onCheckedChange={setOptimizeLyrics}
-                  />
-                </div>
-              )}
-
-              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-                <CollapsibleTrigger icon={<Settings2 className="w-4 h-4" />}>
-                  高级设置
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        采样率
-                      </label>
-                      <Select
-                        value={sampleRate.toString()}
-                        onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="16000">16000 Hz</SelectItem>
-                          <SelectItem value="24000">24000 Hz</SelectItem>
-                          <SelectItem value="32000">32000 Hz</SelectItem>
-                          <SelectItem value="44100">44100 Hz (推荐)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        比特率
-                      </label>
-                      <Select
-                        value={bitrate.toString()}
-                        onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="32000">32 kbps</SelectItem>
-                          <SelectItem value="64000">64 kbps</SelectItem>
-                          <SelectItem value="128000">128 kbps</SelectItem>
-                          <SelectItem value="256000">256 kbps (推荐)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        输出格式
-                      </label>
-                      <Select
-                        value={format}
-                        onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mp3">MP3</SelectItem>
-                          <SelectItem value="wav">WAV</SelectItem>
-                          <SelectItem value="flac">FLAC</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Seed {isSeedAvailable ? '' : '(仅 music-2.6)'}
-                      </label>
-                      <Input
-                        type="number"
-                        value={seed}
-                        onChange={(e) => setSeed(e.target.value)}
-                        placeholder="留空则随机"
-                        disabled={!isSeedAvailable}
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
               <Button
                 onClick={handleGenerate}
                 disabled={isSubmitDisabled()}
@@ -801,21 +894,6 @@ export default function MusicGeneration() {
               onDownload={handleDownload}
             />
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('musicGeneration.creationTipsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• {t('musicGeneration.tip1')}</li>
-                <li>• {t('musicGeneration.tip2')}</li>
-                <li>• {t('musicGeneration.tip3')}</li>
-                <li>• {t('musicGeneration.tip4')}</li>
-                <li>• {t('musicGeneration.tip5')}</li>
-              </ul>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

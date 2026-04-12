@@ -61,7 +61,7 @@ const SelectTriggerInner = React.forwardRef<HTMLButtonElement, SelectTriggerProp
         aria-activedescendant={activeDescendantId}
         className={cn(
           selectTriggerVariants({ size, className }),
-          'w-full [&>span]:line-clamp-1'
+          '[&>span]:line-clamp-1'
         )}
         onClick={() => setOpen(!open)}
         {...props}
