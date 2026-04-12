@@ -2,6 +2,104 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.1] - 2026-04-12
+
+### Added
+
+**Parallel Image Generation - 图像并行生成**
+
+- **并行图像生成** - 支持同时生成多张图像 (1-10张)
+  - `src/pages/ImageGeneration.tsx` (+465/-39) - 并行生成面板和数量选择
+  - `src/lib/api/image.ts` (+8/-0) - 并行生成 API 支持
+  - 用户可配置生成数量，批量创作图像
+  - 并行生成使用 Promise.all 并发执行
+
+- **ImageTaskCard 组件** - 任务卡片显示生成进度
+  - `src/components/image/ImageTaskCard.tsx` (22行) - 任务卡片组件
+  - 显示每张图像的生成状态和进度
+  - 状态颜色指示（蓝色生成中、绿色成功、红色失败）
+
+- **Batch Carousel** - 批量结果轮播展示
+  - 并行生成完成后，结果以轮播形式展示
+  - 支持左右切换查看每张生成结果
+  - 每张卡片可独立下载、预览
+
+- **批量状态指示器** - 每张图像的状态可视化
+  - 蓝色 ring 表示生成中
+  - 绿色 ring 表示成功
+  - 红色 ring 表示失败
+  - 厚 ring + 粗字体突出选中状态
+
+- **错误详情显示** - 失败时显示请求参数和响应错误
+  - 显示原始请求参数（prompt、model 等）
+  - 显示 API 返回的错误信息
+  - 安全的 null check 处理
+
+- **标题支持** - 自定义下载文件名
+  - 支持 title 输入，自动命名 `{title}.png`
+  - 并行生成时自动添加序号 `{title} (1).png`
+
+- **生成后调整** - 生成完成后可调整并行数量
+  - 允许在生成完成后修改 parallel count
+  - 不影响正在进行的生成任务
+
+- **文档**
+  - `docs/superpowers/specs/2026-04-12-parallel-image-generation-design.md` (201行)
+  - `docs/superpowers/plans/2026-04-12-parallel-image-generation.md` (955行)
+
+### Fixed
+
+- **Batch Selector 样式修复** - 多轮样式调整
+  - 移除 double border 防止双重边框
+  - 移除 ring-offset 消除白色间隙
+  - 使用状态颜色作为 ring 颜色
+  - 厚 ring + 粗字体突出选中状态
+  - 未选中时移除 border，选中时仅显示 ring
+
+- **Loading 状态** - 并行生成加载动画
+  - 每张任务卡片独立 loading 动画
+  - 生成中显示 spinner
+  - 防止 lightbox slides 状态异常
+
+- **Lightbox 修复** - 并行生成结果预览
+  - 正确初始化 lightbox slides
+  - 并行生成完成后 slides 自动更新
+
+- **Memoization** - updateTask 使用 useCallback
+  - 防止不必要的重渲染
+  - 优化性能
+
+- **错误显示安全处理** - null check for raw error
+  - 安全处理 null/undefined 错误对象
+  - stringify raw error 防止 JSON 解析失败
+
+### Changed
+
+- **ImageGeneration 页面重构** - 批量结果网格增强
+  - 集成 batch carousel 支持
+  - 结果展示改为 batch-based architecture
+  - 增强现有 results grid
+
+### Removed
+
+- **ImageCarousel 组件** - 不再使用，已删除
+  - 替换为 batch carousel 实现
+  - 移除冗余组件
+
+### Performance
+
+- **5 files changed** (+1,612 insertions, -39 deletions)
+- 新增 1 个核心组件（ImageTaskCard）
+- 并行生成功能前端实现（+465行）
+- 文档 +1,156 行（设计 + 实现）
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 图像生成参数向后兼容（新增可选 `count` 参数）
+- ✅ 标题功能为增量功能，不影响默认命名
+- ✅ 样式变更不影响功能逻辑
+
 ## [1.9.0] - 2026-04-12
 
 ### Added
