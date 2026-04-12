@@ -26,6 +26,8 @@ export class MediaService implements IMediaService {
       offset,
       includeDeleted: filter.includeDeleted,
       ownerId: filter.ownerId,
+      favorite: filter.favorite,
+      favoriteUserId: filter.favoriteUserId,
     })
   }
 

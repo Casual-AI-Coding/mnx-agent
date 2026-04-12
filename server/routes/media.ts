@@ -33,9 +33,11 @@ const upload = multer({
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { type, source, includeDeleted } = req.query
+  const { type, source, includeDeleted, favorite } = req.query
   const { page, limit, offset } = getPaginationParams(req.query)
   const ownerId = buildOwnerFilter(req).params[0]
+
+  const userId = req.user?.userId ? req.user.userId : undefined
 
   const result = await db.getAll({
     type: type as any,
@@ -44,6 +46,8 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
     offset,
     includeDeleted: !!includeDeleted,
     ownerId,
+    favorite: favorite as boolean | undefined,
+    favoriteUserId: userId,
   })
 
   successResponse(res, createPaginatedResponse(result.records, result.total, page, limit))
@@ -76,6 +80,26 @@ router.put('/:id', validateParams(mediaIdParamsSchema), validate(updateMediaReco
   const record = await db.update(req.params.id, req.body, ownerId)
   if (!withEntityNotFound(record, res, 'Media record')) return
   successResponse(res, record)
+}))
+
+router.patch('/:id/favorite', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = getMediaService()
+
+  const ownerId = buildOwnerFilter(req).params[0]
+  const record = await db.getById(req.params.id, ownerId)
+  if (!record) {
+    errorResponse(res, 'Media record not found', 404)
+    return
+  }
+
+  const userId = req.user!.userId
+  const result = await db.toggleFavorite(userId, req.params.id)
+
+  successResponse(res, {
+    mediaId: req.params.id,
+    isFavorite: result.isFavorite,
+    action: result.action,
+  })
 }))
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {

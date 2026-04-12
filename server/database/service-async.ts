@@ -436,6 +436,8 @@ export class DatabaseService {
     offset: number
     includeDeleted?: boolean
     ownerId?: string
+    favorite?: boolean
+    favoriteUserId?: string
   }): Promise<{ records: MediaRecord[]; total: number }> {
     const result = await this.mediaRepo.list(options)
     return { records: result.items, total: result.total }

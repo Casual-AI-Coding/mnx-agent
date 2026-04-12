@@ -16,6 +16,8 @@ export interface MediaFilter {
   offset?: number
   includeDeleted?: boolean
   ownerId?: string
+  favorite?: boolean
+  favoriteUserId?: string
 }
 
 /**
