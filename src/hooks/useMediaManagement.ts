@@ -228,10 +228,12 @@ export function useMediaManagement(): UseMediaManagementReturn {
   }, [pagination])
 
   // Fetch media records
-  const fetchMedia = useCallback(async (isInitial = false) => {
+  const fetchMedia = useCallback(async (isInitial = false, forcePage?: number) => {
     setIsLoading(true)
     if (isInitial) setIsInitialLoad(true)
     setError(null)
+
+    const page = forcePage ?? paginationRef.current.page
 
     try {
       const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
@@ -239,7 +241,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const response = await listMedia({
         type,
         search: searchQuery.trim() || undefined,
-        page: paginationRef.current.page,
+        page,
         limit: paginationRef.current.limit,
         favorite: favoriteFilter ? true : undefined,
       })
@@ -300,14 +302,15 @@ export function useMediaManagement(): UseMediaManagementReturn {
         return next
       })
 
-      await fetchMedia(false)
+      const currentPage = paginationRef.current.page
+      await fetchMedia(false, currentPage)
 
       setDeleteDialog({ isOpen: false, record: null })
       toastSuccess('删除成功')
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败')
     }
-  }, [records, fetchMedia])
+  }, [fetchMedia])
 
   // Handle download
   const handleDownload = useCallback((record: MediaRecord) => {
@@ -367,25 +370,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const deleteCount = selectedIds.size
       setSelectedIds(new Set())
 
-      const remainingRecords = records.filter(r => !selectedIds.has(r.id))
-      const limit = paginationRef.current.limit
       const currentPage = paginationRef.current.page
-
-      if (remainingRecords.length < limit && currentPage > 1) {
-        await fetchMedia(false)
-      } else if (remainingRecords.length === 0 && currentPage === 1) {
-        setRecords([])
-        setPagination(prev => ({
-          ...prev,
-          total: Math.max(0, prev.total - deleteCount),
-        }))
-      } else {
-        setRecords(remainingRecords)
-        setPagination(prev => ({
-          ...prev,
-          total: Math.max(0, prev.total - deleteCount),
-        }))
-      }
+      await fetchMedia(false, currentPage)
 
       setBatchDeleteDialogOpen(false)
       toastSuccess('批量删除成功', `已删除 ${deleteCount} 个文件`)
@@ -394,7 +380,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsBatchDeleting(false)
     }
-  }, [records, selectedIds, fetchMedia])
+  }, [selectedIds, fetchMedia])
 
   // Handle batch download
   const handleBatchDownload = useCallback(async () => {
