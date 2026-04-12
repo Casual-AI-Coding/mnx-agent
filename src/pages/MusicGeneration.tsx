@@ -24,6 +24,7 @@ export default function MusicGeneration() {
   const { t } = useTranslation()
   const musicSettings = useSettingsStore(s => s.settings.generation.music)
   const [lyrics, setLyrics] = useState('')
+  const [songTitle, setSongTitle] = useState('')
   const [stylePrompt, setStylePrompt] = useState('')
   const validModel = MUSIC_MODELS.some(m => m.id === musicSettings.model)
   const [model, setModel] = useState<MusicModel>(validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music)
@@ -100,11 +101,22 @@ export default function MusicGeneration() {
     }
   }
 
-  const saveMusicToMedia = async (audioUrl: string): Promise<void> => {
+  const saveMusicToMedia = async (audioUrl: string, title?: string, index?: number): Promise<void> => {
     try {
+      let filename: string
+      if (title && title.trim()) {
+        const sanitizedTitle = title.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')
+        if (index !== undefined) {
+          filename = `${sanitizedTitle} (${index + 1}).mp3`
+        } else {
+          filename = `${sanitizedTitle}.mp3`
+        }
+      } else {
+        filename = `music_${Date.now()}.mp3`
+      }
       await uploadMediaFromUrl(
         audioUrl,
-        `music_${Date.now()}.mp3`,
+        filename,
         'music',
         'music_generation'
       )
@@ -231,7 +243,11 @@ export default function MusicGeneration() {
           audioDuration: durationSec,
         })
 
-        saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
+saveMusicToMedia(
+          audioData.startsWith('http') ? audioData : url,
+          songTitle,
+          parallelCount > 1 ? index : undefined
+        )
 
         addUsage('musicRequests', 1)
         addItem({
@@ -295,7 +311,11 @@ export default function MusicGeneration() {
         audioDuration: durationSec,
       })
 
-      saveMusicToMedia(audioData.startsWith('http') ? audioData : url)
+      saveMusicToMedia(
+        audioData.startsWith('http') ? audioData : url,
+        songTitle,
+        tasks.length > 1 ? index : undefined
+      )
       addUsage('musicRequests', 1)
     } catch (err) {
       updateTask(index, {
@@ -428,6 +448,14 @@ export default function MusicGeneration() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium shrink-0">歌曲标题</label>
+                  <Input
+                    value={songTitle}
+                    onChange={(e) => setSongTitle(e.target.value)}
+                    placeholder="可选，用于命名生成的音乐文件"
+                  />
+                </div>
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
                   {STRUCTURE_TAGS.map(tag => (
                     <Button
