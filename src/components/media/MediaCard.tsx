@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { TYPE_GRADIENTS, TYPE_LABELS } from '@/lib/constants/media'
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
+import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { MediaCardPreview } from './MediaCardPreview'
-import { FavoriteButton } from './FavoriteButton'
 
 interface MediaCardProps {
   record: MediaRecord
@@ -77,7 +77,7 @@ export function MediaCard({
         </div>
       )}
 
-      <div
+<div
         className={`absolute top-2 left-2 right-2 z-10 flex items-center justify-between transition-opacity duration-200 ${
           showActions || isSelected ? 'opacity-100' : 'opacity-0'
         }`}
@@ -99,25 +99,18 @@ export function MediaCard({
         </div>
 
         <div className="flex items-center gap-1">
-<Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsEditing(true)
-              }}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </Button>
-            {onToggleFavorite && (
-              <FavoriteButton
-                mediaId={record.id}
-                isFavorite={record.is_favorite ?? false}
-                onToggle={onToggleFavorite}
-              />
-            )}
-            {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsEditing(true)
+            }}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </Button>
+          {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
             <Button
               variant="secondary"
               size="sm"
@@ -154,6 +147,29 @@ export function MediaCard({
           </Button>
         </div>
       </div>
+
+      {onToggleFavorite && (
+        <div
+          className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
+            record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite(record.id)
+          }}
+        >
+          <div className={cn(
+            'w-7 h-7 rounded-full flex items-center justify-center cursor-pointer',
+            record.is_favorite
+              ? 'bg-yellow-500 text-white hover:bg-yellow-400'
+              : 'bg-card/50 text-foreground/70 hover:bg-card/70 hover:text-yellow-500'
+          )}
+            title={record.is_favorite ? '取消收藏' : '收藏'}
+          >
+            <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
+          </div>
+        </div>
+      )}
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/80 via-foreground/50 to-transparent pt-12 pb-3 px-3">
         <div className="flex items-end justify-between gap-2">
