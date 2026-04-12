@@ -14,4 +14,9 @@ export interface ImageTask {
     aspect_ratio: string
     seed?: number
   }
+  responseError?: {
+    status_code?: number
+    status_msg?: string
+    raw?: unknown
+  }
 }

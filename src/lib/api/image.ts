@@ -30,7 +30,13 @@ export async function generateImage(
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.base_resp?.status_msg || error.error || 'Failed to generate image')
+    const errorObj = {
+      message: error.base_resp?.status_msg || error.error || 'Failed to generate image',
+      status_code: error.base_resp?.status_code,
+      status_msg: error.base_resp?.status_msg,
+      raw: error,
+    }
+    throw Object.assign(new Error(errorObj.message), errorObj)
   }
 
   const result: MiniMaxImageResponse | ProxyImageResponse | ImageGenerationResponse = await response.json()

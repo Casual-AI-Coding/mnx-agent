@@ -259,10 +259,17 @@ export default function ImageGeneration() {
 
           return { success: true, index }
         } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : '生成失败'
+          const errorData = err as { status_code?: number; status_msg?: string; raw?: unknown }
           updateTask(index, {
             status: 'failed',
             progress: 100,
-            error: err instanceof Error ? err.message : '生成失败',
+            error: errorMsg,
+            responseError: {
+              status_code: errorData.status_code,
+              status_msg: errorData.status_msg || errorMsg,
+              raw: errorData.raw,
+            },
           })
           return { success: false, index }
         }
@@ -299,11 +306,18 @@ export default function ImageGeneration() {
         await saveImageToMedia(url, imageTitle, index, urlIndex)
       }
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : '生成失败'
+      const errorData = err as { status_code?: number; status_msg?: string; raw?: unknown }
       updateTask(index, {
         status: 'failed',
         progress: 100,
-        error: err instanceof Error ? err.message : '生成失败',
+        error: errorMsg,
         retryCount: task.retryCount + 1,
+        responseError: {
+          status_code: errorData.status_code,
+          status_msg: errorData.status_msg || errorMsg,
+          raw: errorData.raw,
+        },
       })
     }
   }, [tasks, model, prompt, numImages, aspectRatio, seed, imageTitle, updateTask])
@@ -789,6 +803,24 @@ export default function ImageGeneration() {
                             <p><span className="text-muted-foreground">n:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.n}</span></p>
                             <p><span className="text-muted-foreground">aspect_ratio:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.aspect_ratio}</span></p>
                             {tasks[currentIndex].requestParams!.seed && <p><span className="text-muted-foreground">seed:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.seed}</span></p>}
+                          </div>
+                        </div>
+                      )}
+                      {tasks[currentIndex]?.responseError && (
+                        <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 max-w-lg w-full">
+                          <p className="text-sm text-red-500/80 font-medium mb-3">响应错误：</p>
+                          <div className="space-y-1 text-xs">
+                            {tasks[currentIndex].responseError!.status_code && (
+                              <p><span className="text-red-500/70">status_code:</span> <span className="text-red-600">{tasks[currentIndex].responseError!.status_code}</span></p>
+                            )}
+                            {tasks[currentIndex].responseError!.status_msg && (
+                              <p><span className="text-red-500/70">status_msg:</span> <span className="text-red-600">{tasks[currentIndex].responseError!.status_msg}</span></p>
+                            )}
+                            {tasks[currentIndex].responseError!.raw && (
+                              <p className="text-xs text-red-500/60 mt-2">
+                                <span className="font-medium">raw:</span> {JSON.stringify(tasks[currentIndex].responseError!.raw).slice(0, 100)}...
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
