@@ -136,50 +136,119 @@ export default function ImageGeneration() {
     }
   }
 
+  const updateTask = (index: number, updates: Partial<ImageTask>) => {
+    setTasks(prev => prev.map((task, i) => 
+      i === index ? { ...task, ...updates } : task
+    ))
+  }
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return
 
-    setIsGenerating(true)
     setError(null)
-    setGeneratedImages([])
 
-    try {
-      const response = await generateImage({
-        model,
-        prompt: prompt.trim(),
-        n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
-        aspect_ratio: aspectRatio,
-        seed,
-      })
+    // 根据并发数量选择执行模式
+    if (parallelCount === 1) {
+      // 单请求模式（保持原有逻辑）
+      setIsGenerating(true)
+      setGeneratedImages([])
 
-      const urls = response.data.map(d => d.url || '')
-      setGeneratedImages(urls)
-
-      addUsage('imageRequests', numImages)
-      urls.forEach((url, index) => {
-        addItem({
-          type: 'image',
-          input: prompt.trim(),
-          outputUrl: url,
-          metadata: {
-            model,
-            aspectRatio,
-            seed,
-            index: index + 1,
-            total: urls.length,
-          },
+      try {
+        const response = await generateImage({
+          model,
+          prompt: prompt.trim(),
+          n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
+          aspect_ratio: aspectRatio,
+          seed,
         })
+
+        const urls = response.data.map(d => d.url || '')
+        setGeneratedImages(urls)
+
+        addUsage('imageRequests', numImages)
+        urls.forEach((url, index) => {
+          addItem({
+            type: 'image',
+            input: prompt.trim(),
+            outputUrl: url,
+            metadata: {
+              model,
+              aspectRatio,
+              seed,
+              index: index + 1,
+              total: urls.length,
+            },
+          })
+        })
+
+        if (urls.length > 0) {
+          for (const url of urls) {
+            await saveImageToMedia(url)
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '生成失败')
+      } finally {
+        setIsGenerating(false)
+      }
+    } else {
+      // 并发模式
+      const newTasks: ImageTask[] = Array.from({ length: parallelCount }, (_, i) => ({
+        id: `${Date.now()}-${i}`,
+        status: 'idle' as const,
+        progress: 0,
+        retryCount: 0,
+      }))
+      setTasks(newTasks)
+      setCurrentIndex(0)
+
+      const promises = newTasks.map(async (task, index) => {
+        updateTask(index, { status: 'generating', progress: 25 })
+
+        try {
+          const response = await generateImage({
+            model,
+            prompt: prompt.trim(),
+            n: 1, // 并发模式固定为1
+            aspect_ratio: aspectRatio,
+            seed,
+          })
+
+          const url = response.data[0]?.url || ''
+          updateTask(index, {
+            status: 'completed',
+            progress: 100,
+            imageUrl: url,
+          })
+
+          await saveImageToMedia(url, undefined, index)
+          addUsage('imageRequests', 1)
+          addItem({
+            type: 'image',
+            input: prompt.trim(),
+            outputUrl: url,
+            metadata: {
+              model,
+              aspectRatio,
+              seed,
+              index: index + 1,
+              total: parallelCount,
+              parallel: true,
+            },
+          })
+
+          return { success: true, index }
+        } catch (err) {
+          updateTask(index, {
+            status: 'failed',
+            progress: 100,
+            error: err instanceof Error ? err.message : '生成失败',
+          })
+          return { success: false, index }
+        }
       })
 
-      if (urls.length > 0) {
-        for (const url of urls) {
-          await saveImageToMedia(url)
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败')
-    } finally {
-      setIsGenerating(false)
+      await Promise.allSettled(promises)
     }
   }
 
