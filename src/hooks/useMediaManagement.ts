@@ -306,7 +306,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const limit = paginationRef.current.limit
       const currentPage = paginationRef.current.page
 
-      if (remainingRecords.length < limit && currentPage > 1) {
+      if (remainingRecords.length < limit) {
         await fetchMedia(false)
       } else if (remainingRecords.length === 0 && currentPage === 1) {
         setRecords([])
