@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn } from 'lucide-react'
+import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -18,7 +18,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { services } from '@/themes/tokens'
-import { ImageCarousel } from '@/components/image/ImageCarousel'
 import { type ImageTask, type ImageTaskStatus } from '@/components/image/ImageTaskCard'
 
 // Animation variants
@@ -333,6 +332,12 @@ export default function ImageGeneration() {
   const getGridCols = () => {
     if (generatedImages.length === 1) return 'grid-cols-1'
     if (generatedImages.length === 2) return 'grid-cols-2'
+    return 'grid-cols-2'
+  }
+
+  const getGridColsForBatch = (count: number) => {
+    if (count === 1) return 'grid-cols-1'
+    if (count === 2) return 'grid-cols-2'
     return 'grid-cols-2'
   }
 
@@ -655,7 +660,34 @@ export default function ImageGeneration() {
                   <Grid3x3 className="w-4 h-4 text-accent-foreground" />
                   <span className="text-sm font-medium text-foreground">{t('imageGeneration.results') || '生成结果'}</span>
                 </div>
-                {generatedImages.length > 0 && (
+                {tasks.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                      disabled={currentIndex === 0}
+                      className={cn(
+                        "p-1 rounded-md transition-colors",
+                        currentIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"
+                      )}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      Batch {currentIndex + 1} / {tasks.length}
+                      {tasks[currentIndex]?.imageUrls && ` (${tasks[currentIndex].imageUrls.length} 张)`}
+                    </span>
+                    <button
+                      onClick={() => setCurrentIndex(Math.min(tasks.length - 1, currentIndex + 1))}
+                      disabled={currentIndex === tasks.length - 1}
+                      className={cn(
+                        "p-1 rounded-md transition-colors",
+                        currentIndex === tasks.length - 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"
+                      )}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : generatedImages.length > 0 && (
                   <span className="text-xs text-muted-foreground">{generatedImages.length} 张图片</span>
                 )}
               </div>
@@ -682,6 +714,65 @@ export default function ImageGeneration() {
                       </div>
                       <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
                       <p className="text-sm text-muted-foreground mt-2">{t('imageGeneration.pleaseWait') || '请稍候，AI正在绘制'}</p>
+                    </motion.div>
+                  ) : tasks.length > 0 && tasks[currentIndex]?.imageUrls ? (
+                    <motion.div
+                      key={`batch-${currentIndex}`}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className={`grid ${getGridColsForBatch(tasks[currentIndex].imageUrls.length)} gap-4`}
+                    >
+                      {tasks[currentIndex].imageUrls.map((url, index) => (
+                        <motion.div
+                          key={url}
+                          variants={imageVariants}
+                          initial="hidden"
+                          animate="visible"
+                          transition={{ delay: index * 0.1 }}
+                          className="relative group"
+                        >
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 to-secondary/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300" />
+                          <div
+                            className="relative overflow-hidden rounded-xl border border-border/50 bg-background/50 cursor-pointer"
+                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                          >
+                            <img
+                              src={url}
+                              alt={`Generated ${index + 1}`}
+                              className={`w-full ${getAspectRatioClass()} object-cover`}
+                            />
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(index); setLightboxOpen(true); }}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
+                                >
+                                  <ZoomIn className="w-4 h-4" />
+                                  预览
+                                </button>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation()
+                                    handleDownload(url, imageTitle.trim() 
+                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')}_${currentIndex + 1}_${index + 1}.png`
+                                      : `image_batch${currentIndex + 1}_${index + 1}.png`)
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  下载
+                                </button>
+                              </div>
+                            </div>
+                            {/* Image Number Badge */}
+                            <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-background/80 backdrop-blur-sm text-xs font-medium text-muted-foreground/70 border border-border/50">
+                              {index + 1} / {tasks[currentIndex]?.imageUrls?.length ?? 0}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
                     </motion.div>
                   ) : generatedImages.length > 0 && parallelCount === 1 ? (
                     <motion.div
@@ -779,35 +870,6 @@ export default function ImageGeneration() {
       </div>
 
       {/* 并发结果轮播区 */}
-      {tasks.length > 0 && (
-        <motion.div variants={itemVariants} className="xl:col-span-7">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl p-6">
-              <ImageCarousel
-                tasks={tasks}
-                currentIndex={currentIndex}
-                onPrev={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                onNext={() => setCurrentIndex(Math.min(tasks.length - 1, currentIndex + 1))}
-                onRetry={retryTask}
-                onPreview={(batchIndex, imageIndex) => {
-                  const url = tasks[batchIndex]?.imageUrls?.[imageIndex]
-                  if (url) {
-                    const allUrls = tasks.flatMap(t => t.imageUrls || [])
-                    const globalIndex = allUrls.indexOf(url)
-                    setLightboxIndex(globalIndex >= 0 ? globalIndex : 0)
-                    setLightboxOpen(true)
-                  }
-                }}
-                onDownload={handleDownload}
-                imageTitle={imageTitle}
-                aspectRatio={aspectRatio}
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
-
       {/* API Reference */}
       <motion.div variants={itemVariants}>
         <APIReference
