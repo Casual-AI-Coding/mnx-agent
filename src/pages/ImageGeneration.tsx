@@ -17,6 +17,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { services } from '@/themes/tokens'
+import ImageCarousel from '@/components/image/ImageCarousel'
+import { type ImageTask, type ImageTaskStatus } from '@/components/image/ImageTaskCard'
 
 // Animation variants
 const containerVariants = {
@@ -72,6 +74,9 @@ export default function ImageGeneration() {
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [tasks, setTasks] = useState<ImageTask[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [parallelCount, setParallelCount] = useState(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
