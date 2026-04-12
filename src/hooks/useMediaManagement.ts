@@ -300,25 +300,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         return next
       })
 
-      const remainingRecords = records.filter(r => r.id !== record.id)
-      const limit = paginationRef.current.limit
-      const currentPage = paginationRef.current.page
-
-      if (remainingRecords.length < limit) {
-        await fetchMedia(false)
-      } else if (remainingRecords.length === 0 && currentPage === 1) {
-        setRecords([])
-        setPagination(prev => ({
-          ...prev,
-          total: Math.max(0, prev.total - 1),
-        }))
-      } else {
-        setRecords(remainingRecords)
-        setPagination(prev => ({
-          ...prev,
-          total: Math.max(0, prev.total - 1),
-        }))
-      }
+      await fetchMedia(false)
 
       setDeleteDialog({ isOpen: false, record: null })
       toastSuccess('删除成功')
