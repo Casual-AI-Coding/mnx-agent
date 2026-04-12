@@ -688,15 +688,15 @@ export default function ImageGeneration() {
                           key={task.id}
                           onClick={() => setCurrentIndex(idx)}
                           className={cn(
-                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                            idx === currentIndex && task.status === 'generating' && "ring-2 ring-blue-500 bg-blue-500/20 text-blue-500",
-                            idx === currentIndex && task.status === 'completed' && "ring-2 ring-green-500 bg-green-500/20 text-green-600",
-                            idx === currentIndex && task.status === 'failed' && "ring-2 ring-red-500 bg-red-500/20 text-red-600",
-                            idx === currentIndex && task.status === 'idle' && "ring-2 ring-muted-foreground bg-muted text-muted-foreground",
-                            idx !== currentIndex && task.status === 'idle' && "bg-muted border border-muted-foreground/30 text-muted-foreground",
-                            idx !== currentIndex && task.status === 'generating' && "bg-blue-500/20 border border-blue-500 animate-pulse text-blue-500",
-                            idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 border border-green-500 text-green-600",
-                            idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 border border-red-500 text-red-600"
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all",
+                            idx === currentIndex && task.status === 'generating' && "ring-[3px] ring-blue-500 bg-blue-500/20 text-blue-500 font-bold",
+                            idx === currentIndex && task.status === 'completed' && "ring-[3px] ring-green-500 bg-green-500/20 text-green-600 font-bold",
+                            idx === currentIndex && task.status === 'failed' && "ring-[3px] ring-red-500 bg-red-500/20 text-red-600 font-bold",
+                            idx === currentIndex && task.status === 'idle' && "ring-[3px] ring-muted-foreground bg-muted text-muted-foreground font-bold",
+                            idx !== currentIndex && task.status === 'idle' && "bg-muted text-muted-foreground font-medium",
+                            idx !== currentIndex && task.status === 'generating' && "bg-blue-500/20 text-blue-500 animate-pulse font-medium",
+                            idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 text-green-600 font-medium",
+                            idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 text-red-600 font-medium"
                           )}
                         >
                           {task.status === 'generating' ? (
