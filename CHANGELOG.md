@@ -2,6 +2,85 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.3] - 2026-04-12
+
+### Added
+
+**Media Favorites Feature - 媒体收藏功能**
+
+- **用户收藏系统** - 支持用户收藏媒体资源
+  - `server/database/migrations-async.ts` (+41/-0) - 新增 `user_media_favorites` 表迁移
+  - `packages/shared-types/entities/media.ts` (+19/-0) - FavoriteRecord 类型定义
+  - `src/types/media.ts` (+1) - is_favorite 字段
+  - 用户可为任意媒体资源添加收藏标记
+
+- **收藏 API 端点** - PATCH /:id/favorite
+  - `server/routes/media.ts` (+31/-0) - 收藏切换 API
+  - `server/repositories/media-repository.ts` (+119/-0) - 收藏 CRUD 方法
+  - `server/services/domain/media.service.ts` (+6/-0) - 收藏服务层
+  - `server/validation/media-schemas.ts` (+1) - 收藏筛选参数
+
+- **FavoriteButton 组件** - 收藏按钮 UI
+  - `src/components/media/FavoriteButton.tsx` (35行) - 收藏按钮组件
+  - `src/lib/api/media.ts` (+14/-0) - toggleFavorite API 函数
+  - 收藏状态实时切换，乐观更新 UI
+
+- **收藏筛选 Tab** - 快速筛选收藏媒体
+  - `src/pages/MediaManagement.tsx` (+25/-5) - 收藏 tab 集成
+  - `src/hooks/useMediaManagement.ts` (+96/-0) - handleToggleFavorite 逻辑
+  - `src/components/media/MediaCard.tsx` (+33) - 收藏按钮集成
+  - `src/components/media/MediaTableView.tsx` (+10) - 表格视图收藏按钮
+  - `src/components/media/TimelineItem.tsx` (+10) - 时间轴视图收藏按钮
+
+- **文档**
+  - `docs/superpowers/specs/media-favorites-design.md` - 收藏功能设计 spec
+  - `docs/superpowers/plans/media-favorites-implementation.md` - 收藏实现 plan
+
+### Changed
+
+**FavoriteButton UI 位置优化** - 收藏按钮移至卡片右上角
+
+- 收藏时始终显示（不依赖 hover）
+- 未收藏时 hover 显示
+- 与 action bar 分离，独立于右上角
+- 视觉设计：无背景、纯图标、尺寸适配
+
+**文档重组**
+
+- `docs/superpowers/archive/v1.8/` - 归档 v1.8 相关计划
+- 设计文档位置规范化
+
+### Fixed
+
+- **收藏按钮位置系列修复** - 12 commits 逐步优化位置和样式
+  - 从 action bar 移至右上角
+  - 正确的 visibility 逻辑（收藏时始终显示）
+  - 无背景、纯图标风格
+  - hover 时正确触发
+
+- **Code review issues 修复**
+  - race condition 修复（收藏状态切换）
+  - auth check 增强（收藏权限验证）
+  - optimistic UI 修复（收藏状态同步）
+
+- **收藏筛选触发修复**
+  - 筛选 tab 切换时正确触发数据获取
+  - FavoriteButton 与筛选 tab 分离
+
+### Performance
+
+- **26 files changed** (+9,303 insertions, -56 deletions)
+- 新增 1 个核心组件（FavoriteButton）
+- 新增 1 个数据库表（user_media_favorites）
+- 收藏功能全栈实现（前端 + 后端 + 数据库）
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（仅新增 PATCH /:id/favorite）
+- ✅ 收藏功能为增量功能，不影响现有媒体管理
+- ✅ 数据库迁移向后兼容
+- ✅ FavoriteButton 为可选组件，不影响现有 UI
+
 ## [1.8.2] - 2026-04-11
 
 ### Added
