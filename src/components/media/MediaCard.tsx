@@ -99,25 +99,6 @@ export function MediaCard({
         </div>
 
         <div className="flex items-center gap-1">
-          {onToggleFavorite && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className={cn(
-                "h-7 px-2 border-0",
-                record.is_favorite
-                  ? "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30"
-                  : "bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70"
-              )}
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleFavorite(record.id)
-              }}
-              title={record.is_favorite ? '取消收藏' : '收藏'}
-            >
-              <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
-            </Button>
-          )}
           <Button
             variant="secondary"
             size="sm"
@@ -164,6 +145,25 @@ export function MediaCard({
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
+          {onToggleFavorite && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className={cn(
+                "h-7 px-2 border-0",
+                record.is_favorite
+                  ? "bg-yellow-500 text-white hover:bg-yellow-600"
+                  : "bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70 opacity-0 group-hover:opacity-100"
+              )}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleFavorite(record.id)
+              }}
+              title={record.is_favorite ? '取消收藏' : '收藏'}
+            >
+              <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
+            </Button>
+          )}
         </div>
       </div>
 
