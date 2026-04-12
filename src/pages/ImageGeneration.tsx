@@ -136,11 +136,13 @@ export default function ImageGeneration() {
     }
   }
 
-  const updateTask = (index: number, updates: Partial<ImageTask>) => {
-    setTasks(prev => prev.map((task, i) => 
-      i === index ? { ...task, ...updates } : task
-    ))
-  }
+  const updateTask = useCallback((index: number, updates: Partial<ImageTask>) => {
+    setTasks(prev => {
+      const newTasks = [...prev]
+      newTasks[index] = { ...newTasks[index], ...updates }
+      return newTasks
+    })
+  }, [])
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
