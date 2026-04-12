@@ -17,6 +17,7 @@ export interface MediaRecord {
   task_id: string | null
   metadata: string | Record<string, unknown> | null
   is_deleted: boolean
+  is_favorite?: boolean
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -28,6 +29,7 @@ export interface ListMediaParams {
   page?: number
   limit?: number
   includeDeleted?: boolean
+  favorite?: boolean
 }
 
 export interface ListMediaResponse {
@@ -162,5 +164,17 @@ export async function uploadMediaFromUrl(
     type,
     source,
   })
+  return response.data
+}
+
+export async function toggleFavorite(mediaId: string): Promise<{
+  success: boolean
+  data: {
+    mediaId: string
+    isFavorite: boolean
+    action: 'added' | 'removed'
+  }
+}> {
+  const response = await client.patch(`/media/${mediaId}/favorite`)
   return response.data
 }
