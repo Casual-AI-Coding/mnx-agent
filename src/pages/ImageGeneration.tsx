@@ -817,9 +817,9 @@ export default function ImageGeneration() {
                               <p><span className="text-red-500/70">status_msg:</span> <span className="text-red-600">{tasks[currentIndex].responseError!.status_msg}</span></p>
                             )}
                             {tasks[currentIndex].responseError!.raw && (
-                              <p className="text-xs text-red-500/60 mt-2">
-                                <span className="font-medium">raw:</span> {JSON.stringify(tasks[currentIndex].responseError!.raw).slice(0, 100)}...
-                              </p>
+                              <div className="text-xs text-red-500/60 mt-2">
+                                <span className="font-medium">raw:</span> <pre className="whitespace-pre-wrap">{JSON.stringify(tasks[currentIndex].responseError!.raw, null, 2).slice(0, 200)}</pre>
+                              </div>
                             )}
                           </div>
                         </div>
