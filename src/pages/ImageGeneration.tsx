@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { services } from '@/themes/tokens'
-import ImageCarousel from '@/components/image/ImageCarousel'
+import { ImageCarousel } from '@/components/image/ImageCarousel'
 import { type ImageTask, type ImageTaskStatus } from '@/components/image/ImageTaskCard'
 
 // Animation variants
