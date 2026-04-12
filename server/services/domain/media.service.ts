@@ -22,6 +22,7 @@ export class MediaService implements IMediaService {
     return this.db.getMediaRecords({
       type: filter.type,
       source: filter.source,
+      search: filter.search,
       limit,
       offset,
       includeDeleted: filter.includeDeleted,

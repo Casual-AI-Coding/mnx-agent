@@ -140,14 +140,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track previous page to avoid unnecessary fetches
   const prevPageRef = useRef(pagination.page)
+  const prevSearchQueryRef = useRef(searchQuery)
 
   // Derived: filtered records based on search query
-  const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) return records
-    return records.filter((record) =>
-      (record.original_name || record.filename).toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }, [records, searchQuery])
+  const filteredRecords = records
 
   // Derived: image records for lightbox
   const imageRecords = useMemo(() => {
@@ -242,6 +238,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
       const response = await listMedia({
         type,
+        search: searchQuery.trim() || undefined,
         page: paginationRef.current.page,
         limit: paginationRef.current.limit,
         favorite: favoriteFilter ? true : undefined,
@@ -257,7 +254,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, favoriteFilter])
+  }, [activeTab, searchQuery, favoriteFilter])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -269,6 +266,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
       const response = await listMedia({
         type,
+        search: searchQuery.trim() || undefined,
         page,
         limit: 20,
         favorite: favoriteFilter ? true : undefined,
@@ -461,16 +459,18 @@ export function useMediaManagement(): UseMediaManagementReturn {
     if (!isInitialLoad) {
       const tabChanged = activeTab !== prevActiveTabRef.current
       const pageChanged = pagination.page !== prevPageRef.current
+      const searchChanged = searchQuery !== prevSearchQueryRef.current
       const favoriteChanged = favoriteFilter !== prevFavoriteFilterRef.current
       
-      if (tabChanged || pageChanged || favoriteChanged) {
+      if (tabChanged || pageChanged || searchChanged || favoriteChanged) {
         prevActiveTabRef.current = activeTab
         prevPageRef.current = pagination.page
+        prevSearchQueryRef.current = searchQuery
         prevFavoriteFilterRef.current = favoriteFilter
         fetchMedia(false)
       }
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilter])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilter])
 
   // Load timeline data when viewMode changes to timeline
   useEffect(() => {

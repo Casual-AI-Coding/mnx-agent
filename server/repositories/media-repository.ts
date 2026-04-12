@@ -29,6 +29,7 @@ function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
 export interface MediaListOptions {
   type?: string
   source?: string
+  search?: string
   limit?: number
   offset?: number
   includeDeleted?: boolean
@@ -68,7 +69,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId } = options
 
     let selectClause = 'm.*'
     let joinClause = ''
@@ -115,6 +116,15 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     if (source) {
       whereClause += whereClause ? ` AND m.source = $${paramIndex}` : `m.source = $${paramIndex}`
       params.push(source)
+      paramIndex++
+    }
+
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`
+      whereClause += whereClause 
+        ? ` AND (m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
+        : `(m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
+      params.push(searchTerm)
       paramIndex++
     }
 

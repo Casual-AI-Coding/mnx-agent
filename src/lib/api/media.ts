@@ -26,6 +26,7 @@ export interface MediaRecord {
 export interface ListMediaParams {
   type?: MediaType
   source?: MediaSource
+  search?: string
   page?: number
   limit?: number
   includeDeleted?: boolean

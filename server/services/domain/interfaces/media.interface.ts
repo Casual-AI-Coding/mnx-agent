@@ -12,6 +12,7 @@ import type { MediaRecord, CreateMediaRecord } from '../../../database/types.js'
 export interface MediaFilter {
   type?: string
   source?: string
+  search?: string
   limit?: number
   offset?: number
   includeDeleted?: boolean

@@ -432,6 +432,7 @@ export class DatabaseService {
   async getMediaRecords(options: {
     type?: string
     source?: string
+    search?: string
     limit: number
     offset: number
     includeDeleted?: boolean
