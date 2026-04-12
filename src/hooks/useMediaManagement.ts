@@ -465,6 +465,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       
       if (tabChanged || pageChanged || favoriteChanged) {
         prevActiveTabRef.current = activeTab
+        prevPageRef.current = pagination.page
         prevFavoriteFilterRef.current = favoriteFilter
         fetchMedia(false)
       }

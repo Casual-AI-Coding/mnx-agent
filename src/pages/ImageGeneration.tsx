@@ -610,7 +610,7 @@ export default function ImageGeneration() {
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    并发模式时每个请求生成1张图片，共 {parallelCount} 张
+                    并发模式时每个请求生成{numImages}张图片，共 {numImages * parallelCount} 张
                   </p>
                 </div>
 
