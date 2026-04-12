@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward, GripVertical } from 'lucide-react'
 import type { MediaRecord } from '@/types/media'
 
 interface AudioPlayerProps {
@@ -24,12 +24,16 @@ export function AudioPlayer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.8)
+  const [volume, setVolume] = useState(0.5)
   const [isMuted, setIsMuted] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [bufferedPercent, setBufferedPercent] = useState(0)
   const [isTitleOverflow, setIsTitleOverflow] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
   const titleRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<HTMLDivElement>(null)
+  const isDraggingRef = useRef(false)
+  const dragOffsetRef = useRef({ x: 0, y: 0 })
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
@@ -135,6 +139,40 @@ export function AudioPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showVolume])
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      const newX = e.clientX - dragOffsetRef.current.x
+      const newY = e.clientY - dragOffsetRef.current.y
+      const maxX = window.innerWidth - 400
+      const maxY = window.innerHeight - 80
+      setPosition({
+        x: Math.max(-maxX / 2, Math.min(maxX / 2, newX - window.innerWidth / 2)),
+        y: Math.max(-maxY, Math.min(0, newY - window.innerHeight + 40))
+      })
+    }
+    
+    const handleMouseUp = () => {
+      isDraggingRef.current = false
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    isDraggingRef.current = true
+    dragOffsetRef.current = {
+      x: e.clientX - position.x - window.innerWidth / 2,
+      y: e.clientY - position.y - window.innerHeight + 40
+    }
+  }
+
   const calculateSeekTime = useCallback((clientX: number): number => {
     if (!progressRef.current || duration === 0) return 0
     const rect = progressRef.current.getBoundingClientRect()
@@ -208,10 +246,20 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[400px]">
+    <div 
+      ref={playerRef}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border shadow-xl rounded-xl p-3 w-[400px] select-none"
+      style={{ transform: `translateX(calc(-50% + ${position.x}px)) translateY(${position.y}px)` }}
+    >
       <audio ref={audioRef} preload="auto" />
 
       <div className="flex items-center gap-1.5 mb-2">
+        <div 
+          onMouseDown={handleDragStart}
+          className="h-6 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-accent/30 rounded"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
         <button onClick={onPrev} disabled={!canGoPrev} className="h-6 w-6 flex items-center justify-center rounded hover:bg-accent/50 disabled:opacity-30">
           <SkipBack className="w-4 h-4" />
         </button>
@@ -237,8 +285,9 @@ export function AudioPlayer({
           </button>
           {showVolume && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border border-border rounded-lg shadow-lg" onClick={handleVolumeChange}>
-              <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer">
+              <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer relative">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${volume * 100}%` }} />
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">{Math.round(volume * 100)}</span>
               </div>
             </div>
           )}
