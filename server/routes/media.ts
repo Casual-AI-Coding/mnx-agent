@@ -92,7 +92,12 @@ router.patch('/:id/favorite', validateParams(mediaIdParamsSchema), asyncHandler(
     return
   }
 
-  const userId = req.user!.userId
+  const userId = req.user?.userId
+  if (!userId) {
+    errorResponse(res, 'Unauthorized', 401)
+    return
+  }
+
   const result = await db.toggleFavorite(userId, req.params.id)
 
   successResponse(res, {

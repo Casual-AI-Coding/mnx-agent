@@ -312,8 +312,26 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const existing = await this.findFavorite(userId, mediaId)
 
     if (!existing) {
-      await this.insertFavorite(userId, mediaId)
-      return { isFavorite: true, action: 'added' }
+      try {
+        await this.insertFavorite(userId, mediaId)
+        return { isFavorite: true, action: 'added' }
+      } catch (error: any) {
+        // Handle race condition - another concurrent request already inserted
+        // PostgreSQL unique constraint violation code: 23505
+        if (error.code === '23505') {
+          const raceExisting = await this.findFavorite(userId, mediaId)
+          if (raceExisting) {
+            // The other request created it, check its state
+            if (raceExisting.is_deleted) {
+              await this.updateFavorite(raceExisting.id, false)
+              return { isFavorite: true, action: 'added' }
+            }
+            // Already favorited by other request
+            return { isFavorite: true, action: 'added' }
+          }
+        }
+        throw error
+      }
     }
 
     if (existing.is_deleted) {

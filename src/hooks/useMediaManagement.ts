@@ -568,27 +568,54 @@ export function useMediaManagement(): UseMediaManagementReturn {
   }, [setRecords, setTimelineRecords])
 
   const handleToggleFavorite = useCallback(async (mediaId: string) => {
+    const currentFavorite = records.find(r => r.id === mediaId)?.is_favorite ?? false
+    const newFavorite = !currentFavorite
+
+    setRecords(prev => prev.map(item =>
+      item.id === mediaId
+        ? { ...item, is_favorite: newFavorite }
+        : item
+    ))
+
+    setTimelineRecords(prev => prev.map(item =>
+      item.id === mediaId
+        ? { ...item, is_favorite: newFavorite }
+        : item
+    ))
+
     try {
       const result = await toggleFavorite(mediaId)
-      
+
       setRecords(prev => prev.map(item =>
         item.id === mediaId
           ? { ...item, is_favorite: result.data.isFavorite }
           : item
       ))
-      
+
       setTimelineRecords(prev => prev.map(item =>
         item.id === mediaId
           ? { ...item, is_favorite: result.data.isFavorite }
           : item
       ))
-      
+
       toastSuccess(result.data.action === 'added' ? '已收藏' : '已取消收藏')
     } catch (error) {
+      setRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_favorite: currentFavorite }
+          : item
+      ))
+
+      setTimelineRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_favorite: currentFavorite }
+          : item
+      ))
+
       console.error('Toggle favorite failed:', error)
       toastError('操作失败，请重试')
     }
-  }, [])
+  }, [records])
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab)
