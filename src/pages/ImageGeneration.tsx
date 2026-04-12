@@ -745,6 +745,39 @@ export default function ImageGeneration() {
                       <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
                       <p className="text-sm text-muted-foreground mt-2">Batch {currentIndex + 1} 正在生成...</p>
                     </motion.div>
+                  ) : tasks.length > 0 && tasks[currentIndex]?.status === 'failed' ? (
+                    <motion.div
+                      key={`failed-${currentIndex}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center py-20"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+                        <X className="w-8 h-8 text-red-500" />
+                      </div>
+                      <p className="text-lg font-medium text-destructive">Batch {currentIndex + 1} 生成失败</p>
+                      <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/30 max-w-md">
+                        <p className="text-sm text-destructive/80 font-medium mb-2">错误信息：</p>
+                        <p className="text-sm text-destructive">{tasks[currentIndex]?.error || '未知错误'}</p>
+                      </div>
+                      {tasks[currentIndex]?.retryCount >= 3 && (
+                        <p className="mt-4 text-xs text-muted-foreground">已多次重试失败，建议检查参数或稍后再试</p>
+                      )}
+                      <button
+                        onClick={() => retryTask(currentIndex)}
+                        disabled={tasks[currentIndex]?.retryCount >= 3}
+                        className={cn(
+                          "mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                          tasks[currentIndex]?.retryCount >= 3
+                            ? "bg-muted text-muted-foreground cursor-not-allowed"
+                            : "bg-primary/10 text-primary hover:bg-primary/20"
+                        )}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2 inline" />
+                        重试生成
+                      </button>
+                    </motion.div>
                   ) : tasks.length > 0 && tasks[currentIndex]?.imageUrls ? (
                     <motion.div
                       key={`batch-${currentIndex}`}
