@@ -201,6 +201,7 @@ export default function ImageGeneration() {
         setIsGenerating(false)
       }
     } else {
+      setIsGenerating(true)
       const newTasks: ImageTask[] = Array.from({ length: parallelCount }, (_, i) => ({
         id: `${Date.now()}-${i}`,
         status: 'idle' as const,
@@ -260,6 +261,7 @@ export default function ImageGeneration() {
       })
 
       await Promise.allSettled(promises)
+      setIsGenerating(false)
     }
   }
 
@@ -918,7 +920,11 @@ export default function ImageGeneration() {
         open={lightboxOpen}
         close={() => setLightboxOpen(false)}
         index={lightboxIndex}
-        slides={generatedImages.map(url => ({ src: url }))}
+        slides={
+          tasks.length > 0 && tasks[currentIndex]?.imageUrls
+            ? tasks[currentIndex].imageUrls.map(url => ({ src: url }))
+            : generatedImages.map(url => ({ src: url }))
+        }
       />
     </motion.div>
   )
