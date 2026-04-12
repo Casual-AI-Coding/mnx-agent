@@ -113,18 +113,26 @@ export default function ImageGeneration() {
     }
   }, [])
 
-  const saveImageToMedia = async (imageUrl: string, title?: string, index?: number): Promise<void> => {
+  const saveImageToMedia = async (imageUrl: string, title?: string, batchIndex?: number, imageIndex?: number): Promise<void> => {
     try {
       let filename: string
       if (title && title.trim()) {
         const sanitizedTitle = title.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')
-        if (index !== undefined) {
-          filename = `${sanitizedTitle} (${index + 1}).png`
+        if (batchIndex !== undefined && imageIndex !== undefined) {
+          filename = `${sanitizedTitle} (${batchIndex + 1}-${imageIndex + 1}).png`
+        } else if (imageIndex !== undefined) {
+          filename = `${sanitizedTitle} (${imageIndex + 1}).png`
         } else {
           filename = `${sanitizedTitle}.png`
         }
       } else {
-        filename = `image_${Date.now()}.png`
+        if (batchIndex !== undefined && imageIndex !== undefined) {
+          filename = `image_${batchIndex + 1}-${imageIndex + 1}.png`
+        } else if (imageIndex !== undefined) {
+          filename = `image_${imageIndex + 1}.png`
+        } else {
+          filename = `image_${Date.now()}.png`
+        }
       }
       await uploadMediaFromUrl(
         imageUrl,
@@ -183,8 +191,8 @@ export default function ImageGeneration() {
         })
 
         if (urls.length > 0) {
-          for (const url of urls) {
-            await saveImageToMedia(url, imageTitle)
+          for (const [urlIndex, url] of urls.entries()) {
+            await saveImageToMedia(url, imageTitle, undefined, urlIndex)
           }
         }
       } catch (err) {
@@ -221,8 +229,8 @@ export default function ImageGeneration() {
             imageUrls: urls,
           })
 
-          for (const url of urls) {
-            await saveImageToMedia(url, imageTitle, index)
+          for (const [urlIndex, url] of urls.entries()) {
+            await saveImageToMedia(url, imageTitle, index, urlIndex)
           }
           addUsage('imageRequests', numImages)
           addItem({
@@ -277,8 +285,8 @@ export default function ImageGeneration() {
         imageUrls: urls,
       })
 
-      for (const url of urls) {
-        await saveImageToMedia(url, imageTitle, index)
+      for (const [urlIndex, url] of urls.entries()) {
+        await saveImageToMedia(url, imageTitle, index, urlIndex)
       }
     } catch (err) {
       updateTask(index, {
@@ -661,7 +669,7 @@ export default function ImageGeneration() {
                   <span className="text-sm font-medium text-foreground">{t('imageGeneration.results') || '生成结果'}</span>
                 </div>
                 {tasks.length > 0 ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                       disabled={currentIndex === 0}
@@ -672,10 +680,30 @@ export default function ImageGeneration() {
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-xs text-muted-foreground">
-                      Batch {currentIndex + 1} / {tasks.length}
-                      {tasks[currentIndex]?.imageUrls && ` (${tasks[currentIndex].imageUrls.length} 张)`}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {tasks.map((task, idx) => (
+                        <button
+                          key={task.id}
+                          onClick={() => setCurrentIndex(idx)}
+                          className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                            idx === currentIndex && "ring-2 ring-offset-2 ring-primary",
+                            task.status === 'idle' && "bg-muted border border-muted-foreground/30 text-muted-foreground",
+                            task.status === 'generating' && "bg-primary/20 border border-primary animate-pulse text-primary",
+                            task.status === 'completed' && "bg-green-500/20 border border-green-500 text-green-600",
+                            task.status === 'failed' && "bg-red-500/20 border border-red-500 text-red-600"
+                          )}
+                        >
+                          {task.status === 'generating' ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : task.status === 'failed' ? (
+                            <X className="w-3 h-3" />
+                          ) : (
+                            idx + 1
+                          )}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       onClick={() => setCurrentIndex(Math.min(tasks.length - 1, currentIndex + 1))}
                       disabled={currentIndex === tasks.length - 1}
@@ -695,9 +723,9 @@ export default function ImageGeneration() {
               {/* Results Content */}
               <div className="p-4">
                 <AnimatePresence mode="wait">
-                  {isGenerating ? (
+                  {tasks.length > 0 && tasks[currentIndex]?.status === 'generating' ? (
                     <motion.div
-                      key="loading"
+                      key={`loading-${currentIndex}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -713,7 +741,7 @@ export default function ImageGeneration() {
                         </div>
                       </div>
                       <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
-                      <p className="text-sm text-muted-foreground mt-2">{t('imageGeneration.pleaseWait') || '请稍候，AI正在绘制'}</p>
+                      <p className="text-sm text-muted-foreground mt-2">Batch {currentIndex + 1} 正在生成...</p>
                     </motion.div>
                   ) : tasks.length > 0 && tasks[currentIndex]?.imageUrls ? (
                     <motion.div
@@ -756,8 +784,8 @@ export default function ImageGeneration() {
                                   onClick={(e) => { 
                                     e.stopPropagation()
                                     handleDownload(url, imageTitle.trim() 
-                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')}_${currentIndex + 1}_${index + 1}.png`
-                                      : `image_batch${currentIndex + 1}_${index + 1}.png`)
+                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')} (${currentIndex + 1}-${index + 1}).png`
+                                      : `image_${currentIndex + 1}-${index + 1}.png`)
                                   }}
                                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
                                 >
@@ -815,8 +843,8 @@ export default function ImageGeneration() {
                                   onClick={(e) => { 
                                     e.stopPropagation()
                                     handleDownload(url, imageTitle.trim() 
-                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')}.png`
-                                      : `image_${Date.now()}_${index + 1}.png`)
+                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')} (${index + 1}).png`
+                                      : `image_${index + 1}.png`)
                                   }}
                                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
                                 >
