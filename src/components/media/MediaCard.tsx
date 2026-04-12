@@ -145,28 +145,32 @@ export function MediaCard({
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
-          {onToggleFavorite && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className={cn(
-                "h-7 px-2 border-0 transition-opacity duration-200",
-                record.is_favorite
-                  ? "bg-yellow-500 text-white hover:bg-yellow-600 opacity-100"
-                  : "bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70",
-                !record.is_favorite && !(showActions || isSelected) && "opacity-0"
-              )}
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleFavorite(record.id)
-              }}
-              title={record.is_favorite ? '取消收藏' : '收藏'}
-            >
-              <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
-            </Button>
-          )}
         </div>
       </div>
+
+      {onToggleFavorite && (
+        <div
+          className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
+            record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite(record.id)
+          }}
+        >
+          <div
+            className={cn(
+              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer',
+              record.is_favorite
+                ? 'bg-yellow-500 text-white'
+                : 'bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70'
+            )}
+            title={record.is_favorite ? '取消收藏' : '收藏'}
+          >
+            <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
+          </div>
+        </div>
+      )}
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/80 via-foreground/50 to-transparent pt-12 pb-3 px-3">
         <div className="flex items-end justify-between gap-2">
