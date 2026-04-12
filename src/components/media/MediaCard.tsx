@@ -78,7 +78,7 @@ export function MediaCard({
       )}
 
 <div
-        className={`absolute top-2 left-2 right-2 z-10 flex items-center justify-between transition-opacity duration-200 ${
+        className={`absolute top-2 left-2 right-10 z-10 flex items-center justify-between transition-opacity duration-200 ${
           showActions || isSelected ? 'opacity-100' : 'opacity-0'
         }`}
       >
