@@ -322,6 +322,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         }))
       }
 
+      setDeleteDialog({ isOpen: false, record: null })
       toastSuccess('删除成功')
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败')

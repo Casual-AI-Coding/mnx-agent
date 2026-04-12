@@ -33,19 +33,34 @@ export interface DialogProps extends React.HTMLAttributes<HTMLDivElement>, Varia
 
 const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
   ({ className, size, open, onClose, title, description, children, ...props }, ref) => {
-    if (!open) return null
+    const [isVisible, setIsVisible] = React.useState(open)
+    const [animationState, setAnimationState] = React.useState<'open' | 'closed'>(open ? 'open' : 'closed')
+
+    React.useEffect(() => {
+      if (open) {
+        setIsVisible(true)
+        setAnimationState('open')
+      } else if (isVisible) {
+        setAnimationState('closed')
+        // Wait for animation to complete before hiding
+        const timer = setTimeout(() => setIsVisible(false), 200)
+        return () => clearTimeout(timer)
+      }
+    }, [open, isVisible])
+
+    if (!isVisible) return null
 
     return (
       <div className="relative">
         <div 
           className={dialogOverlayVariants()} 
           onClick={onClose}
-          data-state={open ? 'open' : 'closed'}
+          data-state={animationState}
         />
         <div
           ref={ref}
           className={cn(dialogContentVariants({ size, className }))}
-          data-state={open ? 'open' : 'closed'}
+          data-state={animationState}
           {...props}
         >
           {title && (
