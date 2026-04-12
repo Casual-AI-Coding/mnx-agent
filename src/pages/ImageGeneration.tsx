@@ -256,14 +256,14 @@ export default function ImageGeneration() {
     }
   }
 
-  const handleDownload = async (url: string, index: number) => {
+  const handleDownload = async (url: string, filename: string) => {
     try {
       const response = await fetch(url)
       const blob = await response.blob()
       const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = blobUrl
-      a.download = `image-${Date.now()}-${index + 1}.png`
+      a.download = filename
       a.click()
       URL.revokeObjectURL(blobUrl)
     } catch {
@@ -686,7 +686,12 @@ export default function ImageGeneration() {
                                   预览
                                 </button>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDownload(url, index); }}
+                                  onClick={(e) => { 
+                                    e.stopPropagation()
+                                    handleDownload(url, imageTitle.trim() 
+                                      ? `${imageTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')}.png`
+                                      : `image_${Date.now()}_${index + 1}.png`)
+                                  }}
                                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-foreground/10 hover:bg-foreground/20 text-foreground text-sm font-medium transition-colors backdrop-blur-sm"
                                 >
                                   <Download className="w-4 h-4" />
