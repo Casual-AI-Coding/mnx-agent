@@ -24,7 +24,7 @@ export function AudioPlayer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.5)
+  const [volume, setVolume] = useState(0.25)
   const [isMuted, setIsMuted] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [bufferedPercent, setBufferedPercent] = useState(0)
@@ -284,10 +284,10 @@ export function AudioPlayer({
             {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-muted-foreground" /> : <Volume2 className="w-4 h-4" />}
           </button>
           {showVolume && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-popover border border-border rounded-lg shadow-lg" onClick={handleVolumeChange}>
-              <div className="w-20 h-1.5 bg-muted rounded-full cursor-pointer relative">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-popover border border-border rounded-lg shadow-lg flex items-center justify-center gap-2 px-3 py-2 text-[10px] text-muted-foreground">
+              {Math.round(volume * 100)}
+              <div className="w-28 h-1.5 bg-muted rounded-full cursor-pointer" onClick={handleVolumeChange}>
                 <div className="h-full bg-primary rounded-full" style={{ width: `${volume * 100}%` }} />
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">{Math.round(volume * 100)}</span>
               </div>
             </div>
           )}
