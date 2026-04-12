@@ -112,11 +112,22 @@ export default function ImageGeneration() {
     }
   }, [])
 
-  const saveImageToMedia = async (imageUrl: string): Promise<void> => {
+  const saveImageToMedia = async (imageUrl: string, title?: string, index?: number): Promise<void> => {
     try {
+      let filename: string
+      if (title && title.trim()) {
+        const sanitizedTitle = title.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')
+        if (index !== undefined) {
+          filename = `${sanitizedTitle} (${index + 1}).png`
+        } else {
+          filename = `${sanitizedTitle}.png`
+        }
+      } else {
+        filename = `image_${Date.now()}.png`
+      }
       await uploadMediaFromUrl(
         imageUrl,
-        `image_${Date.now()}.png`,
+        filename,
         'image',
         'image_generation'
       )
