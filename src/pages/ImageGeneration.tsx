@@ -202,11 +202,19 @@ export default function ImageGeneration() {
       }
     } else {
       setIsGenerating(true)
+      const requestParams = {
+        model,
+        prompt: prompt.trim(),
+        n: numImages as number,
+        aspect_ratio: aspectRatio,
+        seed,
+      }
       const newTasks: ImageTask[] = Array.from({ length: parallelCount }, (_, i) => ({
         id: `${Date.now()}-${i}`,
         status: 'idle' as const,
         progress: 0,
         retryCount: 0,
+        requestParams,
       }))
       setTasks(newTasks)
       setCurrentIndex(0)
@@ -772,6 +780,18 @@ export default function ImageGeneration() {
                         <p className="text-sm text-destructive/80 font-medium mb-2">错误信息：</p>
                         <p className="text-sm text-destructive">{tasks[currentIndex]?.error || '未知错误'}</p>
                       </div>
+                      {tasks[currentIndex]?.requestParams && (
+                        <div className="mt-4 p-4 rounded-lg bg-muted/30 border border-border/50 max-w-lg w-full">
+                          <p className="text-sm text-muted-foreground font-medium mb-3">请求参数：</p>
+                          <div className="space-y-1 text-xs">
+                            <p><span className="text-muted-foreground">model:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.model}</span></p>
+                            <p><span className="text-muted-foreground">prompt:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.prompt.slice(0, 50)}{tasks[currentIndex].requestParams!.prompt.length > 50 ? '...' : ''}</span></p>
+                            <p><span className="text-muted-foreground">n:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.n}</span></p>
+                            <p><span className="text-muted-foreground">aspect_ratio:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.aspect_ratio}</span></p>
+                            {tasks[currentIndex].requestParams!.seed && <p><span className="text-muted-foreground">seed:</span> <span className="text-foreground">{tasks[currentIndex].requestParams!.seed}</span></p>}
+                          </div>
+                        </div>
+                      )}
                       {tasks[currentIndex]?.retryCount >= 3 && (
                         <p className="mt-4 text-xs text-muted-foreground">已多次重试失败，建议检查参数或稍后再试</p>
                       )}

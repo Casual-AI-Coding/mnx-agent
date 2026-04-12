@@ -7,4 +7,11 @@ export interface ImageTask {
   imageUrls?: string[]
   error?: string
   retryCount: number
+  requestParams?: {
+    model: string
+    prompt: string
+    n: number
+    aspect_ratio: string
+    seed?: number
+  }
 }
