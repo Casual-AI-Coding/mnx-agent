@@ -150,7 +150,7 @@ export function MediaCard({
 
       {onToggleFavorite && (
         <div
-          className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
+          className={`absolute top-2 right-10 z-20 transition-opacity duration-200 ${
             record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={(e) => {
