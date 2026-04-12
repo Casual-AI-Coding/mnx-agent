@@ -7,6 +7,7 @@ import {
   batchDeleteMedia,
   batchDownloadMedia,
   updateMedia,
+  toggleFavorite,
 } from '@/lib/api/media'
 import { toastSuccess } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
@@ -48,6 +49,7 @@ export interface UseMediaManagementReturn {
   setPageInput: (input: string) => void
   audioPreviewRecord: MediaRecord | null
   setAudioPreviewRecord: (record: MediaRecord | null) => void
+  favoriteFilter: boolean
 
   // Timeline state
   timelineRecords: MediaRecord[]
@@ -79,6 +81,8 @@ export interface UseMediaManagementReturn {
   handlePreview: (record: MediaRecord) => void
   handlePageChange: (page: number) => void
   handleRename: (id: string, newName: string) => Promise<void>
+  handleToggleFavorite: (mediaId: string) => Promise<void>
+  handleTabChange: (tab: string) => void
 }
 
 export function useMediaManagement(): UseMediaManagementReturn {
@@ -96,6 +100,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
+  const [favoriteFilter, setFavoriteFilter] = useState(false)
 
   // Ref to track pagination values (to avoid dependency issues with setPagination)
   const paginationRef = useRef(pagination)
@@ -237,6 +242,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         type,
         page: paginationRef.current.page,
         limit: paginationRef.current.limit,
+        favorite: favoriteFilter ? true : undefined,
       })
 
       if (response.success) {
@@ -249,7 +255,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab])
+  }, [activeTab, favoriteFilter])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -262,6 +268,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         type,
         page,
         limit: 20,
+        favorite: favoriteFilter ? true : undefined,
       })
 
       if (response.success) {
@@ -279,7 +286,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, isLoadingMore])
+  }, [activeTab, isLoadingMore, favoriteFilter])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {
@@ -560,6 +567,38 @@ export function useMediaManagement(): UseMediaManagementReturn {
     ))
   }, [setRecords, setTimelineRecords])
 
+  const handleToggleFavorite = useCallback(async (mediaId: string) => {
+    try {
+      const result = await toggleFavorite(mediaId)
+      
+      setRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_favorite: result.data.isFavorite }
+          : item
+      ))
+      
+      setTimelineRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_favorite: result.data.isFavorite }
+          : item
+      ))
+      
+      toastSuccess(result.data.action === 'added' ? '已收藏' : '已取消收藏')
+    } catch (error) {
+      console.error('Toggle favorite failed:', error)
+    }
+  }, [])
+
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab)
+    if (tab === 'favorite') {
+      setFavoriteFilter(true)
+    } else {
+      setFavoriteFilter(false)
+    }
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }, [])
+
   return {
     // State
     records,
@@ -592,6 +631,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setPageInput,
     audioPreviewRecord,
     setAudioPreviewRecord,
+    favoriteFilter,
 
     // Timeline state
     timelineRecords,
@@ -623,5 +663,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     handlePreview,
     handlePageChange,
     handleRename,
+    handleToggleFavorite,
+    handleTabChange,
   }
 }
