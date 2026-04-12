@@ -261,15 +261,21 @@ export default function ImageGeneration() {
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : '生成失败'
           const errorData = err as { status_code?: number; status_msg?: string; raw?: unknown }
+          
+          const apiResponse = {
+            success: false,
+            error: {
+              status_code: errorData.status_code,
+              status_msg: errorData.status_msg || errorMsg,
+            },
+            raw: errorData.raw,
+          }
+          
           updateTask(index, {
             status: 'failed',
             progress: 100,
             error: errorMsg,
-            responseError: {
-              status_code: errorData.status_code,
-              status_msg: errorData.status_msg || errorMsg,
-              raw: errorData.raw,
-            },
+            apiResponse,
           })
           return { success: false, index }
         }
@@ -308,16 +314,22 @@ export default function ImageGeneration() {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '生成失败'
       const errorData = err as { status_code?: number; status_msg?: string; raw?: unknown }
+      
+      const apiResponse = {
+        success: false,
+        error: {
+          status_code: errorData.status_code,
+          status_msg: errorData.status_msg || errorMsg,
+        },
+        raw: errorData.raw,
+      }
+      
       updateTask(index, {
         status: 'failed',
         progress: 100,
         error: errorMsg,
         retryCount: task.retryCount + 1,
-        responseError: {
-          status_code: errorData.status_code,
-          status_msg: errorData.status_msg || errorMsg,
-          raw: errorData.raw,
-        },
+        apiResponse,
       })
     }
   }, [tasks, model, prompt, numImages, aspectRatio, seed, imageTitle, updateTask])
@@ -806,19 +818,31 @@ export default function ImageGeneration() {
                           </div>
                         </div>
                       )}
-                      {tasks[currentIndex]?.responseError && (
+                      {tasks[currentIndex]?.apiResponse && (
                         <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 max-w-lg w-full">
-                          <p className="text-sm text-red-500/80 font-medium mb-3">响应错误：</p>
+                          <p className="text-sm text-red-500/80 font-medium mb-3">API 响应（后端出参）：</p>
                           <div className="space-y-1 text-xs">
-                            {tasks[currentIndex].responseError!.status_code && (
-                              <p><span className="text-red-500/70">status_code:</span> <span className="text-red-600">{tasks[currentIndex].responseError!.status_code}</span></p>
+                            <p><span className="text-red-500/70">success:</span> <span className="text-red-600">{String(tasks[currentIndex].apiResponse!.success)}</span></p>
+                            {tasks[currentIndex].apiResponse!.error?.status_code !== undefined && (
+                              <p><span className="text-red-500/70">error.status_code:</span> <span className="text-red-600">{tasks[currentIndex].apiResponse!.error!.status_code}</span></p>
                             )}
-                            {tasks[currentIndex].responseError!.status_msg && (
-                              <p><span className="text-red-500/70">status_msg:</span> <span className="text-red-600">{tasks[currentIndex].responseError!.status_msg}</span></p>
+                            {tasks[currentIndex].apiResponse!.error?.status_msg && (
+                              <p><span className="text-red-500/70">error.status_msg:</span> <span className="text-red-600">{tasks[currentIndex].apiResponse!.error!.status_msg}</span></p>
                             )}
-                            {tasks[currentIndex].responseError!.raw !== undefined && tasks[currentIndex].responseError!.raw !== null && (
-                              <div className="text-xs text-red-500/60 mt-2">
-                                <span className="font-medium">raw:</span> <pre className="whitespace-pre-wrap">{JSON.stringify(tasks[currentIndex].responseError!.raw, null, 2).slice(0, 200)}</pre>
+                            {tasks[currentIndex].apiResponse!.data && (
+                              <>
+                                {tasks[currentIndex].apiResponse!.data!.created !== undefined && (
+                                  <p><span className="text-red-500/70">data.created:</span> <span className="text-red-600">{tasks[currentIndex].apiResponse!.data!.created}</span></p>
+                                )}
+                                {tasks[currentIndex].apiResponse!.data!.image_urls !== undefined && (
+                                  <p><span className="text-red-500/70">data.image_urls:</span> <span className="text-red-600">{tasks[currentIndex].apiResponse!.data!.image_urls!.length} 个 URL</span></p>
+                                )}
+                              </>
+                            )}
+                            {(tasks[currentIndex].apiResponse!.raw !== undefined && tasks[currentIndex].apiResponse!.raw !== null) && (
+                              <div className="text-xs text-red-500/60 mt-2 max-h-40 overflow-auto">
+                                <span className="font-medium">完整响应 (raw):</span>
+                                <pre className="whitespace-pre-wrap mt-1">{JSON.stringify(tasks[currentIndex].apiResponse!.raw, null, 2).slice(0, 500)}</pre>
                               </div>
                             )}
                           </div>
