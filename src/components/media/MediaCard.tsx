@@ -150,10 +150,11 @@ export function MediaCard({
               variant="secondary"
               size="sm"
               className={cn(
-                "h-7 px-2 border-0",
+                "h-7 px-2 border-0 transition-opacity duration-200",
                 record.is_favorite
-                  ? "bg-yellow-500 text-white hover:bg-yellow-600"
-                  : "bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70 opacity-0 group-hover:opacity-100"
+                  ? "bg-yellow-500 text-white hover:bg-yellow-600 opacity-100"
+                  : "bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70",
+                !record.is_favorite && !(showActions || isSelected) && "opacity-0"
               )}
               onClick={(e) => {
                 e.stopPropagation()
