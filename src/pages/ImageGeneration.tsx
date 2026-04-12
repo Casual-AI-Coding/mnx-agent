@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
@@ -77,6 +78,7 @@ export default function ImageGeneration() {
   const [tasks, setTasks] = useState<ImageTask[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [parallelCount, setParallelCount] = useState(1)
+  const [imageTitle, setImageTitle] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
@@ -185,7 +187,7 @@ export default function ImageGeneration() {
 
         if (urls.length > 0) {
           for (const url of urls) {
-            await saveImageToMedia(url)
+            await saveImageToMedia(url, imageTitle)
           }
         }
       } catch (err) {
@@ -223,7 +225,7 @@ export default function ImageGeneration() {
             imageUrl: url,
           })
 
-          await saveImageToMedia(url, undefined, index)
+          await saveImageToMedia(url, imageTitle, index)
           addUsage('imageRequests', 1)
           addItem({
             type: 'image',
@@ -354,6 +356,17 @@ export default function ImageGeneration() {
                     </button>
                   ))}
                 </div>
+
+                {/* 标题输入 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">图片标题（可选，用于保存文件命名）</label>
+                  <Input
+                    value={imageTitle}
+                    onChange={(e) => setImageTitle(e.target.value)}
+                    placeholder="输入标题名称..."
+                    className="bg-background/50 border-border"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -480,6 +493,33 @@ export default function ImageGeneration() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* 并发生成数量 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">并发生成数量</label>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => !isGenerating && tasks.length === 0 && setParallelCount(n)}
+                        disabled={isGenerating || tasks.length > 0}
+                        className={cn(
+                          "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
+                          parallelCount === n
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
+                          (isGenerating || tasks.length > 0) && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    并发模式时每个请求生成1张图片，共 {parallelCount} 张
+                  </p>
                 </div>
 
                 {/* Advanced Settings Toggle */}
