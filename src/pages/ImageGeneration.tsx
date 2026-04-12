@@ -648,7 +648,7 @@ export default function ImageGeneration() {
                       <p className="mt-8 text-lg font-medium text-foreground">{t('imageGeneration.creating') || '正在创造...'}</p>
                       <p className="text-sm text-muted-foreground mt-2">{t('imageGeneration.pleaseWait') || '请稍候，AI正在绘制'}</p>
                     </motion.div>
-                  ) : generatedImages.length > 0 ? (
+                  ) : generatedImages.length > 0 && parallelCount === 1 ? (
                     <motion.div
                       key="results"
                       initial={{ opacity: 0 }}
@@ -737,6 +737,23 @@ export default function ImageGeneration() {
           </div>
         </motion.div>
       </div>
+
+      {/* 并发结果轮播区 */}
+      {tasks.length > 0 && (
+        <motion.div variants={itemVariants} className="xl:col-span-7">
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl p-6">
+              <ImageCarousel
+                tasks={tasks}
+                currentIndex={currentIndex}
+                onPrev={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                onNext={() => setCurrentIndex(Math.min(tasks.length - 1, currentIndex + 1))}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* API Reference */}
       <motion.div variants={itemVariants}>
