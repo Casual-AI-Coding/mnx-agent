@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0] - 2026-04-12
+
+### Added
+
+**Music Generation UI Enhancements - 音乐生成界面增强**
+
+- **歌曲标题输入** - 支持自定义生成音乐文件名
+  - `src/pages/MusicGeneration.tsx` (+32/-4) - 新增歌曲标题输入框
+  - 自动命名格式：`{标题}.mp3` 或 `{标题} (序号).mp3`（并行生成时）
+  - 未填写时保留原有命名逻辑（`music_{timestamp}.mp3`）
+
+### Changed
+
+- **音乐生成布局优化** - UI 布局和交互改进
+  - `src/pages/MusicGeneration.tsx` - 整体布局重构
+  - 生成控制区域更紧凑，操作按钮位置优化
+  - 改进用户生成流程体验
+
+- **国际化更新** - 翻译条目补充
+  - `src/i18n/locales/en.json` (+16/-0) - 英文翻译补充
+  - `src/i18n/locales/zh.json` (+16/-0) - 中文翻译补充
+
+### Fixed
+
+- **Dialog 关闭动画** - 平滑淡出过渡效果
+  - `src/components/ui/Dialog.tsx` (+18/-3) - 动画状态管理
+  - 关闭时等待 200ms 动画完成后再隐藏
+  - 解决 Dialog 立即消失的视觉不连贯问题
+
+- **媒体删除状态清理** - 删除成功后重置对话框状态
+  - `src/hooks/useMediaManagement.ts` (+1/-0) - 删除成功后清理状态
+  - 防止删除确认对话框残留状态
+
+### Performance
+
+- **6 files changed** (+383 insertions, -257 deletions)
+- 音乐生成页面重构（布局优化 + 新功能）
+- Dialog 组件动画增强
+- 删除流程状态清理
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 音乐生成参数向后兼容（歌曲标题为可选输入）
+- ✅ Dialog 动画为纯前端增强，不影响功能
+- ✅ 删除状态清理为内部逻辑优化
+
 ## [1.8.3] - 2026-04-12
 
 ### Added
