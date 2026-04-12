@@ -150,7 +150,7 @@ export function MediaCard({
 
       {onToggleFavorite && (
         <div
-          className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
+          className={`absolute top-2 right-12 z-20 transition-opacity duration-200 ${
             record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={(e) => {
@@ -159,14 +159,14 @@ export function MediaCard({
           }}
         >
           <div className={cn(
-            'w-7 h-7 rounded-full flex items-center justify-center cursor-pointer',
+            'w-8 h-8 rounded-full flex items-center justify-center cursor-pointer',
             record.is_favorite
               ? 'text-yellow-500'
               : 'text-foreground/70 hover:text-yellow-500'
           )}
             title={record.is_favorite ? '取消收藏' : '收藏'}
           >
-            <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
+            <Star className={cn('w-5 h-5', record.is_favorite && 'fill-current')} />
           </div>
         </div>
       )}
