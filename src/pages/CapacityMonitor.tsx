@@ -163,7 +163,23 @@ export default function CapacityMonitor() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {modelRemains
             .sort((a, b) => {
-              const getPriority = (name: string) => {
+              // Priority by quota status: has remaining (0) > exhausted (1) > 0/0 (2)
+              const getQuotaPriority = (model: { current_interval_total_count: number; current_interval_usage_count: number }) => {
+                const total = model.current_interval_total_count
+                const remaining = model.current_interval_usage_count
+                // 0/0 → lowest priority
+                if (total === 0 && remaining === 0) return 2
+                // x/x (exhausted) → middle priority
+                if (total > 0 && remaining === 0) return 1
+                // has remaining → highest priority
+                return 0
+              }
+              
+              const quotaDiff = getQuotaPriority(a) - getQuotaPriority(b)
+              if (quotaDiff !== 0) return quotaDiff
+              
+              // Secondary: sort by model name priority
+              const getModelPriority = (name: string) => {
                 const lower = name.toLowerCase()
                 if (lower.includes('minimax')) return 0
                 if (lower.includes('speech')) return 1
@@ -175,7 +191,7 @@ export default function CapacityMonitor() {
                 if (lower.includes('text')) return 0
                 return 99
               }
-              return getPriority(a.model_name) - getPriority(b.model_name)
+              return getModelPriority(a.model_name) - getModelPriority(b.model_name)
             })
             .map((model) => {
               const total = model.current_interval_total_count
@@ -183,6 +199,8 @@ export default function CapacityMonitor() {
               const used = total - remaining
               const percentage = total > 0 ? Math.round((used / total) * 100) : 0
               const statusColor = percentage < 50 ? status.success.bg : percentage < 80 ? status.warning.bg : status.error.bg
+              const isZeroQuota = total === 0 && remaining === 0
+              const isExhausted = total > 0 && remaining === 0
 
               return (
                 <motion.div
@@ -191,7 +209,10 @@ export default function CapacityMonitor() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="h-full">
+                  <Card className={cn(
+                    'h-full',
+                    isZeroQuota && 'opacity-40 backdrop-blur-[2px] bg-card/20 border-dashed saturate-50'
+                  )}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2.5">
@@ -205,8 +226,12 @@ export default function CapacityMonitor() {
                             <p className="text-xs text-muted-foreground/50">{model.model_name}</p>
                           </div>
                         </div>
-                        <Badge variant={percentage < 80 ? 'default' : 'destructive'}>
-                          {percentage}%
+                        <Badge variant={
+                          isZeroQuota ? 'outline' : 
+                          isExhausted ? 'destructive' : 
+                          percentage < 80 ? 'default' : 'destructive'
+                        }>
+                          {isZeroQuota ? 'N/A' : `${percentage}%`}
                         </Badge>
                       </div>
 
@@ -231,14 +256,18 @@ export default function CapacityMonitor() {
                         </div>
 
                         <div className="pt-1.5">
-                          <div className="h-1.5 bg-card/secondary rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percentage}%` }}
-                              transition={{ duration: 0.5, delay: 0.2 }}
-                              className={`h-full ${statusColor} transition-colors`}
-                            />
-                          </div>
+                          {isZeroQuota ? (
+                            <div className="h-1.5 bg-muted/30 rounded-full" />
+                          ) : (
+                            <div className="h-1.5 bg-card/secondary rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                transition={{ duration: 0.5, delay: 0.2 }}
+                                className={`h-full ${statusColor} transition-colors`}
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between pt-1.5 text-xs text-muted-foreground/50">
