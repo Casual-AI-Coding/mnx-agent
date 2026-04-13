@@ -519,6 +519,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track previous activeTab and page to detect changes
   const prevActiveTabRef = useRef(activeTab)
+  const prevPageRef = useRef(pagination.page)
+  const prevSearchQueryRef = useRef(searchQuery)
+  const prevFavoriteFiltersRef = useRef(favoriteFilters)
+  const prevPublicFiltersRef = useRef(publicFilters)
 
   // Initial fetch and refetch on tab/page changes only (filters/search need manual trigger)
   useEffect(() => {
