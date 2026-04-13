@@ -8,6 +8,8 @@ import {
   batchDownloadMedia,
   updateMedia,
   toggleFavorite,
+  togglePublic,
+  batchTogglePublic,
 } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
@@ -51,6 +53,10 @@ export interface UseMediaManagementReturn {
   setAudioPreviewRecord: (record: MediaRecord | null) => void
   favoriteFilter: boolean
   toggleFavoriteFilter: () => void
+  isPublicFilter: boolean | undefined
+  setIsPublicFilter: (filter: boolean | undefined) => void
+  handleTogglePublic: (mediaId: string) => Promise<void>
+  handleBatchTogglePublic: (ids: string[], isPublic: boolean) => Promise<{ success: boolean; data: Array<{ id: string; success: boolean; data?: import('@/lib/api/media').MediaRecord; error?: string }> }>
 
   // Timeline state
   timelineRecords: MediaRecord[]
@@ -102,6 +108,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [favoriteFilter, setFavoriteFilter] = useState(false)
+  const [isPublicFilter, setIsPublicFilter] = useState<boolean | undefined>()
 
   // Ref to track pagination values (to avoid dependency issues with setPagination)
   const paginationRef = useRef(pagination)
@@ -592,6 +599,87 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [records])
 
+  const handleTogglePublic = useCallback(async (mediaId: string) => {
+    const currentPublic = records.find(r => r.id === mediaId)?.is_public ?? false
+    const newPublic = !currentPublic
+
+    setRecords(prev => prev.map(item =>
+      item.id === mediaId
+        ? { ...item, is_public: newPublic }
+        : item
+    ))
+
+    setTimelineRecords(prev => prev.map(item =>
+      item.id === mediaId
+        ? { ...item, is_public: newPublic }
+        : item
+    ))
+
+    try {
+      const result = await togglePublic(mediaId, newPublic)
+
+      setRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_public: result.data.is_public }
+          : item
+      ))
+
+      setTimelineRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_public: result.data.is_public }
+          : item
+      ))
+
+      toastSuccess(newPublic ? '已设为公开' : '已设为私密')
+    } catch (error) {
+      setRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_public: currentPublic }
+          : item
+      ))
+
+      setTimelineRecords(prev => prev.map(item =>
+        item.id === mediaId
+          ? { ...item, is_public: currentPublic }
+          : item
+      ))
+
+      console.error('Toggle public failed:', error)
+      toastError('操作失败，请重试')
+    }
+  }, [records])
+
+  const handleBatchTogglePublic = useCallback(async (ids: string[], isPublic: boolean) => {
+    try {
+      const result = await batchTogglePublic(ids, isPublic)
+
+      const successIds = result.data.filter(r => r.success).map(r => r.id)
+
+      setRecords(prev => prev.map(item =>
+        successIds.includes(item.id)
+          ? { ...item, is_public: isPublic }
+          : item
+      ))
+
+      setTimelineRecords(prev => prev.map(item =>
+        successIds.includes(item.id)
+          ? { ...item, is_public: isPublic }
+          : item
+      ))
+
+      const successCount = successIds.length
+      toastSuccess(
+        isPublic ? `已设为公开 (${successCount}/${ids.length})` : `已设为私密 (${successCount}/${ids.length})`
+      )
+
+      return result
+    } catch (error) {
+      console.error('Batch toggle public failed:', error)
+      toastError('批量操作失败，请重试')
+      throw error
+    }
+  }, [])
+
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab)
     setPagination(prev => ({ ...prev, page: 1 }))
@@ -636,6 +724,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setAudioPreviewRecord,
 favoriteFilter,
     toggleFavoriteFilter,
+    isPublicFilter,
+    setIsPublicFilter,
+    handleTogglePublic,
+    handleBatchTogglePublic,
 
     // Timeline state
     timelineRecords,

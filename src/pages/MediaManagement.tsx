@@ -14,9 +14,12 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MEDIA_TABS } from '@/lib/constants/media'
 import { formatDateHeader, getDateKey } from '@/lib/utils/media'
+import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 
 export default function MediaManagement() {
+  const currentUser = useAuthStore((state) => state.user)
+
   const {
     records,
     pagination,
@@ -63,6 +66,7 @@ export default function MediaManagement() {
     handlePageChange,
     handleRename,
     handleToggleFavorite,
+    handleTogglePublic,
     handleTabChange,
     favoriteFilter,
     toggleFavoriteFilter,
@@ -260,6 +264,8 @@ export default function MediaManagement() {
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
                 onRename={handleRename}
                 onToggleFavorite={handleToggleFavorite}
+                onTogglePublic={handleTogglePublic}
+                currentUserId={currentUser?.id}
               />
             )}
           </div>

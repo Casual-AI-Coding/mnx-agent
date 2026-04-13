@@ -15,6 +15,7 @@ export interface MediaRecord {
   is_deleted: boolean
   is_public?: boolean
   is_favorite?: boolean
+  owner_id?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null

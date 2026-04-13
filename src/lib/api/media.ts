@@ -19,6 +19,7 @@ export interface MediaRecord {
   is_deleted: boolean
   is_public?: boolean
   is_favorite?: boolean
+  owner_id?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -32,6 +33,7 @@ export interface ListMediaParams {
   limit?: number
   includeDeleted?: boolean
   favorite?: boolean
+  isPublic?: boolean
 }
 
 export interface ListMediaResponse {
@@ -178,5 +180,21 @@ export async function toggleFavorite(mediaId: string): Promise<{
   }
 }> {
   const response = await client.patch(`/media/${mediaId}/favorite`)
+  return response.data
+}
+
+export async function togglePublic(id: string, isPublic: boolean): Promise<{
+  success: boolean
+  data: MediaRecord
+}> {
+  const response = await client.patch(`/media/${id}/public`, { isPublic })
+  return response.data
+}
+
+export async function batchTogglePublic(ids: string[], isPublic: boolean): Promise<{
+  success: boolean
+  data: Array<{ id: string; success: boolean; data?: MediaRecord; error?: string }>
+}> {
+  const response = await client.post('/media/batch/public', { ids, isPublic })
   return response.data
 }

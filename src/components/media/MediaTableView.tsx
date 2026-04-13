@@ -7,6 +7,7 @@ import { TYPE_VARIANTS, TYPE_LABELS, SOURCE_LABELS } from '@/lib/constants/media
 import { formatFileSize, formatDate, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
 import { FavoriteButton } from './FavoriteButton'
+import { PublicButton } from './PublicButton'
 import { updateMedia } from '@/lib/api/media'
 import type { MediaRecord } from '@/types/media'
 
@@ -21,6 +22,8 @@ interface MediaTableViewProps {
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePublic?: (mediaId: string) => void
+  currentUserId?: string
 }
 
 export function MediaTableView({
@@ -34,6 +37,8 @@ export function MediaTableView({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePublic,
+  currentUserId,
 }: MediaTableViewProps) {
   const isAllSelected = selectedIds.size === records.length && records.length > 0
   const isIndeterminate = selectedIds.size > 0 && selectedIds.size < records.length
@@ -101,6 +106,7 @@ export function MediaTableView({
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">文件名</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">类型</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">来源</th>
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">状态</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">大小</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">创建时间</th>
             <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
@@ -203,6 +209,15 @@ export function MediaTableView({
               </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {record.source ? SOURCE_LABELS[record.source] || record.source : '-'}
+              </td>
+              <td className="px-4 py-3 text-foreground">
+                <PublicButton
+                  isPublic={record.is_public}
+                  ownerId={record.owner_id}
+                  currentUserId={currentUserId}
+                  onToggle={record.owner_id === currentUserId ? () => onTogglePublic?.(record.id) : undefined}
+                  size="sm"
+                />
               </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {formatFileSize(record.size_bytes)}
