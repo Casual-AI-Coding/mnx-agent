@@ -182,7 +182,10 @@ export default function ImageGeneration() {
           model,
           prompt: prompt.trim(),
           n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
-          aspect_ratio: aspectRatio,
+          prompt_optimizer: promptOptimizer,
+          ...(aspectRatioState.type === 'preset'
+            ? { aspect_ratio: aspectRatioState.preset }
+            : { width: aspectRatioState.width, height: aspectRatioState.height }),
           seed,
         })
 
@@ -221,7 +224,10 @@ export default function ImageGeneration() {
         model,
         prompt: prompt.trim(),
         n: numImages as number,
-        aspect_ratio: aspectRatio,
+        prompt_optimizer: promptOptimizer,
+        ...(aspectRatioState.type === 'preset'
+          ? { aspect_ratio: aspectRatioState.preset }
+          : { width: aspectRatioState.width, height: aspectRatioState.height }),
         seed,
       }
       const newTasks: ImageTask[] = Array.from({ length: parallelCount }, (_, i) => ({
@@ -242,7 +248,10 @@ export default function ImageGeneration() {
             model,
             prompt: prompt.trim(),
             n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
-            aspect_ratio: aspectRatio,
+            prompt_optimizer: promptOptimizer,
+            ...(aspectRatioState.type === 'preset'
+              ? { aspect_ratio: aspectRatioState.preset }
+              : { width: aspectRatioState.width, height: aspectRatioState.height }),
             seed,
           })
 
@@ -312,7 +321,10 @@ export default function ImageGeneration() {
         model,
         prompt: prompt.trim(),
         n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
-        aspect_ratio: aspectRatio,
+        prompt_optimizer: promptOptimizer,
+        ...(aspectRatioState.type === 'preset'
+          ? { aspect_ratio: aspectRatioState.preset }
+          : { width: aspectRatioState.width, height: aspectRatioState.height }),
         seed,
       })
 
@@ -347,7 +359,7 @@ export default function ImageGeneration() {
         apiResponse,
       })
     }
-  }, [tasks, model, prompt, numImages, aspectRatio, seed, imageTitle, updateTask])
+  }, [tasks, model, prompt, numImages, aspectRatioState, promptOptimizer, seed, imageTitle, updateTask])
 
   const handleDownload = async (url: string, filename: string) => {
     try {

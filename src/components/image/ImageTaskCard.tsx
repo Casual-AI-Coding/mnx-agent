@@ -11,7 +11,10 @@ export interface ImageTask {
     model: string
     prompt: string
     n: number
-    aspect_ratio: string
+    prompt_optimizer?: boolean
+    aspect_ratio?: string
+    width?: number
+    height?: number
     seed?: number
   }
   apiResponse?: {
