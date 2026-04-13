@@ -43,16 +43,34 @@ export function TimelineItem({
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(record.original_name || record.filename)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleRename = () => {
-    if (editName.trim() && editName !== (record.original_name || record.filename)) {
-      onRename?.(record.id, editName.trim())
+  const handleStartEdit = () => {
+    setEditName(record.original_name || record.filename)
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim() || editName === (record.original_name || record.filename)) {
+      setIsEditing(false)
+      return
     }
+    setIsSaving(true)
+    try {
+      onRename?.(record.id, editName.trim())
+      setIsEditing(false)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditName(record.original_name || record.filename)
     setIsEditing(false)
   }
   return (
     <div
-      className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors ${
+      className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group ${
         isSelected ? 'bg-primary/10' : ''
       }`}
       onClick={() => onSelect()}
@@ -99,29 +117,45 @@ export function TimelineItem({
           </span>
         </div>
         {isEditing ? (
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onBlur={handleRename}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleRename()
-              if (e.key === 'Escape') {
-                setEditName(record.original_name || record.filename)
-                setIsEditing(false)
-              }
-            }}
-            className="h-6 text-sm mt-1"
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex items-center gap-2 mt-1">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveEdit()
+                if (e.key === 'Escape') handleCancelEdit()
+              }}
+              className="h-7 text-sm"
+              autoFocus
+              disabled={isSaving}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+              className="h-7 px-2"
+            >
+              {isSaving ? '...' : '✓'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelEdit}
+              className="h-7 px-2"
+            >
+              ✕
+            </Button>
+          </div>
         ) : (
-          <div className="flex items-center gap-1 mt-1 group">
+          <div className="flex items-center gap-2 mt-1">
             <p
-              className="font-medium truncate cursor-pointer hover:underline flex-1"
+              className="font-medium truncate flex-1"
               title={record.original_name || record.filename}
               onDoubleClick={(e) => {
                 e.stopPropagation()
-                setIsEditing(true)
+                handleStartEdit()
               }}
             >
               {record.original_name || record.filename}
@@ -129,8 +163,8 @@ export function TimelineItem({
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}
-              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); handleStartEdit() }}
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
               title="编辑"
             >
               <Pencil className="w-3 h-3" />

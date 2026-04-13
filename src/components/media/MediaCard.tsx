@@ -157,39 +157,33 @@ export function MediaCard({
 
       <div
         className="absolute bottom-2 right-2 z-20 opacity-100"
-        onClick={(e) => {
-          e.stopPropagation()
-          const isOwner = record.owner_id === currentUserId
-          const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
-          if ((isOwner || isSuperWithNoOwner) && onTogglePublic) {
-            onTogglePublic(record.id, !record.is_public)
-          }
-        }}
       >
-<div
-        className={cn(
-          'w-6 h-6 flex items-center justify-center',
-          (record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')) ? 'cursor-pointer' : 'cursor-default'
-        )}
-        onClick={(e) => {
-          e.stopPropagation()
-          const isOwner = record.owner_id === currentUserId
-          const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
-          if ((isOwner || isSuperWithNoOwner) && onTogglePublic) {
-            onTogglePublic(record.id, !record.is_public)
-          }
-        }}
-      >
-        {record.is_public ? (
-          record.owner_id === currentUserId ? (
-            <Globe className="w-3.5 h-3.5 text-green-500" />
-          ) : (
-            <Globe className="w-3.5 h-3.5 text-blue-400" />
-          )
-        ) : (
-          <Lock className="w-3.5 h-3.5 text-red-500" />
-        )}
-      </div>
+        <div
+          className={cn(
+            'w-6 h-6 flex items-center justify-center',
+            (record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')) && onTogglePublic
+              ? 'cursor-pointer'
+              : 'cursor-default'
+          )}
+          onClick={(e) => {
+            e.stopPropagation()
+            const isOwner = record.owner_id === currentUserId
+            const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
+            if ((isOwner || isSuperWithNoOwner) && onTogglePublic) {
+              onTogglePublic(record.id, !record.is_public)
+            }
+          }}
+        >
+          {(() => {
+            const isOwnPublic = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
+            if (record.is_public) {
+              return isOwnPublic
+                ? <Globe className="w-3.5 h-3.5 text-green-500" />
+                : <Globe className="w-3.5 h-3.5 text-blue-400" />
+            }
+            return <Lock className="w-3.5 h-3.5 text-red-500" />
+          })()}
+        </div>
       </div>
 
       {onToggleFavorite && (
