@@ -727,7 +727,7 @@ describe('MediaRecord Database Service', () => {
     })
   })
 
-  describe('togglePublic', () => {
+describe('togglePublic', () => {
     it('should toggle is_public from false to true', async () => {
       const created = await db.createMediaRecord({
         filename: 'toggle_test.png',
@@ -751,10 +751,8 @@ describe('MediaRecord Database Service', () => {
       })
       expect((created as any).is_public).toBe(false)
 
-      // First toggle to true
       await db.togglePublicMediaRecord(created.id, true)
       
-      // Second toggle to false
       const updated = await db.togglePublicMediaRecord(created.id, false)
       expect(updated).not.toBeNull()
       expect((updated as any).is_public).toBe(false)
@@ -763,6 +761,122 @@ describe('MediaRecord Database Service', () => {
     it('should return null when toggling non-existent record', async () => {
       const updated = await db.togglePublicMediaRecord('non-existent-id', true)
       expect(updated).toBeNull()
+    })
+  })
+
+  describe('list visibility', () => {
+    beforeEach(async () => {
+      const conn = getConnection()
+      await conn.execute('TRUNCATE TABLE media_records CASCADE')
+    })
+
+    it('user sees own private + all public records', async () => {
+      const user1 = testOwnerId1
+      const user2 = testOwnerId2
+
+      const ownPrivate = await db.createMediaRecord({
+        filename: 'user1_private.png',
+        filepath: '/data/media/user1_private.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(ownPrivate.id, false)
+
+      const ownPublic = await db.createMediaRecord({
+        filename: 'user1_public.png',
+        filepath: '/data/media/user1_public.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(ownPublic.id, true)
+
+      const otherPrivate = await db.createMediaRecord({
+        filename: 'user2_private.png',
+        filepath: '/data/media/user2_private.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user2)
+      await db.togglePublicMediaRecord(otherPrivate.id, false)
+
+      const otherPublic = await db.createMediaRecord({
+        filename: 'user2_public.png',
+        filepath: '/data/media/user2_public.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user2)
+      await db.togglePublicMediaRecord(otherPublic.id, true)
+
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, ownerId: user1, role: 'user' })
+      const filenames = result.records.map(r => r.filename)
+      
+      expect(filenames).toContain('user1_private.png')
+      expect(filenames).toContain('user1_public.png')
+      expect(filenames).toContain('user2_public.png')
+      expect(filenames).not.toContain('user2_private.png')
+      expect(result.records.length).toBe(3)
+    })
+
+    it('admin sees all records', async () => {
+      const user1 = testOwnerId1
+      const user2 = testOwnerId2
+
+      const ownPrivate = await db.createMediaRecord({
+        filename: 'admin_private1.png',
+        filepath: '/data/media/admin_private1.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(ownPrivate.id, false)
+
+      const otherPrivate = await db.createMediaRecord({
+        filename: 'admin_private2.png',
+        filepath: '/data/media/admin_private2.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user2)
+      await db.togglePublicMediaRecord(otherPrivate.id, false)
+
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, ownerId: user1, role: 'admin' })
+      const filenames = result.records.map(r => r.filename)
+      
+      expect(filenames).toContain('admin_private1.png')
+      expect(filenames).toContain('admin_private2.png')
+    })
+
+    it('isPublic=true filter returns only public records', async () => {
+      const user1 = testOwnerId1
+
+      const privateRecord = await db.createMediaRecord({
+        filename: 'filter_private.png',
+        filepath: '/data/media/filter_private.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(privateRecord.id, false)
+
+      const publicRecord1 = await db.createMediaRecord({
+        filename: 'filter_public1.png',
+        filepath: '/data/media/filter_public1.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(publicRecord1.id, true)
+
+      const publicRecord2 = await db.createMediaRecord({
+        filename: 'filter_public2.png',
+        filepath: '/data/media/filter_public2.png',
+        type: 'image',
+        size_bytes: 1024,
+      }, user1)
+      await db.togglePublicMediaRecord(publicRecord2.id, true)
+
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, isPublic: true })
+      const filenames = result.records.map(r => r.filename)
+      
+      expect(filenames).toContain('filter_public1.png')
+      expect(filenames).toContain('filter_public2.png')
+      expect(filenames).not.toContain('filter_private.png')
+      expect(result.records.length).toBe(2)
     })
   })
 })

@@ -36,6 +36,8 @@ export interface MediaListOptions {
   ownerId?: string
   favorite?: boolean
   favoriteUserId?: string
+  role?: 'user' | 'pro' | 'admin' | 'super'
+  isPublic?: boolean
 }
 
 export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaRecord, Partial<MediaRecord>> {
@@ -69,7 +71,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId, role, isPublic } = options
 
     let selectClause = 'm.*'
     let joinClause = ''
@@ -93,7 +95,15 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       }
     }
 
-    if (ownerId) {
+    // Visibility filtering based on role
+    const isAdminOrSuper = role === 'admin' || role === 'super'
+    if (!isAdminOrSuper && ownerId) {
+      // user/pro: see own private + all public
+      whereClause += `(m.owner_id = $${paramIndex} OR m.is_public = true)`
+      params.push(ownerId)
+      paramIndex++
+    } else if (ownerId) {
+      // admin/super with ownerId: filter by owner
       whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
       params.push(ownerId)
       paramIndex++
@@ -125,6 +135,12 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         ? ` AND (m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
         : `(m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
       params.push(searchTerm)
+      paramIndex++
+    }
+
+    if (isPublic !== undefined) {
+      whereClause += whereClause ? ` AND m.is_public = $${paramIndex}` : `m.is_public = $${paramIndex}`
+      params.push(isPublic)
       paramIndex++
     }
 
