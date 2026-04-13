@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validate, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../../middleware/api-response'
-import { getDatabaseService, getCronSchedulerService, getJobService } from '../../service-registration.js'
+import { getCronSchedulerService, getJobService, getWorkflowService, getTaskService, getLogService } from '../../service-registration.js'
 import { CronExpressionParser } from 'cron-parser'
 import {
   createCronJobSchema,
@@ -14,7 +14,7 @@ import {
   addJobDependencySchema,
   jobDependencyParamsSchema,
 } from '../../validation/cron-schemas'
-import { TaskQueueItem } from '../../database/types'
+
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
 import { formatDuration } from './utils'
 import { withEntityNotFound } from '../../utils/index.js'
@@ -29,9 +29,9 @@ router.get('/jobs', asyncHandler(async (req, res) => {
 }))
 
 router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const jobService = getJobService()
   const scheduler = getCronSchedulerService()
+  const workflowService = getWorkflowService()
   const jobData = req.body
 
   if (!jobData.workflow_id) {
@@ -39,7 +39,7 @@ router.post('/jobs', validate(createCronJobSchema), asyncHandler(async (req, res
     return
   }
 
-  const workflow = await db.getWorkflowTemplateById(jobData.workflow_id)
+  const workflow = await workflowService.getById(jobData.workflow_id, getOwnerIdForInsert(req) ?? undefined)
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
     return
@@ -90,14 +90,14 @@ router.patch('/jobs/:id', validateParams(cronJobIdParamsSchema), validate(update
 }))
 
 router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const jobService = getJobService()
+  const taskService = getTaskService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(job, res, 'Job')) return
-  const tasks: TaskQueueItem[] = await db.getTasksByJobId(req.params.id, ownerId)
+  const tasks = await taskService.getByJobId(req.params.id, ownerId)
   for (const task of tasks) {
-    await db.deleteTask(task.id, ownerId)
+    await taskService.delete(task.id, ownerId)
   }
   await jobService.delete(req.params.id, ownerId)
   deletedResponse(res, { tasksDeleted: tasks.length })
@@ -158,8 +158,8 @@ router.post('/jobs/:id/clone', validateParams(cronJobIdParamsSchema), asyncHandl
 }))
 
 router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
   const jobService = getJobService()
+  const logService = getLogService()
   const ownerId = buildOwnerFilter(req).params[0]
   const job = await jobService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(job, res, 'Job')) return
@@ -178,7 +178,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
     validation.errors.push('Invalid cron expression')
   }
   
-  const recentLogs = await db.getAllExecutionLogs(job.id, 10)
+  const recentLogs = await logService.getAll({ jobId: job.id, limit: 10 })
   const avgDuration = recentLogs.length > 0
     ? recentLogs.reduce((sum: number, log) => sum + (log.duration_ms || 0), 0) / recentLogs.length
     : null
