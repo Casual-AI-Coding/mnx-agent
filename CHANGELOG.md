@@ -2,6 +2,138 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.3] - 2026-04-13
+
+### Added
+
+**Media Public/Private Toggle - 媒体公开/私有切换功能**
+
+- **PublicButton 组件** - 公开/私有状态切换按钮
+  - `src/components/media/PublicButton.tsx` (95行) - 切换按钮组件
+  - 支持单条和批量公开操作
+  - 三种状态可视化：私有（红色）、公开（绿色）、他人公开（蓝色）
+  - 未公开状态用橙色标识
+
+- **后端公开 API** - PATCH /api/media/:id/public
+  - `server/routes/media.ts` (+86/-0) - 公开切换端点
+  - `server/repositories/media-repository.ts` (+156/-0) - togglePublic 方法
+  - `server/services/domain/media.service.ts` (+14/-0) - 服务层委托
+  - `server/database/migrations-async.ts` (+12/-0) - is_public 列迁移
+  - 支持角色权限验证：仅创建者和管理员可切换公开状态
+
+- **Visibility 过滤系统** - 角色感知的可见性过滤
+  - user: 仅查看自己的记录
+  - pro: 自己的记录 + 公开记录
+  - admin/super: 所有记录（包括无 owner_id 的公开记录）
+  - `server/validation/media-schemas.ts` (+33/-0) - visibility 参数验证
+  - `packages/shared-types/entities/media.ts` (+4/-0) - 类型扩展
+
+- **前端筛选 UI** - 收藏和公开筛选复选框
+  - `src/pages/MediaManagement.tsx` (+225/-0) - 篮选 UI 集成
+  - `src/hooks/useMediaManagement.ts` (+191/-0) - 篮选逻辑 hook
+  - `src/lib/api/media.ts` (+42/-0) - 公开切换 API
+  - 支持 ownerIdNot 参数（排除特定用户的记录）
+
+- **批量公开支持** - 管理员批量操作
+  - `src/components/media/BatchOperationsToolbar.tsx` (+56/-0) - 批量公开按钮
+  - super 角色可批量公开无 owner_id 的记录
+
+- **文档**
+  - `docs/superpowers/specs/2026-04-13-media-public-toggle-design.md` (495行)
+  - `docs/superpowers/plans/2026-04-13-media-public-toggle.md` (1389行)
+
+### Changed
+
+- **PublicButton UI 集成** - 三种视图组件集成
+  - `src/components/media/MediaCard.tsx` (+46/-0) - 卡片视图公开按钮
+  - `src/components/media/MediaTableView.tsx` (+31/-0) - 表格视图公开列
+  - `src/components/media/TimelineItem.tsx` (+144/-0) - 时间轴视图公开按钮
+  - 操作按钮顺序统一：查看、下载、收藏、公开、删除
+
+- **公开图标视觉优化** - 三种状态颜色区分
+  - 私有：红色（border-red-500）
+  - 公开：绿色（border-green-500）
+  - 他人公开：蓝色（border-blue-500）
+  - 未公开：橙色（border-orange-500）
+
+- **时间轴视图优化** - hover 显示编辑按钮
+  - 双击进入编辑模式
+  - 与列表视图操作统一
+
+- **加载动画优化** - 最小延迟 0.5 秒
+  - 避免加载闪烁
+  - 更流畅的视觉体验
+
+### Fixed
+
+- **SQL 查询 OR 优先级修复** - visibility 条件正确包裹括号
+  - `fix(media): SQL查询OR优先级修复 - visibility条件正确包裹括号`
+  - `server/repositories/media-repository.ts` - OR 逻辑修正
+
+- **角色筛选语义修复** - owner_id=null 属于公开而非他人公开
+  - `fix(media): admin/super筛选语义 - owner_id=null属于公开而非他人公开`
+  - 正确区分公开记录和他人公开记录
+
+- **筛选逻辑后端化** - 前端筛选迁移到后端
+  - `refactor(media): 篮选逻辑后端化 + 加载动画最少1秒`
+  - 减少前端状态复杂度
+
+- **pro 用户 visibility 修复** - list route 使用 buildOwnerFilter
+  - `fix(media): pro用户visibility修复 - list route使用buildOwnerFilter + 删除按钮权限`
+  - 正确的角色权限过滤
+
+- **getById 公开访问修复** - pro 用户可访问公开记录
+  - `fix(media): getById添加includePublic参数，允许pro用户访问公开记录`
+  - includePublic 参数支持
+
+- **useEffect 依赖修复** - currentUser?.id 依赖添加
+  - `fix(media): auto-fetch useEffect 添加 currentUser?.id 依赖`
+  - 防止 stale closure
+
+- **筛选器 boolean coercion 修复** - 正确的布尔值转换
+  - `fix(media): 篮选器修复 - boolean coercion + 自动刷新`
+
+- **批量公开权限修复** - super 操作 ownerless 记录
+  - `fix(api): 批量公开支持super操作ownerless记录`
+
+- **Security 修复** - 使用认证用户角色而非查询参数
+  - `fix(security): use authenticated user role, not query param`
+  - `server/routes/media.ts` - 角色从 JWT 提取
+
+- **Hook ref 声明修复** - 删除重复 ref 声明
+  - `fix(hook): 删除重复的ref声明`
+  - `fix(hook): 添加缺失的ref声明`
+
+- **筛选逻辑 bug 修复** - 私有+他人公开组合
+  - `fix(hook): 修复筛选逻辑bug - 私有+他人公开组合+依赖数组`
+
+- **API 筛选参数传递修复** - pass role and isPublic filter
+  - `fix(api): pass role and isPublic filter to GET /media`
+
+### Performance
+
+**Code Quality Metrics**
+- **24 files changed** (+3,079 insertions, -192 deletions)
+- **New Feature**: Media public/private toggle (全栈实现)
+- **New Component**: PublicButton (95行)
+- **Backend Enhancement**: Visibility filtering with role-based access
+- **UI Integration**: 3 views (card, table, timeline)
+- **Test Coverage**: Media repository tests extended (+186/-0)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（新增 PATCH /:id/public）
+- ✅ 公开切换为增量功能，不影响现有媒体管理
+- ✅ 数据库迁移向后兼容（is_public 列新增）
+- ✅ Visibility 过滤为可选参数，默认行为不变
+- ✅ PublicButton 为可选组件，不影响现有 UI
+
+### Security
+
+- 角色权限验证：仅创建者和管理员可切换公开状态
+- 角色从 JWT token 提取，不接受查询参数
+- 批量公开操作限制 super 角色
+
 ## [1.9.2] - 2026-04-13
 
 ### Added
