@@ -235,6 +235,13 @@ export function MediaTableView({
                   >
                     <Download className="w-4 h-4" />
                   </Button>
+                  {onToggleFavorite && (
+                    <FavoriteButton
+                      mediaId={record.id}
+                      isFavorite={record.is_favorite ?? false}
+                      onToggle={onToggleFavorite}
+                    />
+                  )}
                   {onTogglePublic && (
                     <PublicButton
                       isPublic={record.is_public}
@@ -242,13 +249,6 @@ export function MediaTableView({
                       currentUserId={currentUserId}
                       onToggle={onTogglePublic ? () => onTogglePublic(record.id) : undefined}
                       iconOnly
-                    />
-                  )}
-                  {onToggleFavorite && (
-                    <FavoriteButton
-                      mediaId={record.id}
-                      isFavorite={record.is_favorite ?? false}
-                      onToggle={onToggleFavorite}
                     />
                   )}
                   <Button

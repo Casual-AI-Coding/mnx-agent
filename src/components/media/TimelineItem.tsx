@@ -130,6 +130,21 @@ export function TimelineItem({
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }} title="预览">
+            <Eye className="w-4 h-4" />
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDownload() }} title="下载">
+          <Download className="w-4 h-4" />
+        </Button>
+        {onToggleFavorite && (
+          <FavoriteButton
+            mediaId={record.id}
+            isFavorite={record.is_favorite ?? false}
+            onToggle={onToggleFavorite}
+          />
+        )}
         {onTogglePublic && (
           <PublicButton
             isPublic={record.is_public}
@@ -139,25 +154,10 @@ export function TimelineItem({
             iconOnly
           />
         )}
-        {onToggleFavorite && (
-          <FavoriteButton
-            mediaId={record.id}
-            isFavorite={record.is_favorite ?? false}
-            onToggle={onToggleFavorite}
-          />
-        )}
-        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}>
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }} title="编辑">
           <Pencil className="w-4 h-4" />
         </Button>
-        {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }}>
-            <Eye className="w-4 h-4" />
-          </Button>
-        )}
-        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDownload() }}>
-          <Download className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }}>
+        <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title="删除">
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
