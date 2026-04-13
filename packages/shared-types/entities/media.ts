@@ -54,6 +54,7 @@ export interface MediaRecordRow {
   task_id: string | null
   metadata: string | null
   is_deleted: boolean
+  is_public?: boolean
   created_at: string
   updated_at: string
   deleted_at: string | null
