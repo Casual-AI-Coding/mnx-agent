@@ -235,6 +235,8 @@ export default function MediaManagement() {
                               onDelete={() => setDeleteDialog({ isOpen: true, record })}
                               onRename={handleRename}
                               onToggleFavorite={handleToggleFavorite}
+                              onTogglePublic={handleTogglePublic}
+                              currentUserId={currentUser?.id}
                             />
                           </div>
                         )

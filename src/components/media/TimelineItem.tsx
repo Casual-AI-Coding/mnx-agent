@@ -7,6 +7,7 @@ import { TYPE_VARIANTS, TYPE_LABELS, TYPE_GRADIENTS } from '@/lib/constants/medi
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
 import { FavoriteButton } from './FavoriteButton'
+import { PublicButton } from './PublicButton'
 import type { MediaRecord } from '@/types/media'
 
 interface TimelineItemProps {
@@ -19,6 +20,8 @@ interface TimelineItemProps {
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePublic?: (id: string, isPublic: boolean) => void
+  currentUserId?: string
 }
 
 export function TimelineItem({
@@ -31,6 +34,8 @@ export function TimelineItem({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePublic,
+  currentUserId,
 }: TimelineItemProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -130,6 +135,15 @@ export function TimelineItem({
             mediaId={record.id}
             isFavorite={record.is_favorite ?? false}
             onToggle={onToggleFavorite}
+          />
+        )}
+        {onTogglePublic && (
+          <PublicButton
+            isPublic={record.is_public}
+            ownerId={record.owner_id}
+            currentUserId={currentUserId}
+            onToggle={onTogglePublic ? (isPublic) => onTogglePublic(record.id, isPublic) : undefined}
+            size="sm"
           />
         )}
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}>
