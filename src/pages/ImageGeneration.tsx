@@ -64,7 +64,7 @@ export default function ImageGeneration() {
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<ImageModel>(imageSettings.model as ImageModel)
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(imageSettings.aspectRatio as AspectRatio)
-  const [numImages, setNumImages] = useState(imageSettings.numImages)
+  const [numImages, setNumImages] = useState(imageSettings.numImages ?? 9)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
@@ -563,7 +563,7 @@ export default function ImageGeneration() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.count') || '生成数量'}</label>
                   <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                    {[4, 5, 6, 7, 8, 9].map(n => (
                       <button
                         key={n}
                         onClick={() => setNumImages(n)}
@@ -583,7 +583,7 @@ export default function ImageGeneration() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">并发生成数量</label>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                    {Array.from({ length: 5 }, (_, i) => i + 1).map(n => (
                       <button
                         key={n}
                         type="button"
