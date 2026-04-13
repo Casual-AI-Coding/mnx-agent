@@ -279,9 +279,12 @@ export function useMediaManagement(): UseMediaManagementReturn {
         // 私有 + 自己公开 = 自己所有
         ownerIdParam = currentUser?.id
       } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-        // 私有 + 他人公开
-        // 需要两次请求或后端支持组合筛选，暂时传isPublic=false让后端处理
-        isPublicParam = false
+        // 私有 + 他人公开 = 全部可见（后端visibility已限制为：自己的私有 + 所有公开）
+        // 用户想要：自己私有 + 他人公开（不含自己公开）
+        // 但这个组合无法精确实现，暂时返回全部可见
+        isPublicParam = undefined
+        ownerIdParam = undefined
+        ownerIdNotParam = undefined
       } else if (!hasPrivate && hasPublic && hasOthersPublic) {
         // 自己公开 + 他人公开 = 所有公开
         isPublicParam = true
@@ -311,7 +314,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, searchQuery, favoriteFilters, publicFilters])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -350,7 +353,9 @@ export function useMediaManagement(): UseMediaManagementReturn {
       } else if (hasPrivate && hasPublic && !hasOthersPublic) {
         ownerIdParam = currentUser?.id
       } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-        isPublicParam = false
+        isPublicParam = undefined
+        ownerIdParam = undefined
+        ownerIdNotParam = undefined
       } else if (!hasPrivate && hasPublic && hasOthersPublic) {
         isPublicParam = true
       } else {
@@ -383,7 +388,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, isLoadingMore, favoriteFilters, publicFilters, currentUser?.id])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {
