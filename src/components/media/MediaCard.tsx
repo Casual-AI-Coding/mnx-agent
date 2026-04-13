@@ -164,17 +164,13 @@ export function MediaCard({
         }}
       >
         <div
-          className={cn(
-            'w-6 h-6 rounded flex items-center justify-center',
-            record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default',
-            record.is_public
-              ? record.owner_id === currentUserId
-                ? 'bg-blue-500/80 text-white hover:bg-blue-500'
-                : 'bg-blue-500/20 text-blue-400'
-              : record.owner_id === currentUserId
-                ? 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-                : 'bg-muted/30 text-muted-foreground/50'
-          )}
+        className={cn(
+          'w-6 h-6 flex items-center justify-center',
+          record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default',
+          record.is_public
+            ? 'text-blue-500'
+            : 'text-muted-foreground'
+        )}
           title={
             record.owner_id === currentUserId
               ? record.is_public ? '点击取消公开' : '点击公开'
