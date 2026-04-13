@@ -517,30 +517,31 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [activeTab, isInitialLoad])
 
-  // Track previous activeTab and favoriteFilter to detect changes
+  // Track previous activeTab and page to detect changes
   const prevActiveTabRef = useRef(activeTab)
-  const prevFavoriteFiltersRef = useRef(favoriteFilters)
-  const prevPublicFiltersRef = useRef(publicFilters)
 
-  // Initial fetch and refetch on tab/page/search/filter changes
+  // Initial fetch and refetch on tab/page changes only (filters/search need manual trigger)
   useEffect(() => {
-    if (isInitialLoad || activeTab !== prevActiveTabRef.current || pagination.page !== prevPageRef.current || searchQuery !== prevSearchQueryRef.current || favoriteFilters !== prevFavoriteFiltersRef.current || publicFilters !== prevPublicFiltersRef.current) {
+    if (isInitialLoad || activeTab !== prevActiveTabRef.current || pagination.page !== prevPageRef.current) {
       const tabChanged = activeTab !== prevActiveTabRef.current
       const pageChanged = pagination.page !== prevPageRef.current
-      const searchChanged = searchQuery !== prevSearchQueryRef.current
-      const favoriteChanged = favoriteFilters !== prevFavoriteFiltersRef.current
-      const publicChanged = publicFilters !== prevPublicFiltersRef.current
       
-      if (tabChanged || pageChanged || searchChanged || favoriteChanged || publicChanged) {
+      if (tabChanged || pageChanged) {
         prevActiveTabRef.current = activeTab
         prevPageRef.current = pagination.page
-        prevSearchQueryRef.current = searchQuery
-        prevFavoriteFiltersRef.current = favoriteFilters
-        prevPublicFiltersRef.current = publicFilters
         fetchMedia(false)
       }
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilters, publicFilters])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page])
+
+  // Manual search trigger - applies current filters and search query
+  const handleManualSearch = useCallback(() => {
+    setPagination(prev => ({ ...prev, page: 1 }))
+    prevSearchQueryRef.current = searchQuery
+    prevFavoriteFiltersRef.current = favoriteFilters
+    prevPublicFiltersRef.current = publicFilters
+    fetchMedia(true, 1)
+  }, [fetchMedia, searchQuery, favoriteFilters, publicFilters])
 
   // Load timeline data when viewMode changes to timeline
   useEffect(() => {
@@ -844,6 +845,7 @@ pageInput,
     togglePublicFilter,
     handleTogglePublic,
     handleBatchTogglePublic,
+    handleManualSearch,
 
     // Timeline state
     timelineRecords,

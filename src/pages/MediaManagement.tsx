@@ -216,22 +216,34 @@ export default function MediaManagement() {
               </div>
             </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索文件名..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-full sm:w-64"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                >
-                  <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 sm:flex-none sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="搜索文件名..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-full"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleManualSearch}
+                disabled={isLoading}
+                className="h-9 px-4"
+              >
+                <Search className="w-4 h-4 mr-1" />
+                搜索
+              </Button>
             </div>
           </div>
         </CardHeader>

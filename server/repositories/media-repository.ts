@@ -81,19 +81,25 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     let paramIndex = 1
 
     // Handle favorite filtering
-    if (favoriteUserId) {
+if (favoriteUserId) {
       selectClause += ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
-      if (favorite) {
-        // INNER JOIN - only return favorited records
+      if (favorite === true) {
         joinClause = 'INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1 AND f.is_deleted = false'
         params.push(favoriteUserId)
         paramIndex++
+      } else if (favorite === false) {
+        joinClause = 'LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1'
+        params.push(favoriteUserId)
+        paramIndex++
+        whereClause += whereClause 
+          ? ` AND (f.id IS NULL OR f.is_deleted = true)` 
+          : `(f.id IS NULL OR f.is_deleted = true)`
       } else {
-        // LEFT JOIN - return all records with is_favorite status
         joinClause = 'LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1'
         params.push(favoriteUserId)
         paramIndex++
       }
+    }
     }
 
     // Visibility filtering based on role
