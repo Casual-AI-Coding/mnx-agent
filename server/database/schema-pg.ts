@@ -377,6 +377,8 @@ CREATE INDEX IF NOT EXISTS idx_media_records_source ON media_records(source);
 CREATE INDEX IF NOT EXISTS idx_media_records_created_at ON media_records(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_media_records_is_deleted ON media_records(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_media_records_task_id ON media_records(task_id);
+CREATE INDEX IF NOT EXISTS idx_media_records_is_public ON media_records(is_public);
+CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner_id, is_public);
 
 -- Prompt templates indexes
 CREATE INDEX IF NOT EXISTS idx_prompt_templates_category ON prompt_templates(category);

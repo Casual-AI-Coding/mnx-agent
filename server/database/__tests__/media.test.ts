@@ -703,7 +703,7 @@ describe('MediaRecord Database Service', () => {
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'media_records' AND column_name = 'is_public'
       `)
-      expect(result.rows.length).toBe(1)
+      expect(result.length).toBe(1)
     })
 
     it('should default is_public to false', async () => {
@@ -723,7 +723,7 @@ describe('MediaRecord Database Service', () => {
         WHERE tablename = 'media_records' 
         AND indexname IN ('idx_media_records_is_public', 'idx_media_records_owner_public')
       `)
-      expect(result.rows.length).toBe(2)
+      expect(result.length).toBe(2)
     })
   })
 })
