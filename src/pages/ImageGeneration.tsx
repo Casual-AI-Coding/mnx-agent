@@ -449,13 +449,24 @@ export default function ImageGeneration() {
                 <span className="text-sm font-medium text-foreground">{t('imageGeneration.prompt') || '提示词'}</span>
               </div>
               <div className="p-4 space-y-4">
+                {/* 标题输入 - 移到提示词上方 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">标题</label>
+                  <Input
+                    value={imageTitle}
+                    onChange={(e) => setImageTitle(e.target.value)}
+                    placeholder="输入标题名称..."
+                    className="bg-background/50 border-border"
+                  />
+                </div>
+
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t('imageGeneration.placeholder') || "描述你想要生成的图片，例如：一只戴着墨镜的猫在海滩上..."}
                   className="min-h-[120px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
                 />
-                
+
                 {/* Template Buttons */}
                 <div className="flex flex-wrap gap-2">
                   {PROMPT_TEMPLATES.slice(0, 6).map((template) => (
@@ -471,17 +482,6 @@ export default function ImageGeneration() {
                       {template.name}
                     </button>
                   ))}
-                </div>
-
-                {/* 标题输入 */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">图片标题（可选，用于保存文件命名）</label>
-                  <Input
-                    value={imageTitle}
-                    onChange={(e) => setImageTitle(e.target.value)}
-                    placeholder="输入标题名称..."
-                    className="bg-background/50 border-border"
-                  />
                 </div>
               </div>
             </div>
@@ -587,101 +587,107 @@ export default function ImageGeneration() {
                 </div>
               </div>
               <div className="p-4 space-y-5">
-                {/* Model Selection */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.model') || '模型'}</label>
-                  <Select value={model} onValueChange={(v) => setModel(v as ImageModel)}>
-                    <SelectTrigger className="w-full bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {IMAGE_MODELS.map(m => (
-                        <SelectItem key={m.id} value={m.id} className="text-foreground focus:bg-secondary">
-                          <div className="flex flex-col">
-                            <span>{m.name}</span>
-                            <span className="text-xs text-muted-foreground">{m.description}</span>
-                          </div>
-                        </SelectItem>
+                {/* 模型选择和宽高比并排展示 */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Model Selection */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">模型选择</label>
+                    <Select value={model} onValueChange={(v) => setModel(v as ImageModel)}>
+                      <SelectTrigger className="w-full bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {IMAGE_MODELS.map(m => (
+                          <SelectItem key={m.id} value={m.id} className="text-foreground focus:bg-secondary">
+                            <div className="flex flex-col">
+                              <span>{m.name}</span>
+                              <span className="text-xs text-muted-foreground">{m.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Aspect Ratio */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">宽高比</label>
+                    <button
+                      onClick={() => setShowAspectRatioPopup(true)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-background/50 border border-border hover:border-primary/50 transition-colors"
+                    >
+                      <span className="text-sm font-medium text-foreground">
+                        {aspectRatioState.type === 'custom'
+                          ? `${aspectRatioState.width} × ${aspectRatioState.height}`
+                          : ASPECT_RATIOS.find(r => r.id === aspectRatioState.preset)?.label ?? '1:1'}
+                      </span>
+                      <span className="text-muted-foreground">选择</span>
+                    </button>
+                    <AspectRatioPopup
+                      open={showAspectRatioPopup}
+                      onClose={() => setShowAspectRatioPopup(false)}
+                      value={aspectRatioState}
+                      onChange={setAspectRatioState}
+                    />
+                  </div>
+                </div>
+
+                {/* 生成数量和并发数并排展示 */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Number of Images */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">生成数量</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[4, 5, 6, 7, 8, 9].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => setNumImages(n)}
+                          className={`flex-1 min-w-[32px] py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                            numImages === n
+                              ? 'bg-gradient-to-r from-primary to-accent border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
+                              : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
+                          }`}
+                        >
+                          {n}
+                        </button>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Aspect Ratio */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.aspectRatio') || '宽高比'}</label>
-                  <button
-                    onClick={() => setShowAspectRatioPopup(true)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-background/50 border border-border hover:border-primary/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-foreground">
-                      {aspectRatioState.type === 'custom'
-                        ? `${aspectRatioState.width} × ${aspectRatioState.height}`
-                        : ASPECT_RATIOS.find(r => r.id === aspectRatioState.preset)?.label ?? '1:1'}
-                    </span>
-                    <span className="text-muted-foreground">选择</span>
-                  </button>
-                  <AspectRatioPopup
-                    open={showAspectRatioPopup}
-                    onClose={() => setShowAspectRatioPopup(false)}
-                    value={aspectRatioState}
-                    onChange={setAspectRatioState}
-                  />
-                </div>
-
-                {/* Number of Images */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.count') || '生成数量'}</label>
-                  <div className="flex flex-wrap gap-2">
-                    {[4, 5, 6, 7, 8, 9].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setNumImages(n)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                          numImages === n
-                            ? 'bg-gradient-to-r from-primary to-accent border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
-                            : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* 并发生成数量 */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">并发生成数量</label>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }, (_, i) => i + 1).map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => {
-                          if (!isGenerating) {
-                            setParallelCount(n)
-                            if (tasks.length > 0) {
-                              setTasks([])
-                              setCurrentIndex(0)
+                  {/* 并发生成数量 */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">并发数</label>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }, (_, i) => i + 1).map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            if (!isGenerating) {
+                              setParallelCount(n)
+                              if (tasks.length > 0) {
+                                setTasks([])
+                                setCurrentIndex(0)
+                              }
                             }
-                          }
-                        }}
-                        disabled={isGenerating}
-                        className={cn(
-                          "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
-                          parallelCount === n
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
-                          isGenerating && "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        {n}
-                      </button>
-                    ))}
+                          }}
+                          disabled={isGenerating}
+                          className={cn(
+                            "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
+                            parallelCount === n
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
+                            isGenerating && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      共 {numImages * parallelCount} 张
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    并发模式时每个请求生成{numImages}张图片，共 {numImages * parallelCount} 张
-                  </p>
                 </div>
 
                 {/* Advanced Settings Toggle */}
@@ -693,7 +699,7 @@ export default function ImageGeneration() {
                   {t('imageGeneration.advanced') || '高级设置'}
                 </button>
 
-                {/* Seed Input */}
+                {/* Advanced Settings */}
                 <AnimatePresence>
                   {showAdvanced && (
                     <motion.div
@@ -702,31 +708,32 @@ export default function ImageGeneration() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-2 overflow-hidden"
                     >
-{/* 自动优化提示词 */}
-                       <div className="flex items-center justify-between">
-                         <div>
-                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">自动优化提示词</label>
-                           <p className="text-xs text-muted-foreground/50 mt-0.5">AI 将优化你的提示词以获得更好效果</p>
-                         </div>
-                         <Switch
-                           checked={promptOptimizer}
-                           onCheckedChange={setPromptOptimizer}
-                         />
-                       </div>
+                      {/* 自动优化提示词和 AIGC 水印并排展示 */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">自动优化提示词</label>
+                            <p className="text-xs text-muted-foreground/50 mt-0.5">AI 将优化你的提示词以获得更好效果</p>
+                          </div>
+                          <Switch
+                            checked={promptOptimizer}
+                            onCheckedChange={setPromptOptimizer}
+                          />
+                        </div>
 
-                       {/* AIGC 水印 */}
-                       <div className="flex items-center justify-between">
-                         <div>
-                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">添加 AIGC 水印</label>
-                           <p className="text-xs text-muted-foreground/50 mt-0.5">在生成的图片中添加 AI 生成标识水印</p>
-                         </div>
-                         <Switch
-                           checked={aigcWatermark}
-                           onCheckedChange={setAigcWatermark}
-                         />
-                       </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">添加 AIGC 水印</label>
+                            <p className="text-xs text-muted-foreground/50 mt-0.5">在生成的图片中添加 AI 生成标识水印</p>
+                          </div>
+                          <Switch
+                            checked={aigcWatermark}
+                            onCheckedChange={setAigcWatermark}
+                          />
+                        </div>
+                      </div>
 
-                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
                       <div className="flex gap-2">
                         <Input
                           type="number"
