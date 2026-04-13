@@ -7,9 +7,13 @@ const router = Router()
 interface ImageGenerateBody {
   model?: string
   prompt: string
-  num_images?: number
+  n?: number
+  num_images?: number  // 兼容旧参数
+  prompt_optimizer?: boolean
+  aspect_ratio?: string
   width?: number
   height?: number
+  seed?: number
   style?: string
 }
 
@@ -18,7 +22,7 @@ router.use('/generate', createApiProxyRouter({
   endpoint: '/',
   clientMethod: 'imageGeneration',
   buildRequestBody: (req: Request) => {
-    const { model, prompt, num_images, width, height, style } = req.body as ImageGenerateBody
+    const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style } = req.body as ImageGenerateBody
 
     if (!prompt) {
       throw { status: 400, message: 'prompt is required' }
@@ -29,9 +33,13 @@ router.use('/generate', createApiProxyRouter({
       prompt,
     }
 
+    if (n !== undefined) body.n = n
     if (num_images !== undefined) body.num_images = num_images
+    if (prompt_optimizer !== undefined) body.prompt_optimizer = prompt_optimizer
+    if (aspect_ratio !== undefined) body.aspect_ratio = aspect_ratio
     if (width !== undefined) body.width = width
     if (height !== undefined) body.height = height
+    if (seed !== undefined) body.seed = seed
     if (style !== undefined) body.style = style
 
     return body
