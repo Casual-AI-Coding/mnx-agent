@@ -153,31 +153,37 @@ export function MediaCard({
         </div>
       </div>
 
-      {onTogglePublic && (
+      <div
+        className="absolute bottom-2 right-2 z-20 opacity-100"
+        onClick={(e) => {
+          e.stopPropagation()
+          const isOwner = record.owner_id === currentUserId
+          if (isOwner && onTogglePublic) {
+            onTogglePublic(record.id, !record.is_public)
+          }
+        }}
+      >
         <div
-          className={`absolute bottom-2 right-2 z-20 transition-opacity duration-200 ${
-            record.is_public ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (record.owner_id === currentUserId) {
-              onTogglePublic(record.id, !record.is_public)
-            }
-          }}
+          className={cn(
+            'w-6 h-6 rounded flex items-center justify-center',
+            record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default',
+            record.is_public
+              ? record.owner_id === currentUserId
+                ? 'bg-blue-500/80 text-white hover:bg-blue-500'
+                : 'bg-blue-500/20 text-blue-400'
+              : record.owner_id === currentUserId
+                ? 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                : 'bg-muted/30 text-muted-foreground/50'
+          )}
+          title={
+            record.owner_id === currentUserId
+              ? record.is_public ? '点击取消公开' : '点击公开'
+              : record.is_public ? '公开资源' : '私有资源'
+          }
         >
-          <div
-            className={cn(
-              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer',
-              record.is_public
-                ? 'bg-blue-500 text-white'
-                : 'bg-card/50 text-foreground/70 hover:text-blue-500 hover:bg-card/70'
-            )}
-            title={record.is_public ? '取消公开' : '公开'}
-          >
-            {record.is_public ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-          </div>
+          {record.is_public ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
         </div>
-      )}
+      </div>
 
       {onToggleFavorite && (
         <div
