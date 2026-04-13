@@ -1,6 +1,6 @@
 import { Globe, Lock } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
 interface PublicButtonProps {
@@ -9,7 +9,7 @@ interface PublicButtonProps {
   currentUserId?: string
   onToggle?: (isPublic: boolean) => void
   disabled?: boolean
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'default'
 }
 
 export function PublicButton({
@@ -41,7 +41,7 @@ export function PublicButton({
   return (
     <Button
       variant={isPublic ? 'default' : 'outline'}
-      size={size}
+      size={size === 'sm' ? 'sm' : 'default'}
       className="gap-1"
       onClick={() => onToggle(!isPublic)}
       disabled={disabled}

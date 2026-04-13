@@ -195,7 +195,7 @@ export default function MediaManagement() {
                 onRename={handleRename}
                 onToggleFavorite={handleToggleFavorite}
                 onTogglePublic={handleTogglePublic}
-                currentUserId={user?.id}
+                currentUserId={currentUser?.id}
               />
             ) : viewMode === 'timeline' ? (
               <div className="rounded-lg overflow-hidden bg-muted/30">
