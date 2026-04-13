@@ -5,6 +5,7 @@ import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
+import { AspectRatioPopup, type AspectRatioState } from '@/components/ui/AspectRatioPopup'
 import WarningBanner from '@/components/shared/WarningBanner'
 import { APIReference } from '@/components/shared/APIReference'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -63,7 +64,11 @@ export default function ImageGeneration() {
   const imageSettings = useSettingsStore(s => s.settings.generation.image)
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<ImageModel>(imageSettings.model as ImageModel)
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(imageSettings.aspectRatio as AspectRatio)
+  const [aspectRatioState, setAspectRatioState] = useState<AspectRatioState>({
+    type: 'preset',
+    preset: imageSettings.aspectRatio as AspectRatio,
+  })
+  const [showAspectRatioPopup, setShowAspectRatioPopup] = useState(false)
   const [numImages, setNumImages] = useState(imageSettings.numImages ?? 9)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -81,6 +86,10 @@ export default function ImageGeneration() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
+  
+  const aspectRatio: AspectRatio = aspectRatioState.type === 'preset'
+    ? aspectRatioState.preset ?? '1:1'
+    : 'custom'
 
   const handleTemplateSelect = useCallback((templateId: string) => {
     const template = PROMPT_TEMPLATES.find(t => t.id === templateId)
@@ -541,22 +550,23 @@ export default function ImageGeneration() {
                 {/* Aspect Ratio */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.aspectRatio') || '宽高比'}</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {ASPECT_RATIOS.slice(0, 4).map(ratio => (
-                      <button
-                        key={ratio.id}
-                        onClick={() => setAspectRatio(ratio.id)}
-                        className={`flex flex-col items-center justify-center py-2.5 rounded-lg transition-all duration-200 border ${
-                          aspectRatio === ratio.id
-                            ? 'bg-gradient-to-br from-primary/80 to-accent/80 border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
-                            : 'bg-background/50 border-border text-muted-foreground/70 hover:border-border hover:text-foreground'
-                        }`}
-                      >
-                        <span className="text-lg leading-none mb-1">{ratio.icon}</span>
-                        <span className="text-xs font-medium">{ratio.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => setShowAspectRatioPopup(true)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-background/50 border border-border hover:border-primary/50 transition-colors"
+                  >
+                    <span className="text-sm font-medium text-foreground">
+                      {aspectRatioState.type === 'custom'
+                        ? `${aspectRatioState.width} × ${aspectRatioState.height}`
+                        : ASPECT_RATIOS.find(r => r.id === aspectRatioState.preset)?.label ?? '1:1'}
+                    </span>
+                    <span className="text-muted-foreground">选择</span>
+                  </button>
+                  <AspectRatioPopup
+                    open={showAspectRatioPopup}
+                    onClose={() => setShowAspectRatioPopup(false)}
+                    value={aspectRatioState}
+                    onChange={setAspectRatioState}
+                  />
                 </div>
 
                 {/* Number of Images */}
