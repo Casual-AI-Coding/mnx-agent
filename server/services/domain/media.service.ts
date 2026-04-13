@@ -27,11 +27,12 @@ export class MediaService implements IMediaService {
       offset,
       includeDeleted: filter.includeDeleted,
       ownerId: filter.ownerId,
+      ownerIdNot: filter.ownerIdNot,
+      visibilityOwnerId: filter.visibilityOwnerId,
       favorite: filter.favorite,
       favoriteUserId: filter.favoriteUserId,
       role: filter.role,
       isPublic: filter.isPublic,
-      ownerIdNot: filter.ownerIdNot,
     })
   }
 

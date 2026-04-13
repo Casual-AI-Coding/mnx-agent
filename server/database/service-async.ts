@@ -438,6 +438,7 @@ export class DatabaseService {
     includeDeleted?: boolean
     ownerId?: string
     ownerIdNot?: string
+    visibilityOwnerId?: string
     favorite?: boolean
     favoriteUserId?: string
     role?: 'user' | 'pro' | 'admin' | 'super'

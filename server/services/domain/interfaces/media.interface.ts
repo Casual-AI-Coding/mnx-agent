@@ -18,6 +18,7 @@ export interface MediaFilter {
   includeDeleted?: boolean
   ownerId?: string
   ownerIdNot?: string
+  visibilityOwnerId?: string
   favorite?: boolean
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
@@ -36,7 +37,7 @@ export interface IMediaService {
   /**
    * Get a single media record by ID
    */
-  getById(id: string, ownerId?: string): Promise<MediaRecord | null>
+  getById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null>
 
   /**
    * Get all media records with pagination and filtering

@@ -35,6 +35,7 @@ export interface MediaListOptions {
   includeDeleted?: boolean
   ownerId?: string
   ownerIdNot?: string
+  visibilityOwnerId?: string
   favorite?: boolean
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
@@ -74,7 +75,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, ownerIdNot, favorite, favoriteUserId, role, isPublic } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, ownerIdNot, visibilityOwnerId, favorite, favoriteUserId, role, isPublic } = options
 
     let selectClause = 'm.*'
     let joinClause = ''
@@ -103,18 +104,17 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       }
     }
 
-    // Visibility filtering based on role
-    const isAdminOrSuper = role === 'admin' || role === 'super'
-    if (!isAdminOrSuper && ownerId) {
-      // user/pro: see own private + all public
-      // IMPORTANT: Wrap OR in parentheses to ensure correct AND precedence
+    // Visibility filtering: user/pro can only see own private + all public
+    if (visibilityOwnerId) {
       whereClause += whereClause 
         ? ` AND (m.owner_id = $${paramIndex} OR m.is_public = true)` 
         : `(m.owner_id = $${paramIndex} OR m.is_public = true)`
-      params.push(ownerId)
+      params.push(visibilityOwnerId)
       paramIndex++
-    } else if (ownerId) {
-      // admin/super with ownerId: filter by owner
+    }
+
+    // Owner filter (user's selection, not visibility)
+    if (ownerId) {
       whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
       params.push(ownerId)
       paramIndex++
