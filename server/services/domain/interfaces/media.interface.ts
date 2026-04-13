@@ -19,6 +19,8 @@ export interface MediaFilter {
   ownerId?: string
   favorite?: boolean
   favoriteUserId?: string
+  role?: 'user' | 'pro' | 'admin' | 'super'
+  isPublic?: boolean
 }
 
 /**
@@ -64,4 +66,9 @@ export interface IMediaService {
    * Get multiple media records by IDs
    */
   getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]>
+
+  /**
+   * Toggle the public visibility of a media record
+   */
+  togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null>
 }

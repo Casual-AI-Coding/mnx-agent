@@ -439,6 +439,8 @@ export class DatabaseService {
     ownerId?: string
     favorite?: boolean
     favoriteUserId?: string
+    role?: 'user' | 'pro' | 'admin' | 'super'
+    isPublic?: boolean
   }): Promise<{ records: MediaRecord[]; total: number }> {
     const result = await this.mediaRepo.list(options)
     return { records: result.items, total: result.total }

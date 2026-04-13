@@ -29,6 +29,8 @@ export class MediaService implements IMediaService {
       ownerId: filter.ownerId,
       favorite: filter.favorite,
       favoriteUserId: filter.favoriteUserId,
+      role: filter.role,
+      isPublic: filter.isPublic,
     })
   }
 
@@ -61,5 +63,9 @@ export class MediaService implements IMediaService {
 
   async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
     return this.db.toggleFavorite(userId, mediaId)
+  }
+
+  async togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null> {
+    return this.db.togglePublicMediaRecord(id, isPublic)
   }
 }
