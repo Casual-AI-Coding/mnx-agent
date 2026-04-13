@@ -33,7 +33,7 @@ const upload = multer({
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { type, source, search, includeDeleted, favorite, isPublic, ownerId, ownerIdNot } = req.query
+  const { type, source, search, includeDeleted, favoriteFilter, publicFilter } = req.query
   const { page, limit, offset } = getPaginationParams(req.query)
   const userId = req.user?.userId ? req.user.userId : undefined
   const role = req.user?.role
@@ -48,13 +48,11 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
     limit,
     offset,
     includeDeleted: !!includeDeleted,
-    ownerId: ownerId as string | undefined,
-    ownerIdNot: ownerIdNot as string | undefined,
     visibilityOwnerId,
-    favorite: favorite as boolean | undefined,
+    favoriteFilter: favoriteFilter as ('favorite' | 'non-favorite')[] | undefined,
+    publicFilter: publicFilter as ('private' | 'public' | 'others-public')[] | undefined,
     favoriteUserId: userId,
     role,
-    isPublic: isPublic as boolean | undefined,
   })
 
   successResponse(res, createPaginatedResponse(result.records, result.total, page, limit))

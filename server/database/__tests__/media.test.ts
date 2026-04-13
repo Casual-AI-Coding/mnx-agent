@@ -307,7 +307,7 @@ describe('MediaRecord Database Service', () => {
         size_bytes: 1024,
       }, testOwnerId2)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, ownerId })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: ownerId })
       expect(result.records.length).toBe(1)
       expect(result.records[0].filename).toBe('owner_file.mp3')
     })
@@ -806,7 +806,7 @@ describe('togglePublic', () => {
       }, user2)
       await db.togglePublicMediaRecord(otherPublic.id, true)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, ownerId: user1, role: 'user' })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: user1, role: 'user' })
       const filenames = result.records.map(r => r.filename)
       
       expect(filenames).toContain('user1_private.png')
@@ -836,7 +836,7 @@ describe('togglePublic', () => {
       }, user2)
       await db.togglePublicMediaRecord(otherPrivate.id, false)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, ownerId: user1, role: 'admin' })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: user1, role: 'admin' })
       const filenames = result.records.map(r => r.filename)
       
       expect(filenames).toContain('admin_private1.png')
@@ -870,7 +870,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(publicRecord2.id, true)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, isPublic: true })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, publicFilter: ['public', 'others-public'] })
       const filenames = result.records.map(r => r.filename)
       
       expect(filenames).toContain('filter_public1.png')

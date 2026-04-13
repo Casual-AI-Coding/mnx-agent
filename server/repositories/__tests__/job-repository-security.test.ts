@@ -92,8 +92,8 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
       expect(result?.total_failures).toBe(0)
     })
 
-    it('should NOT allow updating job stats without ownerId (when job has owner)', async () => {
-      // Try to update without passing ownerId
+    it('should NOT allow updating job stats with wrong ownerId', async () => {
+      // Try to update with a different ownerId (ownerB trying to update ownerA's job)
       const stats: RunStats = {
         success: true,
         tasksExecuted: 1,
@@ -102,18 +102,15 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
         durationMs: 100,
       }
 
-      // Without ownerId, the update should either:
-      // 1. Not find the job (return null)
-      // 2. Not affect rows (return 0 changes)
-      const result = await jobRepo.updateRunStats(ownerAJobId, stats)
+      // With wrong ownerId, the update should return null (job not found for that owner)
+      const result = await jobRepo.updateRunStats(ownerAJobId, stats, ownerBId)
 
-      // If it returns a job, verify the stats weren't actually updated
-      if (result !== null) {
-        const job = await jobRepo.getById(ownerAJobId, ownerAId)
-        // The job exists but stats should not have been updated by anonymous caller
-        // Because the job HAS an owner, anonymous updates should be rejected
-        expect(job?.total_runs).toBe(0) // Should not have been updated
-      }
+      // Should return null because ownerB doesn't own ownerA's job
+      expect(result).toBeNull()
+      
+      // Verify the job's stats weren't actually updated
+      const job = await jobRepo.getById(ownerAJobId, ownerAId)
+      expect(job?.total_runs).toBe(0)
     })
 
     it('should allow owner B to update their own job stats', async () => {

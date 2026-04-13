@@ -6,6 +6,9 @@ export { mediaTypeEnum } from './schemas/enums.js'
 
 export const mediaSourceEnum = z.enum(['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation'])
 
+export const favoriteFilterValues = ['favorite', 'non-favorite'] as const
+export const publicFilterValues = ['private', 'public', 'others-public'] as const
+
 // Handle boolean query params correctly: "false" string should become false, not true
 const booleanQueryParam = z.preprocess(
   (val) => {
@@ -24,10 +27,22 @@ export const listMediaQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
   includeDeleted: booleanQueryParam.default(false),
-  favorite: booleanQueryParam,
-  isPublic: booleanQueryParam,
-  ownerId: z.string().optional(),
-  ownerIdNot: z.string().optional(),
+  favoriteFilter: z.preprocess(
+    (val) => {
+      if (Array.isArray(val)) return val
+      if (typeof val === 'string' && val.length > 0) return val.split(',')
+      return undefined
+    },
+    z.array(z.enum(favoriteFilterValues)).optional()
+  ),
+  publicFilter: z.preprocess(
+    (val) => {
+      if (Array.isArray(val)) return val
+      if (typeof val === 'string' && val.length > 0) return val.split(',')
+      return undefined
+    },
+    z.array(z.enum(publicFilterValues)).optional()
+  ),
 })
 
 export const mediaIdParamsSchema = z.object({

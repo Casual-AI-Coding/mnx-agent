@@ -16,13 +16,11 @@ export interface MediaFilter {
   limit?: number
   offset?: number
   includeDeleted?: boolean
-  ownerId?: string
-  ownerIdNot?: string
   visibilityOwnerId?: string
-  favorite?: boolean
+  favoriteFilter?: ('favorite' | 'non-favorite')[]
+  publicFilter?: ('private' | 'public' | 'others-public')[]
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
-  isPublic?: boolean
 }
 
 /**

@@ -69,7 +69,7 @@ export class ExportService {
       limit: limit * page,
       offset: 0,
       includeDeleted: false,
-      ownerId,
+      visibilityOwnerId: ownerId,
     })
 
     const filteredRecords = result.records.slice(offset, offset + limit)

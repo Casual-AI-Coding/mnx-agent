@@ -25,6 +25,9 @@ export interface MediaRecord {
   deleted_at: string | null
 }
 
+export type FavoriteFilter = 'favorite' | 'non-favorite'
+export type PublicFilter = 'private' | 'public' | 'others-public'
+
 export interface ListMediaParams {
   type?: MediaType
   source?: MediaSource
@@ -32,10 +35,8 @@ export interface ListMediaParams {
   page?: number
   limit?: number
   includeDeleted?: boolean
-  favorite?: boolean
-  isPublic?: boolean
-  ownerId?: string
-  ownerIdNot?: string
+  favoriteFilter?: FavoriteFilter[]
+  publicFilter?: PublicFilter[]
 }
 
 export interface ListMediaResponse {
@@ -64,7 +65,23 @@ export interface CreateMediaData {
 }
 
 export async function listMedia(params?: ListMediaParams): Promise<ListMediaResponse> {
-  const response = await client.get('/media', { params })
+  const queryParams: Record<string, string | number | boolean | undefined> = {
+    type: params?.type,
+    source: params?.source,
+    search: params?.search,
+    page: params?.page,
+    limit: params?.limit,
+    includeDeleted: params?.includeDeleted,
+  }
+  
+  if (params?.favoriteFilter?.length) {
+    queryParams.favoriteFilter = params.favoriteFilter.join(',')
+  }
+  if (params?.publicFilter?.length) {
+    queryParams.publicFilter = params.publicFilter.join(',')
+  }
+  
+  const response = await client.get('/media', { params: queryParams })
   return response.data
 }
 

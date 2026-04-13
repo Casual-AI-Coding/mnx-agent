@@ -235,6 +235,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Fetch media records
   const fetchMedia = useCallback(async (isInitial = false, forcePage?: number) => {
+    const startTime = Date.now()
     setIsLoading(true)
     if (isInitial) setIsInitialLoad(true)
     setError(null)
@@ -245,91 +246,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
 
-      // 计算favorite筛选参数
-      let favoriteParam: boolean | undefined
-      if (favoriteFilters.has('favorite') && !favoriteFilters.has('non-favorite')) {
-        favoriteParam = true
-      } else if (!favoriteFilters.has('favorite') && favoriteFilters.has('non-favorite')) {
-        favoriteParam = false
-      } else {
-        favoriteParam = undefined
-      }
-
-      // 计算public筛选参数
-      let isPublicParam: boolean | undefined
-      let ownerIdParam: string | undefined
-      let ownerIdNotParam: string | undefined
-
-      const hasPrivate = publicFilters.has('private')
-      const hasPublic = publicFilters.has('public')
-      const hasOthersPublic = publicFilters.has('others-public')
-
-      const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'super'
-
-      if (isAdminOrSuper) {
-        // super/admin: owner_id=null 是公共资源，可以管理
-        if (hasPrivate && !hasPublic && !hasOthersPublic) {
-          // 私有: isPublic=false（包含 owner_id=null 私有）
-          isPublicParam = false
-        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-          // 公开: 自己的公开
-          isPublicParam = true
-          ownerIdParam = currentUser?.id
-        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-          // 他人公开: 他人公开（含 owner_id=null 公开）
-          isPublicParam = true
-          ownerIdNotParam = currentUser?.id
-        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-          // 私有 + 自己公开: 自己的所有（含 owner_id=null 私有）
-          ownerIdParam = currentUser?.id
-        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-          // 私有 + 他人公开: 自己私有 + 他人公开（含 owner_id=null 公开）
-          ownerIdNotParam = currentUser?.id
-        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-          // 自己公开 + 他人公开 = 所有公开
-          isPublicParam = true
-        } else {
-          // 全选或全不选 = 全部
-          isPublicParam = undefined
-        }
-      } else {
-        // pro/user: visibility 限制，owner_id=null + is_public=false 不可见
-        if (hasPrivate && !hasPublic && !hasOthersPublic) {
-          // 私有: 自己的私有
-          ownerIdParam = currentUser?.id
-          isPublicParam = false
-        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-          // 公开: 自己的公开
-          ownerIdParam = currentUser?.id
-          isPublicParam = true
-        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-          // 他人公开: 他人公开（含 owner_id=null 公开）
-          isPublicParam = true
-          ownerIdNotParam = currentUser?.id
-        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-          // 私有 + 自己公开: 自己的所有
-          ownerIdParam = currentUser?.id
-        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-          // 私有 + 他人公开: 自己私有 + 他人公开（含 owner_id=null 公开）
-          // 后端 visibility 已限制为自己私有 + 所有公开，这里无需额外筛选
-        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-          // 所有公开
-          isPublicParam = true
-        } else {
-          // 全选或全不选 = 全部可见（后端 visibility 会限制）
-          isPublicParam = undefined
-        }
-      }
-
       const response = await listMedia({
         type,
         search: searchQuery.trim() || undefined,
         page,
         limit: paginationRef.current.limit,
-        favorite: favoriteParam,
-        isPublic: isPublicParam,
-        ownerId: ownerIdParam,
-        ownerIdNot: ownerIdNotParam,
+        favoriteFilter: Array.from(favoriteFilters),
+        publicFilter: Array.from(publicFilters),
       })
 
       if (response.success) {
@@ -339,10 +262,15 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取媒体列表失败')
     } finally {
+      const elapsed = Date.now() - startTime
+      const minDelay = 1000
+      if (elapsed < minDelay) {
+        await new Promise(resolve => setTimeout(resolve, minDelay - elapsed))
+      }
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id, currentUser?.role])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -353,72 +281,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
 
-      let favoriteParam: boolean | undefined
-      if (favoriteFilters.has('favorite') && !favoriteFilters.has('non-favorite')) {
-        favoriteParam = true
-      } else if (!favoriteFilters.has('favorite') && favoriteFilters.has('non-favorite')) {
-        favoriteParam = false
-      } else {
-        favoriteParam = undefined
-      }
-
-      let isPublicParam: boolean | undefined
-      let ownerIdParam: string | undefined
-      let ownerIdNotParam: string | undefined
-
-      const hasPrivate = publicFilters.has('private')
-      const hasPublic = publicFilters.has('public')
-      const hasOthersPublic = publicFilters.has('others-public')
-
-      const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'super'
-
-      if (isAdminOrSuper) {
-        if (hasPrivate && !hasPublic && !hasOthersPublic) {
-          isPublicParam = false
-        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-          isPublicParam = true
-          ownerIdParam = currentUser?.id
-        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-          isPublicParam = true
-          ownerIdNotParam = currentUser?.id
-        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-          ownerIdParam = currentUser?.id
-        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-          ownerIdNotParam = currentUser?.id
-        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-          isPublicParam = true
-        } else {
-          isPublicParam = undefined
-        }
-      } else {
-        if (hasPrivate && !hasPublic && !hasOthersPublic) {
-          ownerIdParam = currentUser?.id
-          isPublicParam = false
-        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-          ownerIdParam = currentUser?.id
-          isPublicParam = true
-        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-          isPublicParam = true
-          ownerIdNotParam = currentUser?.id
-        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-          ownerIdParam = currentUser?.id
-        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-          isPublicParam = true
-        } else {
-          isPublicParam = undefined
-        }
-      }
-
       const response = await listMedia({
         type,
         search: searchQuery.trim() || undefined,
         page,
         limit: 20,
-        favorite: favoriteParam,
-        isPublic: isPublicParam,
-        ownerId: ownerIdParam,
-        ownerIdNot: ownerIdNotParam,
+        favoriteFilter: Array.from(favoriteFilters),
+        publicFilter: Array.from(publicFilters),
       })
 
       if (response.success) {
@@ -436,7 +305,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id, currentUser?.role])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {

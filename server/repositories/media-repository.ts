@@ -33,13 +33,11 @@ export interface MediaListOptions {
   limit?: number
   offset?: number
   includeDeleted?: boolean
-  ownerId?: string
-  ownerIdNot?: string
   visibilityOwnerId?: string
-  favorite?: boolean
+  favoriteFilter?: ('favorite' | 'non-favorite')[]
+  publicFilter?: ('private' | 'public' | 'others-public')[]
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
-  isPublic?: boolean
 }
 
 export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaRecord, Partial<MediaRecord>> {
@@ -75,7 +73,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, ownerIdNot, visibilityOwnerId, favorite, favoriteUserId, role, isPublic } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, visibilityOwnerId, favoriteFilter, publicFilter, favoriteUserId, role } = options
 
     let selectClause = 'm.*'
     let joinClause = ''
@@ -83,14 +81,22 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const params: (string | number | boolean)[] = []
     let paramIndex = 1
 
-// Handle favorite filtering
+    const hasFavorite = favoriteFilter?.includes('favorite')
+    const hasNonFavorite = favoriteFilter?.includes('non-favorite')
+    const hasPrivate = publicFilter?.includes('private')
+    const hasPublic = publicFilter?.includes('public')
+    const hasOthersPublic = publicFilter?.includes('others-public')
+    const isAdminOrSuper = role === 'admin' || role === 'super'
+
+    // Favorite filter - join with favorites table
     if (favoriteUserId) {
       selectClause += ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
-      if (favorite === true) {
+      
+      if (hasFavorite && !hasNonFavorite) {
         joinClause = 'INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1 AND f.is_deleted = false'
         params.push(favoriteUserId)
         paramIndex++
-      } else if (favorite === false) {
+      } else if (!hasFavorite && hasNonFavorite) {
         joinClause = 'LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1'
         params.push(favoriteUserId)
         paramIndex++
@@ -104,7 +110,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       }
     }
 
-    // Visibility filtering: user/pro can only see own private + all public
+    // Visibility filter: user/pro can only see own private + all public
     if (visibilityOwnerId) {
       whereClause += whereClause 
         ? ` AND (m.owner_id = $${paramIndex} OR m.is_public = true)` 
@@ -113,11 +119,55 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       paramIndex++
     }
 
-    // Owner filter (user's selection, not visibility)
-    if (ownerId) {
-      whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
-      params.push(ownerId)
-      paramIndex++
+    // Public filter - apply user's selection
+    if (publicFilter && publicFilter.length > 0) {
+      if (hasPrivate && !hasPublic && !hasOthersPublic) {
+        // Only private: own private (for admin, also owner_id=null private)
+        if (isAdminOrSuper) {
+          whereClause += whereClause ? ` AND m.is_public = false` : `m.is_public = false`
+        } else {
+          whereClause += whereClause 
+            ? ` AND m.owner_id = $${paramIndex} AND m.is_public = false` 
+            : `m.owner_id = $${paramIndex} AND m.is_public = false`
+          params.push(visibilityOwnerId!)
+          paramIndex++
+        }
+      } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+        // Only own public
+        whereClause += whereClause 
+          ? ` AND m.owner_id = $${paramIndex} AND m.is_public = true` 
+          : `m.owner_id = $${paramIndex} AND m.is_public = true`
+        params.push(visibilityOwnerId!)
+        paramIndex++
+      } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+        // Only others' public
+        if (visibilityOwnerId) {
+          whereClause += whereClause 
+            ? ` AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}) AND m.is_public = true` 
+            : `(m.owner_id IS NULL OR m.owner_id != $${paramIndex}) AND m.is_public = true`
+          params.push(visibilityOwnerId)
+          paramIndex++
+        } else {
+          whereClause += whereClause ? ` AND m.is_public = true` : `m.is_public = true`
+        }
+      } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+        // Own private + own public = own all
+        whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
+        params.push(visibilityOwnerId!)
+        paramIndex++
+      } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+        // Own private + others' public
+        if (visibilityOwnerId) {
+          whereClause += whereClause 
+            ? ` AND (m.owner_id = $${paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}))` 
+            : `(m.owner_id = $${paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}))`
+          params.push(visibilityOwnerId)
+          paramIndex++
+        }
+      } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+        // All public
+        whereClause += whereClause ? ` AND m.is_public = true` : `m.is_public = true`
+      }
     }
 
     if (!includeDeleted) {
@@ -146,18 +196,6 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         ? ` AND (m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
         : `(m.filename LIKE $${paramIndex} OR m.original_name LIKE $${paramIndex})`
       params.push(searchTerm)
-      paramIndex++
-    }
-
-    if (isPublic !== undefined) {
-      whereClause += whereClause ? ` AND m.is_public = $${paramIndex}` : `m.is_public = $${paramIndex}`
-      params.push(isPublic)
-      paramIndex++
-    }
-
-    if (ownerIdNot) {
-      whereClause += whereClause ? ` AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex})` : `(m.owner_id IS NULL OR m.owner_id != $${paramIndex})`
-      params.push(ownerIdNot)
       paramIndex++
     }
 
