@@ -34,6 +34,8 @@ export interface ListMediaParams {
   includeDeleted?: boolean
   favorite?: boolean
   isPublic?: boolean
+  ownerId?: string
+  ownerIdNot?: string
 }
 
 export interface ListMediaResponse {

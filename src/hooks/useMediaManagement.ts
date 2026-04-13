@@ -51,10 +51,10 @@ export interface UseMediaManagementReturn {
   setPageInput: (input: string) => void
   audioPreviewRecord: MediaRecord | null
   setAudioPreviewRecord: (record: MediaRecord | null) => void
-  favoriteFilter: boolean
-  toggleFavoriteFilter: () => void
-  isPublicFilter: boolean | undefined
-  setIsPublicFilter: (filter: boolean | undefined) => void
+  favoriteFilters: Set<'favorite' | 'non-favorite'>
+  toggleFavoriteFilter: (filter: 'favorite' | 'non-favorite') => void
+  publicFilters: Set<'private' | 'public' | 'others-public'>
+  togglePublicFilter: (filter: 'private' | 'public' | 'others-public') => void
   handleTogglePublic: (mediaId: string) => Promise<void>
   handleBatchTogglePublic: (ids: string[], isPublic: boolean) => Promise<{ success: boolean; data: Array<{ id: string; success: boolean; data?: import('@/lib/api/media').MediaRecord; error?: string }> }>
 
@@ -107,8 +107,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
-  const [favoriteFilter, setFavoriteFilter] = useState(false)
-  const [isPublicFilter, setIsPublicFilter] = useState<boolean | undefined>()
+  const [favoriteFilters, setFavoriteFilters] = useState<Set<'favorite' | 'non-favorite'>>(new Set(['favorite', 'non-favorite']))
+  const [publicFilters, setPublicFilters] = useState<Set<'private' | 'public' | 'others-public'>>(new Set(['private', 'public', 'others-public']))
 
   // Ref to track pagination values (to avoid dependency issues with setPagination)
   const paginationRef = useRef(pagination)
@@ -245,13 +245,58 @@ export function useMediaManagement(): UseMediaManagementReturn {
     try {
       const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
+
+      // 计算favorite筛选参数
+      let favoriteParam: boolean | undefined
+      if (favoriteFilters.has('favorite') && !favoriteFilters.has('non-favorite')) {
+        favoriteParam = true
+      } else if (!favoriteFilters.has('favorite') && favoriteFilters.has('non-favorite')) {
+        favoriteParam = false
+      } else {
+        favoriteParam = undefined
+      }
+
+      // 计算public筛选参数
+      let isPublicParam: boolean | undefined
+      let ownerIdParam: string | undefined
+      let ownerIdNotParam: string | undefined
+
+      const hasPrivate = publicFilters.has('private')
+      const hasPublic = publicFilters.has('public')
+      const hasOthersPublic = publicFilters.has('others-public')
+
+      if (hasPrivate && !hasPublic && !hasOthersPublic) {
+        isPublicParam = false
+      } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+        isPublicParam = true
+        ownerIdParam = currentUser?.id
+      } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+        isPublicParam = true
+        ownerIdNotParam = currentUser?.id
+      } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+        // 私有 + 自己公开 = 自己所有
+        ownerIdParam = currentUser?.id
+      } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+        // 私有 + 他人公开
+        // 需要两次请求或后端支持组合筛选，暂时传isPublic=false让后端处理
+        isPublicParam = false
+      } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+        // 自己公开 + 他人公开 = 所有公开
+        isPublicParam = true
+      } else {
+        // 全选或全不选 = 全部
+        isPublicParam = undefined
+      }
+
       const response = await listMedia({
         type,
         search: searchQuery.trim() || undefined,
         page,
         limit: paginationRef.current.limit,
-        favorite: favoriteFilter ? true : undefined,
-        isPublic: isPublicFilter,
+        favorite: favoriteParam,
+        isPublic: isPublicParam,
+        ownerId: ownerIdParam,
+        ownerIdNot: ownerIdNotParam,
       })
 
       if (response.success) {
@@ -274,13 +319,51 @@ export function useMediaManagement(): UseMediaManagementReturn {
     try {
       const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
+
+      let favoriteParam: boolean | undefined
+      if (favoriteFilters.has('favorite') && !favoriteFilters.has('non-favorite')) {
+        favoriteParam = true
+      } else if (!favoriteFilters.has('favorite') && favoriteFilters.has('non-favorite')) {
+        favoriteParam = false
+      } else {
+        favoriteParam = undefined
+      }
+
+      let isPublicParam: boolean | undefined
+      let ownerIdParam: string | undefined
+      let ownerIdNotParam: string | undefined
+
+      const hasPrivate = publicFilters.has('private')
+      const hasPublic = publicFilters.has('public')
+      const hasOthersPublic = publicFilters.has('others-public')
+
+      if (hasPrivate && !hasPublic && !hasOthersPublic) {
+        isPublicParam = false
+      } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+        isPublicParam = true
+        ownerIdParam = currentUser?.id
+      } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+        isPublicParam = true
+        ownerIdNotParam = currentUser?.id
+      } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+        ownerIdParam = currentUser?.id
+      } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+        isPublicParam = false
+      } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+        isPublicParam = true
+      } else {
+        isPublicParam = undefined
+      }
+
       const response = await listMedia({
         type,
         search: searchQuery.trim() || undefined,
         page,
         limit: 20,
-        favorite: favoriteFilter ? true : undefined,
-        isPublic: isPublicFilter,
+        favorite: favoriteParam,
+        isPublic: isPublicParam,
+        ownerId: ownerIdParam,
+        ownerIdNot: ownerIdNotParam,
       })
 
       if (response.success) {
@@ -298,7 +381,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, isLoadingMore, favoriteFilter, isPublicFilter])
+  }, [activeTab, isLoadingMore, favoriteFilters, publicFilters, currentUser?.id])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {
@@ -429,17 +512,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track previous activeTab and favoriteFilter to detect changes
   const prevActiveTabRef = useRef(activeTab)
-  const prevFavoriteFilterRef = useRef(favoriteFilter)
-  const prevIsPublicFilterRef = useRef(isPublicFilter)
-
-  // Fetch data when tab, page, or favorite filter changes
-  useEffect(() => {
-    if (!isInitialLoad) {
-      const tabChanged = activeTab !== prevActiveTabRef.current
-      const pageChanged = pagination.page !== prevPageRef.current
-      const searchChanged = searchQuery !== prevSearchQueryRef.current
-      const favoriteChanged = favoriteFilter !== prevFavoriteFilterRef.current
-      const isPublicChanged = isPublicFilter !== prevIsPublicFilterRef.current
+const prevFavoriteFiltersRef = useRef(favoriteFilters)
+  const prevPublicFiltersRef = useRef(publicFilters)
+  const favoriteChanged = favoriteFilters !== prevFavoriteFiltersRef.current
+  const publicChanged = publicFilters !== prevPublicFiltersRef.current
       
       if (tabChanged || pageChanged || searchChanged || favoriteChanged || isPublicChanged) {
         prevActiveTabRef.current = activeTab
@@ -690,8 +766,29 @@ export function useMediaManagement(): UseMediaManagementReturn {
     setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
-  const toggleFavoriteFilter = useCallback(() => {
-    setFavoriteFilter(prev => !prev)
+  const toggleFavoriteFilter = useCallback((filter: 'favorite' | 'non-favorite') => {
+    setFavoriteFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(filter)) {
+        next.delete(filter)
+      } else {
+        next.add(filter)
+      }
+      return next.size === 0 ? new Set(['favorite', 'non-favorite']) : next
+    })
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }, [])
+
+  const togglePublicFilter = useCallback((filter: 'private' | 'public' | 'others-public') => {
+    setPublicFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(filter)) {
+        next.delete(filter)
+      } else {
+        next.add(filter)
+      }
+      return next.size === 0 ? new Set(['private', 'public', 'others-public']) : next
+    })
     setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
@@ -723,14 +820,14 @@ export function useMediaManagement(): UseMediaManagementReturn {
     isBatchDownloading,
     viewMode,
     setViewMode,
-    pageInput,
+pageInput,
     setPageInput,
     audioPreviewRecord,
     setAudioPreviewRecord,
-favoriteFilter,
+    favoriteFilters,
     toggleFavoriteFilter,
-    isPublicFilter,
-    setIsPublicFilter,
+    publicFilters,
+    togglePublicFilter,
     handleTogglePublic,
     handleBatchTogglePublic,
 

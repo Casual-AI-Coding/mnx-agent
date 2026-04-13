@@ -31,6 +31,7 @@ export class MediaService implements IMediaService {
       favoriteUserId: filter.favoriteUserId,
       role: filter.role,
       isPublic: filter.isPublic,
+      ownerIdNot: filter.ownerIdNot,
     })
   }
 

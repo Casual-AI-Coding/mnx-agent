@@ -34,6 +34,7 @@ export interface MediaListOptions {
   offset?: number
   includeDeleted?: boolean
   ownerId?: string
+  ownerIdNot?: string
   favorite?: boolean
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
@@ -141,6 +142,12 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     if (isPublic !== undefined) {
       whereClause += whereClause ? ` AND m.is_public = $${paramIndex}` : `m.is_public = $${paramIndex}`
       params.push(isPublic)
+      paramIndex++
+    }
+
+    if (ownerIdNot) {
+      whereClause += whereClause ? ` AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex})` : `(m.owner_id IS NULL OR m.owner_id != $${paramIndex})`
+      params.push(ownerIdNot)
       paramIndex++
     }
 

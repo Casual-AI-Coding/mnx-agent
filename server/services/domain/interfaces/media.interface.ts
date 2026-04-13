@@ -17,6 +17,7 @@ export interface MediaFilter {
   offset?: number
   includeDeleted?: boolean
   ownerId?: string
+  ownerIdNot?: string
   favorite?: boolean
   favoriteUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
