@@ -8,6 +8,7 @@ import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { MediaCardPreview } from './MediaCardPreview'
+import { PublicButton } from './PublicButton'
 
 interface MediaCardProps {
   record: MediaRecord
@@ -19,6 +20,8 @@ interface MediaCardProps {
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePublic?: (id: string, isPublic: boolean) => void
+  currentUserId?: string
 }
 
 export function MediaCard({
@@ -31,6 +34,8 @@ export function MediaCard({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePublic,
+  currentUserId,
 }: MediaCardProps) {
   const [showActions, setShowActions] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -169,6 +174,18 @@ export function MediaCard({
           >
             <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
           </div>
+        </div>
+      )}
+
+      {onTogglePublic && (
+        <div className="absolute top-2 right-12 z-20">
+          <PublicButton
+            isPublic={record.is_public}
+            ownerId={record.owner_id}
+            currentUserId={currentUserId}
+            onToggle={onTogglePublic ? (isPublic) => onTogglePublic(record.id, isPublic) : undefined}
+            size="sm"
+          />
         </div>
       )}
 

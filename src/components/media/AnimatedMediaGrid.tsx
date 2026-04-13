@@ -17,6 +17,8 @@ interface AnimatedMediaGridProps {
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePublic?: (id: string, isPublic: boolean) => void
+  currentUserId?: string
 }
 
 export function AnimatedMediaGrid({
@@ -29,6 +31,8 @@ export function AnimatedMediaGrid({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePublic,
+  currentUserId,
 }: AnimatedMediaGridProps) {
   return (
     <motion.div
@@ -55,6 +59,8 @@ export function AnimatedMediaGrid({
               onDelete={() => onDelete(record)}
               onRename={onRename}
               onToggleFavorite={onToggleFavorite}
+              onTogglePublic={onTogglePublic}
+              currentUserId={currentUserId}
             />
           </motion.div>
         ))}

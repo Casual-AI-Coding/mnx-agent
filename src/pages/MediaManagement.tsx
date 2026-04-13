@@ -194,6 +194,8 @@ export default function MediaManagement() {
                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
                 onRename={handleRename}
                 onToggleFavorite={handleToggleFavorite}
+                onTogglePublic={handleTogglePublic}
+                currentUserId={user?.id}
               />
             ) : viewMode === 'timeline' ? (
               <div className="rounded-lg overflow-hidden bg-muted/30">
