@@ -68,6 +68,7 @@ export default function MediaManagement() {
     handleToggleFavorite,
     handleTogglePublic,
     handleBatchTogglePublic,
+    handleManualSearch,
     handleTabChange,
     favoriteFilters,
     toggleFavoriteFilter,
