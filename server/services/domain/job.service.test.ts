@@ -30,13 +30,20 @@ describe('JobService', () => {
   const mockJob: CronJob = {
     id: 'job-1',
     name: 'Test Job',
-    expression: '0 * * * *',
-    workflow: '{}',
+    cron_expression: '0 * * * *',
+    description: null,
+    workflow_id: null,
+    owner_id: null,
     is_active: true,
+    last_run_at: null,
+    next_run_at: null,
+    total_runs: 0,
+    total_failures: 0,
+    timeout_ms: 300000,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     timezone: 'UTC',
-    misfire_policy: 'run_once',
+    misfire_policy: 'fire_once',
   }
 
   beforeEach(() => {
@@ -92,13 +99,30 @@ describe('JobService', () => {
     it('should create a new job', async () => {
       const createData: CreateCronJob = {
         name: 'New Job',
-        expression: '0 * * * *',
-        workflow: '{}',
+        cron_expression: '0 * * * *',
       }
-      mockDb.createCronJob.mockResolvedValue(mockJob)
+      mockDb.getAllCronJobs.mockResolvedValue([])
+      mockDb.createCronJob.mockResolvedValue({ ...mockJob, name: 'New Job' })
       const result = await service.create(createData, 'owner-1')
       expect(mockDb.createCronJob).toHaveBeenCalledWith(createData, 'owner-1')
-      expect(result).toEqual(mockJob)
+      expect(result.name).toBe('New Job')
+    })
+
+    it('should validate cron expression before creating job', async () => {
+      const createData: CreateCronJob = {
+        name: 'New Job',
+        cron_expression: 'invalid-expression',
+      }
+      await expect(service.create(createData, 'owner-1')).rejects.toThrow('Invalid cron expression')
+    })
+
+    it('should check duplicate names before creating job', async () => {
+      const createData: CreateCronJob = {
+        name: 'Test Job',
+        cron_expression: '0 * * * *',
+      }
+      mockDb.getAllCronJobs.mockResolvedValue([mockJob])
+      await expect(service.create(createData, 'owner-1')).rejects.toThrow('Job with name "Test Job" already exists')
     })
   })
 
@@ -143,6 +167,54 @@ describe('JobService', () => {
     it('should throw if job not found', async () => {
       mockDb.toggleCronJobActive.mockResolvedValue(null)
       await expect(service.toggle('nonexistent')).rejects.toThrow('CronJob not found: nonexistent')
+    })
+  })
+
+  describe('toggleActive (business logic)', () => {
+    it('should check dependencies before activating job', async () => {
+      const jobBeingActivated = { ...mockJob, id: 'job-1', is_active: false }
+      const inactiveDependency = { ...mockJob, id: 'job-2', is_active: false }
+      
+      mockDb.getCronJobById.mockResolvedValueOnce(jobBeingActivated)
+      mockDb.getJobDependencies.mockResolvedValue(['job-2'])
+      mockDb.getCronJobById.mockResolvedValueOnce(inactiveDependency)
+      
+      await expect(service.toggleActive('job-1', true, 'owner-1')).rejects.toThrow('Dependency job-2 is not active')
+    })
+
+    it('should allow activating job when all dependencies are active', async () => {
+      const jobBeingActivated = { ...mockJob, id: 'job-1', is_active: false }
+      const activeDependency = { ...mockJob, id: 'job-2', is_active: true }
+      const activatedJob = { ...mockJob, id: 'job-1', is_active: true }
+      
+      mockDb.getCronJobById.mockResolvedValueOnce(jobBeingActivated)
+      mockDb.getJobDependencies.mockResolvedValue(['job-2'])
+      mockDb.getCronJobById.mockResolvedValueOnce(activeDependency)
+      mockDb.toggleCronJobActive.mockResolvedValue(activatedJob)
+      
+      const result = await service.toggleActive('job-1', true, 'owner-1')
+      expect(result.is_active).toBe(true)
+    })
+
+    it('should allow activating job with no dependencies', async () => {
+      const jobBeingActivated = { ...mockJob, id: 'job-1', is_active: false }
+      const activatedJob = { ...mockJob, id: 'job-1', is_active: true }
+      
+      mockDb.getCronJobById.mockResolvedValueOnce(jobBeingActivated)
+      mockDb.getJobDependencies.mockResolvedValue([])
+      mockDb.toggleCronJobActive.mockResolvedValue(activatedJob)
+      
+      const result = await service.toggleActive('job-1', true, 'owner-1')
+      expect(result.is_active).toBe(true)
+    })
+  })
+
+  describe('update (business logic)', () => {
+    it('should validate cron expression when updating job', async () => {
+      const updateData: UpdateCronJob = { cron_expression: 'invalid-expression' }
+      mockDb.updateCronJob.mockResolvedValue(null)
+      
+      await expect(service.update('job-1', updateData, 'owner-1')).rejects.toThrow('Invalid cron expression')
     })
   })
 

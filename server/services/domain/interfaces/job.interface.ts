@@ -38,6 +38,12 @@ export interface IJobService {
   toggle(id: string, ownerId?: string): Promise<CronJob>
 
   /**
+   * Toggle job active status with dependency validation
+   * @throws Error if activating job with inactive dependencies
+   */
+  toggleActive(id: string, active: boolean, ownerId?: string): Promise<CronJob | null>
+
+  /**
    * Get all active cron jobs
    */
   getActive(): Promise<CronJob[]>
