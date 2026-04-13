@@ -251,6 +251,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         page,
         limit: paginationRef.current.limit,
         favorite: favoriteFilter ? true : undefined,
+        isPublic: isPublicFilter,
       })
 
       if (response.success) {
@@ -263,7 +264,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, searchQuery, favoriteFilter])
+  }, [activeTab, searchQuery, favoriteFilter, isPublicFilter])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -279,6 +280,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         page,
         limit: 20,
         favorite: favoriteFilter ? true : undefined,
+        isPublic: isPublicFilter,
       })
 
       if (response.success) {
@@ -296,7 +298,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, isLoadingMore, favoriteFilter])
+  }, [activeTab, isLoadingMore, favoriteFilter, isPublicFilter])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {
@@ -428,6 +430,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   // Track previous activeTab and favoriteFilter to detect changes
   const prevActiveTabRef = useRef(activeTab)
   const prevFavoriteFilterRef = useRef(favoriteFilter)
+  const prevIsPublicFilterRef = useRef(isPublicFilter)
 
   // Fetch data when tab, page, or favorite filter changes
   useEffect(() => {
@@ -436,16 +439,18 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const pageChanged = pagination.page !== prevPageRef.current
       const searchChanged = searchQuery !== prevSearchQueryRef.current
       const favoriteChanged = favoriteFilter !== prevFavoriteFilterRef.current
+      const isPublicChanged = isPublicFilter !== prevIsPublicFilterRef.current
       
-      if (tabChanged || pageChanged || searchChanged || favoriteChanged) {
+      if (tabChanged || pageChanged || searchChanged || favoriteChanged || isPublicChanged) {
         prevActiveTabRef.current = activeTab
         prevPageRef.current = pagination.page
         prevSearchQueryRef.current = searchQuery
         prevFavoriteFilterRef.current = favoriteFilter
+        prevIsPublicFilterRef.current = isPublicFilter
         fetchMedia(false)
       }
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilter])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilter, isPublicFilter])
 
   // Load timeline data when viewMode changes to timeline
   useEffect(() => {
