@@ -72,7 +72,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, favorite, favoriteUserId, role, isPublic } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, ownerId, ownerIdNot, favorite, favoriteUserId, role, isPublic } = options
 
     let selectClause = 'm.*'
     let joinClause = ''

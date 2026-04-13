@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
+import { useAuthStore } from '@/stores/auth'
 
 export interface DeleteDialogState {
   isOpen: boolean
@@ -109,6 +110,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [activeTab, setActiveTab] = useState('all')
   const [favoriteFilters, setFavoriteFilters] = useState<Set<'favorite' | 'non-favorite'>>(new Set(['favorite', 'non-favorite']))
   const [publicFilters, setPublicFilters] = useState<Set<'private' | 'public' | 'others-public'>>(new Set(['private', 'public', 'others-public']))
+  const currentUser = useAuthStore((state) => state.user)
 
   // Ref to track pagination values (to avoid dependency issues with setPagination)
   const paginationRef = useRef(pagination)
@@ -512,8 +514,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track previous activeTab and favoriteFilter to detect changes
   const prevActiveTabRef = useRef(activeTab)
-  const prevPageRef = useRef(pagination.page)
-  const prevSearchQueryRef = useRef(searchQuery)
   const prevFavoriteFiltersRef = useRef(favoriteFilters)
   const prevPublicFiltersRef = useRef(publicFilters)
 
