@@ -14,6 +14,8 @@ export const listMediaQuerySchema = z.object({
   search: z.string().optional(),
   includeDeleted: z.coerce.boolean().optional().default(false),
   favorite: z.coerce.boolean().optional(), // 筛选已收藏
+  role: z.enum(['user', 'pro', 'admin', 'super']).optional(),
+  isPublic: z.coerce.boolean().optional(),
 })
 
 export const mediaIdParamsSchema = z.object({
