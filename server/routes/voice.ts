@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -14,16 +15,18 @@ interface VoiceSyncBody {
 interface VoiceAsyncBody {
   model?: string
   text: string
+  callback_url?: string
 }
 
-router.post('/sync', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
+// Sync voice generation
+router.use('/sync', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'textToAudioSync',
+  buildRequestBody: (req: Request) => {
     const { model, text, stream } = req.body as VoiceSyncBody
 
     if (!text) {
-      errorResponse(res, 'text is required', 400)
-      return
+      throw { status: 400, message: 'text is required' }
     }
 
     const body: Record<string, unknown> = {
@@ -33,21 +36,20 @@ router.post('/sync', async (req: Request, res: Response) => {
 
     if (stream !== undefined) body.stream = stream
 
-    const result = await client.textToAudioSync(body)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
 
-router.post('/async', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
-    const { model, text } = req.body as VoiceAsyncBody
+// Async voice generation
+router.use('/async', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'textToAudioAsync',
+  buildRequestBody: (req: Request) => {
+    const { model, text, callback_url } = req.body as VoiceAsyncBody
 
     if (!text) {
-      errorResponse(res, 'text is required', 400)
-      return
+      throw { status: 400, message: 'text is required' }
     }
 
     const body: Record<string, unknown> = {
@@ -55,13 +57,14 @@ router.post('/async', async (req: Request, res: Response) => {
       text,
     }
 
-    const result = await client.textToAudioAsync(body)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    if (callback_url !== undefined) body.callback_url = callback_url
 
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
+
+// Query async result - GET /async/:taskId (factory only supports POST, so kept manual)
 router.get('/async/:taskId', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
@@ -73,7 +76,7 @@ router.get('/async/:taskId', async (req: Request, res: Response) => {
     }
 
     const result = await client.textToAudioAsyncStatus(taskId)
-    successResponse(res, result)
+    res.json({ success: true, data: result })
   } catch (error) {
     handleApiError(res, error)
   }
