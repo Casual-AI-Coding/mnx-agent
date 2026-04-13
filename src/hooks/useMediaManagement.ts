@@ -264,30 +264,61 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const hasPublic = publicFilters.has('public')
       const hasOthersPublic = publicFilters.has('others-public')
 
-      if (hasPrivate && !hasPublic && !hasOthersPublic) {
-        isPublicParam = false
-      } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-        isPublicParam = true
-        ownerIdParam = currentUser?.id
-      } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-        isPublicParam = true
-        ownerIdNotParam = currentUser?.id
-      } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-        // 私有 + 自己公开 = 自己所有
-        ownerIdParam = currentUser?.id
-      } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-        // 私有 + 他人公开 = 全部可见（后端visibility已限制为：自己的私有 + 所有公开）
-        // 用户想要：自己私有 + 他人公开（不含自己公开）
-        // 但这个组合无法精确实现，暂时返回全部可见
-        isPublicParam = undefined
-        ownerIdParam = undefined
-        ownerIdNotParam = undefined
-      } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-        // 自己公开 + 他人公开 = 所有公开
-        isPublicParam = true
+      const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'super'
+
+      if (isAdminOrSuper) {
+        // super/admin: owner_id=null 是公共资源，可以管理
+        if (hasPrivate && !hasPublic && !hasOthersPublic) {
+          // 私有: isPublic=false（包含 owner_id=null 私有）
+          isPublicParam = false
+        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+          // 公开: 自己的公开
+          isPublicParam = true
+          ownerIdParam = currentUser?.id
+        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+          // 他人公开: 他人公开（含 owner_id=null 公开）
+          isPublicParam = true
+          ownerIdNotParam = currentUser?.id
+        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+          // 私有 + 自己公开: 自己的所有（含 owner_id=null 私有）
+          ownerIdParam = currentUser?.id
+        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+          // 私有 + 他人公开: 自己私有 + 他人公开（含 owner_id=null 公开）
+          ownerIdNotParam = currentUser?.id
+        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+          // 自己公开 + 他人公开 = 所有公开
+          isPublicParam = true
+        } else {
+          // 全选或全不选 = 全部
+          isPublicParam = undefined
+        }
       } else {
-        // 全选或全不选 = 全部
-        isPublicParam = undefined
+        // pro/user: visibility 限制，owner_id=null + is_public=false 不可见
+        if (hasPrivate && !hasPublic && !hasOthersPublic) {
+          // 私有: 自己的私有
+          ownerIdParam = currentUser?.id
+          isPublicParam = false
+        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+          // 公开: 自己的公开
+          ownerIdParam = currentUser?.id
+          isPublicParam = true
+        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+          // 他人公开: 他人公开（含 owner_id=null 公开）
+          isPublicParam = true
+          ownerIdNotParam = currentUser?.id
+        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+          // 私有 + 自己公开: 自己的所有
+          ownerIdParam = currentUser?.id
+        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+          // 私有 + 他人公开: 自己私有 + 他人公开（含 owner_id=null 公开）
+          // 后端 visibility 已限制为自己私有 + 所有公开，这里无需额外筛选
+        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+          // 所有公开
+          isPublicParam = true
+        } else {
+          // 全选或全不选 = 全部可见（后端 visibility 会限制）
+          isPublicParam = undefined
+        }
       }
 
       const response = await listMedia({
@@ -311,7 +342,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id, currentUser?.role])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
@@ -339,24 +370,44 @@ export function useMediaManagement(): UseMediaManagementReturn {
       const hasPublic = publicFilters.has('public')
       const hasOthersPublic = publicFilters.has('others-public')
 
-      if (hasPrivate && !hasPublic && !hasOthersPublic) {
-        isPublicParam = false
-      } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-        isPublicParam = true
-        ownerIdParam = currentUser?.id
-      } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-        isPublicParam = true
-        ownerIdNotParam = currentUser?.id
-      } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-        ownerIdParam = currentUser?.id
-      } else if (hasPrivate && !hasPublic && hasOthersPublic) {
-        isPublicParam = undefined
-        ownerIdParam = undefined
-        ownerIdNotParam = undefined
-      } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-        isPublicParam = true
+      const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'super'
+
+      if (isAdminOrSuper) {
+        if (hasPrivate && !hasPublic && !hasOthersPublic) {
+          isPublicParam = false
+        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+          isPublicParam = true
+          ownerIdParam = currentUser?.id
+        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+          isPublicParam = true
+          ownerIdNotParam = currentUser?.id
+        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+          ownerIdParam = currentUser?.id
+        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+          ownerIdNotParam = currentUser?.id
+        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+          isPublicParam = true
+        } else {
+          isPublicParam = undefined
+        }
       } else {
-        isPublicParam = undefined
+        if (hasPrivate && !hasPublic && !hasOthersPublic) {
+          ownerIdParam = currentUser?.id
+          isPublicParam = false
+        } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
+          ownerIdParam = currentUser?.id
+          isPublicParam = true
+        } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
+          isPublicParam = true
+          ownerIdNotParam = currentUser?.id
+        } else if (hasPrivate && hasPublic && !hasOthersPublic) {
+          ownerIdParam = currentUser?.id
+        } else if (hasPrivate && !hasPublic && hasOthersPublic) {
+        } else if (!hasPrivate && hasPublic && hasOthersPublic) {
+          isPublicParam = true
+        } else {
+          isPublicParam = undefined
+        }
       }
 
       const response = await listMedia({
@@ -385,7 +436,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters, currentUser?.id, currentUser?.role])
 
   // Handle single delete
   const handleDelete = useCallback(async (record: MediaRecord) => {
