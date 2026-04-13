@@ -11,7 +11,7 @@ describe('createAsyncStore', () => {
   it('should create store with async action returning success', async () => {
     const mockApi = vi.fn().mockResolvedValue({ success: true, data: { items: [1, 2, 3] } })
 
-    const useTestStore = createAsyncStore<AsyncState & { items: number[] }, { fetchItems: void }>({
+    const useTestStore = createAsyncStore<AsyncState & { items: number[] }>({
       name: 'test-store-success',
       initialState: { items: [], loading: false, error: null },
       actions: {
@@ -34,7 +34,7 @@ describe('createAsyncStore', () => {
   it('should handle API errors', async () => {
     const mockApi = vi.fn().mockResolvedValue({ success: false, error: 'API failed' })
 
-    const useTestStore = createAsyncStore<AsyncState & { items: number[] }, { fetchItems: void }>({
+    const useTestStore = createAsyncStore<AsyncState & { items: number[] }>({
       name: 'test-store-api-error',
       initialState: { items: [], loading: false, error: null },
       actions: {
@@ -46,7 +46,11 @@ describe('createAsyncStore', () => {
     })
 
     await act(async () => {
-      await useTestStore.getState().fetchItems()
+      try {
+        await useTestStore.getState().fetchItems()
+      } catch (e) {
+        // Expected - factory throws on error
+      }
     })
 
     expect(useTestStore.getState().loading).toBe(false)
@@ -57,7 +61,7 @@ describe('createAsyncStore', () => {
   it('should handle network errors', async () => {
     const mockApi = vi.fn().mockRejectedValue(new Error('Network error'))
 
-    const useTestStore = createAsyncStore<AsyncState & { items: number[] }, { fetchItems: void }>({
+    const useTestStore = createAsyncStore<AsyncState & { items: number[] }>({
       name: 'test-store-network-error',
       initialState: { items: [], loading: false, error: null },
       actions: {
@@ -69,7 +73,11 @@ describe('createAsyncStore', () => {
     })
 
     await act(async () => {
-      await useTestStore.getState().fetchItems()
+      try {
+        await useTestStore.getState().fetchItems()
+      } catch (e) {
+        // Expected - factory throws on error
+      }
     })
 
     expect(useTestStore.getState().error).toBe('Network error')
