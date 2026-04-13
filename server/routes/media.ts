@@ -108,6 +108,67 @@ router.patch('/:id/favorite', validateParams(mediaIdParamsSchema), asyncHandler(
   })
 }))
 
+router.patch('/:id/public', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = getMediaService()
+  const { id } = req.params
+  const { isPublic } = req.body
+
+  if (typeof isPublic !== 'boolean') {
+    errorResponse(res, 'isPublic must be boolean', 400)
+    return
+  }
+
+  const record = await db.getById(id)
+  if (!record || record.is_deleted) {
+    errorResponse(res, 'Media record not found', 404)
+    return
+  }
+
+  if (record.owner_id) {
+    if (record.owner_id !== req.user?.userId) {
+      errorResponse(res, 'Only owner can toggle public status', 403)
+      return
+    }
+  } else {
+    if (req.user?.role !== 'super') {
+      errorResponse(res, 'Only super can toggle public status for records without owner', 403)
+      return
+    }
+  }
+
+  const updated = await db.togglePublic(id, isPublic)
+  successResponse(res, updated)
+}))
+
+router.post('/batch/public', asyncHandler(async (req, res) => {
+  const db = getMediaService()
+  const { ids, isPublic } = req.body
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    errorResponse(res, 'ids must be non-empty array', 400)
+    return
+  }
+
+  if (typeof isPublic !== 'boolean') {
+    errorResponse(res, 'isPublic must be boolean', 400)
+    return
+  }
+
+  const userId = req.user?.userId
+  const results = await Promise.all(
+    ids.map(async (id: string) => {
+      const record = await db.getById(id)
+      if (record && !record.is_deleted && record.owner_id === userId) {
+        const updated = await db.togglePublic(id, isPublic)
+        return { id, success: true, data: updated }
+      }
+      return { id, success: false, error: 'Not authorized or not found' }
+    })
+  )
+
+  successResponse(res, results)
+}))
+
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
   const { ids } = req.body as { ids: string[] }

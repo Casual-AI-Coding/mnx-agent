@@ -17,6 +17,7 @@ export interface MediaRecord {
   metadata: string | null
   is_deleted: boolean
   is_public?: boolean
+  owner_id?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -55,6 +56,7 @@ export interface MediaRecordRow {
   metadata: string | null
   is_deleted: boolean
   is_public?: boolean
+  owner_id?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
