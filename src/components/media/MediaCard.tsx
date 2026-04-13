@@ -52,8 +52,10 @@ export function MediaCard({
     setIsEditing(false)
   }
 
-  const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
-  const isOthersPublic = record.is_public && !isOwn
+  const isOwn = record.owner_id === currentUserId
+  const isAdminOrSuper = userRole === 'admin' || userRole === 'super'
+  const canManage = isOwn || (!record.owner_id && isAdminOrSuper)
+  const isOthersPublic = record.is_public && !canManage
   return (
     <div
       className={`relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
@@ -151,7 +153,8 @@ export function MediaCard({
               e.stopPropagation()
               onDelete()
             }}
-            disabled={isOthersPublic}
+            disabled={!canManage}
+            title={!canManage ? '无权限删除此记录' : '删除'}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>

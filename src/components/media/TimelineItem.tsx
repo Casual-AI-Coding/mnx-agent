@@ -68,8 +68,10 @@ export function TimelineItem({
     setEditName(record.original_name || record.filename)
     setIsEditing(false)
   }
-  const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
-  const isOthersPublic = record.is_public && !isOwn
+  const isOwn = record.owner_id === currentUserId
+  const isAdminOrSuper = userRole === 'admin' || userRole === 'super'
+  const canManage = isOwn || (!record.owner_id && isAdminOrSuper)
+  const isOthersPublic = record.is_public && !canManage
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group ${
@@ -205,7 +207,7 @@ export function TimelineItem({
               iconOnly
             />
           )}
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title={isOthersPublic ? '他人公开的记录无法删除' : '删除'} disabled={isOthersPublic}>
+          <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title={!canManage ? '无权限删除此记录' : '删除'} disabled={!canManage}>
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>

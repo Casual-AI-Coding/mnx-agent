@@ -37,6 +37,12 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
   const { page, limit, offset } = getPaginationParams(req.query)
   const userId = req.user?.userId ? req.user.userId : undefined
 
+  // Use buildOwnerFilter for proper visibility control
+  // user/pro: forced to see only own + public records
+  // admin/super: can optionally filter by ownerId query param
+  const ownerFilter = buildOwnerFilter(req)
+  const effectiveOwnerId = ownerFilter.ownerId ?? (ownerId as string | undefined)
+
   const result = await db.getAll({
     type: type as any,
     source: source as any,
@@ -44,7 +50,7 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
     limit,
     offset,
     includeDeleted: !!includeDeleted,
-    ownerId: ownerId as string | undefined,
+    ownerId: effectiveOwnerId,
     ownerIdNot: ownerIdNot as string | undefined,
     favorite: favorite as boolean | undefined,
     favoriteUserId: userId,

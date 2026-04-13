@@ -115,8 +115,10 @@ export function MediaTableView({
         </thead>
         <tbody>
           {records.map((record) => {
-            const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
-            const isOthersPublic = record.is_public && !isOwn
+            const isOwn = record.owner_id === currentUserId
+            const isAdminOrSuper = userRole === 'admin' || userRole === 'super'
+            const canManage = isOwn || (!record.owner_id && isAdminOrSuper)
+            const isOthersPublic = record.is_public && !canManage
             return (
             <tr
               key={record.id}
@@ -263,8 +265,8 @@ export function MediaTableView({
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => onDelete(record)}
-                    title={isOthersPublic ? '他人公开的记录无法删除' : '删除'}
-                    disabled={isOthersPublic}
+                    title={!canManage ? '无权限删除此记录' : '删除'}
+                    disabled={!canManage}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
