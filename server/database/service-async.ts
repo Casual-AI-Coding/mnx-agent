@@ -447,8 +447,8 @@ export class DatabaseService {
     return { records: result.items, total: result.total }
   }
 
-  async getMediaRecordById(id: string, ownerId?: string): Promise<MediaRecord | null> {
-    return this.mediaRepo.getById(id, ownerId)
+  async getMediaRecordById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
+    return this.mediaRepo.getById(id, ownerId, includePublic)
   }
 
   async createMediaRecord(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> {

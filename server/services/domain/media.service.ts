@@ -12,8 +12,8 @@ import type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces/
 export class MediaService implements IMediaService {
   constructor(private readonly db: DatabaseService) {}
 
-  async getById(id: string, ownerId?: string): Promise<MediaRecord | null> {
-    return this.db.getMediaRecordById(id, ownerId)
+  async getById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
+    return this.db.getMediaRecordById(id, ownerId, includePublic)
   }
 
   async getAll(filter: MediaFilter): Promise<MediaQueryResult> {

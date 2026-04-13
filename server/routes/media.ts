@@ -58,7 +58,7 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
-  const record = await db.getById(req.params.id, ownerId)
+  const record = await db.getById(req.params.id, ownerId, true) // includePublic for visibility
   const includeDeleted = req.query.includeDeleted === 'true'
   
   if (!withEntityNotFound(record, res, 'Media record')) return
@@ -88,7 +88,7 @@ router.patch('/:id/favorite', validateParams(mediaIdParamsSchema), asyncHandler(
   const db = getMediaService()
 
   const ownerId = buildOwnerFilter(req).params[0]
-  const record = await db.getById(req.params.id, ownerId)
+  const record = await db.getById(req.params.id, ownerId, true) // includePublic for visibility
   if (!record) {
     errorResponse(res, 'Media record not found', 404)
     return
@@ -290,7 +290,7 @@ router.get('/:id/token', validateParams(mediaIdParamsSchema), asyncHandler(async
   }
 
   const ownerId = buildOwnerFilter(req).params[0]
-  const record = await db.getById(req.params.id, ownerId)
+  const record = await db.getById(req.params.id, ownerId, true) // includePublic for visibility
   if (!record || record.is_deleted) {
     errorResponse(res, 'Media not found', 404)
     return

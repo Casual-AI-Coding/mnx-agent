@@ -56,12 +56,14 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     return rowToMediaRecord(row as MediaRecordRow)
   }
 
-  async getById(id: string, ownerId?: string): Promise<MediaRecord | null> {
+  async getById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
     if (ownerId) {
-      const rows = await this.conn.query<MediaRecordRow>(
-        `SELECT * FROM media_records WHERE id = $1 AND owner_id = $2`,
-        [id, ownerId]
-      )
+      // For read operations, allow access to public records
+      // For write operations, strict owner check
+      const whereClause = includePublic
+        ? `SELECT * FROM media_records WHERE id = $1 AND (owner_id = $2 OR is_public = true)`
+        : `SELECT * FROM media_records WHERE id = $1 AND owner_id = $2`
+      const rows = await this.conn.query<MediaRecordRow>(whereClause, [id, ownerId])
       return rows[0] ? rowToMediaRecord(rows[0]) : null
     }
     const rows = await this.conn.query<MediaRecordRow>(
