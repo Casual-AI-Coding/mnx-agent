@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
-import { getClientFromRequest } from '../lib/minimax-client-factory.js'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { errorResponse, successResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -24,11 +25,16 @@ interface MusicGenerateBody {
   // music-cover 特有
   reference_audio_url?: string
   use_original_lyrics?: boolean
+
+  // prompt from frontend
+  prompt?: string
 }
 
-router.post('/generate', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
+// POST /generate - uses factory
+router.use('/generate', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'musicGeneration',
+  buildRequestBody: (req: Request) => {
     const {
       model,
       lyrics,
@@ -39,24 +45,22 @@ router.post('/generate', async (req: Request, res: Response) => {
       seed,
       reference_audio_url,
       use_original_lyrics,
+      prompt,
     } = req.body as MusicGenerateBody
 
     // 纯音乐模式：lyrics 可为空，但 style_prompt 必填
     const isInstrumental = model === 'music-2.6' || model === 'music-2.5+'
-    if (!lyrics && !style_prompt) {
-      errorResponse(res, '纯音乐模式需要填写风格描述', 400)
-      return
+    if (!lyrics && !style_prompt && !prompt) {
+      throw { status: 400, message: '纯音乐模式需要填写风格描述' }
     }
     // 非纯音乐模式：lyrics 必填
     if (!isInstrumental && !lyrics) {
-      errorResponse(res, 'lyrics is required', 400)
-      return
+      throw { status: 400, message: 'lyrics is required' }
     }
 
     // music-cover 模式验证
     if (model === 'music-cover' && !reference_audio_url) {
-      errorResponse(res, 'reference_audio_url is required for music-cover model', 400)
-      return
+      throw { status: 400, message: 'reference_audio_url is required for music-cover model' }
     }
 
     const body: Record<string, unknown> = {
@@ -65,7 +69,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     }
 
     // Handle prompt from frontend (official MiniMax parameter name)
-    const promptValue = style_prompt || req.body.prompt
+    const promptValue = style_prompt || prompt
     if (lyrics) body.lyrics = lyrics
     if (promptValue) body.prompt = promptValue
     if (optimize_lyrics !== undefined) body.optimize_lyrics = optimize_lyrics
@@ -74,37 +78,12 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (reference_audio_url) body.reference_audio_url = reference_audio_url
     if (use_original_lyrics !== undefined) body.use_original_lyrics = use_original_lyrics
 
-    const result = await client.musicGeneration(body) as {
-      data: {
-        audio: string
-        status: number
-      }
-      trace_id: string
-      extra_info?: {
-        music_duration?: number
-        music_sample_rate?: number
-        music_channel?: number
-        bitrate?: number
-        music_size?: number
-      }
-      base_resp?: {
-        status_code: number
-        status_msg: string
-      }
-    }
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
 
-    // Flatten the response structure
-    successResponse(res, {
-      audio: result.data.audio,
-      status: result.data.status,
-      trace_id: result.trace_id,
-      extra_info: result.extra_info,
-    })
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
-
+// POST /preprocess - manual implementation (FormData upload)
 router.post('/preprocess', upload.single('audio_file'), async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)

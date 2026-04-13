@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { getClientFromRequest } from '../lib/minimax-client-factory.js'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { errorResponse, successResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -17,14 +18,15 @@ interface VideoGenerateBody {
   callback_url?: string
 }
 
-router.post('/generate', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
+// POST /generate - uses factory
+router.use('/generate', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'videoGeneration',
+  buildRequestBody: (req: Request) => {
     const { model, prompt, first_frame_image, last_frame_image, subject_reference, callback_url } = req.body as VideoGenerateBody
 
     if (!prompt) {
-      errorResponse(res, 'prompt is required', 400)
-      return
+      throw { status: 400, message: 'prompt is required' }
     }
 
     const body: Record<string, unknown> = {
@@ -37,13 +39,12 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (subject_reference) body.subject_reference = subject_reference
     if (callback_url) body.callback_url = callback_url
 
-    const result = await client.videoGeneration(body)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
 
+// GET /status/:taskId - manual implementation (factory only supports POST)
 router.get('/status/:taskId', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)

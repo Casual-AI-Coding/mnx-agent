@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { getClientFromRequest } from '../lib/minimax-client-factory.js'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { errorResponse, successResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -21,18 +22,20 @@ const VIDEO_AGENT_TEMPLATES = [
   { id: '393488336655310850', name: '攀岩', description: '运动攀岩', requires: ['media_inputs'] },
 ]
 
+// GET /templates - manual implementation (factory only supports POST)
 router.get('/templates', async (_req: Request, res: Response) => {
   successResponse(res, VIDEO_AGENT_TEMPLATES)
 })
 
-router.post('/generate', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
+// POST /generate - uses factory
+router.use('/generate', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'videoAgentGenerate',
+  buildRequestBody: (req: Request) => {
     const { template_id, text_inputs, media_inputs, callback_url } = req.body as VideoAgentGenerateBody
 
     if (!template_id) {
-      errorResponse(res, 'template_id is required', 400)
-      return
+      throw { status: 400, message: 'template_id is required' }
     }
 
     const body: Record<string, unknown> = { template_id }
@@ -41,13 +44,12 @@ router.post('/generate', async (req: Request, res: Response) => {
     if (media_inputs) body.media_inputs = media_inputs
     if (callback_url) body.callback_url = callback_url
 
-    const result = await client.videoAgentGenerate(body)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
 
+// GET /status/:taskId - manual implementation (factory only supports POST)
 router.get('/status/:taskId', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)

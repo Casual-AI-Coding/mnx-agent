@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express'
-import { getClientFromRequest } from '../lib/minimax-client-factory.js'
-import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
 import multer from 'multer'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { getClientFromRequest } from '../lib/minimax-client-factory'
+import { handleApiError } from '../middleware/errorHandler'
+import { errorResponse, successResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -11,6 +12,12 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 })
 
+interface FileDeleteBody {
+  file_id: number | string
+  purpose: string
+}
+
+// GET /list - manual implementation (factory only supports POST)
 router.get('/list', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
@@ -22,6 +29,7 @@ router.get('/list', async (req: Request, res: Response) => {
   }
 })
 
+// POST /upload - manual implementation (FormData upload)
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
@@ -48,6 +56,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
   }
 })
 
+// GET /retrieve - manual implementation (factory only supports POST)
 router.get('/retrieve', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
@@ -65,21 +74,20 @@ router.get('/retrieve', async (req: Request, res: Response) => {
   }
 })
 
-router.post('/delete', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
-    const { file_id, purpose } = req.body
+// POST /delete - uses factory
+router.use('/delete', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'fileDelete',
+  buildRequestBody: (req: Request) => {
+    const { file_id, purpose } = req.body as FileDeleteBody
 
     if (!file_id || !purpose) {
-      errorResponse(res, 'file_id and purpose are required', 400)
-      return
+      throw { status: 400, message: 'file_id and purpose are required' }
     }
 
-    const result = await client.fileDelete(Number(file_id), purpose)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    return { file_id: Number(file_id), purpose }
+  },
+  extractClient: getClientFromRequest
+}))
 
 export default router
