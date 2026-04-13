@@ -29,7 +29,10 @@ export function createApiProxyRouter(config: ApiProxyConfig): Router {
   router.post(
     config.endpoint,
     asyncHandler(async (req: Request, res: Response) => {
-      const client = config.extractClient?.(req) ?? req.minimaxClient
+      const client = config.extractClient?.(req)
+      if (!client) {
+        throw new Error('extractClient is required for createApiProxyRouter')
+      }
       const requestBody = config.buildRequestBody(req)
 
       const method = (client as any)[config.clientMethod]

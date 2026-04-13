@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { getClientFromRequest } from '../lib/minimax-client-factory.js'
+import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { errorResponse } from '../middleware/api-response'
 
 const router = Router()
 
@@ -19,15 +20,15 @@ interface ChatRequestBody {
   max_completion_tokens?: number
 }
 
-router.post('/chat', async (req: Request, res: Response) => {
-  try {
-    const client = getClientFromRequest(req)
-    
+// Non-streaming chat endpoint - uses factory
+router.use('/chat', createApiProxyRouter({
+  endpoint: '/',
+  clientMethod: 'chatCompletion',
+  buildRequestBody: (req: Request) => {
     const { model, messages, temperature, top_p, max_completion_tokens } = req.body as ChatRequestBody
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      errorResponse(res, 'messages is required and must be a non-empty array', 400)
-      return
+      throw { status: 400, message: 'messages is required and must be a non-empty array' }
     }
 
     const body: Record<string, unknown> = {
@@ -39,13 +40,12 @@ router.post('/chat', async (req: Request, res: Response) => {
     if (top_p !== undefined) body.top_p = top_p
     if (max_completion_tokens !== undefined) body.max_completion_tokens = max_completion_tokens
 
-    const result = await client.chatCompletion(body)
-    successResponse(res, result)
-  } catch (error) {
-    handleApiError(res, error)
-  }
-})
+    return body
+  },
+  extractClient: getClientFromRequest
+}))
 
+// Streaming chat endpoint - manual implementation (factory doesn't support streaming)
 router.post('/chat/stream', async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
