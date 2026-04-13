@@ -512,21 +512,30 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Track previous activeTab and favoriteFilter to detect changes
   const prevActiveTabRef = useRef(activeTab)
-const prevFavoriteFiltersRef = useRef(favoriteFilters)
+  const prevPageRef = useRef(pagination.page)
+  const prevSearchQueryRef = useRef(searchQuery)
+  const prevFavoriteFiltersRef = useRef(favoriteFilters)
   const prevPublicFiltersRef = useRef(publicFilters)
-  const favoriteChanged = favoriteFilters !== prevFavoriteFiltersRef.current
-  const publicChanged = publicFilters !== prevPublicFiltersRef.current
+
+  // Initial fetch and refetch on tab/page/search/filter changes
+  useEffect(() => {
+    if (isInitialLoad || activeTab !== prevActiveTabRef.current || pagination.page !== prevPageRef.current || searchQuery !== prevSearchQueryRef.current || favoriteFilters !== prevFavoriteFiltersRef.current || publicFilters !== prevPublicFiltersRef.current) {
+      const tabChanged = activeTab !== prevActiveTabRef.current
+      const pageChanged = pagination.page !== prevPageRef.current
+      const searchChanged = searchQuery !== prevSearchQueryRef.current
+      const favoriteChanged = favoriteFilters !== prevFavoriteFiltersRef.current
+      const publicChanged = publicFilters !== prevPublicFiltersRef.current
       
-      if (tabChanged || pageChanged || searchChanged || favoriteChanged || isPublicChanged) {
+      if (tabChanged || pageChanged || searchChanged || favoriteChanged || publicChanged) {
         prevActiveTabRef.current = activeTab
         prevPageRef.current = pagination.page
         prevSearchQueryRef.current = searchQuery
-        prevFavoriteFilterRef.current = favoriteFilter
-        prevIsPublicFilterRef.current = isPublicFilter
+        prevFavoriteFiltersRef.current = favoriteFilters
+        prevPublicFiltersRef.current = publicFilters
         fetchMedia(false)
       }
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilter, isPublicFilter])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, searchQuery, favoriteFilters, publicFilters])
 
   // Load timeline data when viewMode changes to timeline
   useEffect(() => {

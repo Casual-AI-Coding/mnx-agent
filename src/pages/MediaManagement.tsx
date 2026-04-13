@@ -1,4 +1,4 @@
-import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive, Star } from 'lucide-react'
+import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive, Star, StarOff, Lock, Globe, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -69,8 +69,10 @@ export default function MediaManagement() {
     handleTogglePublic,
     handleBatchTogglePublic,
     handleTabChange,
-    favoriteFilter,
+    favoriteFilters,
     toggleFavoriteFilter,
+    publicFilters,
+    togglePublicFilter,
   } = useMediaManagement()
 
   return (
@@ -131,16 +133,62 @@ export default function MediaManagement() {
               </TabsList>
             </Tabs>
 
-            <div className="flex items-center bg-muted/50 rounded-lg p-1">
-              <Button
-                variant={favoriteFilter ? 'default' : 'ghost'}
-                size="sm"
-                onClick={toggleFavoriteFilter}
-                className={cn('h-8 px-3', favoriteFilter && 'text-yellow-500')}
-                title={favoriteFilter ? '取消收藏筛选' : '只看已收藏'}
-              >
-                <Star className={cn('w-4 h-4', favoriteFilter && 'fill-current')} />
-              </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant={favoriteFilters.has('favorite') ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => toggleFavoriteFilter('favorite')}
+                  className={cn('h-8 px-3', favoriteFilters.has('favorite') && 'text-yellow-500')}
+                  title="已收藏"
+                >
+                  <Star className={cn('w-4 h-4', favoriteFilters.has('favorite') && 'fill-current')} />
+                  <span className="ml-1 text-xs">已收藏</span>
+                </Button>
+                <Button
+                  variant={favoriteFilters.has('non-favorite') ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => toggleFavoriteFilter('non-favorite')}
+                  className="h-8 px-3"
+                  title="未收藏"
+                >
+                  <StarOff className="w-4 h-4" />
+                  <span className="ml-1 text-xs">未收藏</span>
+                </Button>
+              </div>
+              
+              <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant={publicFilters.has('private') ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => togglePublicFilter('private')}
+                  className={cn('h-8 px-3', publicFilters.has('private') && 'text-red-500')}
+                  title="私有"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span className="ml-1 text-xs">私有</span>
+                </Button>
+                <Button
+                  variant={publicFilters.has('public') ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => togglePublicFilter('public')}
+                  className={cn('h-8 px-3', publicFilters.has('public') && 'text-green-500')}
+                  title="公开"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="ml-1 text-xs">公开</span>
+                </Button>
+                <Button
+                  variant={publicFilters.has('others-public') ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => togglePublicFilter('others-public')}
+                  className={cn('h-8 px-3', publicFilters.has('others-public') && 'text-blue-400')}
+                  title="他人公开"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="ml-1 text-xs">他人</span>
+                </Button>
+              </div>
             </div>
 
             <div className="relative">
