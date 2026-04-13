@@ -147,10 +147,6 @@ export function useMediaManagement(): UseMediaManagementReturn {
   // Track fetched IDs to avoid duplicate requests
   const fetchedIdsRef = useRef<Set<string>>(new Set())
 
-  // Track previous page to avoid unnecessary fetches
-  const prevPageRef = useRef(pagination.page)
-  const prevSearchQueryRef = useRef(searchQuery)
-
   // Derived: filtered records based on search query
   const filteredRecords = records
 
