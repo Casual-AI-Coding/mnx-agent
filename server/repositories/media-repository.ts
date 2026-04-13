@@ -122,9 +122,11 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     // Public filter - apply user's selection
     if (publicFilter && publicFilter.length > 0) {
       if (hasPrivate && !hasPublic && !hasOthersPublic) {
-        // Only private: own private (for admin, also owner_id=null private)
+        // Only private
         if (isAdminOrSuper) {
-          whereClause += whereClause ? ` AND m.is_public = false` : `m.is_public = false`
+          whereClause += whereClause ? ` AND (m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = false` : `(m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = false`
+          params.push(visibilityOwnerId!)
+          paramIndex++
         } else {
           whereClause += whereClause 
             ? ` AND m.owner_id = $${paramIndex} AND m.is_public = false` 
@@ -133,15 +135,29 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
           paramIndex++
         }
       } else if (!hasPrivate && hasPublic && !hasOthersPublic) {
-        // Only own public
-        whereClause += whereClause 
-          ? ` AND m.owner_id = $${paramIndex} AND m.is_public = true` 
-          : `m.owner_id = $${paramIndex} AND m.is_public = true`
-        params.push(visibilityOwnerId!)
-        paramIndex++
+        // Only own public (for admin/super: includes owner_id=null public)
+        if (isAdminOrSuper) {
+          whereClause += whereClause 
+            ? ` AND (m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = true` 
+            : `(m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = true`
+          params.push(visibilityOwnerId!)
+          paramIndex++
+        } else {
+          whereClause += whereClause 
+            ? ` AND m.owner_id = $${paramIndex} AND m.is_public = true` 
+            : `m.owner_id = $${paramIndex} AND m.is_public = true`
+          params.push(visibilityOwnerId!)
+          paramIndex++
+        }
       } else if (!hasPrivate && !hasPublic && hasOthersPublic) {
-        // Only others' public
-        if (visibilityOwnerId) {
+        // Only others' public (for admin/super: excludes owner_id=null)
+        if (isAdminOrSuper && visibilityOwnerId) {
+          whereClause += whereClause 
+            ? ` AND m.owner_id != $${paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true` 
+            : `m.owner_id != $${paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true`
+          params.push(visibilityOwnerId)
+          paramIndex++
+        } else if (visibilityOwnerId) {
           whereClause += whereClause 
             ? ` AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}) AND m.is_public = true` 
             : `(m.owner_id IS NULL OR m.owner_id != $${paramIndex}) AND m.is_public = true`
@@ -151,13 +167,27 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
           whereClause += whereClause ? ` AND m.is_public = true` : `m.is_public = true`
         }
       } else if (hasPrivate && hasPublic && !hasOthersPublic) {
-        // Own private + own public = own all
-        whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
-        params.push(visibilityOwnerId!)
-        paramIndex++
+        // Own private + own public (for admin/super: owner_id=null all)
+        if (isAdminOrSuper) {
+          whereClause += whereClause 
+            ? ` AND (m.owner_id = $${paramIndex} OR m.owner_id IS NULL)` 
+            : `(m.owner_id = $${paramIndex} OR m.owner_id IS NULL)`
+          params.push(visibilityOwnerId!)
+          paramIndex++
+        } else {
+          whereClause += whereClause ? ` AND m.owner_id = $${paramIndex}` : `m.owner_id = $${paramIndex}`
+          params.push(visibilityOwnerId!)
+          paramIndex++
+        }
       } else if (hasPrivate && !hasPublic && hasOthersPublic) {
         // Own private + others' public
-        if (visibilityOwnerId) {
+        if (isAdminOrSuper && visibilityOwnerId) {
+          whereClause += whereClause 
+            ? ` AND ((m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = false OR m.owner_id != $${paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true)` 
+            : `((m.owner_id = $${paramIndex} OR m.owner_id IS NULL) AND m.is_public = false OR m.owner_id != $${paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true)`
+          params.push(visibilityOwnerId)
+          paramIndex++
+        } else if (visibilityOwnerId) {
           whereClause += whereClause 
             ? ` AND (m.owner_id = $${paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}))` 
             : `(m.owner_id = $${paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${paramIndex}))`
@@ -165,7 +195,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
           paramIndex++
         }
       } else if (!hasPrivate && hasPublic && hasOthersPublic) {
-        // All public
+        // All public (for admin/super: public + others-public = all public including owner_id=null)
         whereClause += whereClause ? ` AND m.is_public = true` : `m.is_public = true`
       }
     }
