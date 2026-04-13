@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -154,9 +154,6 @@ export function TimelineItem({
             iconOnly
           />
         )}
-        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }} title="编辑">
-          <Pencil className="w-4 h-4" />
-        </Button>
         <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title="删除">
           <Trash2 className="w-4 h-4" />
         </Button>
