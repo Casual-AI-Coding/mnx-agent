@@ -80,8 +80,8 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const params: (string | number | boolean)[] = []
     let paramIndex = 1
 
-    // Handle favorite filtering
-if (favoriteUserId) {
+// Handle favorite filtering
+    if (favoriteUserId) {
       selectClause += ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
       if (favorite === true) {
         joinClause = 'INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $1 AND f.is_deleted = false'
@@ -99,7 +99,6 @@ if (favoriteUserId) {
         params.push(favoriteUserId)
         paramIndex++
       }
-    }
     }
 
     // Visibility filtering based on role
