@@ -1,12 +1,10 @@
 import { internalAxios } from './client'
-import { toApiResponse } from './errors'
+import { createApiMethod } from './create-api-method'
 import type {
-  CronJob,
   BackendJob,
   TaskQueueItem,
   ExecutionLog,
   ExecutionLogDetail,
-  CapacityRecord,
   WorkflowTemplate,
   CreateCronJobDTO,
   UpdateCronJobDTO,
@@ -43,332 +41,263 @@ const cronClient = internalAxios
 // Cron Jobs API - Fixed endpoints to match backend
 // ============================================
 
-export async function getCronJobs(): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
-  try {
-    const response = await cronClient.get('/cron/jobs')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getCronJobs(): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
+  return createApiMethod<Record<string, never>, { jobs: BackendJob[]; total: number }>({
+    method: 'GET',
+    path: '/cron/jobs',
+  })({})
 }
 
-export async function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<BackendJob>> {
-  try {
-    const backendJob = {
-      name: job.name,
-      description: job.description,
-      cron_expression: job.cronExpression,
-      timezone: job.timezone ?? 'Asia/Shanghai',
-      workflow_id: job.workflowId,
-      is_active: job.isActive ?? true,
-    }
-    const response = await cronClient.post('/cron/jobs', backendJob)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
+export function createCronJob(job: CreateCronJobDTO): Promise<ApiResponse<BackendJob>> {
+  const backendJob = {
+    name: job.name,
+    description: job.description,
+    cron_expression: job.cronExpression,
+    timezone: job.timezone ?? 'Asia/Shanghai',
+    workflow_id: job.workflowId,
+    is_active: job.isActive ?? true,
   }
+  return createApiMethod<{ body: typeof backendJob }, BackendJob>({
+    method: 'POST',
+    path: '/cron/jobs',
+  })({ body: backendJob })
 }
 
-export async function getCronJob(id: string): Promise<ApiResponse<BackendJob>> {
-  try {
-    const response = await cronClient.get(`/cron/jobs/${id}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getCronJob(id: string): Promise<ApiResponse<BackendJob>> {
+  return createApiMethod<{ id: string }, BackendJob>({
+    method: 'GET',
+    path: '/cron/jobs/:id',
+  })({ id })
 }
 
-export async function updateCronJob(id: string, updates: UpdateCronJobDTO): Promise<ApiResponse<BackendJob>> {
-  try {
-    const backendUpdates: Record<string, unknown> = {}
-    if (updates.name !== undefined) backendUpdates.name = updates.name
-    if (updates.description !== undefined) backendUpdates.description = updates.description
-    if (updates.cronExpression !== undefined) backendUpdates.cron_expression = updates.cronExpression
-    if (updates.timezone !== undefined) backendUpdates.timezone = updates.timezone
-    if (updates.workflowId !== undefined) backendUpdates.workflow_id = updates.workflowId
-    if (updates.isActive !== undefined) backendUpdates.is_active = updates.isActive
-    
-    const response = await cronClient.put(`/cron/jobs/${id}`, backendUpdates)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function updateCronJob(id: string, updates: UpdateCronJobDTO): Promise<ApiResponse<BackendJob>> {
+  const backendUpdates: Record<string, unknown> = {}
+  if (updates.name !== undefined) backendUpdates.name = updates.name
+  if (updates.description !== undefined) backendUpdates.description = updates.description
+  if (updates.cronExpression !== undefined) backendUpdates.cron_expression = updates.cronExpression
+  if (updates.timezone !== undefined) backendUpdates.timezone = updates.timezone
+  if (updates.workflowId !== undefined) backendUpdates.workflow_id = updates.workflowId
+  if (updates.isActive !== undefined) backendUpdates.is_active = updates.isActive
+
+  return createApiMethod<{ id: string; body: Record<string, unknown> }, BackendJob>({
+    method: 'PUT',
+    path: '/cron/jobs/:id',
+  })({ id, body: backendUpdates })
 }
 
-export async function deleteCronJob(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.delete(`/cron/jobs/${id}`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function deleteCronJob(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'DELETE',
+    path: '/cron/jobs/:id',
+  })({ id })
 }
 
-export async function runCronJob(id: string): Promise<ApiResponse<{ message: string; logId: string }>> {
-  try {
-    const response = await cronClient.post(`/cron/jobs/${id}/run`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function runCronJob(id: string): Promise<ApiResponse<{ message: string; logId: string }>> {
+  return createApiMethod<{ id: string }, { message: string; logId: string }>({
+    method: 'POST',
+    path: '/cron/jobs/:id/run',
+  })({ id })
 }
 
-export async function toggleCronJob(id: string): Promise<ApiResponse<{ job: BackendJob; scheduled: boolean }>> {
-  try {
-    const response = await cronClient.post(`/cron/jobs/${id}/toggle`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function toggleCronJob(id: string): Promise<ApiResponse<{ job: BackendJob; scheduled: boolean }>> {
+  return createApiMethod<{ id: string }, { job: BackendJob; scheduled: boolean }>({
+    method: 'POST',
+    path: '/cron/jobs/:id/toggle',
+  })({ id })
 }
 
 // ============================================
 // Task Queue API - Fixed endpoints
 // ============================================
 
-export async function getTasks(filter?: TaskQueueFilter & { page?: number; limit?: number }): Promise<ApiResponse<TasksResponse>> {
-  try {
-    const params = new URLSearchParams()
-    if (filter?.status) params.append('status', filter.status)
-    if (filter?.jobId) params.append('job_id', filter.jobId)
-    if (filter?.page) params.append('page', String(filter.page))
-    if (filter?.limit) params.append('limit', String(filter.limit))
-    
-    const response = await cronClient.get('/cron/queue', { params })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getTasks(filter?: TaskQueueFilter & { page?: number; limit?: number }): Promise<ApiResponse<TasksResponse>> {
+  return createApiMethod<{ query: { status?: string; job_id?: string; page?: number; limit?: number } }, TasksResponse>({
+    method: 'GET',
+    path: '/cron/queue',
+  })({ query: { status: filter?.status, job_id: filter?.jobId, page: filter?.page, limit: filter?.limit } })
 }
 
-export async function createTask(task: CreateTaskDTO): Promise<ApiResponse<TaskQueueItem>> {
-  try {
-    const backendTask = {
-      job_id: task.jobId,
-      task_type: task.taskType,
-      payload: typeof task.payload === 'string' ? task.payload : JSON.stringify(task.payload),
-      priority: task.priority ?? 0,
-      max_retries: task.maxRetries ?? 3,
-    }
-    const response = await cronClient.post('/cron/queue', backendTask)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
+export function createTask(task: CreateTaskDTO): Promise<ApiResponse<TaskQueueItem>> {
+  const backendTask = {
+    job_id: task.jobId,
+    task_type: task.taskType,
+    payload: typeof task.payload === 'string' ? task.payload : JSON.stringify(task.payload),
+    priority: task.priority ?? 0,
+    max_retries: task.maxRetries ?? 3,
   }
+  return createApiMethod<{ body: typeof backendTask }, TaskQueueItem>({
+    method: 'POST',
+    path: '/cron/queue',
+  })({ body: backendTask })
 }
 
-export async function updateTask(id: string, updates: UpdateTaskDTO): Promise<ApiResponse<TaskQueueItem>> {
-  try {
-    const response = await cronClient.put(`/cron/queue/${id}`, updates)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function updateTask(id: string, updates: UpdateTaskDTO): Promise<ApiResponse<TaskQueueItem>> {
+  return createApiMethod<{ id: string; body: UpdateTaskDTO }, TaskQueueItem>({
+    method: 'PUT',
+    path: '/cron/queue/:id',
+  })({ id, body: updates })
 }
 
-export async function deleteTask(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.delete(`/cron/queue/${id}`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function deleteTask(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'DELETE',
+    path: '/cron/queue/:id',
+  })({ id })
 }
 
-export async function retryTask(id: string): Promise<ApiResponse<TaskQueueItem>> {
-  try {
-    const response = await cronClient.post(`/cron/queue/${id}/retry`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function retryTask(id: string): Promise<ApiResponse<TaskQueueItem>> {
+  return createApiMethod<{ id: string }, TaskQueueItem>({
+    method: 'POST',
+    path: '/cron/queue/:id/retry',
+  })({ id })
 }
 
 // ============================================
 // Execution Logs API - Fixed endpoints
 // ============================================
 
-export async function getLogs(filter?: { jobId?: string; status?: string; limit?: number }): Promise<ApiResponse<{ logs: ExecutionLog[]; total: number }>> {
-  try {
-    const params = new URLSearchParams()
-    if (filter?.jobId) params.append('job_id', filter.jobId)
-    if (filter?.status) params.append('status', filter.status)
-    if (filter?.limit) params.append('limit', String(filter.limit))
-    
-    const response = await cronClient.get('/cron/logs', { params })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getLogs(filter?: { jobId?: string; status?: string; limit?: number }): Promise<ApiResponse<{ logs: ExecutionLog[]; total: number }>> {
+  return createApiMethod<{ query: { job_id?: string; status?: string; limit?: number } }, { logs: ExecutionLog[]; total: number }>({
+    method: 'GET',
+    path: '/cron/logs',
+  })({ query: { job_id: filter?.jobId, status: filter?.status, limit: filter?.limit } })
 }
 
-export async function getLogById(id: string): Promise<ApiResponse<ExecutionLog>> {
-  try {
-    const response = await cronClient.get(`/cron/logs/${id}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getLogById(id: string): Promise<ApiResponse<ExecutionLog>> {
+  return createApiMethod<{ id: string }, ExecutionLog>({
+    method: 'GET',
+    path: '/cron/logs/:id',
+  })({ id })
 }
 
-export async function getLogDetails(id: string): Promise<ApiResponse<{ log: ExecutionLog; details: ExecutionLogDetail[] }>> {
-  try {
-    const response = await cronClient.get(`/cron/logs/${id}/details`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getLogDetails(id: string): Promise<ApiResponse<{ log: ExecutionLog; details: ExecutionLogDetail[] }>> {
+  return createApiMethod<{ id: string }, { log: ExecutionLog; details: ExecutionLogDetail[] }>({
+    method: 'GET',
+    path: '/cron/logs/:id/details',
+  })({ id })
 }
 
 // ============================================
 // Workflow API - Fixed endpoints
 // ============================================
 
-export async function validateWorkflow(workflow: { nodes: unknown[]; edges: unknown[] } | { workflow_json: string }): Promise<ApiResponse<WorkflowValidationResponse>> {
-  try {
-    const response = await cronClient.post('/cron/workflow/validate', workflow)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function validateWorkflow(workflow: { nodes: unknown[]; edges: unknown[] } | { workflow_json: string }): Promise<ApiResponse<WorkflowValidationResponse>> {
+  return createApiMethod<{ body: typeof workflow }, WorkflowValidationResponse>({
+    method: 'POST',
+    path: '/cron/workflow/validate',
+  })({ body: workflow })
 }
 
-export async function getWorkflowTemplates(): Promise<ApiResponse<{ templates: WorkflowTemplate[]; total: number }>> {
-  try {
-    const response = await cronClient.get('/cron/workflow/templates')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getWorkflowTemplates(): Promise<ApiResponse<{ templates: WorkflowTemplate[]; total: number }>> {
+  return createApiMethod<Record<string, never>, { templates: WorkflowTemplate[]; total: number }>({
+    method: 'GET',
+    path: '/cron/workflow/templates',
+  })({})
 }
 
-export async function createWorkflowTemplate(template: { name: string; description: string; nodesJson: string; edgesJson: string }): Promise<ApiResponse<WorkflowTemplate>> {
-  try {
-    const backendTemplate = {
-      name: template.name,
-      description: template.description,
-      nodes_json: template.nodesJson,
-      edges_json: template.edgesJson,
-      is_template: true,
-    }
-    const response = await cronClient.post('/cron/workflow/templates', backendTemplate)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
+export function createWorkflowTemplate(template: { name: string; description: string; nodesJson: string; edgesJson: string }): Promise<ApiResponse<WorkflowTemplate>> {
+  const backendTemplate = {
+    name: template.name,
+    description: template.description,
+    nodes_json: template.nodesJson,
+    edges_json: template.edgesJson,
+    is_template: true,
   }
+  return createApiMethod<{ body: typeof backendTemplate }, WorkflowTemplate>({
+    method: 'POST',
+    path: '/cron/workflow/templates',
+  })({ body: backendTemplate })
 }
 
-export async function updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplateDTO): Promise<ApiResponse<WorkflowTemplate>> {
-  try {
-    const backendUpdates: Record<string, unknown> = {}
-    if (updates.name !== undefined) backendUpdates.name = updates.name
-    if (updates.description !== undefined) backendUpdates.description = updates.description
-    if (updates.nodesJson !== undefined) backendUpdates.nodes_json = updates.nodesJson
-    if (updates.edgesJson !== undefined) backendUpdates.edges_json = updates.edgesJson
-    
-    const response = await cronClient.put(`/cron/workflow/templates/${id}`, backendUpdates)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplateDTO): Promise<ApiResponse<WorkflowTemplate>> {
+  const backendUpdates: Record<string, unknown> = {}
+  if (updates.name !== undefined) backendUpdates.name = updates.name
+  if (updates.description !== undefined) backendUpdates.description = updates.description
+  if (updates.nodesJson !== undefined) backendUpdates.nodes_json = updates.nodesJson
+  if (updates.edgesJson !== undefined) backendUpdates.edges_json = updates.edgesJson
+
+  return createApiMethod<{ id: string; body: Record<string, unknown> }, WorkflowTemplate>({
+    method: 'PUT',
+    path: '/cron/workflow/templates/:id',
+  })({ id, body: backendUpdates })
 }
 
-export async function deleteWorkflowTemplate(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.delete(`/cron/workflow/templates/${id}`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function deleteWorkflowTemplate(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'DELETE',
+    path: '/cron/workflow/templates/:id',
+  })({ id })
 }
 
 // ============================================
 // Job Tags API
 // ============================================
 
-export async function addJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
-  try {
-    const response = await cronClient.post(`/cron/jobs/${jobId}/tags`, { tag })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function addJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
+  return createApiMethod<{ jobId: string; body: { tag: string } }, { tags: string[] }>({
+    method: 'POST',
+    path: '/cron/jobs/:jobId/tags',
+  })({ jobId, body: { tag } })
 }
 
-export async function removeJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
-  try {
-    const response = await cronClient.delete(`/cron/jobs/${jobId}/tags/${encodeURIComponent(tag)}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function removeJobTag(jobId: string, tag: string): Promise<ApiResponse<{ tags: string[] }>> {
+  return createApiMethod<{ jobId: string; tag: string }, { tags: string[] }>({
+    method: 'DELETE',
+    path: '/cron/jobs/:jobId/tags/:tag',
+  })({ jobId, tag: encodeURIComponent(tag) })
 }
 
-export async function getJobTags(jobId: string): Promise<ApiResponse<{ tags: string[] }>> {
-  try {
-    const response = await cronClient.get(`/cron/jobs/${jobId}/tags`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getJobTags(jobId: string): Promise<ApiResponse<{ tags: string[] }>> {
+  return createApiMethod<{ jobId: string }, { tags: string[] }>({
+    method: 'GET',
+    path: '/cron/jobs/:jobId/tags',
+  })({ jobId })
 }
 
-export async function getJobsByTag(tag: string): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
-  try {
-    const response = await cronClient.get(`/cron/tags/${encodeURIComponent(tag)}/jobs`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getJobsByTag(tag: string): Promise<ApiResponse<{ jobs: BackendJob[]; total: number }>> {
+  return createApiMethod<{ tag: string }, { jobs: BackendJob[]; total: number }>({
+    method: 'GET',
+    path: '/cron/tags/:tag/jobs',
+  })({ tag })
 }
 
-export async function getAllTags(): Promise<ApiResponse<{ tags: { tag: string; count: number }[] }>> {
-  try {
-    const response = await cronClient.get('/cron/tags')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getAllTags(): Promise<ApiResponse<{ tags: { tag: string; count: number }[] }>> {
+  return createApiMethod<Record<string, never>, { tags: { tag: string; count: number }[] }>({
+    method: 'GET',
+    path: '/cron/tags',
+  })({})
 }
 
 // ============================================
 // Job Dependencies API
 // ============================================
 
-export async function addJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
-  try {
-    const response = await cronClient.post(`/cron/jobs/${jobId}/dependencies`, { depends_on_job_id: dependsOnJobId })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function addJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  return createApiMethod<{ jobId: string; body: { depends_on_job_id: string } }, { dependencies: string[] }>({
+    method: 'POST',
+    path: '/cron/jobs/:jobId/dependencies',
+  })({ jobId, body: { depends_on_job_id: dependsOnJobId } })
 }
 
-export async function removeJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
-  try {
-    const response = await cronClient.delete(`/cron/jobs/${jobId}/dependencies/${dependsOnJobId}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function removeJobDependency(jobId: string, dependsOnJobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  return createApiMethod<{ jobId: string; dependsOnJobId: string }, { dependencies: string[] }>({
+    method: 'DELETE',
+    path: '/cron/jobs/:jobId/dependencies/:dependsOnJobId',
+  })({ jobId, dependsOnJobId })
 }
 
-export async function getJobDependencies(jobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
-  try {
-    const response = await cronClient.get(`/cron/jobs/${jobId}/dependencies`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getJobDependencies(jobId: string): Promise<ApiResponse<{ dependencies: string[] }>> {
+  return createApiMethod<{ jobId: string }, { dependencies: string[] }>({
+    method: 'GET',
+    path: '/cron/jobs/:jobId/dependencies',
+  })({ jobId })
 }
 
-export async function getJobDependents(jobId: string): Promise<ApiResponse<{ dependents: string[] }>> {
-  try {
-    const response = await cronClient.get(`/cron/jobs/${jobId}/dependents`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getJobDependents(jobId: string): Promise<ApiResponse<{ dependents: string[] }>> {
+  return createApiMethod<{ jobId: string }, { dependents: string[] }>({
+    method: 'GET',
+    path: '/cron/jobs/:jobId/dependents',
+  })({ jobId })
 }
 
 // ============================================
@@ -380,34 +309,25 @@ interface DLQListResponse {
   total: number
 }
 
-export async function getDeadLetterQueue(limit?: number): Promise<ApiResponse<DLQListResponse>> {
-  try {
-    const params = new URLSearchParams()
-    if (limit) params.append('limit', String(limit))
-    
-    const response = await cronClient.get('/cron/dlq', { params })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getDeadLetterQueue(limit?: number): Promise<ApiResponse<DLQListResponse>> {
+  return createApiMethod<{ query: { limit?: number } }, DLQListResponse>({
+    method: 'GET',
+    path: '/cron/dlq',
+  })({ query: { limit } })
 }
 
-export async function retryDeadLetterQueueItem(id: string): Promise<ApiResponse<{ taskId: string; message: string }>> {
-  try {
-    const response = await cronClient.post(`/cron/dlq/${id}/retry`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function retryDeadLetterQueueItem(id: string): Promise<ApiResponse<{ taskId: string; message: string }>> {
+  return createApiMethod<{ id: string }, { taskId: string; message: string }>({
+    method: 'POST',
+    path: '/cron/dlq/:id/retry',
+  })({ id })
 }
 
-export async function deleteDeadLetterQueueItem(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.delete(`/cron/dlq/${id}`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function deleteDeadLetterQueueItem(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'DELETE',
+    path: '/cron/dlq/:id',
+  })({ id })
 }
 
 // ============================================
@@ -428,118 +348,98 @@ export interface AutoRetryStats {
   config: AutoRetryConfig
 }
 
-export async function getAutoRetryStats(): Promise<ApiResponse<AutoRetryStats>> {
-  try {
-    const response = await cronClient.get('/cron/dlq/auto-retry/stats')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getAutoRetryStats(): Promise<ApiResponse<AutoRetryStats>> {
+  return createApiMethod<Record<string, never>, AutoRetryStats>({
+    method: 'GET',
+    path: '/cron/dlq/auto-retry/stats',
+  })({})
 }
 
-export async function updateAutoRetryConfig(config: {
+export function updateAutoRetryConfig(config: {
   enabled?: boolean
   initialDelayMs?: number
   maxDelayMs?: number
   maxAttempts?: number
   backoffMultiplier?: number
 }): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.patch('/cron/dlq/auto-retry/config', config)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+  return createApiMethod<{ body: typeof config }, void>({
+    method: 'PATCH',
+    path: '/cron/dlq/auto-retry/config',
+  })({ body: config })
 }
 
-export async function startAutoRetry(): Promise<ApiResponse<{ message: string }>> {
-  try {
-    const response = await cronClient.post('/cron/dlq/auto-retry/start')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function startAutoRetry(): Promise<ApiResponse<{ message: string }>> {
+  return createApiMethod<Record<string, never>, { message: string }>({
+    method: 'POST',
+    path: '/cron/dlq/auto-retry/start',
+  })({})
 }
 
-export async function stopAutoRetry(): Promise<ApiResponse<{ message: string }>> {
-  try {
-    const response = await cronClient.post('/cron/dlq/auto-retry/stop')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function stopAutoRetry(): Promise<ApiResponse<{ message: string }>> {
+  return createApiMethod<Record<string, never>, { message: string }>({
+    method: 'POST',
+    path: '/cron/dlq/auto-retry/stop',
+  })({})
 }
 
-export async function getWebhooks(): Promise<ApiResponse<{ webhooks: WebhookConfig[]; total: number }>> {
-  try {
-    const response = await cronClient.get('/cron/webhooks')
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getWebhooks(): Promise<ApiResponse<{ webhooks: WebhookConfig[]; total: number }>> {
+  return createApiMethod<Record<string, never>, { webhooks: WebhookConfig[]; total: number }>({
+    method: 'GET',
+    path: '/cron/webhooks',
+  })({})
 }
 
-export async function createWebhook(data: CreateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
-  try {
-    const backendData = {
-      job_id: data.jobId,
-      name: data.name,
-      url: data.url,
-      events: data.events,
-      headers: data.headers,
-      secret: data.secret,
-      is_active: data.isActive ?? true,
-    }
-    const response = await cronClient.post('/cron/webhooks', backendData)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
+export function createWebhook(data: CreateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
+  const backendData = {
+    job_id: data.jobId,
+    name: data.name,
+    url: data.url,
+    events: data.events,
+    headers: data.headers,
+    secret: data.secret,
+    is_active: data.isActive ?? true,
   }
+  return createApiMethod<{ body: typeof backendData }, WebhookConfig>({
+    method: 'POST',
+    path: '/cron/webhooks',
+  })({ body: backendData })
 }
 
-export async function updateWebhook(id: string, data: UpdateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
-  try {
-    const backendData: Record<string, unknown> = {}
-    if (data.jobId !== undefined) backendData.job_id = data.jobId
-    if (data.name !== undefined) backendData.name = data.name
-    if (data.url !== undefined) backendData.url = data.url
-    if (data.events !== undefined) backendData.events = data.events
-    if (data.headers !== undefined) backendData.headers = data.headers
-    if (data.secret !== undefined) backendData.secret = data.secret
-    if (data.isActive !== undefined) backendData.is_active = data.isActive
+export function updateWebhook(id: string, data: UpdateWebhookConfig): Promise<ApiResponse<WebhookConfig>> {
+  const backendData: Record<string, unknown> = {}
+  if (data.jobId !== undefined) backendData.job_id = data.jobId
+  if (data.name !== undefined) backendData.name = data.name
+  if (data.url !== undefined) backendData.url = data.url
+  if (data.events !== undefined) backendData.events = data.events
+  if (data.headers !== undefined) backendData.headers = data.headers
+  if (data.secret !== undefined) backendData.secret = data.secret
+  if (data.isActive !== undefined) backendData.is_active = data.isActive
 
-    const response = await cronClient.patch(`/cron/webhooks/${id}`, backendData)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+  return createApiMethod<{ id: string; body: Record<string, unknown> }, WebhookConfig>({
+    method: 'PATCH',
+    path: '/cron/webhooks/:id',
+  })({ id, body: backendData })
 }
 
-export async function deleteWebhook(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.delete(`/cron/webhooks/${id}`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function deleteWebhook(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'DELETE',
+    path: '/cron/webhooks/:id',
+  })({ id })
 }
 
-export async function testWebhook(id: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
-  try {
-    const response = await cronClient.post(`/cron/webhooks/${id}/test`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function testWebhook(id: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  return createApiMethod<{ id: string }, { success: boolean; message: string }>({
+    method: 'POST',
+    path: '/cron/webhooks/:id/test',
+  })({ id })
 }
 
-export async function getWebhookDeliveries(webhookId: string): Promise<ApiResponse<{ deliveries: WebhookDelivery[]; total: number }>> {
-  try {
-    const response = await cronClient.get(`/cron/webhooks/${webhookId}/deliveries`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getWebhookDeliveries(webhookId: string): Promise<ApiResponse<{ deliveries: WebhookDelivery[]; total: number }>> {
+  return createApiMethod<{ webhookId: string }, { deliveries: WebhookDelivery[]; total: number }>({
+    method: 'GET',
+    path: '/cron/webhooks/:webhookId/deliveries',
+  })({ webhookId })
 }
 
 export interface ExecutionState {
@@ -551,40 +451,32 @@ export interface ExecutionState {
   nodeStatuses: Record<string, { status: string; result?: unknown; error?: string }>
 }
 
-export async function pauseExecution(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.post(`/cron/executions/${id}/pause`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function pauseExecution(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'POST',
+    path: '/cron/executions/:id/pause',
+  })({ id })
 }
 
-export async function resumeExecution(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.post(`/cron/executions/${id}/resume`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function resumeExecution(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'POST',
+    path: '/cron/executions/:id/resume',
+  })({ id })
 }
 
-export async function cancelExecution(id: string): Promise<ApiResponse<void>> {
-  try {
-    await cronClient.post(`/cron/executions/${id}/cancel`)
-    return { success: true }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function cancelExecution(id: string): Promise<ApiResponse<void>> {
+  return createApiMethod<{ id: string }, void>({
+    method: 'POST',
+    path: '/cron/executions/:id/cancel',
+  })({ id })
 }
 
-export async function getExecutionState(id: string): Promise<ApiResponse<ExecutionState>> {
-  try {
-    const response = await cronClient.get(`/cron/executions/${id}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    return toApiResponse(error)
-  }
+export function getExecutionState(id: string): Promise<ApiResponse<ExecutionState>> {
+  return createApiMethod<{ id: string }, ExecutionState>({
+    method: 'GET',
+    path: '/cron/executions/:id',
+  })({ id })
 }
 
 export { cronClient }
