@@ -359,7 +359,7 @@ function App() {
       <ErrorBoundary
         fallback={<ErrorFallback className="min-h-screen" onRetry={() => window.location.reload()} />}
       >
-        <Toaster position="bottom-right" theme="dark" richColors />
+        <Toaster position="top-right" theme="dark" richColors offset={64} />
         <AppContent />
       </ErrorBoundary>
     </BrowserRouter>

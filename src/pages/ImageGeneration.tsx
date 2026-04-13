@@ -450,8 +450,8 @@ export default function ImageGeneration() {
               </div>
               <div className="p-4 space-y-4">
                 {/* 标题输入 - 移到提示词上方 */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">标题</label>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-foreground shrink-0">标题</label>
                   <Input
                     value={imageTitle}
                     onChange={(e) => setImageTitle(e.target.value)}
