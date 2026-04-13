@@ -540,7 +540,21 @@ export function useMediaManagement(): UseMediaManagementReturn {
     prevSearchQueryRef.current = searchQuery
     prevFavoriteFiltersRef.current = favoriteFilters
     prevPublicFiltersRef.current = publicFilters
-    fetchMedia(true, 1)
+    
+    // Ensure minimum loading animation time (350ms) to avoid jarring flash
+    const minLoadTime = 350
+    const startTime = Date.now()
+    setIsLoading(true)
+    
+    fetchMedia(true, 1).then(() => {
+      const elapsed = Date.now() - startTime
+      const remaining = Math.max(0, minLoadTime - elapsed)
+      if (remaining > 0) {
+        setTimeout(() => setIsLoading(false), remaining)
+      } else {
+        setIsLoading(false)
+      }
+    })
   }, [fetchMedia, searchQuery, favoriteFilters, publicFilters])
 
   // Load timeline data when viewMode changes to timeline

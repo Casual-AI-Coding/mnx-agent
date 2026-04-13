@@ -240,10 +240,14 @@ export default function MediaManagement() {
                 size="sm" 
                 onClick={handleManualSearch}
                 disabled={isLoading}
-                className="h-9 px-4"
+                className="h-9 px-4 transition-all duration-200"
               >
-                <Search className="w-4 h-4 mr-1" />
-                搜索
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                <span className="ml-1">{isLoading ? '搜索中' : '搜索'}</span>
               </Button>
             </div>
           </div>
