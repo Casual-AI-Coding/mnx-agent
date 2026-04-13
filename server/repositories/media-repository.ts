@@ -107,7 +107,10 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const isAdminOrSuper = role === 'admin' || role === 'super'
     if (!isAdminOrSuper && ownerId) {
       // user/pro: see own private + all public
-      whereClause += `(m.owner_id = $${paramIndex} OR m.is_public = true)`
+      // IMPORTANT: Wrap OR in parentheses to ensure correct AND precedence
+      whereClause += whereClause 
+        ? ` AND (m.owner_id = $${paramIndex} OR m.is_public = true)` 
+        : `(m.owner_id = $${paramIndex} OR m.is_public = true)`
       params.push(ownerId)
       paramIndex++
     } else if (ownerId) {
