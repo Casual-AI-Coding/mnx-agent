@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn, ChevronLeft, ChevronRight, Link } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { AspectRatioPopup, type AspectRatioState } from '@/components/ui/AspectRatioPopup'
 import WarningBanner from '@/components/shared/WarningBanner'
@@ -71,6 +72,8 @@ export default function ImageGeneration() {
   const [showAspectRatioPopup, setShowAspectRatioPopup] = useState(false)
   const [numImages, setNumImages] = useState(imageSettings.numImages ?? 9)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
+  const [referenceImageMode, setReferenceImageMode] = useState<'upload' | 'url'>('upload')
+  const [referenceImageUrl, setReferenceImageUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -117,6 +120,7 @@ export default function ImageGeneration() {
 
   const removeReferenceImage = useCallback(() => {
     setReferenceImage(null)
+    setReferenceImageUrl('')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -491,26 +495,63 @@ export default function ImageGeneration() {
                     </button>
                   </div>
                 ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group/upload"
-                  >
-                    <div className="relative mx-auto w-12 h-12 mb-3">
-                      <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full group-hover/upload:blur-2xl transition-all" />
-                      <Upload className="w-12 h-12 relative text-muted-foreground/50 group-hover/upload:text-accent-foreground transition-colors" />
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground/70 group-hover/upload:text-foreground transition-colors">
-                      {t('imageGeneration.clickToUpload') || '点击上传参考图片'}
-                    </p>
-                    <p className="text-xs text-muted-foreground/50 mt-1">JPG, PNG</p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </div>
+                  <Tabs value={referenceImageMode} onValueChange={(v) => setReferenceImageMode(v as 'upload' | 'url')}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="upload" className="flex-1">
+                        <Upload className="w-4 h-4 mr-2" />
+                        上传图片
+                      </TabsTrigger>
+                      <TabsTrigger value="url" className="flex-1">
+                        <Link className="w-4 h-4 mr-2" />
+                        图片URL
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="upload" className="mt-4">
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group/upload"
+                      >
+                        <div className="relative mx-auto w-12 h-12 mb-3">
+                          <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full group-hover/upload:blur-2xl transition-all" />
+                          <Upload className="w-12 h-12 relative text-muted-foreground/50 group-hover/upload:text-accent-foreground transition-colors" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground/70 group-hover/upload:text-foreground transition-colors">
+                          {t('imageGeneration.clickToUpload') || '点击上传参考图片'}
+                        </p>
+                        <p className="text-xs text-muted-foreground/50 mt-1">JPG, PNG</p>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="url" className="mt-4">
+                      <div className="space-y-3">
+                        <Input
+                          value={referenceImageUrl}
+                          onChange={(e) => setReferenceImageUrl(e.target.value)}
+                          placeholder="输入图片 URL..."
+                          className="w-full bg-background/50 border-border"
+                        />
+                        <button
+                          onClick={() => {
+                            if (referenceImageUrl.trim()) {
+                              setReferenceImage(referenceImageUrl.trim())
+                            }
+                          }}
+                          disabled={!referenceImageUrl.trim()}
+                          className="w-full py-2 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          使用此 URL
+                        </button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 )}
               </div>
             </div>
