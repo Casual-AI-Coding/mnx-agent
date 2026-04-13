@@ -13,6 +13,7 @@ export interface MediaRecord {
   task_id: string | null
   metadata: string | Record<string, unknown> | null
   is_deleted: boolean
+  is_public?: boolean
   is_favorite?: boolean
   created_at: string
   updated_at: string
