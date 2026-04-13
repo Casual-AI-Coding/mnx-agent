@@ -2,33 +2,13 @@ import { create, StateCreator } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { AsyncState, CreateAsyncStoreConfig, AsyncActionConfig } from './types'
 
-/**
- * Factory for creating async-capable Zustand stores.
- * Eliminates ~750 lines of duplicate try/catch/loading/error patterns.
- *
- * @example
- * const useJobsStore = createAsyncStore({
- *   name: 'cron-jobs',
- *   initialState: { jobs: [], loading: false, error: null },
- *   actions: {
- *     fetchJobs: {
- *       apiCall: () => apiCron.getJobs(),
- *       onSuccess: (state, data) => { state.jobs = data.items }
- *     },
- *     createJob: {
- *       apiCall: (params) => apiCron.createJob(params),
- *       onSuccess: (state, data) => { state.jobs.push(data) }
- *     }
- *   }
- * })
- */
 export function createAsyncStore<
   TState extends AsyncState,
-  TActions extends Record<string, AsyncActionConfig<any, any>>
+  TActions extends object = Record<string, void>
 >(config: CreateAsyncStoreConfig<TState, TActions>) {
 
   type StoreState = TState & {
-    [K in keyof TActions]: (params?: any) => Promise<void>
+    [K in keyof TActions]: (params?: any) => Promise<any>
   }
 
   const storeCreator: StateCreator<StoreState> = (set, get) => {
@@ -37,35 +17,47 @@ export function createAsyncStore<
     // Generate action methods from config
     const actions = Object.fromEntries(
       Object.entries(config.actions).map(([actionName, actionConfig]) => {
+        const cfg = actionConfig as AsyncActionConfig<any, any>
         return [actionName, async (params?: any) => {
-          // Standard pattern: set loading, try API, handle result
+          if (cfg.preCheck) {
+            const checkResult = cfg.preCheck(params, get())
+            if (checkResult === false) return
+            if (typeof checkResult === 'string') {
+              set({ error: checkResult, loading: false } as unknown as Partial<StoreState>)
+              return
+            }
+          }
+
           set({ loading: true, error: null } as unknown as Partial<StoreState>)
 
           try {
-            const response = await actionConfig.apiCall(params)
+            const response = await cfg.apiCall(params)
 
-            if (!response.success || !response.data) {
+            if (!response.success) {
               const errorMsg = response.error || `${actionName} failed`
               set({
                 error: errorMsg,
                 loading: false
               } as Partial<StoreState>)
-              actionConfig.onError?.(get(), errorMsg)
-              return
+              cfg.onError?.(get(), errorMsg)
+              throw new Error(errorMsg)
             }
 
-            // Apply success transformation
             set((state) => {
-              actionConfig.onSuccess?.(state, response.data)
+              cfg.onSuccess?.(state, response.data, params)
               return { ...state, loading: false } as Partial<StoreState>
             })
+
+            return response.data
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : `${actionName} failed`
             set({
               error: errorMsg,
               loading: false
             } as Partial<StoreState>)
-            actionConfig.onError?.(get(), errorMsg)
+            cfg.onError?.(get(), errorMsg)
+            if (err instanceof Error) throw err
+            throw new Error(errorMsg)
           }
         }]
       })
