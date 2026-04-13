@@ -309,7 +309,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setIsLoading(false)
       setIsInitialLoad(false)
     }
-  }, [activeTab, searchQuery, favoriteFilter, isPublicFilter])
+  }, [activeTab, searchQuery, favoriteFilters, publicFilters])
 
   // Fetch timeline media (infinite scroll)
   const fetchTimelineMedia = useCallback(async (page: number, reset = false) => {
