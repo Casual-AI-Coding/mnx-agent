@@ -326,17 +326,13 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         await this.insertFavorite(userId, mediaId)
         return { isFavorite: true, action: 'added' }
       } catch (error: any) {
-        // Handle race condition - another concurrent request already inserted
-        // PostgreSQL unique constraint violation code: 23505
         if (error.code === '23505') {
           const raceExisting = await this.findFavorite(userId, mediaId)
           if (raceExisting) {
-            // The other request created it, check its state
             if (raceExisting.is_deleted) {
               await this.updateFavorite(raceExisting.id, false)
               return { isFavorite: true, action: 'added' }
             }
-            // Already favorited by other request
             return { isFavorite: true, action: 'added' }
           }
         }
@@ -351,5 +347,26 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
 
     await this.updateFavorite(existing.id, true)
     return { isFavorite: false, action: 'removed' }
+  }
+
+  async togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null> {
+    const existing = await this.getById(id)
+    if (!existing) return null
+
+    const now = toISODate()
+
+    if (this.isPostgres()) {
+      const rows = await this.conn.query<MediaRecordRow>(
+        `UPDATE media_records SET is_public = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+        [isPublic, now, id]
+      )
+      return rows[0] ? rowToMediaRecord(rows[0]) : null
+    } else {
+      await this.conn.execute(
+        `UPDATE media_records SET is_public = ?, updated_at = ? WHERE id = ?`,
+        [isPublic ? 1 : 0, now, id]
+      )
+      return this.getById(id)
+    }
   }
 }

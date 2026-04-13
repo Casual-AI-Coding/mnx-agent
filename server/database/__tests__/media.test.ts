@@ -726,4 +726,43 @@ describe('MediaRecord Database Service', () => {
       expect(result.length).toBe(2)
     })
   })
+
+  describe('togglePublic', () => {
+    it('should toggle is_public from false to true', async () => {
+      const created = await db.createMediaRecord({
+        filename: 'toggle_test.png',
+        filepath: '/data/media/toggle_test.png',
+        type: 'image',
+        size_bytes: 1024,
+      })
+      expect((created as any).is_public).toBe(false)
+
+      const updated = await db.togglePublicMediaRecord(created.id, true)
+      expect(updated).not.toBeNull()
+      expect((updated as any).is_public).toBe(true)
+    })
+
+    it('should toggle is_public from true to false', async () => {
+      const created = await db.createMediaRecord({
+        filename: 'toggle_test2.png',
+        filepath: '/data/media/toggle_test2.png',
+        type: 'image',
+        size_bytes: 1024,
+      })
+      expect((created as any).is_public).toBe(false)
+
+      // First toggle to true
+      await db.togglePublicMediaRecord(created.id, true)
+      
+      // Second toggle to false
+      const updated = await db.togglePublicMediaRecord(created.id, false)
+      expect(updated).not.toBeNull()
+      expect((updated as any).is_public).toBe(false)
+    })
+
+    it('should return null when toggling non-existent record', async () => {
+      const updated = await db.togglePublicMediaRecord('non-existent-id', true)
+      expect(updated).toBeNull()
+    })
+  })
 })

@@ -468,6 +468,10 @@ export class DatabaseService {
     return this.mediaRepo.toggleFavorite(userId, mediaId)
   }
 
+  async togglePublicMediaRecord(id: string, isPublic: boolean): Promise<MediaRecord | null> {
+    return this.mediaRepo.togglePublic(id, isPublic)
+  }
+
   async getExecutionStatsOverview(ownerId?: string): Promise<{
     totalExecutions: number
     successRate: number
