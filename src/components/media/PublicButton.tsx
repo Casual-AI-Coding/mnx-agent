@@ -7,6 +7,7 @@ interface PublicButtonProps {
   isPublic?: boolean
   ownerId?: string | null
   currentUserId?: string
+  userRole?: string
   onToggle?: (isPublic: boolean) => void
   disabled?: boolean
   size?: 'sm' | 'default'
@@ -17,13 +18,15 @@ export function PublicButton({
   isPublic,
   ownerId,
   currentUserId,
+  userRole,
   onToggle,
   disabled = false,
   size = 'sm',
   iconOnly = false
 }: PublicButtonProps) {
   const isOwner = ownerId === currentUserId
-  const canToggle = isOwner && onToggle
+  const isSuperWithNoOwner = !ownerId && userRole === 'super'
+  const canToggle = (isOwner || isSuperWithNoOwner) && onToggle
 
   // 图标模式 - 适用于卡片、时间线、操作栏
   if (iconOnly) {

@@ -22,6 +22,7 @@ interface MediaCardProps {
   onToggleFavorite?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
+  userRole?: string
 }
 
 export function MediaCard({
@@ -36,6 +37,7 @@ export function MediaCard({
   onToggleFavorite,
   onTogglePublic,
   currentUserId,
+  userRole,
 }: MediaCardProps) {
   const [showActions, setShowActions] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -158,7 +160,8 @@ export function MediaCard({
         onClick={(e) => {
           e.stopPropagation()
           const isOwner = record.owner_id === currentUserId
-          if (isOwner && onTogglePublic) {
+          const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
+          if ((isOwner || isSuperWithNoOwner) && onTogglePublic) {
             onTogglePublic(record.id, !record.is_public)
           }
         }}
@@ -166,12 +169,13 @@ export function MediaCard({
 <div
         className={cn(
           'w-6 h-6 flex items-center justify-center',
-          record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default'
+          (record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')) ? 'cursor-pointer' : 'cursor-default'
         )}
         onClick={(e) => {
           e.stopPropagation()
           const isOwner = record.owner_id === currentUserId
-          if (isOwner && onTogglePublic) {
+          const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
+          if ((isOwner || isSuperWithNoOwner) && onTogglePublic) {
             onTogglePublic(record.id, !record.is_public)
           }
         }}

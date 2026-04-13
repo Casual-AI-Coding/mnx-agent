@@ -24,6 +24,7 @@ interface MediaTableViewProps {
   onToggleFavorite?: (mediaId: string) => void
   onTogglePublic?: (mediaId: string) => void
   currentUserId?: string
+  userRole?: string
 }
 
 export function MediaTableView({
@@ -39,6 +40,7 @@ export function MediaTableView({
   onToggleFavorite,
   onTogglePublic,
   currentUserId,
+  userRole,
 }: MediaTableViewProps) {
   const isAllSelected = selectedIds.size === records.length && records.length > 0
   const isIndeterminate = selectedIds.size > 0 && selectedIds.size < records.length
@@ -247,6 +249,7 @@ export function MediaTableView({
                       isPublic={record.is_public}
                       ownerId={record.owner_id}
                       currentUserId={currentUserId}
+                      userRole={userRole}
                       onToggle={onTogglePublic ? () => onTogglePublic(record.id) : undefined}
                       iconOnly
                     />

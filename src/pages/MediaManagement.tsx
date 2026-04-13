@@ -185,19 +185,20 @@ export default function MediaManagement() {
                 {searchQuery ? '没有找到匹配的文件' : '暂无媒体文件'}
               </div>
             ) : viewMode === 'card' ? (
-              <AnimatedMediaGrid
-                records={filteredRecords}
-                signedUrls={signedUrls}
-                selectedIds={selectedIds}
-                onSelect={handleSelect}
-                onPreview={handlePreview}
-                onDownload={handleDownload}
-                onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
-                onRename={handleRename}
-                onToggleFavorite={handleToggleFavorite}
-                onTogglePublic={handleTogglePublic}
-                currentUserId={currentUser?.id}
-              />
+<AnimatedMediaGrid
+                 records={filteredRecords}
+                 signedUrls={signedUrls}
+                 selectedIds={selectedIds}
+                 onSelect={handleSelect}
+                 onPreview={handlePreview}
+                 onDownload={handleDownload}
+                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
+                 onRename={handleRename}
+                 onToggleFavorite={handleToggleFavorite}
+                 onTogglePublic={handleTogglePublic}
+                 currentUserId={currentUser?.id}
+                 userRole={currentUser?.role}
+               />
             ) : viewMode === 'timeline' ? (
               <div className="rounded-lg overflow-hidden bg-muted/30">
                 {timelineRecords.length === 0 && isLoadingMore ? (
@@ -226,19 +227,20 @@ export default function MediaManagement() {
                                 <span>{formatDateHeader(record.created_at)}</span>
                               </div>
                             )}
-                            <TimelineItem
-                              record={record}
-                              signedUrl={signedUrls[record.id]}
-                              isSelected={selectedIds.has(record.id)}
-                              onSelect={() => handleSelect(record.id)}
-                              onPreview={() => handlePreview(record)}
-                              onDownload={() => handleDownload(record)}
-                              onDelete={() => setDeleteDialog({ isOpen: true, record })}
-                              onRename={handleRename}
-                              onToggleFavorite={handleToggleFavorite}
-                              onTogglePublic={handleTogglePublic}
-                              currentUserId={currentUser?.id}
-                            />
+<TimelineItem
+                               record={record}
+                               signedUrl={signedUrls[record.id]}
+                               isSelected={selectedIds.has(record.id)}
+                               onSelect={() => handleSelect(record.id)}
+                               onPreview={() => handlePreview(record)}
+                               onDownload={() => handleDownload(record)}
+                               onDelete={() => setDeleteDialog({ isOpen: true, record })}
+                               onRename={handleRename}
+                               onToggleFavorite={handleToggleFavorite}
+                               onTogglePublic={handleTogglePublic}
+                               currentUserId={currentUser?.id}
+                               userRole={currentUser?.role}
+                             />
                           </div>
                         )
                       })
@@ -258,20 +260,21 @@ export default function MediaManagement() {
                 )}
               </div>
             ) : (
-              <MediaTableView
-                records={filteredRecords}
-                signedUrls={signedUrls}
-                selectedIds={selectedIds}
-                onSelectAll={handleSelectAll}
-                onSelect={handleSelect}
-                onPreview={handlePreview}
-                onDownload={handleDownload}
-                onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
-                onRename={handleRename}
-                onToggleFavorite={handleToggleFavorite}
-                onTogglePublic={handleTogglePublic}
-                currentUserId={currentUser?.id}
-              />
+<MediaTableView
+                 records={filteredRecords}
+                 signedUrls={signedUrls}
+                 selectedIds={selectedIds}
+                 onSelectAll={handleSelectAll}
+                 onSelect={handleSelect}
+                 onPreview={handlePreview}
+                 onDownload={handleDownload}
+                 onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
+                 onRename={handleRename}
+                 onToggleFavorite={handleToggleFavorite}
+                 onTogglePublic={handleTogglePublic}
+                 currentUserId={currentUser?.id}
+                 userRole={currentUser?.role}
+               />
             )}
           </div>
 

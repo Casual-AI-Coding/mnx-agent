@@ -19,6 +19,7 @@ interface AnimatedMediaGridProps {
   onToggleFavorite?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
+  userRole?: string
 }
 
 export function AnimatedMediaGrid({
@@ -33,6 +34,7 @@ export function AnimatedMediaGrid({
   onToggleFavorite,
   onTogglePublic,
   currentUserId,
+  userRole,
 }: AnimatedMediaGridProps) {
   return (
     <motion.div
@@ -61,6 +63,7 @@ export function AnimatedMediaGrid({
               onToggleFavorite={onToggleFavorite}
               onTogglePublic={onTogglePublic}
               currentUserId={currentUserId}
+              userRole={userRole}
             />
           </motion.div>
         ))}

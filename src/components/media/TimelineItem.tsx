@@ -22,6 +22,7 @@ interface TimelineItemProps {
   onToggleFavorite?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
+  userRole?: string
 }
 
 export function TimelineItem({
@@ -36,6 +37,7 @@ export function TimelineItem({
   onToggleFavorite,
   onTogglePublic,
   currentUserId,
+  userRole,
 }: TimelineItemProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -113,16 +115,27 @@ export function TimelineItem({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <p
-            className="font-medium truncate mt-1 cursor-pointer hover:underline"
-            title={record.original_name || record.filename}
-            onDoubleClick={(e) => {
-              e.stopPropagation()
-              setIsEditing(true)
-            }}
-          >
-            {record.original_name || record.filename}
-          </p>
+          <div className="flex items-center gap-1 mt-1 group">
+            <p
+              className="font-medium truncate cursor-pointer hover:underline flex-1"
+              title={record.original_name || record.filename}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                setIsEditing(true)
+              }}
+            >
+              {record.original_name || record.filename}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}
+              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+              title="编辑"
+            >
+              <Pencil className="w-3 h-3" />
+            </Button>
+          </div>
         )}
         <p className="text-xs text-muted-foreground">
           {new Date(record.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
@@ -150,6 +163,7 @@ export function TimelineItem({
             isPublic={record.is_public}
             ownerId={record.owner_id}
             currentUserId={currentUserId}
+            userRole={userRole}
             onToggle={onTogglePublic ? () => onTogglePublic(record.id, !record.is_public) : undefined}
             iconOnly
           />
