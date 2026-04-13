@@ -263,7 +263,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
       setError(err instanceof Error ? err.message : '获取媒体列表失败')
     } finally {
       const elapsed = Date.now() - startTime
-      const minDelay = 1000
+      const minDelay = 500
       if (elapsed < minDelay) {
         await new Promise(resolve => setTimeout(resolve, minDelay - elapsed))
       }
