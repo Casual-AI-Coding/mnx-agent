@@ -695,4 +695,35 @@ describe('MediaRecord Database Service', () => {
       expect(updatedMeta.originalPrompt).toBe('test prompt')
     })
   })
+
+  describe('is_public field', () => {
+    it('should have is_public column after migration', async () => {
+      const conn = getConnection()
+      const result = await conn.query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'media_records' AND column_name = 'is_public'
+      `)
+      expect(result.rows.length).toBe(1)
+    })
+
+    it('should default is_public to false', async () => {
+      const created = await db.createMediaRecord({
+        filename: 'public_test.png',
+        filepath: '/data/media/public_test.png',
+        type: 'image',
+        size_bytes: 1024,
+      })
+      expect((created as any).is_public).toBe(false)
+    })
+
+    it('should have indexes for is_public field', async () => {
+      const conn = getConnection()
+      const result = await conn.query(`
+        SELECT indexname FROM pg_indexes 
+        WHERE tablename = 'media_records' 
+        AND indexname IN ('idx_media_records_is_public', 'idx_media_records_owner_public')
+      `)
+      expect(result.rows.length).toBe(2)
+    })
+  })
 })

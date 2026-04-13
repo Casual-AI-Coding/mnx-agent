@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS media_records (
   task_id VARCHAR(36),
   metadata JSONB,
   is_deleted BOOLEAN DEFAULT false,
+  is_public BOOLEAN DEFAULT false,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP

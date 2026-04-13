@@ -518,6 +518,18 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_type ON media_records(owner_i
     CREATE INDEX IF NOT EXISTS idx_favorites_media ON user_media_favorites(media_id);
     `,
   },
+  {
+    id: 26,
+    name: 'migration_026_add_is_public_to_media_records',
+    sql: `
+-- 新增 is_public 字段
+ALTER TABLE media_records ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
+-- 新增索引
+CREATE INDEX IF NOT EXISTS idx_media_records_is_public ON media_records(is_public);
+CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner_id, is_public);
+    `,
+  },
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
