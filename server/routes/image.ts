@@ -15,6 +15,7 @@ interface ImageGenerateBody {
   height?: number
   seed?: number
   style?: string
+  aigc_watermark?: boolean
 }
 
 // POST /generate - uses factory
@@ -22,7 +23,7 @@ router.use('/generate', createApiProxyRouter({
   endpoint: '/',
   clientMethod: 'imageGeneration',
   buildRequestBody: (req: Request) => {
-    const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style } = req.body as ImageGenerateBody
+    const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style, aigc_watermark } = req.body as ImageGenerateBody
 
     if (!prompt) {
       throw { status: 400, message: 'prompt is required' }
@@ -41,6 +42,7 @@ router.use('/generate', createApiProxyRouter({
     if (height !== undefined) body.height = height
     if (seed !== undefined) body.seed = seed
     if (style !== undefined) body.style = style
+    if (aigc_watermark !== undefined) body.aigc_watermark = aigc_watermark
 
     return body
   },

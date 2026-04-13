@@ -16,6 +16,7 @@ export interface ImageGenerationRequest {
     description?: string
   }
   style?: string
+  aigc_watermark?: boolean
 }
 
 export interface ImageGenerationResponse {

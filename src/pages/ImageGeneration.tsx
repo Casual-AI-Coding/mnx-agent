@@ -80,6 +80,7 @@ export default function ImageGeneration() {
   const [error, setError] = useState<string | null>(null)
   const [seed, setSeed] = useState<number | undefined>()
   const [promptOptimizer, setPromptOptimizer] = useState(false)
+  const [aigcWatermark, setAigcWatermark] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -183,6 +184,7 @@ export default function ImageGeneration() {
           prompt: prompt.trim(),
           n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
           prompt_optimizer: promptOptimizer,
+        aigc_watermark: aigcWatermark,
           ...(aspectRatioState.type === 'preset'
             ? { aspect_ratio: aspectRatioState.preset }
             : { width: aspectRatioState.width, height: aspectRatioState.height }),
@@ -225,6 +227,7 @@ export default function ImageGeneration() {
         prompt: prompt.trim(),
         n: numImages as number,
         prompt_optimizer: promptOptimizer,
+        aigc_watermark: aigcWatermark,
         ...(aspectRatioState.type === 'preset'
           ? { aspect_ratio: aspectRatioState.preset }
           : { width: aspectRatioState.width, height: aspectRatioState.height }),
@@ -249,6 +252,7 @@ export default function ImageGeneration() {
             prompt: prompt.trim(),
             n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
             prompt_optimizer: promptOptimizer,
+        aigc_watermark: aigcWatermark,
             ...(aspectRatioState.type === 'preset'
               ? { aspect_ratio: aspectRatioState.preset }
               : { width: aspectRatioState.width, height: aspectRatioState.height }),
@@ -322,6 +326,7 @@ export default function ImageGeneration() {
         prompt: prompt.trim(),
         n: numImages as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
         prompt_optimizer: promptOptimizer,
+        aigc_watermark: aigcWatermark,
         ...(aspectRatioState.type === 'preset'
           ? { aspect_ratio: aspectRatioState.preset }
           : { width: aspectRatioState.width, height: aspectRatioState.height }),
@@ -359,7 +364,7 @@ export default function ImageGeneration() {
         apiResponse,
       })
     }
-  }, [tasks, model, prompt, numImages, aspectRatioState, promptOptimizer, seed, imageTitle, updateTask])
+  }, [tasks, model, prompt, numImages, aspectRatioState, promptOptimizer, aigcWatermark, seed, imageTitle, updateTask])
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -697,19 +702,31 @@ export default function ImageGeneration() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-2 overflow-hidden"
                     >
-                      {/* 自动优化提示词 */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">自动优化提示词</label>
-                          <p className="text-xs text-muted-foreground/50 mt-0.5">AI 将优化你的提示词以获得更好效果</p>
-                        </div>
-                        <Switch
-                          checked={promptOptimizer}
-                          onCheckedChange={setPromptOptimizer}
-                        />
-                      </div>
+{/* 自动优化提示词 */}
+                       <div className="flex items-center justify-between">
+                         <div>
+                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">自动优化提示词</label>
+                           <p className="text-xs text-muted-foreground/50 mt-0.5">AI 将优化你的提示词以获得更好效果</p>
+                         </div>
+                         <Switch
+                           checked={promptOptimizer}
+                           onCheckedChange={setPromptOptimizer}
+                         />
+                       </div>
 
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
+                       {/* AIGC 水印 */}
+                       <div className="flex items-center justify-between">
+                         <div>
+                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">添加 AIGC 水印</label>
+                           <p className="text-xs text-muted-foreground/50 mt-0.5">在生成的图片中添加 AI 生成标识水印</p>
+                         </div>
+                         <Switch
+                           checked={aigcWatermark}
+                           onCheckedChange={setAigcWatermark}
+                         />
+                       </div>
+
+                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
                       <div className="flex gap-2">
                         <Input
                           type="number"
