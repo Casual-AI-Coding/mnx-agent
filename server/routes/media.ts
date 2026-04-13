@@ -156,12 +156,17 @@ router.post('/batch/public', asyncHandler(async (req, res) => {
   }
 
   const userId = req.user?.userId
+  const userRole = req.user?.role
   const results = await Promise.all(
     ids.map(async (id: string) => {
       const record = await db.getById(id)
-      if (record && !record.is_deleted && record.owner_id === userId) {
-        const updated = await db.togglePublic(id, isPublic)
-        return { id, success: true, data: updated }
+      if (record && !record.is_deleted) {
+        const isOwner = record.owner_id === userId
+        const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
+        if (isOwner || isSuperWithNoOwner) {
+          const updated = await db.togglePublic(id, isPublic)
+          return { id, success: true, data: updated }
+        }
       }
       return { id, success: false, error: 'Not authorized or not found' }
     })
