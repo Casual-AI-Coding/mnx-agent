@@ -58,6 +58,7 @@ export interface UseMediaManagementReturn {
   togglePublicFilter: (filter: 'private' | 'public' | 'others-public') => void
   handleTogglePublic: (mediaId: string) => Promise<void>
   handleBatchTogglePublic: (ids: string[], isPublic: boolean) => Promise<{ success: boolean; data: Array<{ id: string; success: boolean; data?: import('@/lib/api/media').MediaRecord; error?: string }> }>
+  handleManualSearch: () => void
 
   // Timeline state
   timelineRecords: MediaRecord[]
@@ -522,13 +523,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Auto-fetch when filters change
   useEffect(() => {
-    if (!isInitialLoad) {
+    if (!isInitialLoad && currentUser?.id) {
       prevFavoriteFiltersRef.current = favoriteFilters
       prevPublicFiltersRef.current = publicFilters
       setPagination(prev => ({ ...prev, page: 1 }))
       fetchMedia(true, 1)
     }
-  }, [favoriteFilters, publicFilters])
+  }, [favoriteFilters, publicFilters, currentUser?.id])
 
   // Initial fetch and refetch on tab/page changes
   useEffect(() => {
