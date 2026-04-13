@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Image as LucideImage, Upload, Download, Sparkles, Loader2, X, RefreshCw, Wand2, Grid3x3, Zap, Settings2, Lightbulb, ArrowRight, ZoomIn, ChevronLeft, ChevronRight, Link } from 'lucide-react'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
+import { Switch } from '@/components/ui/Switch'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { AspectRatioPopup, type AspectRatioState } from '@/components/ui/AspectRatioPopup'
@@ -78,6 +79,7 @@ export default function ImageGeneration() {
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [seed, setSeed] = useState<number | undefined>()
+  const [promptOptimizer, setPromptOptimizer] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -683,6 +685,18 @@ export default function ImageGeneration() {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-2 overflow-hidden"
                     >
+                      {/* 自动优化提示词 */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">自动优化提示词</label>
+                          <p className="text-xs text-muted-foreground/50 mt-0.5">AI 将优化你的提示词以获得更好效果</p>
+                        </div>
+                        <Switch
+                          checked={promptOptimizer}
+                          onCheckedChange={setPromptOptimizer}
+                        />
+                      </div>
+
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('imageGeneration.seed') || '随机种子'}</label>
                       <div className="flex gap-2">
                         <Input
