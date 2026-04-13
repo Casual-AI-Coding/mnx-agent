@@ -67,6 +67,7 @@ export default function MediaManagement() {
     handleRename,
     handleToggleFavorite,
     handleTogglePublic,
+    handleBatchTogglePublic,
     handleTabChange,
     favoriteFilter,
     toggleFavoriteFilter,
@@ -365,6 +366,7 @@ export default function MediaManagement() {
         onDelete={() => setBatchDeleteDialogOpen(true)}
         onDownload={handleBatchDownload}
         onClearSelection={() => setSelectedIds(new Set())}
+        onSetPublic={(isPublic) => handleBatchTogglePublic(Array.from(selectedIds), isPublic)}
         isDeleting={isBatchDeleting}
         isDownloading={isBatchDownloading}
       />

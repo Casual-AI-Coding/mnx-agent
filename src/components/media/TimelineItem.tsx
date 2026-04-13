@@ -130,20 +130,20 @@ export function TimelineItem({
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
-        {onToggleFavorite && (
-          <FavoriteButton
-            mediaId={record.id}
-            isFavorite={record.is_favorite ?? false}
-            onToggle={onToggleFavorite}
-          />
-        )}
         {onTogglePublic && (
           <PublicButton
             isPublic={record.is_public}
             ownerId={record.owner_id}
             currentUserId={currentUserId}
-            onToggle={onTogglePublic ? (isPublic) => onTogglePublic(record.id, isPublic) : undefined}
-            size="sm"
+            onToggle={onTogglePublic ? () => onTogglePublic(record.id, !record.is_public) : undefined}
+            iconOnly
+          />
+        )}
+        {onToggleFavorite && (
+          <FavoriteButton
+            mediaId={record.id}
+            isFavorite={record.is_favorite ?? false}
+            onToggle={onToggleFavorite}
           />
         )}
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsEditing(true) }}>

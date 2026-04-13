@@ -106,7 +106,6 @@ export function MediaTableView({
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">文件名</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">类型</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">来源</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">状态</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">大小</th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">创建时间</th>
             <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
@@ -210,15 +209,6 @@ export function MediaTableView({
               <td className="px-4 py-3 text-muted-foreground">
                 {record.source ? SOURCE_LABELS[record.source] || record.source : '-'}
               </td>
-              <td className="px-4 py-3 text-foreground">
-                <PublicButton
-                  isPublic={record.is_public}
-                  ownerId={record.owner_id}
-                  currentUserId={currentUserId}
-                  onToggle={record.owner_id === currentUserId ? () => onTogglePublic?.(record.id) : undefined}
-                  size="sm"
-                />
-              </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {formatFileSize(record.size_bytes)}
               </td>
@@ -245,6 +235,15 @@ export function MediaTableView({
                   >
                     <Download className="w-4 h-4" />
                   </Button>
+                  {onTogglePublic && (
+                    <PublicButton
+                      isPublic={record.is_public}
+                      ownerId={record.owner_id}
+                      currentUserId={currentUserId}
+                      onToggle={onTogglePublic ? () => onTogglePublic(record.id) : undefined}
+                      iconOnly
+                    />
+                  )}
                   {onToggleFavorite && (
                     <FavoriteButton
                       mediaId={record.id}

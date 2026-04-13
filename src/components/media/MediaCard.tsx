@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -153,9 +153,35 @@ export function MediaCard({
         </div>
       </div>
 
-      {onToggleFavorite && (
+      {onTogglePublic && (
         <div
           className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
+            record.is_public ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (record.owner_id === currentUserId) {
+              onTogglePublic(record.id, !record.is_public)
+            }
+          }}
+        >
+          <div
+            className={cn(
+              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer',
+              record.is_public
+                ? 'bg-blue-500 text-white'
+                : 'bg-card/50 text-foreground/70 hover:text-blue-500 hover:bg-card/70'
+            )}
+            title={record.is_public ? '取消公开' : '公开'}
+          >
+            {record.is_public ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          </div>
+        </div>
+      )}
+
+      {onToggleFavorite && (
+        <div
+          className={`absolute top-2 right-10 z-20 transition-opacity duration-200 ${
             record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={(e) => {
@@ -174,18 +200,6 @@ export function MediaCard({
           >
             <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
           </div>
-        </div>
-      )}
-
-      {onTogglePublic && (
-        <div className="absolute top-2 right-12 z-20">
-          <PublicButton
-            isPublic={record.is_public}
-            ownerId={record.owner_id}
-            currentUserId={currentUserId}
-            onToggle={onTogglePublic ? (isPublic) => onTogglePublic(record.id, isPublic) : undefined}
-            size="sm"
-          />
         </div>
       )}
 

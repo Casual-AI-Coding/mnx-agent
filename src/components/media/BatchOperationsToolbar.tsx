@@ -1,4 +1,4 @@
-import { Trash2, Download, X, AlertCircle } from 'lucide-react'
+import { Trash2, Download, X, AlertCircle, Globe, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
 
@@ -7,8 +7,10 @@ export interface BatchOperationsToolbarProps {
   onDelete: () => void
   onDownload: () => void
   onClearSelection: () => void
+  onSetPublic?: (isPublic: boolean) => void
   isDeleting?: boolean
   isDownloading?: boolean
+  isSettingPublic?: boolean
 }
 
 interface BatchDeleteDialogProps {
@@ -78,8 +80,10 @@ export function BatchOperationsToolbar({
   onDelete,
   onDownload,
   onClearSelection,
+  onSetPublic,
   isDeleting = false,
   isDownloading = false,
+  isSettingPublic = false,
 }: BatchOperationsToolbarProps) {
   if (selectedCount === 0) {
     return null
@@ -103,7 +107,7 @@ export function BatchOperationsToolbar({
           variant="outline"
           size="sm"
           onClick={onDownload}
-          disabled={isDownloading || isDeleting}
+          disabled={isDownloading || isDeleting || isSettingPublic}
           className="gap-2"
         >
           {isDownloading ? (
@@ -119,11 +123,55 @@ export function BatchOperationsToolbar({
           )}
         </Button>
 
+        {onSetPublic && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSetPublic(true)}
+            disabled={isDeleting || isDownloading || isSettingPublic}
+            className="gap-2"
+          >
+            {isSettingPublic ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                处理中...
+              </>
+            ) : (
+              <>
+                <Globe className="w-4 h-4" />
+                公开
+              </>
+            )}
+          </Button>
+        )}
+
+        {onSetPublic && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSetPublic(false)}
+            disabled={isDeleting || isDownloading || isSettingPublic}
+            className="gap-2"
+          >
+            {isSettingPublic ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                处理中...
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4" />
+                私有
+              </>
+            )}
+          </Button>
+        )}
+
         <Button
           variant="destructive"
           size="sm"
           onClick={onDelete}
-          disabled={isDeleting || isDownloading}
+          disabled={isDeleting || isDownloading || isSettingPublic}
           className="gap-2"
         >
           {isDeleting ? (
@@ -146,7 +194,7 @@ export function BatchOperationsToolbar({
         variant="ghost"
         size="sm"
         onClick={onClearSelection}
-        disabled={isDeleting || isDownloading}
+        disabled={isDeleting || isDownloading || isSettingPublic}
         className="gap-1 text-muted-foreground hover:text-foreground"
       >
         <X className="w-4 h-4" />
