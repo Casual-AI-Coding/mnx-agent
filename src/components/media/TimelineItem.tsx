@@ -68,6 +68,8 @@ export function TimelineItem({
     setEditName(record.original_name || record.filename)
     setIsEditing(false)
   }
+  const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
+  const isOthersPublic = record.is_public && !isOwn
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group ${
@@ -165,7 +167,8 @@ export function TimelineItem({
               size="sm"
               onClick={(e) => { e.stopPropagation(); handleStartEdit() }}
               className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-              title="编辑"
+              title={isOthersPublic ? '他人公开的记录无法编辑' : '编辑'}
+              disabled={isOthersPublic}
             >
               <Pencil className="w-3 h-3" />
             </Button>
@@ -192,17 +195,17 @@ export function TimelineItem({
             onToggle={onToggleFavorite}
           />
         )}
-        {onTogglePublic && (
-          <PublicButton
-            isPublic={record.is_public}
-            ownerId={record.owner_id}
-            currentUserId={currentUserId}
-            userRole={userRole}
-            onToggle={onTogglePublic ? () => onTogglePublic(record.id, !record.is_public) : undefined}
-            iconOnly
-          />
-        )}
-        <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title="删除">
+{onTogglePublic && (
+            <PublicButton
+              isPublic={record.is_public}
+              ownerId={record.owner_id}
+              currentUserId={currentUserId}
+              userRole={userRole}
+              onToggle={isOthersPublic ? undefined : (onTogglePublic ? () => onTogglePublic(record.id, !record.is_public) : undefined)}
+              iconOnly
+            />
+          )}
+          <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDelete() }} title={isOthersPublic ? '他人公开的记录无法删除' : '删除'} disabled={isOthersPublic}>
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>

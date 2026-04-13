@@ -114,7 +114,10 @@ export function MediaTableView({
           </tr>
         </thead>
         <tbody>
-          {records.map((record) => (
+          {records.map((record) => {
+            const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
+            const isOthersPublic = record.is_public && !isOwn
+            return (
             <tr
               key={record.id}
               className={`group hover:bg-muted/50 ${selectedIds.has(record.id) ? 'bg-primary/5' : ''}`}
@@ -196,6 +199,7 @@ export function MediaTableView({
                         size="sm"
                         onClick={() => handleStartEdit(record)}
                         className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        disabled={isOthersPublic}
                       >
                         <Pencil className="w-3 h-3" />
                       </Button>
@@ -250,7 +254,7 @@ export function MediaTableView({
                       ownerId={record.owner_id}
                       currentUserId={currentUserId}
                       userRole={userRole}
-                      onToggle={onTogglePublic ? () => onTogglePublic(record.id) : undefined}
+                      onToggle={isOthersPublic ? undefined : (onTogglePublic ? () => onTogglePublic(record.id) : undefined)}
                       iconOnly
                     />
                   )}
@@ -259,14 +263,16 @@ export function MediaTableView({
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => onDelete(record)}
-                    title="删除"
+                    title={isOthersPublic ? '他人公开的记录无法删除' : '删除'}
+                    disabled={isOthersPublic}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {previewRecord && (

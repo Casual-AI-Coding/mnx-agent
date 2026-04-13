@@ -38,7 +38,7 @@ export function PublicButton({
         <div
           className={cn(
             'w-7 h-7 rounded-md flex items-center justify-center',
-            isPublic ? 'text-blue-400' : 'text-red-500'
+            isPublic ? 'text-blue-400' : 'text-orange-500'
           )}
           title={title}
         >
@@ -53,7 +53,7 @@ export function PublicButton({
         size="sm"
         className={cn(
           'w-7 h-7 p-0',
-          isPublic ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'
+          isPublic ? 'text-green-500 hover:text-green-600' : 'text-orange-500 hover:text-orange-600'
         )}
         onClick={() => onToggle(!isPublic)}
         disabled={disabled}

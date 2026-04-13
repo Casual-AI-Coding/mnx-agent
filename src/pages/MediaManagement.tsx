@@ -162,7 +162,7 @@ export default function MediaManagement() {
                   variant={publicFilters.has('private') ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => togglePublicFilter('private')}
-                  className={cn('h-8 px-3', publicFilters.has('private') && 'text-red-500')}
+                  className={cn('h-8 px-3', publicFilters.has('private') && 'text-orange-500')}
                   title="私有"
                 >
                   <Lock className="w-4 h-4" />

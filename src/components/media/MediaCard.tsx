@@ -52,6 +52,8 @@ export function MediaCard({
     setIsEditing(false)
   }
 
+  const isOwn = record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')
+  const isOthersPublic = record.is_public && !isOwn
   return (
     <div
       className={`relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
@@ -149,6 +151,7 @@ export function MediaCard({
               e.stopPropagation()
               onDelete()
             }}
+            disabled={isOthersPublic}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -181,7 +184,7 @@ export function MediaCard({
                 ? <Globe className="w-3.5 h-3.5 text-green-500" />
                 : <Globe className="w-3.5 h-3.5 text-blue-400" />
             }
-            return <Lock className="w-3.5 h-3.5 text-red-500" />
+            return <Lock className="w-3.5 h-3.5 text-orange-500" />
           })()}
         </div>
       </div>
