@@ -163,22 +163,29 @@ export function MediaCard({
           }
         }}
       >
-        <div
+<div
         className={cn(
           'w-6 h-6 flex items-center justify-center',
-          record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default',
-          record.is_public
-            ? 'text-blue-500'
-            : 'text-muted-foreground'
+          record.owner_id === currentUserId ? 'cursor-pointer' : 'cursor-default'
         )}
-          title={
-            record.owner_id === currentUserId
-              ? record.is_public ? '点击取消公开' : '点击公开'
-              : record.is_public ? '公开资源' : '私有资源'
+        onClick={(e) => {
+          e.stopPropagation()
+          const isOwner = record.owner_id === currentUserId
+          if (isOwner && onTogglePublic) {
+            onTogglePublic(record.id, !record.is_public)
           }
-        >
-          {record.is_public ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-        </div>
+        }}
+      >
+        {record.is_public ? (
+          record.owner_id === currentUserId ? (
+            <Globe className="w-3.5 h-3.5 text-green-500" />
+          ) : (
+            <Globe className="w-3.5 h-3.5 text-blue-400" />
+          )
+        ) : (
+          <Lock className="w-3.5 h-3.5 text-red-500" />
+        )}
+      </div>
       </div>
 
       {onToggleFavorite && (
