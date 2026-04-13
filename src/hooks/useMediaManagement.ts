@@ -520,7 +520,17 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const prevFavoriteFiltersRef = useRef(favoriteFilters)
   const prevPublicFiltersRef = useRef(publicFilters)
 
-  // Initial fetch and refetch on tab/page changes only (filters/search need manual trigger)
+  // Auto-fetch when filters change
+  useEffect(() => {
+    if (!isInitialLoad) {
+      prevFavoriteFiltersRef.current = favoriteFilters
+      prevPublicFiltersRef.current = publicFilters
+      setPagination(prev => ({ ...prev, page: 1 }))
+      fetchMedia(true, 1)
+    }
+  }, [favoriteFilters, publicFilters])
+
+  // Initial fetch and refetch on tab/page changes
   useEffect(() => {
     if (isInitialLoad || activeTab !== prevActiveTabRef.current || pagination.page !== prevPageRef.current) {
       const tabChanged = activeTab !== prevActiveTabRef.current

@@ -6,15 +6,26 @@ export { mediaTypeEnum } from './schemas/enums.js'
 
 export const mediaSourceEnum = z.enum(['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation'])
 
+// Handle boolean query params correctly: "false" string should become false, not true
+const booleanQueryParam = z.preprocess(
+  (val) => {
+    if (typeof val === 'boolean') return val
+    if (val === 'true') return true
+    if (val === 'false') return false
+    return undefined
+  },
+  z.boolean().optional()
+)
+
 export const listMediaQuerySchema = z.object({
   type: mediaTypeEnum.optional(),
   source: mediaSourceEnum.optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
-  includeDeleted: z.coerce.boolean().optional().default(false),
-  favorite: z.coerce.boolean().optional(),
-  isPublic: z.coerce.boolean().optional(),
+  includeDeleted: booleanQueryParam.default(false),
+  favorite: booleanQueryParam,
+  isPublic: booleanQueryParam,
   ownerId: z.string().optional(),
   ownerIdNot: z.string().optional(),
 })
