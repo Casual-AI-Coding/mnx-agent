@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { TaskStatus, TriggerType, ExecutionStatus, MisfirePolicy } from '../database/types'
 import { taskTypeEnum, executionStatusEnum } from './schemas/enums.js'
+import { idSchema } from './common.js'
 
 // ============================================================================
 // Cron Job Schemas
@@ -20,7 +21,7 @@ export const createCronJobSchema = z.object({
 export const updateCronJobSchema = createCronJobSchema.partial()
 
 export const cronJobIdParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('job id'),
 })
 
 // ============================================================================
@@ -42,7 +43,7 @@ export const updateTaskSchema = z.object({
 })
 
 export const taskIdParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('task id'),
 })
 
 export const taskQueueQuerySchema = z.object({
@@ -63,7 +64,7 @@ export const executionLogQuerySchema = z.object({
 })
 
 export const executionLogIdParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('execution log id'),
 })
 
 // ============================================================================
@@ -112,7 +113,7 @@ export const workflowValidateSchema = z.object({
 })
 
 export const workflowTemplateIdParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('workflow template id'),
 })
 
 export const createWorkflowTemplateSchema = z.object({
@@ -137,7 +138,7 @@ export const addJobTagSchema = z.object({
 })
 
 export const jobTagParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('job id'),
   tag: z.string()
     .min(1, 'tag must be at least 1 character')
     .max(50, 'tag must be at most 50 characters'),
@@ -154,12 +155,12 @@ export const jobsByTagParamsSchema = z.object({
 // ============================================================================
 
 export const addJobDependencySchema = z.object({
-  depends_on_job_id: z.string().min(1, 'depends_on_job_id is required'),
+  depends_on_job_id: idSchema('depends_on_job_id'),
 })
 
 export const jobDependencyParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
-  depId: z.string().min(1, 'depId is required'),
+  id: idSchema('job id'),
+  depId: idSchema('depId'),
 })
 
 // ============================================================================
@@ -189,7 +190,7 @@ export const updateWebhookSchema = z.object({
 })
 
 export const webhookIdParamsSchema = z.object({
-  id: z.string().min(1, 'id is required'),
+  id: idSchema('webhook id'),
 })
 
 export const webhookDeliveriesQuerySchema = z.object({

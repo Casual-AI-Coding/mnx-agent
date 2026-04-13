@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { mediaTypeEnum } from './schemas/enums.js'
+import { idSchema } from './common.js'
 
 export { mediaTypeEnum } from './schemas/enums.js'
 
@@ -16,7 +17,7 @@ export const listMediaQuerySchema = z.object({
 })
 
 export const mediaIdParamsSchema = z.object({
-  id: z.string().min(1),
+  id: idSchema('media id'),
 })
 
 export const createMediaRecordSchema = z.object({
