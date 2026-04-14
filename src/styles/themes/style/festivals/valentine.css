@@ -1,4 +1,4 @@
-.theme-valentine {
+:root.theme-valentine {
   --background: 340 30% 12%;
   --foreground: 210 40% 98%;
   --card: 340 30% 14%;

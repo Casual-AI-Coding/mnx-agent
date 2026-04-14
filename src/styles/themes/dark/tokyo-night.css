@@ -1,4 +1,4 @@
-.theme-tokyo-night {
+:root.theme-tokyo-night {
   --background: 240 15% 8%;
   --foreground: 240 10% 92%;
   --card: 240 15% 10%;

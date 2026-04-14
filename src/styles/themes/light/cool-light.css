@@ -1,4 +1,4 @@
-.theme-cool-light {
+:root.theme-cool-light {
   --background: 210 30% 96%;
   --foreground: 210 10% 15%;
   --card: 210 30% 98%;

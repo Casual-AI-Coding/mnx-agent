@@ -1,4 +1,4 @@
-.theme-naruto {
+:root.theme-naruto {
   --background: 30 15% 10%;
   --foreground: 210 40% 98%;
   --card: 30 15% 12%;

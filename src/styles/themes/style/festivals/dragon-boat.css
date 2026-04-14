@@ -1,4 +1,4 @@
-.theme-dragon-boat {
+:root.theme-dragon-boat {
   --background: 140 25% 12%;
   --foreground: 210 40% 98%;
   --card: 140 25% 14%;

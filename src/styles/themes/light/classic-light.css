@@ -1,4 +1,4 @@
-.theme-classic-light {
+:root.theme-classic-light {
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
   --card: 0 0% 98%;

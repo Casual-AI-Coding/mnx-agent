@@ -1,4 +1,4 @@
-.theme-nord {
+:root.theme-nord {
   --background: 220 17% 17%;
   --foreground: 220 30% 90%;
   --card: 220 17% 20%;

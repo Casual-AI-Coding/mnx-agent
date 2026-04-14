@@ -1,4 +1,4 @@
-.theme-rose-light {
+:root.theme-rose-light {
   --background: 340 30% 96%;
   --foreground: 340 10% 15%;
   --card: 340 30% 98%;

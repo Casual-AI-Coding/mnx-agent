@@ -1,4 +1,4 @@
-.theme-gothic-lolita {
+:root.theme-gothic-lolita {
   --background: 270 25% 8%;
   --foreground: 210 40% 98%;
   --card: 270 25% 10%;

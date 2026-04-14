@@ -1,4 +1,4 @@
-.theme-solarized-dark {
+:root.theme-solarized-dark {
   --background: 193 100% 7%;
   --foreground: 186 10% 90%;
   --card: 193 100% 9%;

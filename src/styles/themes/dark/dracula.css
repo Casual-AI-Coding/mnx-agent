@@ -1,4 +1,4 @@
-.theme-dracula {
+:root.theme-dracula {
   --background: 231 15% 18%;
   --foreground: 60 30% 96%;
   --card: 231 15% 20%;

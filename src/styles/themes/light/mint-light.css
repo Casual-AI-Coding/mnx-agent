@@ -1,4 +1,4 @@
-.theme-mint-light {
+:root.theme-mint-light {
   --background: 150 30% 96%;
   --foreground: 150 10% 15%;
   --card: 150 30% 98%;

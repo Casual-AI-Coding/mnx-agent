@@ -1,4 +1,4 @@
-.theme-super-saiyan {
+:root.theme-super-saiyan {
   --background: 45 15% 10%;
   --foreground: 210 40% 98%;
   --card: 45 15% 12%;

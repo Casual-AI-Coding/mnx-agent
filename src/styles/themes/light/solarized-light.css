@@ -1,4 +1,4 @@
-.theme-solarized-light {
+:root.theme-solarized-light {
   --background: 44 87% 94%;
   --foreground: 192 15% 25%;
   --card: 44 87% 96%;

@@ -1,4 +1,4 @@
-.theme-purple-haze {
+:root.theme-purple-haze {
   --background: 270 20% 10%;
   --foreground: 270 10% 92%;
   --card: 270 20% 12%;

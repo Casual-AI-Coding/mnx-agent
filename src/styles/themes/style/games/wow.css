@@ -1,4 +1,4 @@
-.theme-wow {
+:root.theme-wow {
   --background: 220 15% 8%;
   --foreground: 210 40% 98%;
   --card: 220 15% 10%;

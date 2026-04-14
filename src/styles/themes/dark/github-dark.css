@@ -1,4 +1,4 @@
-.theme-github-dark {
+:root.theme-github-dark {
   --background: 210 10% 8%;
   --foreground: 210 15% 92%;
   --card: 210 10% 10%;

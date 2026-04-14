@@ -1,4 +1,4 @@
-.theme-starcraft {
+:root.theme-starcraft {
   --background: 200 30% 8%;
   --foreground: 210 40% 98%;
   --card: 200 30% 10%;

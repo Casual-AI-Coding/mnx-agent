@@ -1,4 +1,4 @@
-.theme-bleach {
+:root.theme-bleach {
   --background: 0 10% 6%;
   --foreground: 210 40% 98%;
   --card: 0 10% 8%;

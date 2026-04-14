@@ -1,4 +1,4 @@
-.theme-zangief {
+:root.theme-zangief {
   --background: 0 15% 10%;
   --foreground: 210 40% 98%;
   --card: 0 15% 12%;

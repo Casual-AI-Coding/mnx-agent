@@ -1,4 +1,4 @@
-.theme-cyberpunk {
+:root.theme-cyberpunk {
   --background: 280 20% 8%;
   --foreground: 280 5% 95%;
   --card: 280 20% 10%;

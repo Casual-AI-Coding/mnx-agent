@@ -1,4 +1,4 @@
-.theme-ocean-blue {
+:root.theme-ocean-blue {
   --background: 210 50% 8%;
   --foreground: 200 80% 95%;
   --card: 210 50% 10%;

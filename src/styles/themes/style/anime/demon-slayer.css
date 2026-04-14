@@ -1,4 +1,4 @@
-.theme-demon-slayer {
+:root.theme-demon-slayer {
   --background: 200 15% 10%;
   --foreground: 210 40% 98%;
   --card: 200 15% 12%;

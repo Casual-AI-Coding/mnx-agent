@@ -1,4 +1,4 @@
-.theme-midnight {
+:root.theme-midnight {
   --background: 220 20% 6%;
   --foreground: 210 40% 98%;
   --card: 220 20% 8%;

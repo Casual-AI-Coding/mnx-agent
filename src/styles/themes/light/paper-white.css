@@ -1,4 +1,4 @@
-.theme-paper-white {
+:root.theme-paper-white {
   --background: 40 30% 98%;
   --foreground: 40 10% 15%;
   --card: 40 30% 100%;

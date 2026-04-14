@@ -1,4 +1,4 @@
-.theme-wukong {
+:root.theme-wukong {
   --background: 30 15% 8%;
   --foreground: 210 40% 98%;
   --card: 30 15% 10%;

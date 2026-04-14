@@ -1,4 +1,4 @@
-.theme-dragon-ball {
+:root.theme-dragon-ball {
   --background: 210 20% 12%;
   --foreground: 210 40% 98%;
   --card: 210 20% 14%;

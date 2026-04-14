@@ -1,4 +1,4 @@
-.theme-tanabata {
+:root.theme-tanabata {
   --background: 220 30% 15%;
   --foreground: 210 40% 98%;
   --card: 220 30% 17%;

@@ -1,4 +1,4 @@
-.theme-warm-light {
+:root.theme-warm-light {
   --background: 30 50% 95%;
   --foreground: 30 10% 15%;
   --card: 30 50% 98%;

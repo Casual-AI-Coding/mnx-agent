@@ -1,4 +1,4 @@
-.theme-monokai {
+:root.theme-monokai {
   --background: 240 20% 10%;
   --foreground: 60 30% 96%;
   --card: 240 20% 12%;

@@ -1,4 +1,4 @@
-.theme-mccree {
+:root.theme-mccree {
   --background: 30 20% 12%;
   --foreground: 210 40% 98%;
   --card: 30 20% 14%;
