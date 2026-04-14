@@ -18,6 +18,20 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
+    const conn = getConnection()
+    
+    // Create test users first (required for FK constraint)
+    await conn.execute(`
+      INSERT INTO users (id, username, password_hash, role, is_active)
+      VALUES ($1, 'owner-a', 'test-hash', 'user', true)
+      ON CONFLICT (id) DO NOTHING
+    `, [ownerAId])
+    await conn.execute(`
+      INSERT INTO users (id, username, password_hash, role, is_active)
+      VALUES ($1, 'owner-b', 'test-hash', 'user', true)
+      ON CONFLICT (id) DO NOTHING
+    `, [ownerBId])
+    
     jobRepo = new JobRepository(getConnection())
   })
 
@@ -45,6 +59,7 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
   afterAll(async () => {
     const conn = getConnection()
     await conn.execute('DELETE FROM cron_jobs WHERE owner_id IN ($1, $2)', [ownerAId, ownerBId])
+    await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [ownerAId, ownerBId])
     await teardownTestDatabase()
   })
 
@@ -78,8 +93,8 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
     it('should allow owner A to update their own job stats', async () => {
       const stats: RunStats = {
         success: true,
-        tasksExecuted: 3,
-        tasksSucceeded: 3,
+        tasksExecuted: 1,
+        tasksSucceeded: 1,
         tasksFailed: 0,
         durationMs: 500,
       }
@@ -116,9 +131,9 @@ describe('JobRepository Security - updateRunStats IDOR Prevention', () => {
     it('should allow owner B to update their own job stats', async () => {
       const stats: RunStats = {
         success: false, // Mark as failure
-        tasksExecuted: 2,
+        tasksExecuted: 1,
         tasksSucceeded: 0,
-        tasksFailed: 2,
+        tasksFailed: 1,
         durationMs: 200,
       }
 

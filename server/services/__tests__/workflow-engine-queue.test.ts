@@ -3,6 +3,7 @@ import { WorkflowEngine } from '../workflow-engine.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { TaskQueueItem } from '../../database/types.js'
+import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
 
 describe('WorkflowEngine - Queue Node', () => {
   let engine: WorkflowEngine
@@ -36,7 +37,7 @@ describe('WorkflowEngine - Queue Node', () => {
       call: vi.fn().mockResolvedValue({ success: true }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
+    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
   })
 
   describe('queue processing', () => {

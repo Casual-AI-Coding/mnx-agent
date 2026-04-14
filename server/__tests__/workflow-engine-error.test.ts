@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { WorkflowEngine } from '../services/workflow-engine'
+import { createMockEventBus } from './helpers/mock-event-bus'
 
 describe('Workflow Engine Error Handling', () => {
   let engine: WorkflowEngine

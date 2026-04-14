@@ -365,20 +365,26 @@ describe('CapacityChecker', () => {
 
     it('should poll until capacity becomes available', async () => {
       let callCount = 0
-      ;(mockClient.getBalance as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      ;(mockDb.getCapacityRecord as ReturnType<typeof vi.fn>).mockImplementation(async () => {
         callCount++
         if (callCount < 3) {
-          return Promise.resolve({
-            account_balance: 0.5,
-            grant_balance: 0,
-            cash_balance: 0,
-          })
+          return {
+            id: '1',
+            service_type: 'text',
+            remaining_quota: 0,
+            total_quota: 500,
+            reset_at: null,
+            last_checked_at: new Date().toISOString(),
+          } as CapacityRecord
         }
-        return Promise.resolve({
-          account_balance: 100,
-          grant_balance: 0,
-          cash_balance: 0,
-        })
+        return {
+          id: '1',
+          service_type: 'text',
+          remaining_quota: 100,
+          total_quota: 500,
+          reset_at: null,
+          last_checked_at: new Date().toISOString(),
+        } as CapacityRecord
       })
 
       const result = await checker.waitForCapacity('text', 5000)

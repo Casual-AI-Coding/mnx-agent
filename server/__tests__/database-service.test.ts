@@ -599,11 +599,14 @@ describe('DatabaseService', () => {
       expect(record!.remaining_quota).toBe(90)
     })
 
-    it('should not go below zero when decrementing', async () => {
+    it('should return null when decrementing insufficient quota', async () => {
       await db.upsertCapacityRecord('text', { remaining_quota: 5, total_quota: 1000 })
 
       const record = await db.decrementCapacity('text', 10)
-      expect(record!.remaining_quota).toBe(0)
+      expect(record).toBeNull()
+
+      const existingRecord = await db.getCapacityRecord('text')
+      expect(existingRecord!.remaining_quota).toBe(5)
     })
 
     it('should return null when decrementing non-existent', async () => {

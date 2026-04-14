@@ -103,7 +103,7 @@ describe('Workflows API Routes', () => {
       expect(res.body.data.id).toBeDefined()
     })
 
-    it('should create workflow with is_template default false', async () => {
+    it('should create workflow with is_public default false', async () => {
       const res = await request(app).post('/api/workflows').send({
         name: 'Test Workflow',
         nodes_json: '{"nodes":[]}',
@@ -111,7 +111,7 @@ describe('Workflows API Routes', () => {
       })
 
       expect(res.status).toBe(201)
-      expect(res.body.data.is_template).toBe(false)
+      expect(res.body.data.is_public).toBe(false)
     })
 
     it('should reject missing name', async () => {

@@ -42,7 +42,10 @@ describe('WebSocketService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     closeCronWebSocket()
-    mockServer = {}
+    mockServer = {
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    }
   })
 
   afterEach(() => {

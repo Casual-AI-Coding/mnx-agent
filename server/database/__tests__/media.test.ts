@@ -39,6 +39,7 @@ describe('MediaRecord Database Service', () => {
 
   afterAll(async () => {
     const conn = getConnection()
+    await conn.execute('DELETE FROM media_records WHERE owner_id IN ($1, $2)', [testOwnerId1, testOwnerId2])
     await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testOwnerId1, testOwnerId2])
     await teardownTestDatabase()
   })

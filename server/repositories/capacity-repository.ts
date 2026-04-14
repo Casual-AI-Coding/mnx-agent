@@ -69,7 +69,7 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
     )
   }
 
-  /**
+/**
    * Atomically decrement capacity using a single UPDATE with WHERE clause.
    * This prevents race conditions where concurrent requests could read the
    * same quota value and both decrement, exceeding the actual capacity.
@@ -79,7 +79,6 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
   async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> {
     const now = this.toISODate()
 
-    // Atomic UPDATE with WHERE clause - only succeeds if remaining_quota >= amount
     const result = await this.conn.query<CapacityRecordRow>(
       `UPDATE capacity_tracking 
        SET remaining_quota = remaining_quota - $1, last_checked_at = $2
@@ -89,8 +88,7 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
     )
 
     if (result.length === 0) {
-      const existing = await this.getByService(serviceType)
-      return existing
+      return null
     }
 
     return rowToCapacityRecord(result[0])

@@ -75,13 +75,20 @@ export class UserService {
       )
 
       if (consumedCode.length === 0) {
-        // Check why it failed - code invalid vs fully used
-        const existingCode = await tx.query<{ used_count: number; max_uses: number }>(
-          'SELECT used_count, max_uses FROM invitation_codes WHERE code = $1',
+        // Check why it failed - code invalid vs expired vs fully used
+        const existingCode = await tx.query<{ used_count: number; max_uses: number; expires_at: string | null; is_active: boolean }>(
+          'SELECT used_count, max_uses, expires_at, is_active FROM invitation_codes WHERE code = $1',
           [input.invitationCode]
         )
         if (existingCode.length === 0) {
           return { success: false, error: '邀请码无效' }
+        }
+        const code = existingCode[0]
+        if (!code.is_active) {
+          return { success: false, error: '邀请码已失效' }
+        }
+        if (code.expires_at && new Date(code.expires_at) < new Date()) {
+          return { success: false, error: '邀请码已过期' }
         }
         return { success: false, error: '邀请码已用完' }
       }

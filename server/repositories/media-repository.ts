@@ -111,7 +111,8 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     }
 
     // Visibility filter: user/pro can only see own private + all public
-    if (visibilityOwnerId) {
+    // Admin/super can see all records regardless of visibility
+    if (visibilityOwnerId && !isAdminOrSuper) {
       whereClause += whereClause 
         ? ` AND (m.owner_id = $${paramIndex} OR m.is_public = true)` 
         : `(m.owner_id = $${paramIndex} OR m.is_public = true)`

@@ -32,12 +32,27 @@ describe('Manual Trigger Error Handling', () => {
       scheduleJob: vi.fn(),
     }
 
+    const mockJobService = {
+      getById: vi.fn().mockResolvedValue({
+        id: 'test-job',
+        name: 'Test Job',
+        cron_expression: '0 0 * * *',
+        is_active: true,
+        workflow_id: 'workflow-1',
+      }),
+      getAll: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    }
+
     const { getDatabase } = await import('../database/service-async')
     ;(getDatabase as any).mockResolvedValue(mockDb)
 
-    // Setup DI Container with mock scheduler
     const container = getGlobalContainer()
+    container.register(TOKENS.DATABASE, mockDb)
     container.register(TOKENS.CRON_SCHEDULER, mockScheduler)
+    container.register(TOKENS.JOB_SERVICE, mockJobService)
 
     app = express()
     app.use(express.json())

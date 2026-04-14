@@ -11,6 +11,7 @@ import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from '../l
 import { toCSV } from '../lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token'
 import { createMockEventBus } from './helpers/mock-event-bus'
+import { createMockConcurrencyManager } from './helpers/mock-concurrency-manager'
 import type { WorkflowTemplate } from '../database/types'
 
 async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
@@ -415,7 +416,8 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
     engine = new WorkflowEngine(db, registry, createMockEventBus())
-    scheduler = new CronScheduler(db, engine)
+    const mockConcurrencyManager = createMockConcurrencyManager()
+    scheduler = new CronScheduler(db, engine, null, null, createMockEventBus(), mockConcurrencyManager)
   })
 
   beforeEach(async () => {

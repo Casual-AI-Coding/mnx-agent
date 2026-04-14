@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import workflowRoutes from '../routes/workflows'
+import { getGlobalContainer, resetContainer } from '../container'
+import { TOKENS } from '../service-registration'
 
 vi.mock('../database/service-async', () => ({
   getDatabase: vi.fn(),
@@ -18,17 +20,35 @@ describe('Workflow Pagination Validation', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    resetContainer()
 
     mockDb = {
       getWorkflowTemplatesPaginated: vi.fn().mockResolvedValue({ templates: [], total: 0 }),
     }
 
+    const mockServiceNodeRegistry = {}
+
+    const mockEventBus = {
+      emit: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+    }
+
     const { getDatabase } = await import('../database/service-async')
     ;(getDatabase as any).mockResolvedValue(mockDb)
+
+    const container = getGlobalContainer()
+    container.register(TOKENS.DATABASE, mockDb)
+    container.register(TOKENS.SERVICE_NODE_REGISTRY, mockServiceNodeRegistry)
+    container.register(TOKENS.EVENT_BUS, mockEventBus)
 
     app = express()
     app.use(express.json())
     app.use('/api/workflows', workflowRoutes)
+  })
+
+  afterEach(() => {
+    resetContainer()
   })
 
   it('should clamp negative page number to 1', async () => {

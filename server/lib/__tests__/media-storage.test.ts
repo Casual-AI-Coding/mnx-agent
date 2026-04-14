@@ -52,7 +52,7 @@ describe('media-storage', () => {
       const buffer = Buffer.from('test content for reading')
       const { filepath } = await saveMediaFile(buffer, 'test.wav', 'audio', TEST_MEDIA_ROOT)
       
-      const readBuffer = await readMediaFile(filepath)
+      const readBuffer = await readMediaFile(filepath, TEST_MEDIA_ROOT)
       expect(readBuffer.toString()).toBe('test content for reading')
     })
 

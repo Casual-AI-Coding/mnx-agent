@@ -207,19 +207,24 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     return this.getById(id)
   }
 
-  async updateRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null> {
-    const newTotalRuns = stats.tasksExecuted
-    const newTotalFailures = stats.tasksFailed
+  async updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
     const now = toISODate()
 
-    const result = await this.conn.execute(
-      'UPDATE cron_jobs SET total_runs = $1, total_failures = $2, last_run_at = $3, updated_at = $4 WHERE id = $5 AND owner_id = $6',
-      [newTotalRuns, newTotalFailures, now, now, id, ownerId]
-    )
+    if (ownerId) {
+      const result = await this.conn.execute(
+        'UPDATE cron_jobs SET total_runs = total_runs + 1, total_failures = total_failures + $1, last_run_at = $2, updated_at = $3 WHERE id = $4 AND owner_id = $5',
+        [stats.success ? 0 : 1, now, now, id, ownerId]
+      )
 
-    if (result.changes === 0) {
-      console.warn(`[JobRepository] updateRunStats: No job found with id=${id} and owner_id=${ownerId}`)
-      return null
+      if (result.changes === 0) {
+        console.warn(`[JobRepository] updateRunStats: No job found with id=${id} and owner_id=${ownerId}`)
+        return null
+      }
+    } else {
+      await this.conn.execute(
+        'UPDATE cron_jobs SET total_runs = total_runs + 1, total_failures = total_failures + $1, last_run_at = $2, updated_at = $3 WHERE id = $4',
+        [stats.success ? 0 : 1, now, now, id]
+      )
     }
 
     return this.getById(id, ownerId)

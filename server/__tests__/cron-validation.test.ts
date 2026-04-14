@@ -5,15 +5,9 @@ import cronRoutes from '../routes/cron'
 import { getGlobalContainer, resetContainer } from '../container'
 import { TOKENS } from '../service-registration'
 
-vi.mock('../database/service-async', () => {
-  const mockGetWorkflowTemplateById = vi.fn()
-  const mockCreateCronJob = vi.fn()
-  return {
-    getDatabase: vi.fn(),
-    __mockGetWorkflowTemplateById: mockGetWorkflowTemplateById,
-    __mockCreateCronJob: mockCreateCronJob,
-  }
-})
+vi.mock('../database/service-async', () => ({
+  getDatabase: vi.fn(),
+}))
 
 vi.mock('../services/service-node-registry', () => ({
   getServiceNodeRegistry: vi.fn().mockReturnValue({}),
@@ -28,6 +22,8 @@ describe('Cron Job Validation', () => {
   let app: express.Application
   let mockScheduler: any
   let mockDb: any
+  let mockJobService: any
+  let mockWorkflowService: any
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -50,11 +46,51 @@ describe('Cron Job Validation', () => {
       stopAll: vi.fn(),
     }
 
+    mockJobService = {
+      getAll: vi.fn().mockResolvedValue([]),
+      create: vi.fn().mockResolvedValue({
+        id: 'job-1',
+        name: 'Test Job',
+        workflow_id: 'workflow-1',
+        is_active: true,
+      }),
+      getById: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    }
+
+    mockWorkflowService = {
+      getById: vi.fn(),
+      getAll: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    }
+
+    const mockTaskService = {
+      getAll: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      getById: vi.fn(),
+      update: vi.fn(),
+    }
+
+    const mockLogService = {
+      getAll: vi.fn().mockResolvedValue([]),
+      getById: vi.fn(),
+      create: vi.fn(),
+      getDetails: vi.fn().mockResolvedValue([]),
+    }
+
     const { getDatabase } = await import('../database/service-async')
     ;(getDatabase as any).mockResolvedValue(mockDb)
 
     const container = getGlobalContainer()
+    container.register(TOKENS.DATABASE, mockDb)
     container.register(TOKENS.CRON_SCHEDULER, mockScheduler)
+    container.register(TOKENS.JOB_SERVICE, mockJobService)
+    container.register(TOKENS.WORKFLOW_SERVICE, mockWorkflowService)
+    container.register(TOKENS.TASK_SERVICE, mockTaskService)
+    container.register(TOKENS.LOG_SERVICE, mockLogService)
 
     app = express()
     app.use(express.json())
@@ -66,7 +102,7 @@ describe('Cron Job Validation', () => {
   })
 
   it('should reject cron job with non-existent workflow_id', async () => {
-    mockDb.getWorkflowTemplateById.mockResolvedValue(null)
+    mockWorkflowService.getById.mockResolvedValue(null)
 
     const response = await request(app)
       .post('/api/cron/jobs')
@@ -96,13 +132,7 @@ describe('Cron Job Validation', () => {
   })
 
   it('should create cron job with valid workflow_id', async () => {
-    mockDb.getWorkflowTemplateById.mockResolvedValue({ id: 'workflow-1', name: 'Test Workflow' })
-    mockDb.createCronJob.mockResolvedValue({
-      id: 'job-1',
-      name: 'Test Job',
-      workflow_id: 'workflow-1',
-      is_active: true,
-    })
+    mockWorkflowService.getById.mockResolvedValue({ id: 'workflow-1', name: 'Test Workflow' })
 
     const response = await request(app)
       .post('/api/cron/jobs')

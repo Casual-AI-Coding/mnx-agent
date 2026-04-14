@@ -2,6 +2,7 @@ import { WorkflowEngine, WorkflowGraph } from '../services/workflow-engine'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
 import type { DatabaseService } from '../database/service-async'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { createMockEventBus } from './helpers/mock-event-bus'
 
 /**
  * 阶段 A 验证：最小验证集

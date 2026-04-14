@@ -40,7 +40,7 @@ describe('UserService - Invitation Code Race Condition', () => {
       // Mock DB that simulates atomic UPDATE returning empty (code exhausted)
       const mockTxQuery = vi.fn()
         .mockResolvedValueOnce([]) // Atomic UPDATE returns no rows (code exhausted)
-        .mockResolvedValueOnce([{ used_count: 1, max_uses: 1 }]) // Check why failed
+        .mockResolvedValueOnce([{ used_count: 1, max_uses: 1, expires_at: null, is_active: true }]) // Check why failed
 
       const mockDb = {
         query: vi.fn(),
@@ -227,7 +227,7 @@ describe('UserService - Invitation Code Race Condition', () => {
       // Chain all tx.query calls: atomic UPDATE + check why failed
       const mockTxQuery2 = vi.fn()
         .mockResolvedValueOnce([]) // Atomic UPDATE returns no rows - code exhausted
-        .mockResolvedValueOnce([{ used_count: 1, max_uses: 1 }]) // Check why failed
+        .mockResolvedValueOnce([{ used_count: 1, max_uses: 1, expires_at: null, is_active: true }]) // Check why failed
 
       const mockDb2 = {
         query: vi.fn(),

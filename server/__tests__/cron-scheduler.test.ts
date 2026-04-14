@@ -1,6 +1,9 @@
 import { CronScheduler } from '../services/cron-scheduler'
 import { CronJob, ExecutionStatus, TriggerType, MisfirePolicy } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest'
+import type { IEventBus } from '../services/interfaces/event-bus.interface'
+import type { IConcurrencyManager } from '../services/interfaces/concurrency-manager.interface'
+import { MisfireHandler, createMisfireHandler } from '../services/misfire-handler'
 
 vi.mock('node-cron', () => {
   return {
@@ -25,10 +28,16 @@ describe('CronScheduler', () => {
     updateCronJob: Mock
     createExecutionLog: Mock
     updateExecutionLog: Mock
+    getWorkflowTemplateById: Mock
+    getWebhookConfigsByJobId: Mock
   }
   let mockWorkflowEngine: {
     executeWorkflow: Mock
   }
+  let mockEventBus: IEventBus
+  let mockConcurrencyManager: IConcurrencyManager
+  let misfireHandler: MisfireHandler
+  let runningJobsSet: Set<string>
 
   const createMockJob = (id: string, overrides?: Partial<CronJob>): CronJob => ({
     id,
@@ -53,6 +62,8 @@ describe('CronScheduler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    runningJobsSet = new Set<string>()
+
     mockDb = {
       getActiveCronJobs: vi.fn().mockResolvedValue([]),
       getCronJobById: vi.fn().mockResolvedValue(null),
@@ -71,11 +82,56 @@ describe('CronScheduler', () => {
       }),
     }
 
-    scheduler = new CronScheduler(mockDb as any, mockWorkflowEngine as any, {
-      maxConcurrent: 2,
-      timezone: 'UTC',
-      defaultTimeoutMs: 5000,
-    })
+    mockEventBus = {
+      emitJobCreated: vi.fn(),
+      emitJobUpdated: vi.fn(),
+      emitJobDeleted: vi.fn(),
+      emitJobToggled: vi.fn(),
+      emitJobExecuted: vi.fn(),
+      emitTaskCreated: vi.fn(),
+      emitTaskUpdated: vi.fn(),
+      emitTaskCompleted: vi.fn(),
+      emitTaskFailed: vi.fn(),
+      emitTaskMovedToDLQ: vi.fn(),
+      emitLogCreated: vi.fn(),
+      emitLogUpdated: vi.fn(),
+      emitWorkflowTestStarted: vi.fn(),
+      emitWorkflowTestCompleted: vi.fn(),
+      emitWorkflowNodeOutput: vi.fn(),
+      emitWorkflowNodeStart: vi.fn(),
+      emitWorkflowNodeComplete: vi.fn(),
+      emitWorkflowNodeError: vi.fn(),
+    }
+
+    mockConcurrencyManager = {
+      acquireSlot: vi.fn().mockResolvedValue(true),
+      releaseSlot: vi.fn(),
+      getRunningJobs: () => runningJobsSet,
+      getRunningCount: () => runningJobsSet.size,
+      isShuttingDown: () => false,
+      setShuttingDown: vi.fn(),
+    }
+
+    misfireHandler = new MisfireHandler()
+  })
+
+  const createScheduler = (options?: { timezone?: string; defaultTimeoutMs?: number }) => {
+    const sched = new CronScheduler(
+      mockDb as any,
+      mockWorkflowEngine as any,
+      null,
+      null,
+      mockEventBus,
+      mockConcurrencyManager,
+      misfireHandler,
+      options
+    )
+    misfireHandler.setExecuteJobCallback(sched.executeJobTick.bind(sched))
+    return sched
+  }
+
+  beforeEach(() => {
+    scheduler = createScheduler({ timezone: 'UTC', defaultTimeoutMs: 5000 })
   })
 
   afterEach(() => {
@@ -177,21 +233,35 @@ describe('CronScheduler', () => {
     })
 
     it('should respect max concurrent limit', async () => {
-      // Create a scheduler with maxConcurrent=2
-      const limitedScheduler = new CronScheduler(mockDb as any, mockWorkflowEngine as any, {
-        maxConcurrent: 2,
-      })
+      const customRunningJobs = new Set<string>()
+      const customConcurrencyManager: IConcurrencyManager = {
+        acquireSlot: vi.fn().mockResolvedValue(true),
+        releaseSlot: vi.fn(),
+        getRunningJobs: () => customRunningJobs,
+        getRunningCount: () => customRunningJobs.size,
+        isShuttingDown: () => false,
+        setShuttingDown: vi.fn(),
+      }
+      
+      const customMisfireHandler = new MisfireHandler()
+      const limitedScheduler = new CronScheduler(
+        mockDb as any,
+        mockWorkflowEngine as any,
+        null,
+        null,
+        mockEventBus,
+        customConcurrencyManager,
+        customMisfireHandler,
+        { timezone: 'UTC' }
+      )
+      customMisfireHandler.setExecuteJobCallback(limitedScheduler.executeJobTick.bind(limitedScheduler))
       
       const runningJobs = limitedScheduler.getRunningJobs()
       
-      // Manually fill the slots
       runningJobs.add('job-1')
       runningJobs.add('job-2')
       
       expect(limitedScheduler.getRunningJobCount()).toBe(2)
-      
-      // Third job should not be able to acquire slot (simulated)
-      // In real execution, this would be checked in executeJobTick
       
       limitedScheduler.stopAll()
     })
@@ -207,12 +277,7 @@ describe('CronScheduler', () => {
     })
 
     it('should enforce maxConcurrent from options', () => {
-      const customScheduler = new CronScheduler(mockDb as any, mockWorkflowEngine as any, {
-        maxConcurrent: 10,
-      })
-      
-      // The scheduler should use the custom maxConcurrent
-      // This is verified indirectly through the options
+      const customScheduler = createScheduler()
       
       customScheduler.stopAll()
     })
@@ -459,11 +524,30 @@ describe('CronScheduler', () => {
     })
 
     it('should return configured timezone', () => {
-      expect(scheduler.getTimezone()).toBe('Asia/Shanghai')
+      // Scheduler was configured with 'UTC' timezone in beforeEach
+      expect(scheduler.getTimezone()).toBe('UTC')
     })
 
     it('should use default timezone if not specified', () => {
-      const defaultScheduler = new CronScheduler(mockDb as any, mockWorkflowEngine as any)
+      const defaultConcurrencyManager: IConcurrencyManager = {
+        acquireSlot: vi.fn().mockResolvedValue(true),
+        releaseSlot: vi.fn(),
+        getRunningJobs: () => new Set(),
+        getRunningCount: () => 0,
+        isShuttingDown: () => false,
+        setShuttingDown: vi.fn(),
+      }
+      
+      const defaultMisfireHandler = new MisfireHandler()
+      const defaultScheduler = new CronScheduler(
+        mockDb as any,
+        mockWorkflowEngine as any,
+        null,
+        null,
+        mockEventBus,
+        defaultConcurrencyManager,
+        defaultMisfireHandler
+      )
       
       expect(defaultScheduler.getTimezone()).toBe('Asia/Shanghai')
       

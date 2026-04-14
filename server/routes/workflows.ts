@@ -63,7 +63,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const result = await workflowService.getPaginated(page, limit, ownerId)
 
-  successResponse(res, createPaginatedResponse(result.templates, result.total, page, limit))
+  successResponse(res, createPaginatedResponse(result.templates, result.total, page, limit, 'workflows'))
 }))
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {

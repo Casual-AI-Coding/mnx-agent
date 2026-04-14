@@ -4,7 +4,25 @@ import { WorkflowEngine } from '../workflow-engine'
 import { QueueProcessor } from '../queue-processor'
 import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../service-node-registry'
+import type { IConcurrencyManager, IRetryManager } from '../interfaces'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus'
+
+function createMockConcurrencyManager(): IConcurrencyManager {
+  return {
+    runningJobs: new Set<string>(),
+    getRunningCount: () => 0,
+    canStart: () => true,
+    markRunning: vi.fn(),
+    markCompleted: vi.fn(),
+  }
+}
+
+function createMockRetryManager(): IRetryManager {
+  return {
+    getRetryDelay: vi.fn().mockReturnValue(1000),
+    delay: vi.fn().mockResolvedValue(undefined),
+  }
+}
 
 describe('CronScheduler Integration with TaskExecutor', () => {
   let mockDb: Partial<DatabaseService>
@@ -12,6 +30,8 @@ describe('CronScheduler Integration with TaskExecutor', () => {
   let mockTaskExecutor: {
     executeTask: ReturnType<typeof vi.fn>
   }
+  let mockEventBus: ReturnType<typeof createMockEventBus>
+  let mockConcurrencyManager: IConcurrencyManager
   let workflowEngine: WorkflowEngine
   let cronScheduler: CronScheduler
 
@@ -41,13 +61,31 @@ describe('CronScheduler Integration with TaskExecutor', () => {
       executeTask: vi.fn(),
     }
 
-    const mockEventBus = createMockEventBus()
-    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, mockEventBus, mockTaskExecutor as any)
-    cronScheduler = new CronScheduler(mockDb as DatabaseService, workflowEngine as any, mockTaskExecutor as any, {
-      maxConcurrent: 2,
-      timezone: 'UTC',
-      defaultTimeoutMs: 5000,
-    }, mockEventBus)
+    mockEventBus = createMockEventBus()
+    mockConcurrencyManager = createMockConcurrencyManager()
+    
+    // WorkflowEngine constructor: db, serviceRegistry, taskExecutor, eventBus
+    workflowEngine = new WorkflowEngine(
+      mockDb as DatabaseService,
+      mockRegistry as ServiceNodeRegistry,
+      mockTaskExecutor as any,
+      mockEventBus
+    )
+    
+    // CronScheduler constructor: db, workflowEngine, taskExecutor, notificationService, eventBus, concurrencyManager, misfireHandler?, options?
+    cronScheduler = new CronScheduler(
+      mockDb as DatabaseService,
+      workflowEngine as any,
+      mockTaskExecutor as any,
+      null, // notificationService
+      mockEventBus,
+      mockConcurrencyManager,
+      undefined, // misfireHandler
+      {
+        timezone: 'UTC',
+        defaultTimeoutMs: 5000,
+      }
+    )
   })
 
   afterEach(() => {
@@ -89,6 +127,8 @@ describe('QueueProcessor Dead Letter Queue', () => {
     decrementCapacity: ReturnType<typeof vi.fn>
     getSafeExecutionLimit: ReturnType<typeof vi.fn>
   }
+  let mockEventBus: ReturnType<typeof createMockEventBus>
+  let mockRetryManager: IRetryManager
   let queueProcessor: QueueProcessor
 
   beforeEach(() => {
@@ -116,10 +156,16 @@ describe('QueueProcessor Dead Letter Queue', () => {
       getSafeExecutionLimit: vi.fn().mockResolvedValue(10),
     }
 
+    mockEventBus = createMockEventBus()
+    mockRetryManager = createMockRetryManager()
+
+    // QueueProcessor constructor: db, taskExecutor, capacityChecker, eventBus, retryManager
     queueProcessor = new QueueProcessor(
       mockDb as DatabaseService,
       mockTaskExecutor as any,
-      mockCapacityChecker as any
+      mockCapacityChecker as any,
+      mockEventBus,
+      mockRetryManager
     )
   })
 
@@ -162,7 +208,7 @@ describe('QueueProcessor Dead Letter Queue', () => {
   })
 
   it('should emit DLQ event when task is moved to dead letter queue', async () => {
-    const emitSpy = vi.spyOn(cronEvents, 'emitTaskMovedToDLQ')
+    const emitSpy = vi.spyOn(mockEventBus, 'emitTaskMovedToDLQ')
 
     const failedTask = {
       id: 'task-2',
@@ -225,6 +271,7 @@ describe('WorkflowEngine with TaskExecutor', () => {
   let mockDb: Partial<DatabaseService>
   let mockRegistry: Partial<ServiceNodeRegistry>
   let mockTaskExecutor: { executeTask: ReturnType<typeof vi.fn> }
+  let mockEventBus: ReturnType<typeof createMockEventBus>
   let workflowEngine: WorkflowEngine
 
   beforeEach(() => {
@@ -247,7 +294,15 @@ describe('WorkflowEngine with TaskExecutor', () => {
       executeTask: vi.fn(),
     }
 
-    workflowEngine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus(), mockTaskExecutor as any)
+    mockEventBus = createMockEventBus()
+    
+    // WorkflowEngine constructor: db, serviceRegistry, taskExecutor, eventBus
+    workflowEngine = new WorkflowEngine(
+      mockDb as DatabaseService,
+      mockRegistry as ServiceNodeRegistry,
+      mockTaskExecutor as any,
+      mockEventBus
+    )
   })
 
   it('should use TaskExecutor directly when available for queue nodes', async () => {
@@ -296,7 +351,13 @@ describe('WorkflowEngine with TaskExecutor', () => {
   })
 
   it('should fall back to serviceRegistry when TaskExecutor is not available', async () => {
-    const workflowEngineWithoutExecutor = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, createMockEventBus())
+    // WorkflowEngine without TaskExecutor: db, serviceRegistry, undefined, eventBus
+    const workflowEngineWithoutExecutor = new WorkflowEngine(
+      mockDb as DatabaseService,
+      mockRegistry as ServiceNodeRegistry,
+      undefined,
+      mockEventBus
+    )
 
     const queueTask = {
       id: 'task-1',
