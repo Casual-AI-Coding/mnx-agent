@@ -55,7 +55,10 @@ export class MiniMaxClient {
     
     if (axiosError.response?.data) {
       const data = axiosError.response.data
-      const statusCode = data.base_resp?.status_code ?? data.error?.code ? Number(data.error?.code) : error.response?.status ?? 500
+      const statusCode = data.base_resp?.status_code 
+        ?? (data.error?.code ? Number(data.error?.code) : undefined)
+        ?? error.response?.status 
+        ?? 500
       const statusMsg = data.base_resp?.status_msg ?? data.error?.message ?? 'Unknown error'
       
       const err = new Error(statusMsg) as Error & MiniMaxError
@@ -371,7 +374,8 @@ export function getMiniMaxClient(): MiniMaxClient {
       console.warn('[MiniMaxClient] MINIMAX_API_KEY not configured, using mock client that will fail on API calls')
       clientInstance = new MockMiniMaxClient()
     } else {
-      const region = (process.env.MINIMAX_REGION as Region) || 'international'
+      const envRegion = process.env.MINIMAX_REGION
+      const region: Region = (envRegion === 'cn' ? 'domestic' : 'international')
       clientInstance = new MiniMaxClient(apiKey, region)
     }
   }

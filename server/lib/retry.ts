@@ -19,8 +19,9 @@ const DEFAULT_RETRYABLE_CODES = [429, 500, 502, 503, 504, 408]
 /**
  * Calculate delay with exponential backoff and jitter
  * Formula: min(baseDelay * 2^attempt + jitter, maxDelay)
+ * @internal Exported for testing purposes
  */
-function calculateBackoffDelay(
+export function calculateBackoffDelay(
   attempt: number,
   baseDelayMs: number,
   maxDelayMs: number
@@ -40,15 +41,17 @@ function calculateBackoffDelay(
 
 /**
  * Sleep for a specified duration
+ * @internal Exported for testing purposes
  */
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
  * Check if an error is retryable based on its status code
+ * @internal Exported for testing purposes
  */
-function isRetryableError(
+export function isRetryableError(
   error: unknown,
   retryableStatusCodes: number[]
 ): boolean {
