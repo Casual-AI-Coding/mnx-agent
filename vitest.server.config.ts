@@ -27,6 +27,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      reportOnAllFiles: false,
       include: [
         'server/services/workflow/**/*.ts',
         'server/services/cron-scheduler.ts',

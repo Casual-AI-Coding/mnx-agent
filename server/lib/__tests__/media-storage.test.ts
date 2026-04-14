@@ -313,7 +313,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should use default mediaRoot when not provided', () => {
       const result = getMediaFilePath('test.wav')
-      expect(result).toBe(join('./data/media', 'test.wav'))
+      expect(result).toBe(join(process.env.MEDIA_ROOT || './test-media-storage', 'test.wav'))
     })
 
     it('should handle deeply nested paths', () => {
@@ -403,17 +403,16 @@ it('should handle multiple delete calls on same file', async () => {
     })
 
     it('should use default mediaRoot when not provided', async () => {
-      const defaultRoot = './data/media'
+      const defaultRoot = join(TEST_MEDIA_ROOT, 'default-root-test')
       await fs.mkdir(defaultRoot, { recursive: true })
       
       const mockData = Buffer.from('default root download')
       ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
-      const result = await saveFromUrl('http://example.com/file.wav', 'test.wav', 'audio')
+      const result = await saveFromUrl('http://example.com/file.wav', 'test.wav', 'audio', defaultRoot)
 
-      expect(result.filepath).toContain('data/media')
+      expect(result.filepath).toContain(defaultRoot)
       
-      // Cleanup
       await fs.rm(defaultRoot, { recursive: true, force: true })
     })
 

@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 import axios from 'axios'
 import type { MediaType } from '../database/types'
 
-const DEFAULT_MEDIA_ROOT = './data/media'
+const DEFAULT_MEDIA_ROOT = process.env.MEDIA_ROOT || './data/media'
 
 export async function saveMediaFile(
   buffer: Buffer,
@@ -12,6 +12,9 @@ export async function saveMediaFile(
   type: MediaType,
   mediaRoot: string = DEFAULT_MEDIA_ROOT
 ): Promise<{ filepath: string; filename: string; size_bytes: number }> {
+  if (process.env.NODE_ENV === 'test' && mediaRoot === './data/media') {
+    throw new Error('CRITICAL: Tests must use TEST_MEDIA_ROOT, not production path ./data/media')
+  }
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
