@@ -326,4 +326,329 @@ describe('LogRepository', () => {
       expect(result.avgDuration).toBe(0)
     })
   })
+
+  describe('getPaginated with all options', () => {
+    it('should handle empty options', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '0' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getPaginated({})
+
+      expect(result.total).toBe(0)
+      expect(result.logs).toHaveLength(0)
+    })
+
+    it('should use default limit and offset', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '100' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getPaginated({})
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT $'),
+        expect.arrayContaining([50, 0])
+      )
+    })
+
+    it('should apply both startDate and endDate filters', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '5' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getPaginated({
+        startDate: '2026-01-01T00:00:00Z',
+        endDate: '2026-01-31T23:59:59Z',
+        ownerId: 'owner-1',
+      })
+
+      const queryCall = mockDb.query.mock.calls[0]
+      expect(queryCall[0]).toContain('started_at >= $')
+      expect(queryCall[0]).toContain('started_at <= $')
+      expect(queryCall[1]).toContain('2026-01-01T00:00:00Z')
+      expect(queryCall[1]).toContain('2026-01-31T23:59:59Z')
+    })
+
+    it('should combine ownerId with date filters', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '3' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getPaginated({
+        ownerId: 'owner-1',
+        startDate: '2026-01-01T00:00:00Z',
+      })
+
+      const queryCall = mockDb.query.mock.calls[0]
+      expect(queryCall[0]).toContain('owner_id = $')
+      expect(queryCall[0]).toContain('started_at >= $')
+    })
+
+    it('should handle custom limit and offset', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '200' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getPaginated({ limit: 25, offset: 50 })
+
+      const queryCall = mockDb.query.mock.calls[1]
+      expect(queryCall[1]).toContain(25)
+      expect(queryCall[1]).toContain(50)
+    })
+
+    it('should return correct total from count query', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '150' }] as any)
+        .mockResolvedValueOnce([
+          { id: 'log-1', job_id: 'job-1', trigger_type: 'manual' as TriggerType, status: 'completed' as ExecutionStatus },
+        ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getPaginated({ limit: 10, offset: 0 })
+
+      expect(result.total).toBe(150)
+      expect(result.logs).toHaveLength(1)
+    })
+  })
+
+  describe('getStatsTrend', () => {
+    it('should return daily trend for postgres', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { date: '2026-01-15', total: '10', success: '8', failed: '2' },
+        { date: '2026-01-14', total: '15', success: '12', failed: '3' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getStatsTrend('day')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('TO_CHAR(started_at, \'YYYY-MM-DD\')'),
+        []
+      )
+      expect(result).toHaveLength(2)
+      expect(result[0].date).toBe('2026-01-15')
+      expect(result[0].total).toBe(10)
+      expect(result[0].success).toBe(8)
+      expect(result[0].failed).toBe(2)
+    })
+
+    it('should return weekly trend for postgres', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { date: '2026-03', total: '50', success: '45', failed: '5' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getStatsTrend('week')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('TO_CHAR(started_at, \'IYYY-IW\')'),
+        []
+      )
+      expect(result).toHaveLength(1)
+    })
+
+    it('should return monthly trend for postgres', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { date: '2026-01', total: '200', success: '180', failed: '20' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getStatsTrend('month')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('TO_CHAR(started_at, \'YYYY-MM\')'),
+        []
+      )
+      expect(result).toHaveLength(1)
+    })
+
+    it('should return daily trend for sqlite', async () => {
+      mockDb.isPostgres = vi.fn().mockReturnValue(false)
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { date: '2026-01-15', total: '10', success: '8', failed: '2' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getStatsTrend('day')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('strftime'),
+        []
+      )
+      expect(result).toHaveLength(1)
+    })
+
+    it('should apply owner filter to trend', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { date: '2026-01-15', total: '5', success: '4', failed: '1' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getStatsTrend('day', 'owner-1')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE owner_id = $1'),
+        ['owner-1']
+      )
+      expect(result).toHaveLength(1)
+    })
+
+    it('should limit results to 90 periods', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getStatsTrend('day')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT 90'),
+        []
+      )
+    })
+  })
+
+  describe('updateDetail', () => {
+    it('should update output_result field', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', { output_result: '{"result":"success"}' })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE execution_log_details SET output_result = $1'),
+        expect.arrayContaining(['{"result":"success"}', 'detail-1'])
+      )
+    })
+
+    it('should update error_message field', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', { error_message: 'Connection timeout' })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE execution_log_details SET error_message = $1'),
+        expect.arrayContaining(['Connection timeout', 'detail-1'])
+      )
+    })
+
+    it('should update completed_at field', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', { completed_at: '2026-01-15T10:30:00Z' })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE execution_log_details SET completed_at = $1'),
+        expect.arrayContaining(['2026-01-15T10:30:00Z', 'detail-1'])
+      )
+    })
+
+    it('should update duration_ms field', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', { duration_ms: 1500 })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE execution_log_details SET duration_ms = $1'),
+        expect.arrayContaining([1500, 'detail-1'])
+      )
+    })
+
+    it('should update multiple fields at once', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', {
+        output_result: '{"success":true}',
+        completed_at: '2026-01-15T10:30:00Z',
+        duration_ms: 2000,
+      })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('output_result = $1'),
+        expect.arrayContaining(['{"success":true}', '2026-01-15T10:30:00Z', 2000, 'detail-1'])
+      )
+    })
+
+    it('should do nothing when no fields provided', async () => {
+      const repo = new LogRepository(mockDb)
+      await repo.updateDetail('detail-1', {})
+
+      expect(mockDb.execute).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getRecent', () => {
+    it('should call getAll with default limit', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { id: 'log-1', job_id: 'job-1', trigger_type: 'manual' as TriggerType, status: 'completed' as ExecutionStatus },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getRecent()
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        'SELECT * FROM execution_logs ORDER BY started_at DESC LIMIT $1',
+        [20]
+      )
+    })
+
+    it('should call getAll with custom limit', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getRecent(50)
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        'SELECT * FROM execution_logs ORDER BY started_at DESC LIMIT $1',
+        [50]
+      )
+    })
+
+    it('should apply owner filter', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      await repo.getRecent(20, 'owner-1')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        'SELECT * FROM execution_logs WHERE owner_id = $1 ORDER BY started_at DESC LIMIT $2',
+        ['owner-1', 20]
+      )
+    })
+  })
+
+  describe('getDetailsByLogId', () => {
+    it('should return details for a log', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([
+        { id: 'detail-1', log_id: 'log-1', node_id: 'node-1', output_result: '{"success":true}' },
+        { id: 'detail-2', log_id: 'log-1', node_id: 'node-2', output_result: '{"success":true}' },
+      ] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getDetailsByLogId('log-1')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        'SELECT * FROM execution_log_details WHERE log_id = $1 ORDER BY started_at',
+        ['log-1']
+      )
+      expect(result).toHaveLength(2)
+    })
+
+    it('should return empty array when no details found', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+
+      const repo = new LogRepository(mockDb)
+      const result = await repo.getDetailsByLogId('log-with-no-details')
+
+      expect(result).toHaveLength(0)
+    })
+  })
 })
