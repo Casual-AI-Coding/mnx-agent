@@ -69,6 +69,85 @@ async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
   })
 }
 
+async function registerMockServices(db: Awaited<ReturnType<typeof getDatabase>>) {
+  const registry = getServiceNodeRegistry(db)
+
+  const mockMinimaxClient = {
+    chatCompletion: vi.fn().mockResolvedValue({
+      id: 'mock-chat-123',
+      choices: [{ message: { content: 'Mock response' } }],
+    }),
+    imageGeneration: vi.fn().mockResolvedValue({
+      data: { image_urls: ['https://mock-url/image.png'] },
+    }),
+    videoGeneration: vi.fn().mockResolvedValue({
+      task_id: 'mock-video-task-123',
+    }),
+    textToAudioSync: vi.fn().mockResolvedValue({
+      data: { audio: 'https://mock-url/audio.mp3' },
+    }),
+    textToAudioAsync: vi.fn().mockResolvedValue({
+      task_id: 'mock-voice-task-123',
+    }),
+    musicGeneration: vi.fn().mockResolvedValue({
+      data: { audio: 'https://mock-url/music.mp3', duration: 30 },
+    }),
+  }
+
+  const mockCapacityChecker = {
+    getRemainingCapacity: vi.fn().mockResolvedValue({ remaining: 1000 }),
+    hasCapacity: vi.fn().mockResolvedValue(true),
+  }
+
+  await registry.register({
+    serviceName: 'minimaxClient',
+    instance: mockMinimaxClient,
+    methods: [
+      { name: 'chatCompletion', displayName: 'Text Generation', category: 'MiniMax API' },
+      { name: 'imageGeneration', displayName: 'Image Generation', category: 'MiniMax API' },
+      { name: 'videoGeneration', displayName: 'Video Generation', category: 'MiniMax API' },
+      { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
+      { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
+      { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'db',
+    instance: db,
+    methods: [
+      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
+      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'capacityChecker',
+    instance: mockCapacityChecker,
+    methods: [
+      { name: 'getRemainingCapacity', displayName: 'Get Remaining Capacity', category: 'Capacity' },
+      { name: 'hasCapacity', displayName: 'Check Has Capacity', category: 'Capacity' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'mediaStorage',
+    instance: { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile },
+    methods: [
+      { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
+      { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
+    ],
+  })
+
+  await registry.register({
+    serviceName: 'utils',
+    instance: { toCSV, generateMediaToken, verifyMediaToken },
+    methods: [
+      { name: 'toCSV', displayName: 'Convert to CSV', category: 'Utils' },
+    ],
+  })
+}
+
 /**
  * 阶段 B：完整验证集 - 集成测试
  * 
@@ -101,7 +180,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     db = await getDatabase()
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry, createMockEventBus())
+    engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
   })
 
   beforeEach(async () => {
@@ -403,7 +482,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
  * vitest run server/__tests__/workflow-integration.test.ts -t "Phase C"
  * ```
  */
-describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
+describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
   let db: Awaited<ReturnType<typeof getDatabase>>
   let registry: ReturnType<typeof getServiceNodeRegistry>
   let engine: WorkflowEngine
@@ -413,9 +492,9 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
     await setupTestDatabase()
     resetServiceNodeRegistry()
     db = await getDatabase()
-    await registerServices(db)
+    await registerMockServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry, createMockEventBus())
+    engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
     const mockConcurrencyManager = createMockConcurrencyManager()
     scheduler = new CronScheduler(db, engine, null, null, createMockEventBus(), mockConcurrencyManager)
   })
@@ -496,7 +575,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase C E2E Tests', () => {
       
       const logs = await db.getAllExecutionLogs(undefined, 10)
       const latestLog = logs.find(l => l.job_id === job.id)
-      
+
       expect(latestLog).toBeDefined()
       expect(latestLog?.status).toBe('completed')
       expect(latestLog?.tasks_executed).toBe(2)
