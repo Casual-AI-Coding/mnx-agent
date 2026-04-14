@@ -27,8 +27,31 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['server/**/*.ts'],
-      exclude: ['server/**/*.{test,spec}.ts', 'server/index.ts'],
+      include: [
+        'server/services/workflow/**/*.ts',
+        'server/services/cron-scheduler.ts',
+        'server/services/task-executor.ts',
+        'server/services/queue-processor.ts',
+        'server/services/user-service.ts',
+        'server/services/misfire-handler.ts',
+        'server/repositories/**/*.ts',
+        'server/lib/media-storage.ts',
+      ],
+      exclude: [
+        'server/**/*.{test,spec}.ts',
+        'server/services/index.ts',
+        'server/services/workflow/index.ts',
+        'server/services/workflow/types.ts',
+        'server/services/interfaces/**/*.ts',
+        'server/repositories/index.ts',
+        'server/repositories/ports/**/*.ts',
+      ],
+      thresholds: {
+        lines: 54,
+        functions: 54,
+        branches: 45,
+        statements: 54,
+      },
     },
   },
 })
