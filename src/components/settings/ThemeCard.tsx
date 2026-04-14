@@ -40,14 +40,13 @@ export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
       <div className="relative flex items-center justify-between w-full">
         <div
           className={cn(
-            'w-10 h-10 rounded-full shadow-lg transition-all duration-300',
-            selected ? 'scale-110 shadow-xl' : 'group-hover:scale-105'
+            'w-10 h-10 rounded-xl flex items-center justify-center text-2xl transition-all duration-300',
+            selected ? 'scale-110 shadow-lg' : 'group-hover:scale-105',
+            isDarkBackground ? 'bg-white/10' : 'bg-black/10'
           )}
-          style={{ 
-            backgroundColor: `hsl(${theme.preview.primary})`,
-            boxShadow: `0 4px 20px -4px hsl(${theme.preview.primary} / 0.5)`
-          }}
-        />
+        >
+          {theme.icon}
+        </div>
 
         <div 
           className={cn(
