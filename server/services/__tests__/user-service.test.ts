@@ -218,6 +218,111 @@ describe('UserService', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe('用户名已存在')
     })
+
+    it('should create user with email provided', async () => {
+      const mockTxQuery = vi.fn()
+        .mockResolvedValueOnce([{
+          id: 'code-1',
+          code: 'TEST123',
+          max_uses: 1,
+          used_count: 1,
+          expires_at: null,
+          is_active: true
+        }])
+        .mockResolvedValueOnce([])
+
+      const mockTxExecute = vi.fn().mockResolvedValue({ changes: 1 })
+
+      const mockDb = {
+        query: vi.fn(),
+        execute: vi.fn(),
+        transaction: vi.fn(async (fn: (conn: DatabaseConnection) => Promise<unknown>) => {
+          const txConnection = {
+            query: mockTxQuery,
+            execute: mockTxExecute,
+          }
+          return await fn(txConnection as unknown as DatabaseConnection)
+        }),
+        isPostgres: vi.fn().mockReturnValue(true),
+      } as unknown as DatabaseConnection
+
+      vi.spyOn(UserService.prototype, 'getUserById' as any).mockResolvedValue({
+        id: expect.any(String),
+        username: 'testuser',
+        email: 'test@example.com',
+        minimax_api_key: null,
+        minimax_region: 'cn',
+        role: 'user' as const,
+        is_active: true,
+        last_login_at: null,
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      })
+
+      const service = new UserService(mockDb)
+
+      const result = await service.register({
+        username: 'testuser',
+        password: 'password123',
+        invitationCode: 'TEST123',
+        email: 'test@example.com',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.user?.email).toBe('test@example.com')
+    })
+
+    it('should create user with invitation code having valid expiration date', async () => {
+      const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      const mockTxQuery = vi.fn()
+        .mockResolvedValueOnce([{
+          id: 'code-1',
+          code: 'TEST123',
+          max_uses: 1,
+          used_count: 1,
+          expires_at: futureDate,
+          is_active: true
+        }])
+        .mockResolvedValueOnce([])
+
+      const mockTxExecute = vi.fn().mockResolvedValue({ changes: 1 })
+
+      const mockDb = {
+        query: vi.fn(),
+        execute: vi.fn(),
+        transaction: vi.fn(async (fn: (conn: DatabaseConnection) => Promise<unknown>) => {
+          const txConnection = {
+            query: mockTxQuery,
+            execute: mockTxExecute,
+          }
+          return await fn(txConnection as unknown as DatabaseConnection)
+        }),
+        isPostgres: vi.fn().mockReturnValue(true),
+      } as unknown as DatabaseConnection
+
+      vi.spyOn(UserService.prototype, 'getUserById' as any).mockResolvedValue({
+        id: expect.any(String),
+        username: 'testuser',
+        email: null,
+        minimax_api_key: null,
+        minimax_region: 'cn',
+        role: 'user' as const,
+        is_active: true,
+        last_login_at: null,
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      })
+
+      const service = new UserService(mockDb)
+
+      const result = await service.register({
+        username: 'testuser',
+        password: 'password123',
+        invitationCode: 'TEST123',
+      })
+
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('login', () => {
@@ -332,6 +437,10 @@ describe('UserService', () => {
   })
 
   describe('getUserById', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks()
+    })
+
     it('should return user by id', async () => {
       const mockDb = {
         query: vi.fn().mockResolvedValueOnce([
@@ -361,6 +470,21 @@ describe('UserService', () => {
       expect(user).not.toBeNull()
       expect(user?.username).toBe('testuser')
     })
+
+    it('should return null for non-existent user', async () => {
+      const mockDb = {
+        query: vi.fn().mockResolvedValueOnce([]),
+        execute: vi.fn(),
+        transaction: vi.fn((fn) => fn(mockDb)),
+        isPostgres: vi.fn().mockReturnValue(true),
+      } as unknown as DatabaseConnection
+
+      const service = new UserService(mockDb)
+
+      const user = await service.getUserById('non-existent')
+
+      expect(user).toBeNull()
+    })
   })
 
   describe('generateAccessToken', () => {
@@ -369,6 +493,22 @@ describe('UserService', () => {
       const service = new UserService(mockDb)
 
       const token = service.generateAccessToken({
+        userId: 'user-1',
+        username: 'testuser',
+        role: 'user',
+      })
+
+      expect(token).toBeDefined()
+      expect(typeof token).toBe('string')
+    })
+  })
+
+  describe('generateRefreshToken', () => {
+    it('should generate valid refresh token', () => {
+      const mockDb = {} as unknown as DatabaseConnection
+      const service = new UserService(mockDb)
+
+      const token = service.generateRefreshToken({
         userId: 'user-1',
         username: 'testuser',
         role: 'user',
@@ -495,6 +635,64 @@ describe('UserService', () => {
 
       expect(result).not.toBeNull()
       expect(result?.username).toBe('testuser')
+    })
+
+    it('should update both minimax_api_key and minimax_region', async () => {
+      const mockDb = {
+        query: vi.fn().mockResolvedValue([{
+          id: 'user-1',
+          username: 'testuser',
+          email: null,
+          minimax_api_key: 'new-api-key',
+          minimax_region: 'international',
+          role: 'user',
+          is_active: true,
+          last_login_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }]),
+        execute: vi.fn().mockResolvedValue({ changes: 1 }),
+        transaction: vi.fn((fn) => fn(mockDb)),
+        isPostgres: vi.fn().mockReturnValue(true),
+      } as unknown as DatabaseConnection
+
+      const service = new UserService(mockDb)
+
+      const result = await service.updateUser('user-1', {
+        minimax_api_key: 'new-api-key',
+        minimax_region: 'international'
+      })
+
+      expect(result).not.toBeNull()
+      expect(result?.minimax_api_key).toBe('new-api-key')
+      expect(result?.minimax_region).toBe('international')
+    })
+
+    it('should set minimax_api_key to null', async () => {
+      const mockDb = {
+        query: vi.fn().mockResolvedValue([{
+          id: 'user-1',
+          username: 'testuser',
+          email: null,
+          minimax_api_key: null,
+          minimax_region: 'cn',
+          role: 'user',
+          is_active: true,
+          last_login_at: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }]),
+        execute: vi.fn().mockResolvedValue({ changes: 1 }),
+        transaction: vi.fn((fn) => fn(mockDb)),
+        isPostgres: vi.fn().mockReturnValue(true),
+      } as unknown as DatabaseConnection
+
+      const service = new UserService(mockDb)
+
+      const result = await service.updateUser('user-1', { minimax_api_key: null })
+
+      expect(result).not.toBeNull()
+      expect(result?.minimax_api_key).toBeNull()
     })
   })
 

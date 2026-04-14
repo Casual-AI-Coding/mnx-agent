@@ -294,6 +294,69 @@ describe('MiniMaxClient', () => {
     })
   })
 
+  describe('chatCompletionStream method', () => {
+    it('should return stream chunks', async () => {
+      // Create mock async iterable for stream
+      const mockChunks = [
+        Buffer.from('data: {"choices":[{"delta":{"content":"Hello"}}]}\n'),
+        Buffer.from('data: {"choices":[{"delta":{"content":" World"}}]}\n'),
+        Buffer.from('data: [DONE]\n'),
+      ]
+      
+      async function* mockStream() {
+        for (const chunk of mockChunks) {
+          yield chunk
+        }
+      }
+      
+      mockClient.post.mockResolvedValueOnce({
+        data: mockStream(),
+      })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.chatCompletionStream({
+        model: 'abab6.5s-chat',
+        messages: [{ role: 'user', content: 'Hi' }],
+        stream: true,
+      })
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/text/chatcompletion_v2', {
+        model: 'abab6.5s-chat',
+        messages: [{ role: 'user', content: 'Hi' }],
+        stream: true,
+      }, {
+        responseType: 'stream',
+      })
+      
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual({ data: '{"choices":[{"delta":{"content":"Hello"}}]}', isEnd: false })
+      expect(result[1]).toEqual({ data: '{"choices":[{"delta":{"content":" World"}}]}', isEnd: false })
+      expect(result[2]).toEqual({ data: '[DONE]', isEnd: true })
+    })
+
+    it('should handle stream error', async () => {
+      const error = new AxiosError('Stream failed')
+      error.response = {
+        status: 500,
+        data: {
+          base_resp: {
+            status_code: 1002,
+            status_msg: 'Rate limit exceeded',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.chatCompletionStream({ messages: [] })).rejects.toMatchObject({
+        message: 'Rate limit exceeded',
+        code: 1002,
+      })
+    })
+  })
+
   describe('imageGeneration method', () => {
     it('should return successful response with image_urls', async () => {
       const mockResponse = {
@@ -485,6 +548,28 @@ describe('MiniMaxClient', () => {
       expect(mockClient.get).toHaveBeenCalledWith('/v1/t2a_async_v2?task_id=audio-task-12345')
       expect(result).toEqual(mockResponse)
     })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Request failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Task not found',
+          },
+        },
+      }
+      
+      mockClient.get.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.textToAudioAsyncStatus('invalid-id')).rejects.toMatchObject({
+        message: 'Task not found',
+        code: 1001,
+      })
+    })
   })
 
   describe('videoGenerationStatus method', () => {
@@ -502,6 +587,28 @@ describe('MiniMaxClient', () => {
       
       expect(mockClient.get).toHaveBeenCalledWith('/v1/query/video_generation?task_id=video-task-12345')
       expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Request failed')
+      error.response = {
+        status: 404,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Task not found',
+          },
+        },
+      }
+      
+      mockClient.get.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.videoGenerationStatus('invalid-id')).rejects.toMatchObject({
+        message: 'Task not found',
+        code: 1001,
+      })
     })
   })
 
@@ -571,6 +678,411 @@ describe('MiniMaxClient', () => {
       
       expect(mockClient.get).toHaveBeenCalledWith('/v1/files/list?purpose=voice_clone')
       expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Request failed')
+      error.response = {
+        status: 500,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Server error',
+          },
+        },
+      }
+      
+      mockClient.get.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.fileList()).rejects.toMatchObject({
+        message: 'Server error',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('fileUpload method', () => {
+    it('should upload file successfully', async () => {
+      const mockResponse = {
+        file_id: 123,
+        file_name: 'uploaded.mp3',
+      }
+      
+      const formData = new FormData()
+      formData.append('file', new Blob(['audio data']), 'test.mp3')
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.fileUpload(formData)
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Upload failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Invalid file format',
+          },
+        },
+      }
+      
+      const formData = new FormData()
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.fileUpload(formData)).rejects.toMatchObject({
+        message: 'Invalid file format',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('fileRetrieve method', () => {
+    it('should retrieve file successfully', async () => {
+      const mockResponse = {
+        file_id: 123,
+        file_name: 'test.mp3',
+        file_size: 1024,
+      }
+      
+      mockClient.get.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.fileRetrieve(123)
+      
+      expect(mockClient.get).toHaveBeenCalledWith('/v1/files/retrieve?file_id=123')
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('File not found')
+      error.response = {
+        status: 404,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'File not found',
+          },
+        },
+      }
+      
+      mockClient.get.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.fileRetrieve(999)).rejects.toMatchObject({
+        message: 'File not found',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('fileDelete method', () => {
+    it('should delete file successfully', async () => {
+      const mockResponse = {
+        success: true,
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.fileDelete(123, 'voice_clone')
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/files/delete', { file_id: 123, purpose: 'voice_clone' })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Delete failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Cannot delete file',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.fileDelete(123, 'voice_clone')).rejects.toMatchObject({
+        message: 'Cannot delete file',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('voiceDelete method', () => {
+    it('should delete voice successfully', async () => {
+      const mockResponse = {
+        success: true,
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.voiceDelete('voice-123', 'clone')
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/delete_voice', { voice_id: 'voice-123', voice_type: 'clone' })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Delete failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Voice not found',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.voiceDelete('invalid-id', 'clone')).rejects.toMatchObject({
+        message: 'Voice not found',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('voiceClone method', () => {
+    it('should clone voice successfully', async () => {
+      const mockResponse = {
+        voice_id: 'clone-voice-123',
+        voice_name: 'My Clone Voice',
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.voiceClone({
+        voice_id: 'source-voice',
+        file_id: 123,
+      })
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/voice_clone', {
+        voice_id: 'source-voice',
+        file_id: 123,
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Clone failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Invalid source voice',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.voiceClone({ voice_id: 'invalid' })).rejects.toMatchObject({
+        message: 'Invalid source voice',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('voiceDesign method', () => {
+    it('should design voice successfully', async () => {
+      const mockResponse = {
+        voice_id: 'designed-voice-123',
+        voice_name: 'Custom Voice',
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.voiceDesign({
+        text: 'Create a warm female voice',
+        voice_description: 'warm and friendly',
+      })
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/voice_design', {
+        text: 'Create a warm female voice',
+        voice_description: 'warm and friendly',
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Design failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Invalid voice description',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.voiceDesign({ text: '' })).rejects.toMatchObject({
+        message: 'Invalid voice description',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('videoAgentGenerate method', () => {
+    it('should generate video with agent successfully', async () => {
+      const mockResponse = {
+        task_id: 'video-agent-task-123',
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.videoAgentGenerate({
+        prompt: 'Create a video of a sunset',
+      })
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/video_template_generation', {
+        prompt: 'Create a video of a sunset',
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Generation failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Invalid prompt',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.videoAgentGenerate({ prompt: '' })).rejects.toMatchObject({
+        message: 'Invalid prompt',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('videoAgentStatus method', () => {
+    it('should check video agent status successfully', async () => {
+      const mockResponse = {
+        task_id: 'video-agent-task-123',
+        status: 'completed',
+        video_url: 'https://example.com/video.mp4',
+      }
+      
+      mockClient.get.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.videoAgentStatus('video-agent-task-123')
+      
+      expect(mockClient.get).toHaveBeenCalledWith('/v1/query/video_template_generation?task_id=video-agent-task-123')
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Status check failed')
+      error.response = {
+        status: 404,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Task not found',
+          },
+        },
+      }
+      
+      mockClient.get.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.videoAgentStatus('invalid-id')).rejects.toMatchObject({
+        message: 'Task not found',
+        code: 1001,
+      })
+    })
+  })
+
+  describe('musicPreprocess method', () => {
+    it('should preprocess music successfully', async () => {
+      const mockResponse = {
+        preprocess_id: 'preprocess-123',
+      }
+      
+      const formData = new FormData()
+      formData.append('audio_file', new Blob(['audio data']), 'song.mp3')
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.musicPreprocess(formData)
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/music_cover_preprocess', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Preprocess failed')
+      error.response = {
+        status: 400,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Invalid audio format',
+          },
+        },
+      }
+      
+      const formData = new FormData()
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.musicPreprocess(formData)).rejects.toMatchObject({
+        message: 'Invalid audio format',
+        code: 1001,
+      })
     })
   })
 })
