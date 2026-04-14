@@ -49,9 +49,16 @@ export async function deleteMediaFile(filepath: string): Promise<void> {
 }
 
 export async function readMediaFile(filepath: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): Promise<Buffer> {
-  const fullPath = filepath.startsWith(mediaRoot)
-    ? filepath
-    : join(mediaRoot, filepath)
+  let fullPath: string
+  
+  if (filepath.startsWith(mediaRoot)) {
+    fullPath = filepath
+  } else if (filepath.startsWith('data/media') || filepath.startsWith('./data/media')) {
+    fullPath = filepath.startsWith('./') ? filepath : './' + filepath
+  } else {
+    fullPath = join(mediaRoot, filepath)
+  }
+  
   return fs.readFile(fullPath)
 }
 
