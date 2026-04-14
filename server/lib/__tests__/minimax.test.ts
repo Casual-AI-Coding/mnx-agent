@@ -925,4 +925,160 @@ describe('MockMiniMaxClient', () => {
       code: 503,
     })
   })
+
+  it('should return error for voiceDelete', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.voiceDelete({ voice_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for voiceClone', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.voiceClone({ voice_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for voiceDesign', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.voiceDesign({ text: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for fileList', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.fileList({})).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for fileRetrieve', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.fileRetrieve({ file_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for fileDelete', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.fileDelete({ file_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for getCodingPlanRemains', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.getCodingPlanRemains()).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for videoAgentGenerate', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.videoAgentGenerate({ prompt: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for videoAgentStatus', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.videoAgentStatus({ task_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for musicPreprocess', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.musicPreprocess({ prompt: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for videoGenerationStatus', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.videoGenerationStatus({ task_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for chatCompletionStream', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.chatCompletionStream({ messages: [] })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for textToAudioAsyncStatus', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.textToAudioAsyncStatus({ task_id: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
 })
