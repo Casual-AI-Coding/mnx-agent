@@ -4,7 +4,7 @@ import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { withEntityNotFound } from '../../utils/index.js'
 import { getDatabaseService, getLogService, getTaskService, getExecutionStateManagerInstance } from '../../service-registration.js'
-import { WorkflowEngine } from '../../services/workflow-engine'
+import { WorkflowEngine } from '../../services/workflow/index'
 import {
   executionLogQuerySchema,
   executionLogIdParamsSchema,

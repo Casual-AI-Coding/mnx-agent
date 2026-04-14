@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { getDatabase } from '../database/service-async'
 import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
 import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
-import { WorkflowEngine } from '../services/workflow-engine'
+import { WorkflowEngine } from '../services/workflow/index'
 import { CronScheduler } from '../services/cron-scheduler'
 import { getMiniMaxClient } from '../lib/minimax'
 import { CapacityChecker } from '../services/capacity-checker'

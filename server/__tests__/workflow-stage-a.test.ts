@@ -1,4 +1,4 @@
-import { WorkflowEngine, WorkflowGraph } from '../services/workflow-engine'
+import { WorkflowEngine, WorkflowGraph } from '../services/workflow/index'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
 import type { DatabaseService } from '../database/service-async'
 import { describe, it, expect, beforeEach, vi } from 'vitest'

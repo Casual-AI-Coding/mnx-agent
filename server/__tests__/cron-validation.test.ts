@@ -14,7 +14,7 @@ vi.mock('../services/service-node-registry', () => ({
   resetServiceNodeRegistry: vi.fn(),
 }))
 
-vi.mock('../services/workflow-engine', () => ({
+vi.mock('../services/workflow/index', () => ({
   WorkflowEngine: vi.fn(),
 }))
 

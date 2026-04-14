@@ -4,13 +4,12 @@ import {
   WorkflowEdge, 
   WorkflowGraph,
   TaskResult,
-  resolveTemplateString,
-  resolveNodeConfig,
-  parseWorkflowJson,
-  validateWorkflow,
   buildExecutionLayers,
   buildExecutionOrder,
-} from '../services/workflow-engine'
+  parseWorkflowJson,
+  validateWorkflow,
+} from '../services/workflow/index'
+import { resolveTemplateString, resolveNodeConfig } from '../services/workflow/template-resolver'
 import { evaluateCondition } from '../services/workflow/executors/condition-executor'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
 import type { DatabaseService } from '../database/service-async'

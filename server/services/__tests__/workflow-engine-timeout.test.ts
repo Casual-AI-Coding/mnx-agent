@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { WorkflowEngine } from '../workflow-engine.js'
+import { WorkflowEngine } from '../workflow/index.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'

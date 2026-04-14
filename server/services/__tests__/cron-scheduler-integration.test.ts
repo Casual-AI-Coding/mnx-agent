@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { CronScheduler } from '../cron-scheduler'
-import { WorkflowEngine } from '../workflow-engine'
+import { WorkflowEngine } from '../workflow/index'
 import { QueueProcessor } from '../queue-processor'
 import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../service-node-registry'

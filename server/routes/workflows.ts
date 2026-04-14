@@ -13,7 +13,7 @@ import {
   testRunWorkflowSchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
-import { WorkflowEngine } from '../services/workflow-engine'
+import { WorkflowEngine } from '../services/workflow/index'
 import {
   getPaginationParams,
   createPaginatedResponse,
