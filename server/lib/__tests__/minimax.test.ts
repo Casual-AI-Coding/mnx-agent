@@ -716,3 +716,213 @@ describe('resetMiniMaxClient', () => {
     delete process.env.MINIMAX_API_KEY
   })
 })
+
+describe('getBalance method', () => {
+  let mockClient: { post: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }
+  let mockAxiosCreate: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = {
+      post: vi.fn(),
+      get: vi.fn(),
+    }
+    mockAxiosCreate = vi.fn().mockReturnValue(mockClient as unknown as AxiosInstance)
+    vi.spyOn(axios, 'create').mockImplementation(mockAxiosCreate)
+    resetMiniMaxClient()
+  })
+
+  it('should return balance data on success', async () => {
+    const mockResponse = { balance: 1000, quota: 5000 }
+    mockClient.get.mockResolvedValueOnce({ data: mockResponse })
+
+    const client = new MiniMaxClient('test-key')
+    const result = await client.getBalance()
+
+    expect(mockClient.get).toHaveBeenCalledWith('/v1/user/balance')
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('should throw on error', async () => {
+    const error = new AxiosError('Service unavailable')
+    error.response = {
+      status: 503,
+      data: {},
+    }
+    mockClient.get.mockRejectedValueOnce(error)
+
+    const client = new MiniMaxClient('test-key')
+
+    try {
+      await client.getBalance()
+      fail('Should have thrown')
+    } catch (e: any) {
+      expect(e.code).toBe(503)
+    }
+  })
+})
+
+describe('getCodingPlanRemains method', () => {
+  let mockClient: { post: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }
+  let mockAxiosCreate: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = {
+      post: vi.fn(),
+      get: vi.fn(),
+    }
+    mockAxiosCreate = vi.fn().mockReturnValue(mockClient as unknown as AxiosInstance)
+    vi.spyOn(axios, 'create').mockImplementation(mockAxiosCreate)
+    resetMiniMaxClient()
+  })
+
+  it('should return remains data on success', async () => {
+    const mockResponse = { remains: 100, total: 1000 }
+    mockClient.get.mockResolvedValueOnce({ data: mockResponse })
+
+    const client = new MiniMaxClient('test-key')
+    const result = await client.getCodingPlanRemains('1001')
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      '/v1/api/openplatform/coding_plan/remains',
+      expect.objectContaining({ headers: { productId: '1001' } })
+    )
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('should use default productId', async () => {
+    const mockResponse = { remains: 100 }
+    mockClient.get.mockResolvedValueOnce({ data: mockResponse })
+
+    const client = new MiniMaxClient('test-key')
+    await client.getCodingPlanRemains()
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      '/v1/api/openplatform/coding_plan/remains',
+      expect.objectContaining({ headers: { productId: '1001' } })
+    )
+  })
+
+  it('should throw on error', async () => {
+    const error = new AxiosError('API error')
+    error.response = {
+      status: 400,
+      data: { base_resp: { status_code: 400, status_msg: 'Invalid request' } },
+    }
+    mockClient.get.mockRejectedValueOnce(error)
+
+    const client = new MiniMaxClient('test-key')
+
+    await expect(client.getCodingPlanRemains()).rejects.toMatchObject({
+      message: 'Invalid request',
+      code: 400,
+    })
+  })
+})
+
+describe('MockMiniMaxClient', () => {
+  let mockClient: { post: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }
+  let mockAxiosCreate: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClient = {
+      post: vi.fn(),
+      get: vi.fn(),
+    }
+    mockAxiosCreate = vi.fn().mockReturnValue(mockClient as unknown as AxiosInstance)
+    vi.spyOn(axios, 'create').mockImplementation(mockAxiosCreate)
+    resetMiniMaxClient()
+    delete process.env.MINIMAX_API_KEY
+  })
+
+  afterEach(() => {
+    delete process.env.MINIMAX_API_KEY
+    resetMiniMaxClient()
+  })
+
+  it('should return error when API key not configured for chatCompletion', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.chatCompletion({})).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for imageGeneration', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.imageGeneration({ prompt: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for videoGeneration', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.videoGeneration({ prompt: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for getBalance', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.getBalance()).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for musicGeneration', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.musicGeneration({ prompt: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for voiceList', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.voiceList()).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+
+  it('should return error for fileUpload', async () => {
+    process.env.MINIMAX_API_KEY = ''
+    resetMiniMaxClient()
+    
+    const client = getMiniMaxClient()
+
+    await expect(client.fileUpload({ file: 'test' })).rejects.toMatchObject({
+      message: expect.stringContaining('MINIMAX_API_KEY not configured'),
+      code: 503,
+    })
+  })
+})
