@@ -256,6 +256,41 @@ describe('UserRepository', () => {
       )
     })
 
+    it('should filter by resource_id', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '2' }] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new UserRepository(mockDb)
+      await repo.getAuditLogs({ resource_id: 'job-123' })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('resource_id = $1'),
+        expect.arrayContaining(['job-123'])
+      )
+    })
+
+    it('should filter by combined filters', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '5' }] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new UserRepository(mockDb)
+      await repo.getAuditLogs({
+        action: 'create',
+        resource_type: 'cron_job',
+        user_id: 'user-1',
+        response_status: 200
+      })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('action = $1 AND resource_type = $2 AND user_id = $3 AND response_status = $4'),
+        expect.arrayContaining(['create', 'cron_job', 'user-1', 200])
+      )
+    })
+
     it('should filter by response_status', async () => {
       vi.mocked(mockDb.query)
         .mockResolvedValueOnce([{ count: '2' }] as any)
@@ -409,6 +444,37 @@ describe('UserRepository', () => {
 
       expect(result.logs[0].username).toBe('testuser')
     })
+
+    it('should handle logs without user_id (null username)', async () => {
+      const mockLogs = [
+        {
+          id: 'log-1',
+          action: 'create',
+          resource_type: 'job',
+          resource_id: 'job-1',
+          user_id: null,
+          ip_address: null,
+          user_agent: null,
+          request_method: null,
+          request_path: null,
+          request_body: null,
+          response_status: null,
+          error_message: null,
+          duration_ms: null,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ]
+
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '1' }] as any)
+        .mockResolvedValueOnce(mockLogs as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getAuditLogs({})
+
+      expect(result.logs[0].username).toBeNull()
+      expect(mockDb.query).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('getAuditStats', () => {
@@ -474,6 +540,34 @@ describe('UserRepository', () => {
       expect(result.total_logs).toBe(0)
       expect(result.by_action.create).toBe(0)
       expect(result.avg_duration_ms).toBe(0)
+    })
+
+    it('should handle missing avg_duration', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '10' }] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getAuditStats()
+
+      expect(result.avg_duration_ms).toBe(0)
+    })
+
+    it('should handle response_status null entries', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '5' }] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([{ avg_duration: '0' }] as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getAuditStats()
+
+      expect(result.by_response_status).toEqual({})
     })
   })
 
@@ -561,6 +655,18 @@ describe('UserRepository', () => {
       )
       expect(result).toHaveLength(1)
     })
+
+    it('should handle null user_ids in results', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ user_id: 'user-1' }, { user_id: null }, { user_id: null }] as any)
+        .mockResolvedValueOnce([{ id: 'user-1', username: 'testuser' }] as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getUniqueAuditUsers()
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('user-1')
+    })
   })
 
   describe('getAllServiceNodePermissions', () => {
@@ -596,6 +702,51 @@ describe('UserRepository', () => {
       expect(result).toHaveLength(2)
       expect(result[0].service_name).toBe('MiniMaxService')
       expect(result[1].is_enabled).toBe(true)
+    })
+
+    it('should convert is_enabled integer 0 to boolean false', async () => {
+      const mockRows = [
+        {
+          id: 'perm-1',
+          service_name: 'DisabledService',
+          method_name: 'disabledMethod',
+          display_name: 'Disabled Method',
+          category: 'test',
+          min_role: 'admin',
+          is_enabled: 0,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ]
+
+      vi.mocked(mockDb.query).mockResolvedValueOnce(mockRows as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getAllServiceNodePermissions()
+
+      expect(result).toHaveLength(1)
+      expect(result[0].is_enabled).toBe(false)
+    })
+
+    it('should handle is_enabled as boolean', async () => {
+      const mockRows = [
+        {
+          id: 'perm-1',
+          service_name: 'TestService',
+          method_name: 'testMethod',
+          display_name: 'Test',
+          category: 'test',
+          min_role: 'user',
+          is_enabled: false,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ]
+
+      vi.mocked(mockDb.query).mockResolvedValueOnce(mockRows as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getAllServiceNodePermissions()
+
+      expect(result[0].is_enabled).toBe(false)
     })
 
     it('should order by category and display_name', async () => {
@@ -640,6 +791,26 @@ describe('UserRepository', () => {
       const result = await repo.getServiceNodePermission('NonExistentService', 'unknown')
 
       expect(result).toBeNull()
+    })
+
+    it('should convert is_enabled integer 0 to boolean false', async () => {
+      const mockRow = {
+        id: 'perm-1',
+        service_name: 'DisabledService',
+        method_name: 'disabledMethod',
+        display_name: 'Disabled Method',
+        category: 'test',
+        min_role: 'admin',
+        is_enabled: 0,
+        created_at: '2026-01-01T00:00:00Z',
+      }
+
+      vi.mocked(mockDb.query).mockResolvedValueOnce([mockRow] as any)
+
+      const repo = new UserRepository(mockDb)
+      const result = await repo.getServiceNodePermission('DisabledService', 'disabledMethod')
+
+      expect(result?.is_enabled).toBe(false)
     })
   })
 
@@ -770,6 +941,43 @@ describe('UserRepository', () => {
       expect(mockDb.execute).toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining([true])
+      )
+    })
+
+    it('should use explicit is_enabled false', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new UserRepository(mockDb)
+      await repo.upsertServiceNodePermission({
+        service_name: 'DisabledService',
+        method_name: 'disabledMethod',
+        display_name: 'Disabled',
+        category: 'test',
+        is_enabled: false,
+      })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining([false])
+      )
+    })
+
+    it('should use explicit is_enabled false for sqlite', async () => {
+      mockDb.isPostgres = vi.fn().mockReturnValue(false)
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const repo = new UserRepository(mockDb)
+      await repo.upsertServiceNodePermission({
+        service_name: 'DisabledService',
+        method_name: 'disabledMethod',
+        display_name: 'Disabled',
+        category: 'test',
+        is_enabled: false,
+      })
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining([0])
       )
     })
   })

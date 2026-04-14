@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { BaseRepository, ListOptions } from '../base-repository'
+import { BaseRepository } from '../base-repository'
 import { DatabaseConnection } from '../../database/connection'
 
 interface TestEntity {
@@ -17,6 +17,14 @@ interface CreateTestEntity {
 
 interface UpdateTestEntity {
   name?: string
+  description?: string | null
+  displayName?: string
+  active?: boolean
+  verified?: boolean
+  count?: number
+  status?: string | number
+  priority?: number
+  optional?: undefined
 }
 
 class TestRepository extends BaseRepository<TestEntity, CreateTestEntity, UpdateTestEntity> {
@@ -249,6 +257,58 @@ describe('BaseRepository', () => {
         expect.any(Array)
       )
     })
+
+    it('should include boolean conditions', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '3' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      await repo.list({ is_active: true, is_published: false })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE is_active = $1 AND is_published = $2'),
+        expect.arrayContaining([true, false])
+      )
+    })
+
+    it('should include numeric conditions', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '10' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      await repo.list({ status: 1, priority: 5 })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE status = $1 AND priority = $2'),
+        expect.arrayContaining([1, 5])
+      )
+    })
+
+    it('should handle only limit without offset', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '50' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      await repo.list({ limit: 10 })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT $1 OFFSET $2'),
+        expect.arrayContaining([10, 0])
+      )
+    })
+
+    it('should handle only offset without custom limit', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '100' }] as any)
+        .mockResolvedValueOnce([] as any)
+
+      await repo.list({ offset: 25 })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT $'),
+        expect.arrayContaining([50, 25])
+      )
+    })
   })
 
   describe('delete', () => {
@@ -291,6 +351,14 @@ describe('BaseRepository', () => {
 
       expect(result).toBe(false)
     })
+
+    it('should handle delete result without changes property', async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({} as any)
+
+      const result = await repo.delete('entity-1')
+
+      expect(result).toBe(false)
+    })
   })
 
   describe('buildUpdateFields', () => {
@@ -329,6 +397,34 @@ describe('BaseRepository', () => {
       expect(fields).toHaveLength(0)
       expect(values).toHaveLength(0)
       expect(paramIndex).toBe(1)
+    })
+
+    it('should include null values (not skip them)', async () => {
+      const updates = { name: 'New Name', description: null }
+      const { fields, values } = repo['buildUpdateFields'](updates)
+
+      expect(fields).toHaveLength(2)
+      expect(fields).toContain('name = $1')
+      expect(fields).toContain('description = $2')
+      expect(values).toEqual(['New Name', null])
+    })
+
+    it('should handle boolean values', async () => {
+      const updates = { active: true, verified: false }
+      const { fields, values } = repo['buildUpdateFields'](updates)
+
+      expect(fields).toHaveLength(2)
+      expect(fields).toContain('active = $1')
+      expect(fields).toContain('verified = $2')
+      expect(values).toEqual([true, false])
+    })
+
+    it('should handle mixed types including null, boolean, string, number', async () => {
+      const updates = { name: 'Test', count: 5, active: true, description: null }
+      const { fields, values } = repo['buildUpdateFields'](updates)
+
+      expect(fields).toHaveLength(4)
+      expect(values).toEqual(['Test', 5, true, null])
     })
   })
 
@@ -392,6 +488,33 @@ describe('BaseRepository', () => {
       expect(mockDb.execute).toHaveBeenCalledWith(
         expect.stringContaining('WHERE id = $'),
         expect.arrayContaining(['owner-1'])
+      )
+    })
+
+    it('should return null when entity not found after update', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([] as any)
+
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      const result = await repo['executeUpdate']({ name: 'New Name' }, 'deleted-entity', 'owner-1')
+
+      expect(result).toBeNull()
+    })
+
+    it('should handle update without owner filter', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([] as any)
+        .mockResolvedValueOnce([existingEntity] as any)
+
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+
+      await repo['executeUpdate']({ name: 'New Name' }, 'entity-1')
+
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE id = $'),
+        expect.not.arrayContaining(['owner-1'])
       )
     })
   })
