@@ -228,7 +228,8 @@ describe('media-storage', () => {
 
     it('should use default mediaRoot when not provided', async () => {
       const buffer = Buffer.from('test default root')
-      const defaultRoot = './data/media'
+      // Use test-specific root to avoid deleting real data/media
+      const defaultRoot = join(TEST_MEDIA_ROOT, 'default-test')
       await fs.mkdir(defaultRoot, { recursive: true })
       
       const { filepath, filename } = await saveMediaFile(buffer, 'default.wav', 'audio', defaultRoot)
@@ -236,6 +237,7 @@ describe('media-storage', () => {
       
       expect(readBuffer.toString()).toBe('test default root')
       
+      // Cleanup only test directory, not real data/media
       await fs.rm(defaultRoot, { recursive: true, force: true })
     })
   })
