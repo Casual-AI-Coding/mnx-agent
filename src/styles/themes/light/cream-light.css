@@ -1,0 +1,43 @@
+.theme-cream-light {
+  --background: 30 20% 96%;
+  --foreground: 30 10% 15%;
+  --card: 30 20% 98%;
+  --card-foreground: 30 10% 15%;
+  --popover: 30 20% 98%;
+  --popover-foreground: 30 10% 15%;
+  --primary: 30 80% 40%;
+  --primary-foreground: 30 20% 96%;
+  --secondary: 30 15% 90%;
+  --secondary-foreground: 30 10% 15%;
+  --muted: 30 15% 90%;
+  --muted-foreground: 30 10% 45%;
+  --accent: 30 15% 90%;
+  --accent-foreground: 30 10% 15%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 30 20% 96%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 30 15% 85%;
+  --input: 30 15% 85%;
+  --ring: 30 80% 40%;
+  --radius: 0.5rem;
+  --primary-400: 30 80% 45%;
+  --primary-500: 30 80% 40%;
+  --primary-600: 30 80% 35%;
+  --dark-950: 30 20% 100%;
+  --dark-900: 30 20% 96%;
+  --dark-800: 30 15% 88%;
+  --dark-700: 30 12% 78%;
+  --dark-600: 30 10% 65%;
+  --dark-500: 30 8% 50%;
+  --dark-400: 30 8% 40%;
+  --dark-300: 30 8% 30%;
+  --dark-200: 30 8% 20%;
+}
+

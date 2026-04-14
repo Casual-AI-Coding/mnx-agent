@@ -1,0 +1,43 @@
+.theme-purple-haze {
+  --background: 270 20% 10%;
+  --foreground: 270 10% 92%;
+  --card: 270 20% 12%;
+  --card-foreground: 270 10% 92%;
+  --popover: 270 20% 12%;
+  --popover-foreground: 270 10% 92%;
+  --primary: 280 100% 60%;
+  --primary-foreground: 270 20% 10%;
+  --secondary: 270 15% 18%;
+  --secondary-foreground: 270 10% 92%;
+  --muted: 270 15% 18%;
+  --muted-foreground: 270 10% 55%;
+  --accent: 270 15% 18%;
+  --accent-foreground: 270 10% 92%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 270 10% 92%;
+  --success: 142 71% 45%;
+  --success-foreground: 220 20% 6%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 220 20% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 220 20% 6%;
+  --info: 217 91% 60%;
+  --info-foreground: 220 20% 6%;
+  --border: 270 15% 24%;
+  --input: 270 15% 24%;
+  --ring: 280 100% 60%;
+  --radius: 0.5rem;
+  --dark-950: 270 20% 10%;
+  --dark-900: 270 20% 12%;
+  --dark-800: 270 15% 18%;
+  --dark-700: 270 12% 28%;
+  --dark-600: 270 10% 38%;
+  --dark-500: 270 8% 48%;
+  --dark-400: 270 6% 58%;
+  --dark-300: 270 4% 68%;
+  --dark-200: 270 2% 78%;
+  --primary-400: 280 100% 65%;
+  --primary-500: 280 100% 60%;
+  --primary-600: 280 100% 55%;
+}
+

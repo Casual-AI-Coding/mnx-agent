@@ -1,0 +1,43 @@
+.theme-mint-light {
+  --background: 150 30% 96%;
+  --foreground: 150 10% 15%;
+  --card: 150 30% 98%;
+  --card-foreground: 150 10% 15%;
+  --popover: 150 30% 98%;
+  --popover-foreground: 150 10% 15%;
+  --primary: 150 100% 35%;
+  --primary-foreground: 150 30% 96%;
+  --secondary: 150 25% 90%;
+  --secondary-foreground: 150 10% 15%;
+  --muted: 150 25% 90%;
+  --muted-foreground: 150 10% 45%;
+  --accent: 150 25% 90%;
+  --accent-foreground: 150 10% 15%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 150 30% 96%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 150 25% 85%;
+  --input: 150 25% 85%;
+  --ring: 150 100% 35%;
+  --radius: 0.5rem;
+  --primary-400: 150 100% 40%;
+  --primary-500: 150 100% 35%;
+  --primary-600: 150 100% 30%;
+  --dark-950: 150 30% 100%;
+  --dark-900: 150 30% 96%;
+  --dark-800: 150 25% 88%;
+  --dark-700: 150 20% 78%;
+  --dark-600: 150 15% 65%;
+  --dark-500: 150 12% 50%;
+  --dark-400: 150 12% 40%;
+  --dark-300: 150 12% 30%;
+  --dark-200: 150 12% 20%;
+}
+

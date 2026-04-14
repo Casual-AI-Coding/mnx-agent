@@ -1,0 +1,43 @@
+.theme-classic-light {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 5%;
+  --popover: 0 0% 98%;
+  --popover-foreground: 0 0% 5%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 90%;
+  --secondary-foreground: 0 0% 5%;
+  --muted: 0 0% 90%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 90%;
+  --accent-foreground: 0 0% 5%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 0 0% 85%;
+  --input: 0 0% 85%;
+  --ring: 217 91% 60%;
+  --radius: 0.5rem;
+  --primary-400: 0 0% 10%;
+  --primary-500: 0 0% 0%;
+  --primary-600: 0 0% 5%;
+  --dark-950: 0 0% 100%;
+  --dark-900: 0 0% 96%;
+  --dark-800: 0 0% 90%;
+  --dark-700: 0 0% 80%;
+  --dark-600: 0 0% 65%;
+  --dark-500: 0 0% 50%;
+  --dark-400: 0 0% 40%;
+  --dark-300: 0 0% 30%;
+  --dark-200: 0 0% 20%;
+}
+

@@ -1,0 +1,43 @@
+.theme-solarized-dark {
+  --background: 193 100% 7%;
+  --foreground: 186 10% 90%;
+  --card: 193 100% 9%;
+  --card-foreground: 186 10% 90%;
+  --popover: 193 100% 9%;
+  --popover-foreground: 186 10% 90%;
+  --primary: 45 100% 71%;
+  --primary-foreground: 193 100% 7%;
+  --secondary: 193 50% 15%;
+  --secondary-foreground: 186 10% 90%;
+  --muted: 193 50% 15%;
+  --muted-foreground: 186 10% 55%;
+  --accent: 193 50% 15%;
+  --accent-foreground: 186 10% 90%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 186 10% 90%;
+  --success: 142 71% 45%;
+  --success-foreground: 220 20% 6%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 220 20% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 220 20% 6%;
+  --info: 217 91% 60%;
+  --info-foreground: 220 20% 6%;
+  --border: 193 50% 20%;
+  --input: 193 50% 20%;
+  --ring: 45 100% 71%;
+  --radius: 0.5rem;
+  --dark-950: 193 100% 7%;
+  --dark-900: 193 100% 9%;
+  --dark-800: 193 50% 15%;
+  --dark-700: 193 40% 25%;
+  --dark-600: 193 30% 35%;
+  --dark-500: 193 20% 45%;
+  --dark-400: 193 15% 55%;
+  --dark-300: 193 10% 65%;
+  --dark-200: 193 5% 75%;
+  --primary-400: 45 100% 76%;
+  --primary-500: 45 100% 71%;
+  --primary-600: 45 100% 66%;
+}
+

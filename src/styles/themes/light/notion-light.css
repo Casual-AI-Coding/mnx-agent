@@ -1,0 +1,43 @@
+.theme-notion-light {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 10%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 10%;
+  --popover: 0 0% 98%;
+  --popover-foreground: 0 0% 10%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 92%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 92%;
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 0 0% 88%;
+  --input: 0 0% 88%;
+  --ring: 217 91% 60%;
+  --radius: 0.375rem;
+  --primary-400: 217 91% 65%;
+  --primary-500: 217 91% 60%;
+  --primary-600: 217 91% 50%;
+  --dark-950: 0 0% 100%;
+  --dark-900: 0 0% 96%;
+  --dark-800: 0 0% 88%;
+  --dark-700: 0 0% 78%;
+  --dark-600: 0 0% 65%;
+  --dark-500: 0 0% 50%;
+  --dark-400: 0 0% 40%;
+  --dark-300: 0 0% 30%;
+  --dark-200: 0 0% 20%;
+}
+

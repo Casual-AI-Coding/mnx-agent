@@ -1,0 +1,43 @@
+.theme-paper-white {
+  --background: 40 30% 98%;
+  --foreground: 40 10% 15%;
+  --card: 40 30% 100%;
+  --card-foreground: 40 10% 15%;
+  --popover: 40 30% 100%;
+  --popover-foreground: 40 10% 15%;
+  --primary: 200 50% 50%;
+  --primary-foreground: 40 30% 98%;
+  --secondary: 40 20% 90%;
+  --secondary-foreground: 40 10% 15%;
+  --muted: 40 20% 90%;
+  --muted-foreground: 40 10% 45%;
+  --accent: 40 20% 90%;
+  --accent-foreground: 40 10% 15%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 40 30% 98%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 40 20% 85%;
+  --input: 40 20% 85%;
+  --ring: 200 50% 50%;
+  --radius: 0.5rem;
+  --primary-400: 200 50% 55%;
+  --primary-500: 200 50% 50%;
+  --primary-600: 200 50% 45%;
+  --dark-950: 40 30% 100%;
+  --dark-900: 40 30% 96%;
+  --dark-800: 40 20% 88%;
+  --dark-700: 40 15% 78%;
+  --dark-600: 40 12% 65%;
+  --dark-500: 40 10% 50%;
+  --dark-400: 40 8% 40%;
+  --dark-300: 40 8% 30%;
+  --dark-200: 40 8% 20%;
+}
+

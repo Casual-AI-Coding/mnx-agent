@@ -1,0 +1,43 @@
+.theme-ocean-blue {
+  --background: 210 50% 8%;
+  --foreground: 200 80% 95%;
+  --card: 210 50% 10%;
+  --card-foreground: 200 80% 95%;
+  --popover: 210 50% 10%;
+  --popover-foreground: 200 80% 95%;
+  --primary: 200 100% 50%;
+  --primary-foreground: 210 50% 8%;
+  --secondary: 210 40% 18%;
+  --secondary-foreground: 200 80% 95%;
+  --muted: 210 40% 18%;
+  --muted-foreground: 210 30% 50%;
+  --accent: 210 40% 18%;
+  --accent-foreground: 200 80% 95%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 200 80% 95%;
+  --success: 142 71% 45%;
+  --success-foreground: 220 20% 6%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 220 20% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 220 20% 6%;
+  --info: 217 91% 60%;
+  --info-foreground: 220 20% 6%;
+  --border: 210 40% 25%;
+  --input: 210 40% 25%;
+  --ring: 200 100% 50%;
+  --radius: 0.5rem;
+  --dark-950: 210 50% 8%;
+  --dark-900: 210 50% 10%;
+  --dark-800: 210 40% 18%;
+  --dark-700: 210 35% 25%;
+  --dark-600: 210 30% 35%;
+  --dark-500: 210 25% 45%;
+  --dark-400: 210 20% 55%;
+  --dark-300: 210 15% 65%;
+  --dark-200: 210 10% 80%;
+  --primary-400: 200 100% 55%;
+  --primary-500: 200 100% 50%;
+  --primary-600: 200 100% 45%;
+}
+

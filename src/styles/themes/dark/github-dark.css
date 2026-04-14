@@ -1,0 +1,43 @@
+.theme-github-dark {
+  --background: 210 10% 8%;
+  --foreground: 210 15% 92%;
+  --card: 210 10% 10%;
+  --card-foreground: 210 15% 92%;
+  --popover: 210 10% 10%;
+  --popover-foreground: 210 15% 92%;
+  --primary: 203 100% 32%;
+  --primary-foreground: 210 10% 8%;
+  --secondary: 210 10% 15%;
+  --secondary-foreground: 210 15% 92%;
+  --muted: 210 10% 15%;
+  --muted-foreground: 210 10% 55%;
+  --accent: 210 10% 15%;
+  --accent-foreground: 210 15% 92%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 210 15% 92%;
+  --success: 142 71% 45%;
+  --success-foreground: 220 20% 6%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 220 20% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 220 20% 6%;
+  --info: 217 91% 60%;
+  --info-foreground: 220 20% 6%;
+  --border: 210 10% 20%;
+  --input: 210 10% 20%;
+  --ring: 203 100% 32%;
+  --radius: 0.375rem;
+  --dark-950: 210 10% 8%;
+  --dark-900: 210 10% 10%;
+  --dark-800: 210 10% 15%;
+  --dark-700: 210 8% 25%;
+  --dark-600: 210 6% 35%;
+  --dark-500: 210 5% 45%;
+  --dark-400: 210 4% 55%;
+  --dark-300: 210 3% 65%;
+  --dark-200: 210 2% 75%;
+  --primary-400: 203 100% 37%;
+  --primary-500: 203 100% 32%;
+  --primary-600: 203 100% 27%;
+}
+

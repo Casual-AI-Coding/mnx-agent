@@ -1,0 +1,43 @@
+.theme-solarized-light {
+  --background: 44 87% 94%;
+  --foreground: 192 15% 25%;
+  --card: 44 87% 96%;
+  --card-foreground: 192 15% 25%;
+  --popover: 44 87% 96%;
+  --popover-foreground: 192 15% 25%;
+  --primary: 45 100% 71%;
+  --primary-foreground: 44 87% 94%;
+  --secondary: 44 30% 85%;
+  --secondary-foreground: 192 15% 25%;
+  --muted: 44 30% 85%;
+  --muted-foreground: 192 10% 45%;
+  --accent: 44 30% 85%;
+  --accent-foreground: 192 15% 25%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 44 87% 94%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 40%;
+  --warning-foreground: 0 0% 100%;
+  --error: 0 84% 50%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --border: 44 30% 80%;
+  --input: 44 30% 80%;
+  --ring: 45 100% 71%;
+  --radius: 0.5rem;
+  --primary-400: 45 100% 76%;
+  --primary-500: 45 100% 71%;
+  --primary-600: 45 100% 66%;
+  --dark-950: 44 87% 100%;
+  --dark-900: 44 87% 96%;
+  --dark-800: 44 60% 88%;
+  --dark-700: 44 40% 78%;
+  --dark-600: 44 30% 65%;
+  --dark-500: 44 20% 50%;
+  --dark-400: 44 15% 40%;
+  --dark-300: 44 10% 30%;
+  --dark-200: 44 10% 20%;
+}
+

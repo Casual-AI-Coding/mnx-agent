@@ -1,0 +1,43 @@
+.theme-monokai {
+  --background: 240 20% 10%;
+  --foreground: 60 30% 96%;
+  --card: 240 20% 12%;
+  --card-foreground: 60 30% 96%;
+  --popover: 240 20% 12%;
+  --popover-foreground: 60 30% 96%;
+  --primary: 60 100% 50%;
+  --primary-foreground: 240 20% 10%;
+  --secondary: 240 15% 20%;
+  --secondary-foreground: 60 30% 96%;
+  --muted: 240 15% 20%;
+  --muted-foreground: 240 10% 55%;
+  --accent: 240 15% 20%;
+  --accent-foreground: 60 30% 96%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 60 30% 96%;
+  --success: 142 71% 45%;
+  --success-foreground: 220 20% 6%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 220 20% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 220 20% 6%;
+  --info: 217 91% 60%;
+  --info-foreground: 220 20% 6%;
+  --border: 240 15% 25%;
+  --input: 240 15% 25%;
+  --ring: 60 100% 50%;
+  --radius: 0.5rem;
+  --dark-950: 240 20% 10%;
+  --dark-900: 240 20% 12%;
+  --dark-800: 240 15% 20%;
+  --dark-700: 240 12% 30%;
+  --dark-600: 240 10% 40%;
+  --dark-500: 240 8% 50%;
+  --dark-400: 240 6% 60%;
+  --dark-300: 240 4% 70%;
+  --dark-200: 240 2% 80%;
+  --primary-400: 60 100% 55%;
+  --primary-500: 60 100% 50%;
+  --primary-600: 60 100% 45%;
+}
+
