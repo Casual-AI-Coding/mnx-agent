@@ -1,4 +1,4 @@
-export type ThemeCategory = 'light' | 'dark'
+export type ThemeCategory = 'light' | 'dark' | 'style'
 
 export interface ThemeMeta {
   id: string
@@ -58,6 +58,58 @@ export const THEME_REGISTRY: ThemeMeta[] = [
     preview: { background: '150 30% 96%', primary: '150 100% 35%' } },
   { id: 'cream-light', name: 'Cream Light', category: 'light',
     preview: { background: '30 20% 96%', primary: '30 80% 40%' } },
+  
+  // Style themes - Games (6)
+  { id: 'wukong', name: '黑神话悟空', category: 'style',
+    preview: { background: '30 15% 8%', primary: '45 90% 55%' } },
+  { id: 'cyberpunk-2077', name: '赛博朋克2077', category: 'style',
+    preview: { background: '280 20% 6%', primary: '320 100% 50%' } },
+  { id: 'starcraft', name: '星际争霸二', category: 'style',
+    preview: { background: '200 30% 8%', primary: '180 100% 45%' } },
+  { id: 'genshin', name: '原神', category: 'style',
+    preview: { background: '260 20% 10%', primary: '280 80% 60%' } },
+  { id: 'spider-man', name: '漫威蜘蛛侠', category: 'style',
+    preview: { background: '220 20% 12%', primary: '0 85% 50%' } },
+  { id: 'wow', name: '魔兽世界', category: 'style',
+    preview: { background: '220 15% 8%', primary: '140 60% 45%' } },
+  
+  // Style themes - Anime (9)
+  { id: 'super-saiyan', name: '超级赛亚人', category: 'style',
+    preview: { background: '45 15% 10%', primary: '45 100% 60%' } },
+  { id: 'iori', name: '八神庵', category: 'style',
+    preview: { background: '270 20% 8%', primary: '280 100% 50%' } },
+  { id: 'zangief', name: '桑吉尔夫', category: 'style',
+    preview: { background: '0 15% 10%', primary: '0 80% 50%' } },
+  { id: 'mccree', name: '麦克雷', category: 'style',
+    preview: { background: '30 20% 12%', primary: '30 90% 50%' } },
+  { id: 'dragon-ball', name: '龙珠', category: 'style',
+    preview: { background: '210 20% 12%', primary: '35 100% 55%' } },
+  { id: 'bleach', name: '死神', category: 'style',
+    preview: { background: '0 10% 6%', primary: '0 100% 40%' } },
+  { id: 'demon-slayer', name: '鬼灭之刃', category: 'style',
+    preview: { background: '200 15% 10%', primary: '190 100% 45%' } },
+  { id: 'naruto', name: '火影忍者', category: 'style',
+    preview: { background: '30 15% 10%', primary: '35 100% 55%' } },
+  { id: 'ponyo', name: '龙猫深海', category: 'style',
+    preview: { background: '200 25% 15%', primary: '195 80% 50%' } },
+  
+  // Style themes - Festivals (8)
+  { id: 'chinese-new-year', name: '新年', category: 'style',
+    preview: { background: '0 20% 12%', primary: '0 90% 50%' } },
+  { id: 'halloween', name: '万圣节', category: 'style',
+    preview: { background: '270 15% 8%', primary: '30 100% 50%' } },
+  { id: 'valentine', name: '情人节', category: 'style',
+    preview: { background: '340 30% 12%', primary: '340 90% 55%' } },
+  { id: 'christmas', name: '圣诞节', category: 'style',
+    preview: { background: '140 20% 10%', primary: '0 85% 50%' } },
+  { id: 'tanabata', name: '七夕', category: 'style',
+    preview: { background: '220 30% 15%', primary: '340 80% 60%' } },
+  { id: 'dragon-boat', name: '端午节', category: 'style',
+    preview: { background: '140 25% 12%', primary: '140 80% 45%' } },
+  { id: 'mid-autumn', name: '中秋节', category: 'style',
+    preview: { background: '30 20% 10%', primary: '45 90% 55%' } },
+  { id: 'gothic-lolita', name: '哥特萝莉', category: 'style',
+    preview: { background: '270 25% 8%', primary: '280 100% 50%' } },
 ]
 
 export function getThemeById(id: string): ThemeMeta | undefined {

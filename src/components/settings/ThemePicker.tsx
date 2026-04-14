@@ -5,20 +5,22 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { SystemOption } from './SystemOption'
 import { ThemeCard } from './ThemeCard'
 import type { ThemeCategory } from '@/themes/registry'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Monitor, Moon, Sun, Palette } from 'lucide-react'
 
-type TabValue = 'system' | 'dark' | 'light'
+type TabValue = 'system' | 'dark' | 'light' | 'style'
 
 const tabIcons = {
   system: Monitor,
   dark: Moon,
   light: Sun,
+  style: Palette,
 }
 
 const tabLabels = {
   system: 'System',
   dark: 'Dark',
   light: 'Light',
+  style: 'Style',
 }
 
 export function ThemePicker() {
@@ -41,8 +43,8 @@ export function ThemePicker() {
   return (
     <div className="space-y-5">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="w-full grid grid-cols-3 bg-secondary/30 p-1 rounded-xl gap-1 h-auto">
-          {(['system', 'dark', 'light'] as TabValue[]).map((tab) => {
+        <TabsList className="w-full grid grid-cols-4 bg-secondary/30 p-1 rounded-xl gap-1 h-auto">
+          {(['system', 'dark', 'light', 'style'] as TabValue[]).map((tab) => {
             const Icon = tabIcons[tab]
             const isActive = activeTab === tab
             return (
