@@ -9,8 +9,10 @@ interface ThemeCardProps {
 }
 
 export function ThemeCard({ theme, selected, onSelect }: ThemeCardProps) {
-  const isDark = theme.category === 'dark'
-  const textColor = isDark ? '210 40% 98%' : '220 20% 10%'
+  // Calculate text color based on background lightness (L value in HSL)
+  const bgLightness = theme.preview.background.split(' ').pop()?.replace('%', '') ?? '50'
+  const isDarkBackground = parseFloat(bgLightness) < 50
+  const textColor = isDarkBackground ? '210 40% 98%' : '220 20% 10%'
 
   return (
     <button
