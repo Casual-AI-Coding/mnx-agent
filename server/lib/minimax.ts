@@ -50,7 +50,7 @@ export class MiniMaxClient {
     })
   }
 
-  private handleError(error: AxiosError<MiniMaxErrorResponse>): never {
+  static handleError(error: AxiosError<MiniMaxErrorResponse>): never {
     const axiosError = error as AxiosError<MiniMaxErrorResponse>
     
     if (axiosError.response?.data) {
@@ -83,7 +83,7 @@ export class MiniMaxClient {
         const response = await this.client.post('/v1/text/chatcompletion_v2', body)
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -113,7 +113,7 @@ export class MiniMaxClient {
 
       return chunks
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -123,7 +123,7 @@ export class MiniMaxClient {
         const response = await this.client.post('/v1/t2a_v2', body)
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -134,7 +134,7 @@ export class MiniMaxClient {
         const response = await this.client.post('/v1/t2a_async_v2', body)
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -144,7 +144,7 @@ export class MiniMaxClient {
       const response = await this.client.get(`/v1/t2a_async_v2?task_id=${taskId}`)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -154,7 +154,7 @@ export class MiniMaxClient {
         const response = await this.client.post('/v1/image_generation', body)
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -172,7 +172,7 @@ export class MiniMaxClient {
         })
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -186,7 +186,7 @@ export class MiniMaxClient {
       })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -196,7 +196,7 @@ export class MiniMaxClient {
         const response = await this.client.post('/v1/video_generation', body)
         return response.data
       } catch (error) {
-        return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
     })
   }
@@ -206,7 +206,7 @@ export class MiniMaxClient {
       const response = await this.client.get(`/v1/query/video_generation?task_id=${taskId}`)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -215,7 +215,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/video_template_generation', body)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -224,7 +224,7 @@ export class MiniMaxClient {
       const response = await this.client.get(`/v1/query/video_template_generation?task_id=${taskId}`)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -234,7 +234,7 @@ export class MiniMaxClient {
       const response = await this.client.get(url)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -247,7 +247,7 @@ export class MiniMaxClient {
       })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -256,7 +256,7 @@ export class MiniMaxClient {
       const response = await this.client.get(`/v1/files/retrieve?file_id=${fileId}`)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -265,7 +265,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/files/delete', { file_id: fileId, purpose })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -274,7 +274,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/get_voice', { voice_type: voiceType })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -283,7 +283,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/delete_voice', { voice_id: voiceId, voice_type: voiceType })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -292,7 +292,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/voice_clone', body)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -301,7 +301,7 @@ export class MiniMaxClient {
       const response = await this.client.post('/v1/voice_design', body)
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -310,7 +310,7 @@ export class MiniMaxClient {
       const response = await this.client.get('/v1/user/balance')
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 
@@ -323,7 +323,7 @@ export class MiniMaxClient {
       })
       return response.data
     } catch (error) {
-      return this.handleError(error as AxiosError<MiniMaxErrorResponse>)
+      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
     }
   }
 }

@@ -211,34 +211,19 @@ describe('MiniMaxClient', () => {
       })
     })
 
-    it.skip('should handle ECONNABORTED timeout error', async () => {
-      // Skipped: vi.mock hoisting issue with ESM - retryWithBackoff mock not applied
-      const error = new AxiosError('timeout of 60000ms exceeded')
+    it('should handle ECONNABORTED timeout error', () => {
+      const error = new AxiosError('timeout of 60000ms exceeded') as AxiosError<MiniMaxErrorResponse>
       error.code = 'ECONNABORTED'
-      
-      mockClient.post.mockRejectedValueOnce(error)
-      
-      const client = new MiniMaxClient('test-key')
-      
-      await expect(client.chatCompletion({})).rejects.toMatchObject({
-        message: 'Request timeout',
-        code: 408,
-      })
+
+      expect(() => MiniMaxClient.handleError(error)).toThrow('Request timeout')
     })
 
-    it.skip('should handle generic axios error without response', async () => {
-      // Skipped: vi.mock hoisting issue with ESM - retryWithBackoff mock not applied
-      const error = new AxiosError('Network Error')
+    it('should handle generic axios error without response', () => {
+      const error = new AxiosError('Network Error') as AxiosError<MiniMaxErrorResponse>
       error.code = 'ERR_NETWORK'
-      
-      mockClient.post.mockRejectedValueOnce(error)
-      
-      const client = new MiniMaxClient('test-key')
-      
-      await expect(client.chatCompletion({})).rejects.toMatchObject({
-        message: 'Network Error',
-        code: 500,
-      })
+      error.response = undefined
+
+      expect(() => MiniMaxClient.handleError(error)).toThrow('Network Error')
     })
 
     it('should use response status and Unknown error when no base_resp or error.code', async () => {
@@ -258,19 +243,11 @@ describe('MiniMaxClient', () => {
       })
     })
 
-    it.skip('should use default message when error.message is empty', async () => {
-      // Skipped: vi.mock hoisting issue with ESM - retryWithBackoff mock not applied
-      const error = new AxiosError('')
+    it('should use default message when error.message is empty', () => {
+      const error = new AxiosError('') as AxiosError<MiniMaxErrorResponse>
       error.response = undefined
-      
-      mockClient.post.mockRejectedValueOnce(error)
-      
-      const client = new MiniMaxClient('test-key')
-      
-      await expect(client.chatCompletion({})).rejects.toMatchObject({
-        message: 'Request failed',
-        code: 500,
-      })
+
+      expect(() => MiniMaxClient.handleError(error)).toThrow('Request failed')
     })
   })
 
