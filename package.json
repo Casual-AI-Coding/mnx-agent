@@ -1,7 +1,7 @@
 {
   "name": "mnx-agent",
   "private": true,
-  "version": "1.9.3",
+  "version": "1.10.0",
   "type": "module",
   "bin": {
     "mnx-dev": "./scripts/dev.js"
@@ -84,7 +84,6 @@
     "jsdom": "^29.0.1",
     "madge": "^8.0.0",
     "postcss": "^8.4.35",
-    "postcss-import": "^16.1.1",
     "react-hook-form": "^7.72.0",
     "react-hotkeys-hook": "^5.2.4",
     "react-markdown": "^10.1.0",

@@ -2,6 +2,127 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0] - 2026-04-14
+
+### Added
+
+**Theme System Expansion - 45 主题独立 CSS 文件 + 23 特色主题**
+
+- **主题文件重构** - 45 个主题拆分为独立 CSS 文件，按类别组织
+  - `src/styles/themes/dark/` - 12 个暗色主题 (cyberpunk, dracula, github-dark, midnight, monokai, nord, ocean-blue, one-dark, purple-haze, solarized-dark, tokyo-night, etc.)
+  - `src/styles/themes/light/` - 13 个亮色主题 (classic-light, cool-light, cream-light, github-light, material-light, mint-light, notion-light, paper-white, rose-light, solarized-light, warm-light, etc.)
+  - `src/styles/themes/style/` - 20 个特色主题，分三个子类
+  - `src/themes/registry.ts` (+103/-0) - 主题注册表重构
+  - `src/index.css` (-1039/-0) - 大幅简化，仅保留导入语句
+  - 支持动态加载和更好的主题管理
+
+- **Style 类别特色主题** - 23 个游戏/动漫/节日主题
+  - **Games**: cyberpunk-2077, genshin, spider-man, starcraft, wow, wukong (6 个)
+  - **Anime**: bleach, demon-slayer, dragon-ball, iori, mccree, naruto, ponyo, super-saiyan, zangief (9 个)
+  - **Festivals**: chinese-new-year, christmas, dragon-boat, gothic-lolita, halloween, mid-autumn, tanabata, valentine (8 个)
+  - 每个主题都有独特的配色方案，增强视觉体验
+
+- **ThemeCard 增强** - 主题选择卡片优化
+  - `src/components/settings/ThemeCard.tsx` (+19/-0) - 添加主题图标
+  - 使用背景亮度自动选择文字颜色
+  - 更好的主题预览效果
+
+- **ThemePicker CSS 导入修复**
+  - `src/components/settings/ThemePicker.tsx` (+10/-0) - CSS 导入顺序修正
+  - 确保主题正确加载
+
+**Image Generation Enhancements - 图像生成功能增强**
+
+- **AspectRatioPopup 组件** - 弹窗式宽高比选择器
+  - `src/components/ui/AspectRatioPopup.tsx` (162 行) - 新增宽高比选择弹窗
+  - 支持常用宽高比选择 (1:1, 2:3, 3:2, 3:4, 4:3, 9:16, 16:9, etc.)
+  - 可视化预览和一键切换
+
+- **Prompt Optimizer Toggle** - 提示词优化开关
+  - `src/pages/ImageGeneration.tsx` (+355/-0) - 高级设置面板新增优化开关
+  - `src/types/image.ts` (+3/-0) - 新增 promptOptimizer 参数
+  - 支持 MiniMax API 提示词自动优化功能
+
+- **AIGC Watermark Toggle** - AIGC 水印开关
+  - 高级设置面板新增水印开关
+  - 控制生成图像是否添加 AIGC 水印
+
+- **Reference Image URL Input** - 参考图 URL 输入选项
+  - 支持通过 URL 提供参考图像
+  - 简化参考图像上传流程
+
+- **Server API Params Support** - 后端新参数支持
+  - `server/routes/image.ts` (+14/-0) - 支持 aspectRatioState, promptOptimizer 参数
+  - MiniMax API 参数对齐
+
+- **Generation Options Adjustment** - 生成参数范围调整
+  - numImages: 4-9 张
+  - parallelCount: 1-5 张
+
+- **Documentation**
+  - `docs/superpowers/specs/2026-04-13-image-generation-enhancements-design.md` (222 行)
+  - `docs/superpowers/plans/2026-04-13-image-generation-enhancements.md` (781 行)
+
+**UI Improvements - 界面改进**
+
+- **Toast Close Button** - 点击关闭功能
+  - `src/components/ui/Toast.tsx` - closeButton 属性
+  - 支持 click-to-dismiss 交互
+
+- **Toast Position Adjustment** - Toast 位置优化
+  - 移至 header 下方右上角
+  - 更好的视觉层次和遮挡处理
+
+- **Capacity Monitor Optimization** - 容量监控优化
+  - `src/pages/CapacityMonitor.tsx` (+55/-0) - 配额显示优化
+  - 排序和视觉层次改进
+  - 更清晰的状态展示
+
+### Changed
+
+- **ImageGeneration 页面布局优化**
+  - `src/pages/ImageGeneration.tsx` (+355/-0) - 全面布局重构
+  - 标题 label 与 input 并排
+  - Toast 位置调整
+  - 高级设置面板组织优化
+
+- **Theme CSS Architecture Refactoring**
+  - 从单一 index.css 拆分为 45 个独立主题文件
+  - 使用 PostCSS 配置导入所有主题
+  - `postcss.config.js` (+15/-0) - PostCSS 配置更新
+
+### Fixed
+
+- **Theme CSS Specificity Fix**
+  - `fix(theme): use :root.theme-{id} selectors for higher specificity`
+  - 确保主题样式优先级正确
+
+- **ThemeCard Text Color Fix**
+  - `fix(theme): use background lightness for text color in ThemeCard`
+  - 根据背景亮度自动选择文字颜色
+  - 解决深色主题文字不可见问题
+
+- **CSS Imports Order Fix**
+  - `fix(theme): fix CSS imports order and add theme icons to ThemeCard`
+  - 确保主题文件按正确顺序加载
+
+### Performance
+
+**Code Quality Metrics**
+- **61 files changed** (+3,554 insertions, -1,175 deletions)
+- **New Theme Files**: 45 个独立主题 CSS 文件
+- **New Components**: 1 个 (AspectRatioPopup)
+- **Documentation**: 2 个新文档文件 (1,003 行)
+- **CSS Optimization**: index.css 大幅简化 (-1039 行)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 图像生成参数向后兼容（新增可选参数）
+- ✅ 主题系统重构不影响现有主题切换功能
+- ✅ Toast 组件增强为可选功能
+- ✅ PostCSS 配置变更仅影响构建流程
+
 ## [1.9.3] - 2026-04-13
 
 ### Added
