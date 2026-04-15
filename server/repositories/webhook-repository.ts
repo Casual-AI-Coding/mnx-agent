@@ -11,6 +11,7 @@ import type {
   WebhookEvent,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToWebhookConfig(row: WebhookConfigRow): WebhookConfig {
   const events = typeof row.events === 'string' ? JSON.parse(row.events) : row.events
@@ -49,7 +50,7 @@ export class WebhookRepository extends BaseRepository<WebhookConfig, CreateWebho
 
   async createConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const events = JSON.stringify(data.events)
     const headers = data.headers ? JSON.stringify(data.headers) : null
 
@@ -148,7 +149,7 @@ export class WebhookRepository extends BaseRepository<WebhookConfig, CreateWebho
     if (fields.length === 0) return existing
 
     fields.push(`updated_at = $${paramIndex}`)
-    values.push(this.toISODate())
+    values.push(toLocalISODateString())
     paramIndex++
     values.push(id)
     if (ownerId) {
@@ -172,7 +173,7 @@ export class WebhookRepository extends BaseRepository<WebhookConfig, CreateWebho
 
   async createDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
 
     if (this.isPostgres()) {

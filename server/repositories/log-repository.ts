@@ -13,9 +13,7 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToExecutionLog(row: ExecutionLogRow): ExecutionLog {
   return {
@@ -129,7 +127,7 @@ export class LogRepository extends BaseRepository<ExecutionLog, CreateExecutionL
 
   async create(log: CreateExecutionLog, ownerId?: string): Promise<ExecutionLog> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO execution_logs (id, job_id, trigger_type, status, started_at, tasks_executed, tasks_succeeded, tasks_failed, error_summary, owner_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -202,12 +200,12 @@ export class LogRepository extends BaseRepository<ExecutionLog, CreateExecutionL
     if (ownerId) {
       await this.conn.execute(
         `UPDATE execution_logs SET status = $1, completed_at = $2, duration_ms = $3, tasks_executed = $4, tasks_succeeded = $5, tasks_failed = $6, error_summary = $7 WHERE id = $8 AND owner_id = $9`,
-        [status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id, ownerId]
+        [status, toLocalISODateString(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id, ownerId]
       )
     } else {
       await this.conn.execute(
         `UPDATE execution_logs SET status = $1, completed_at = $2, duration_ms = $3, tasks_executed = $4, tasks_succeeded = $5, tasks_failed = $6, error_summary = $7 WHERE id = $8`,
-        [status, toISODate(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id]
+        [status, toLocalISODateString(), stats.durationMs, stats.tasksExecuted, stats.tasksSucceeded, stats.tasksFailed, stats.errorSummary ?? null, id]
       )
     }
     return this.getById(id, ownerId)
@@ -219,7 +217,7 @@ export class LogRepository extends BaseRepository<ExecutionLog, CreateExecutionL
 
   async createDetail(data: CreateExecutionLogDetail): Promise<string> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     const inputPayload = data.input_payload ?? null
     const outputResult = data.output_result ?? null
 

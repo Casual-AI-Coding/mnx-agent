@@ -9,9 +9,7 @@ import type {
 import { SystemConfigValueType } from '../database/types.js'
 import { BaseRepository, ListOptions } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToSystemConfig(row: SystemConfigRow): SystemConfig {
   return {
@@ -66,7 +64,7 @@ export class SystemConfigRepository extends BaseRepository<SystemConfig, CreateS
 
   async create(data: CreateSystemConfig, updatedBy?: string): Promise<SystemConfig> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
 
     await this.conn.execute(
       `INSERT INTO system_config (id, key, value, description, value_type, updated_at, updated_by)
@@ -99,7 +97,7 @@ export class SystemConfigRepository extends BaseRepository<SystemConfig, CreateS
     if (fields.length === 0) return existing
 
     fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
+    values.push(toLocalISODateString())
     paramIndex++
     fields.push(`updated_by = $${paramIndex}`)
     values.push(updatedBy ?? null)

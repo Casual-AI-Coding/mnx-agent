@@ -9,9 +9,7 @@ import type {
 import { TemplateCategory } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
   const variables = row.variables ? (typeof row.variables === 'string' ? JSON.parse(row.variables) : row.variables) : []
@@ -88,7 +86,7 @@ export class PromptTemplateRepository extends BaseRepository<PromptTemplate, Cre
 
   async create(data: CreatePromptTemplate, ownerId?: string): Promise<PromptTemplate> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     const variables = data.variables ? JSON.stringify(data.variables) : null
     const isBuiltin = data.is_builtin === true
 
@@ -146,7 +144,7 @@ export class PromptTemplateRepository extends BaseRepository<PromptTemplate, Cre
     if (fields.length === 0) return existing
 
     fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
+    values.push(toLocalISODateString())
     paramIndex++
     values.push(id)
     if (ownerId) values.push(ownerId)

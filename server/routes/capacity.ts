@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { getCapacityService } from '../service-registration.js'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { getLogger } from '../lib/logger'
+import { toLocalISODateString } from '../lib/date-utils.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
 
 const logger = getLogger()
@@ -39,7 +40,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     
     const codingPlan = await client.getCodingPlanRemains()
     const now = new Date()
-    const resetAt = new Date(now.getTime() + 60000).toISOString()
+    const resetAt = toLocalISODateString(new Date(now.getTime() + 60000))
     const rateLimits: Record<string, { rpm: number }> = {
       text: { rpm: 500 },
       voice_sync: { rpm: 60 },

@@ -12,6 +12,7 @@ import type {
 } from '../database/types.js'
 import { AuditAction } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToAuditLog(row: AuditLogRow, usernameMap?: Map<string, string>): AuditLog {
   return {
@@ -45,7 +46,7 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
 
   async createAuditLog(data: CreateAuditLog): Promise<AuditLog> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO audit_logs (id, action, resource_type, resource_id, user_id, ip_address, user_agent, request_method, request_path, request_body, response_status, error_message, duration_ms, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
@@ -284,7 +285,7 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
 
   async upsertServiceNodePermission(data: CreateServiceNodePermission): Promise<void> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const minRole = data.min_role || 'pro'
     const isEnabled = data.is_enabled !== undefined ? data.is_enabled : true
 

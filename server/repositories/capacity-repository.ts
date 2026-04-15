@@ -6,6 +6,7 @@ import type {
   UpdateCapacityRecord,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToCapacityRecord(row: CapacityRecordRow): CapacityRecord {
   return row
@@ -44,7 +45,7 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
     data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }
   ): Promise<CapacityRecord> {
     const existing = await this.getByService(serviceType)
-    const now = this.toISODate()
+    const now = toLocalISODateString()
 
     if (existing) {
       await this.conn.execute(
@@ -65,7 +66,7 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
   async updateCapacity(serviceType: string, remaining: number): Promise<void> {
     await this.conn.execute(
       'UPDATE capacity_tracking SET remaining_quota = $1, last_checked_at = $2 WHERE service_type = $3',
-      [remaining, this.toISODate(), serviceType]
+      [remaining, toLocalISODateString(), serviceType]
     )
   }
 
@@ -77,7 +78,7 @@ export class CapacityRepository extends BaseRepository<CapacityRecord> {
    * @returns The updated capacity record, or null if service doesn't exist or insufficient quota
    */
   async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> {
-    const now = this.toISODate()
+    const now = toLocalISODateString()
 
     const result = await this.conn.query<CapacityRecordRow>(
       `UPDATE capacity_tracking 

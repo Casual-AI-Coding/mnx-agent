@@ -8,9 +8,7 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToDeadLetterQueueItem(row: DeadLetterQueueRow): DeadLetterQueueItem {
   const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
@@ -37,7 +35,7 @@ export class DeadLetterRepository extends BaseRepository<DeadLetterQueueItem, Cr
 
   async create(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     const payload = typeof data.payload === 'string' ? data.payload : JSON.stringify(data.payload)
 
     await this.conn.execute(
@@ -110,7 +108,7 @@ export class DeadLetterRepository extends BaseRepository<DeadLetterQueueItem, Cr
 
   async markResolved(id: string, resolution: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
     return this.update(id, {
-      resolved_at: toISODate(),
+      resolved_at: toLocalISODateString(),
       resolution,
     }, ownerId)
   }

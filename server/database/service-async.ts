@@ -1,5 +1,6 @@
 import { DatabaseConnection, createConnection, closeConnection, QueryResultRow } from './connection.js'
 import { TaskStatus, TriggerType, ExecutionStatus } from './types.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 import type {
   CronJob,
   TaskQueueItem,
@@ -717,7 +718,7 @@ export class DatabaseService {
     }, item.owner_id ?? undefined)
 
     await this.updateDeadLetterQueueItem(id, {
-      resolved_at: new Date().toISOString(),
+      resolved_at: toLocalISODateString(),
       resolution: 'retried',
     }, ownerId)
 

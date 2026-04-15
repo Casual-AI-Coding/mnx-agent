@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { DatabaseConnection } from '../database/connection.js'
 import { BaseRepository } from './base-repository.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 import type { SettingsCategory } from '../../src/settings/types/index.js'
 
 export interface UserSettingsRow {
@@ -63,7 +64,7 @@ export class SettingsRepository extends BaseRepository<UserSettingsRow, CreateUs
 
   async upsertSettings(data: CreateUserSettings): Promise<UserSettingsRow> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const settingsJson = JSON.stringify(data.settings)
 
     if (this.isPostgres()) {
@@ -87,7 +88,7 @@ export class SettingsRepository extends BaseRepository<UserSettingsRow, CreateUs
   }
 
   async updateSettings(userId: string, category: SettingsCategory, settings: Record<string, unknown>): Promise<UserSettingsRow | null> {
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const settingsJson = JSON.stringify(settings)
 
     await this.conn.execute(

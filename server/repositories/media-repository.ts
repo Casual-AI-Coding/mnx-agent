@@ -10,9 +10,7 @@ import type {
 import { BaseRepository } from './base-repository.js'
 import type { MediaType, MediaSource } from '../database/types.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
   const metadata = row.metadata ? (typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata) : null
@@ -260,7 +258,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
 
   async create(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     const metadata = data.metadata ? JSON.stringify(data.metadata) : null
 
     await this.conn.execute(
@@ -280,7 +278,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const existing = await this.getById(id, ownerId)
     if (!existing) return null
 
-    const now = toISODate()
+    const now = toLocalISODateString()
     const metadata = data.metadata !== undefined
       ? (data.metadata ? JSON.stringify(data.metadata) : null)
       : existing.metadata
@@ -304,7 +302,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const existing = await this.getById(id, ownerId)
     if (!existing) return false
 
-    const now = toISODate()
+    const now = toLocalISODateString()
 
     if (ownerId) {
       if (this.isPostgres()) {
@@ -348,7 +346,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       return { deleted: 0, failed: 0 }
     }
 
-    const now = toISODate()
+    const now = toLocalISODateString()
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
 
     if (this.isPostgres()) {
@@ -397,7 +395,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async insertFavorite(userId: string, mediaId: string): Promise<FavoriteRecord> {
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO user_media_favorites (user_id, media_id, is_deleted, created_at, updated_at)
        VALUES ($1, $2, FALSE, $3, $3)`,
@@ -411,7 +409,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async updateFavorite(id: number, isDeleted: boolean): Promise<void> {
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `UPDATE user_media_favorites
        SET is_deleted = $1, updated_at = $2
@@ -455,7 +453,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const existing = await this.getById(id)
     if (!existing) return null
 
-    const now = toISODate()
+    const now = toLocalISODateString()
 
     if (this.isPostgres()) {
       const rows = await this.conn.query<MediaRecordRow>(

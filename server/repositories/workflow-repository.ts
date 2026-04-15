@@ -8,6 +8,7 @@ import type {
   CreateWorkflowVersion,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToWorkflowTemplate(row: WorkflowTemplateRow): WorkflowTemplate {
   const nodes_json = typeof row.nodes_json === 'string'
@@ -122,7 +123,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
     ownerId?: string
   ): Promise<WorkflowTemplate> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     const isTemplate = template.is_public !== false
 
     if (this.isPostgres()) {
@@ -228,7 +229,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
 
   async createPermission(data: { workflow_id: string; user_id: string; granted_by?: string | null }): Promise<void> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO workflow_permissions (id, workflow_id, user_id, granted_by, created_at)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -294,7 +295,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
 
   async createVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> {
     const id = `ver_${uuidv4().replace(/-/g, '')}`
-    const now = this.toISODate()
+    const now = toLocalISODateString()
 
     if (this.isPostgres()) {
       await this.conn.execute(

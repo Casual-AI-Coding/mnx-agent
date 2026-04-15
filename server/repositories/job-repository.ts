@@ -10,9 +10,7 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToCronJob(row: CronJobRow): CronJob {
   return {
@@ -81,7 +79,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
 
   async create(job: CreateCronJob, ownerId?: string): Promise<CronJob> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     const isActive = job.is_active !== false
     const timeoutMs = job.timeout_ms ?? 300000
     const timezone = job.timezone ?? 'UTC'
@@ -175,7 +173,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     if (fields.length === 0) return existing
 
     fields.push(`updated_at = $${paramIndex}`)
-    values.push(toISODate())
+    values.push(toLocalISODateString())
     paramIndex++
     values.push(id)
 
@@ -191,7 +189,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     if (!existing) return null
 
     const newIsActive = !existing.is_active
-    const now = toISODate()
+    const now = toLocalISODateString()
 
     if (this.isPostgres()) {
       await this.conn.execute(
@@ -208,7 +206,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
   }
 
   async updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
-    const now = toISODate()
+    const now = toLocalISODateString()
 
     if (ownerId) {
       const result = await this.conn.execute(
@@ -231,7 +229,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
   }
 
   async updateLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> {
-    const now = toISODate()
+    const now = toLocalISODateString()
     if (ownerId) {
       await this.conn.execute(
         'UPDATE cron_jobs SET last_run_at = $1, next_run_at = $2, updated_at = $3 WHERE id = $4 AND owner_id = $5',
@@ -248,7 +246,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
 
   async addTag(jobId: string, tag: string): Promise<void> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)`,
       [id, jobId, tag, now]
@@ -305,7 +303,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
 
   async addDependency(jobId: string, dependsOnJobId: string): Promise<void> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)`,
       [id, jobId, dependsOnJobId, now]

@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { DatabaseConnection } from '../database/connection.js'
 import type { SettingsCategory } from '../../src/settings/types/index.js'
 
+import { toLocalISODateString } from '../lib/date-utils.js'
+
 export interface SettingsHistoryRow {
   id: string
   user_id: string
@@ -42,13 +44,9 @@ export class SettingsHistoryRepository {
     this.conn = conn
   }
 
-  protected toISODate(): string {
-    return new Date().toISOString()
-  }
-
   async logChange(data: CreateSettingsHistory): Promise<SettingsHistoryRow> {
     const id = uuidv4()
-    const now = this.toISODate()
+    const now = toLocalISODateString()
 
     await this.conn.execute(
       `INSERT INTO settings_history (id, user_id, category, setting_key, old_value, new_value, changed_at, changed_by, source, ip_address, user_agent)

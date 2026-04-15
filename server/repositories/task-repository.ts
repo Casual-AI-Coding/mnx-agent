@@ -9,9 +9,7 @@ import type {
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 
-function toISODate(): string {
-  return new Date().toISOString()
-}
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToTaskQueueItem(row: TaskQueueRow): TaskQueueItem {
   return { ...row, status: row.status as TaskStatus }
@@ -95,7 +93,7 @@ export class TaskRepository extends BaseRepository<TaskQueueItem, CreateTaskQueu
 
   async create(task: CreateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem> {
     const id = uuidv4()
-    const now = toISODate()
+    const now = toLocalISODateString()
     await this.conn.execute(
       `INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at, owner_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -252,7 +250,7 @@ export class TaskRepository extends BaseRepository<TaskQueueItem, CreateTaskQueu
   async markRunning(id: string): Promise<TaskQueueItem | null> {
     await this.conn.execute(
       `UPDATE task_queue SET status = 'running', started_at = $1 WHERE id = $2`,
-      [toISODate(), id]
+      [toLocalISODateString(), id]
     )
     return this.getById(id)
   }
@@ -261,12 +259,12 @@ export class TaskRepository extends BaseRepository<TaskQueueItem, CreateTaskQueu
     if (ownerId) {
       await this.conn.execute(
         `UPDATE task_queue SET status = 'completed', completed_at = $1, result = $2 WHERE id = $3 AND owner_id = $4`,
-        [toISODate(), result ?? null, id, ownerId]
+        [toLocalISODateString(), result ?? null, id, ownerId]
       )
     } else {
       await this.conn.execute(
         `UPDATE task_queue SET status = 'completed', completed_at = $1, result = $2 WHERE id = $3`,
-        [toISODate(), result ?? null, id]
+        [toLocalISODateString(), result ?? null, id]
       )
     }
     return this.getById(id, ownerId)
@@ -282,12 +280,12 @@ export class TaskRepository extends BaseRepository<TaskQueueItem, CreateTaskQueu
     if (ownerId) {
       await this.conn.execute(
         `UPDATE task_queue SET status = $1, retry_count = $2, error_message = $3, completed_at = $4 WHERE id = $5 AND owner_id = $6`,
-        [newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id, ownerId]
+        [newStatus, newRetryCount, error, newStatus === 'failed' ? toLocalISODateString() : null, id, ownerId]
       )
     } else {
       await this.conn.execute(
         `UPDATE task_queue SET status = $1, retry_count = $2, error_message = $3, completed_at = $4 WHERE id = $5`,
-        [newStatus, newRetryCount, error, newStatus === 'failed' ? toISODate() : null, id]
+        [newStatus, newRetryCount, error, newStatus === 'failed' ? toLocalISODateString() : null, id]
       )
     }
     return this.getById(id, ownerId)

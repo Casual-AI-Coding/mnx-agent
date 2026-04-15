@@ -110,7 +110,7 @@ export class CronScheduler {
     // Calculate and save next_run_at
     const nextRun = this.calculateNextRun(job.cron_expression)
     if (nextRun) {
-      await this.db.updateCronJob(job.id, { next_run_at: nextRun.toISOString() })
+      await this.db.updateCronJob(job.id, { next_run_at: toLocalISODateString(nextRun) })
     }
 
     const task = cron.schedule(
@@ -120,7 +120,7 @@ export class CronScheduler {
         // Update next_run_at after execution
         const nextRunAfter = this.calculateNextRun(job.cron_expression)
         if (nextRunAfter) {
-          await this.db.updateCronJob(job.id, { next_run_at: nextRunAfter.toISOString() })
+          await this.db.updateCronJob(job.id, { next_run_at: toLocalISODateString(nextRunAfter) })
         }
       },
       { timezone: this.timezone }
