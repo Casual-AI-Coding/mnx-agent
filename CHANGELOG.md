@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.3] - 2026-04-16
+
+### Added
+
+- **UI Enhancement - Glassmorphism Effects** - Modern glass-like visual design with hover animations
+  - `src/pages/MediaManagement.tsx` (+17/-17) - Enlarge filter buttons (h-7→h-8, text-xs→text-sm, px-2.5→px-3, w-3.5→w-4)
+  - `src/components/music/MusicTaskCard.tsx` (+108/-100) - Gradient glow wrapper, status-based gradient backgrounds, spring physics animations, button interaction feedback (whileHover/whileTap)
+  - `src/components/music/MusicCarousel.tsx` (+6/-1) - Glass container wrapper with backdrop-blur-xl
+  - `src/pages/MusicGeneration.tsx` (+859/-XX) - 3 cards glassmorphism with staggered spring animations (0s, 0.1s, 0.2s), generate button shadow enhancement
+  - `src/pages/VideoGeneration.tsx` (+262/-XX) - Prompt/tips/task list cards glassmorphism
+  - `src/pages/VideoAgent.tsx` (+284/-77) - Agent dialog/template/form/task list cards glassmorphism
+  - `src/pages/CapacityMonitor.tsx` (+6/-2) - Quota cards glassmorphism hover effect
+  - `src/pages/VoiceManagement.tsx` (+5/-1) - Voice selection cards glassmorphism
+  - `src/pages/FileManagement.tsx` (+13/-6) - Stat cards and file list card glassmorphism
+  - Pattern: `bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100`
+  - Spring animation: `{ type: "spring", stiffness: 300, damping: 30 }`
+
+- **Documentation** - UI Enhancement design spec
+  - `docs/specs/2026-04-15-ui-enhancement-design.md` (729 lines) - Complete design specification
+
+### Fixed
+
+- **VideoAgent JSX structure** - Close missing JSX tags in ternary branch
+  - `src/pages/VideoAgent.tsx` (+2/-0) - Add closing div tags for glassmorphism wrapper
+
 ## [1.10.2] - 2026-04-15
 
 ### Fixed

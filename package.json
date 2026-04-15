@@ -1,7 +1,7 @@
 {
   "name": "mnx-agent",
   "private": true,
-  "version": "1.10.2",
+  "version": "1.10.3",
   "type": "module",
   "bin": {
     "mnx-dev": "./scripts/dev.js"
