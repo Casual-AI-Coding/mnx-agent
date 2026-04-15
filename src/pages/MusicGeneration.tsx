@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
 import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, HelpCircle, X, Palette, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -7,9 +8,8 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { Switch } from '@/components/ui/Switch'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { cn } from '@/lib/utils'
 import { generateMusic, preprocessMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl } from '@/lib/api/media'
@@ -219,7 +219,7 @@ export default function MusicGeneration() {
 
     const request = buildRequest()
 
-    const promises = newTasks.map(async (task, index) => {
+    const promises = newTasks.map(async (_task, index) => {
       updateTask(index, { status: 'generating', progress: 25 })
 
       try {
@@ -440,470 +440,491 @@ saveMusicToMedia(
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           {(!instrumental || !isInstrumentalAvailable) && !isCoverModel && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative group"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
                   <Music2 className="w-5 h-5" />
-                  {t('musicGeneration.lyricsEditorTitle')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium shrink-0">歌曲标题</label>
-                  <Input
-                    value={songTitle}
-                    onChange={(e) => setSongTitle(e.target.value)}
-                    placeholder="可选，用于命名生成的音乐文件"
-                  />
+                  <span className="text-base font-semibold">{t('musicGeneration.lyricsEditorTitle')}</span>
                 </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  {STRUCTURE_TAGS.map(tag => (
-                    <Button
-                      key={tag}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => insertTag(tag)}
-                      className="h-7 px-2 text-xs shrink-0"
-                    >
-                      {tag}
-                    </Button>
-                  ))}
-                </div>
-                <div className="relative">
-                  <Textarea
-                    id="lyrics-editor"
-                    value={lyrics}
-                    onChange={(e) => setLyrics(e.target.value)}
-                    placeholder={t('musicGeneration.lyricsPlaceholder')}
-                    className={cn(
-                      "min-h-[300px] resize-none font-mono text-sm pb-6",
-                      isLyricsOverLimit && "border-red-500"
-                    )}
-                  />
-                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{t('musicGeneration.useTags')}</span>
-                    <span className={cn(
-                      isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
-                    )}>
-                      {lyrics.length} / {LYRICS_MAX}
-                    </span>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium shrink-0">歌曲标题</label>
+                    <Input
+                      value={songTitle}
+                      onChange={(e) => setSongTitle(e.target.value)}
+                      placeholder="可选，用于命名生成的音乐文件"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {STRUCTURE_TAGS.map(tag => (
+                      <Button
+                        key={tag}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => insertTag(tag)}
+                        className="h-7 px-2 text-xs shrink-0"
+                      >
+                        {tag}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <Textarea
+                      id="lyrics-editor"
+                      value={lyrics}
+                      onChange={(e) => setLyrics(e.target.value)}
+                      placeholder={t('musicGeneration.lyricsPlaceholder')}
+                      className={cn(
+                        "min-h-[300px] resize-none font-mono text-sm pb-6",
+                        isLyricsOverLimit && "border-red-500"
+                      )}
+                    />
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{t('musicGeneration.useTags')}</span>
+                      <span className={cn(
+                        isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
+                      )}>
+                        {lyrics.length} / {LYRICS_MAX}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           )}
 
           {!isCoverModel && (
-            <Card>
-<CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
+              className="relative group"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
                   <Palette className="w-5 h-5" />
-                  {instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 relative">
-                  <Select value="" onValueChange={handleTemplateSelect}>
-                    <SelectTrigger className="w-[400px]">
-                      <SelectValue placeholder="选择风格模板..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MUSIC_TEMPLATES.map(t => (
-                        <SelectItem key={t.id} value={t.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{t.name}</span>
-                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">{t.style}</span>
+                  <span className="text-base font-semibold">{instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')}</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 relative">
+                    <Select value="" onValueChange={handleTemplateSelect}>
+                      <SelectTrigger className="w-[400px]">
+                        <SelectValue placeholder="选择风格模板..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MUSIC_TEMPLATES.map(t => (
+                          <SelectItem key={t.id} value={t.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{t.name}</span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">{t.style}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+                      disabled={!stylePrompt.trim()}
+                      title="保存为模板"
+                    >
+                      <Save className="w-4 h-4" />
+                    </Button>
+                    {showSaveTemplate && (
+                      <div className="absolute top-full mt-2 right-0 w-72 bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                        <div className="p-3 space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium">模板名称</label>
+                            <Input
+                              value={newTemplateName}
+                              onChange={(e) => setNewTemplateName(e.target.value)}
+                              placeholder="输入模板名称..."
+                              className="h-8"
+                            />
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => setShowSaveTemplate(!showSaveTemplate)}
-                    disabled={!stylePrompt.trim()}
-                    title="保存为模板"
-                  >
-                    <Save className="w-4 h-4" />
-                  </Button>
-                  {showSaveTemplate && (
-                    <div className="absolute top-full mt-2 right-0 w-72 bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
-                      <div className="p-3 space-y-3">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium">模板名称</label>
-                          <Input
-                            value={newTemplateName}
-                            onChange={(e) => setNewTemplateName(e.target.value)}
-                            placeholder="输入模板名称..."
-                            className="h-8"
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7"
-                            onClick={() => {
-                              setShowSaveTemplate(false)
-                              setNewTemplateName('')
-                            }}
-                          >
-                            取消
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-7"
-                            disabled={!newTemplateName.trim()}
-                            onClick={() => {
-                              // TODO: 实现保存模板到 localStorage 或后端
-                              console.log('Save template:', newTemplateName, stylePrompt)
-                              setShowSaveTemplate(false)
-                              setNewTemplateName('')
-                            }}
-                          >
-                            保存
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7"
+                              onClick={() => {
+                                setShowSaveTemplate(false)
+                                setNewTemplateName('')
+                              }}
+                            >
+                              取消
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7"
+                              disabled={!newTemplateName.trim()}
+                              onClick={() => {
+                                // TODO: 实现保存模板到 localStorage 或后端
+                                console.log('Save template:', newTemplateName, stylePrompt)
+                                setShowSaveTemplate(false)
+                                setNewTemplateName('')
+                              }}
+                            >
+                              保存
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-                <div className="relative">
-                  <Textarea
-                    value={stylePrompt}
-                    onChange={(e) => setStylePrompt(e.target.value)}
-                    placeholder={instrumental
-                      ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
-                      : t('musicGeneration.stylePlaceholder')
-                    }
-                    className={cn(
-                      "min-h-[80px] resize-none pb-5",
-                      isStylePromptOverLimit && "border-red-500"
                     )}
-                  />
-                  <div className={cn(
-                    "absolute bottom-1.5 right-2 text-xs",
-                    isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
-                  )}>
-                    {stylePrompt.length} / {STYLE_PROMPT_MAX}
+                  </div>
+                  <div className="relative">
+                    <Textarea
+                      value={stylePrompt}
+                      onChange={(e) => setStylePrompt(e.target.value)}
+                      placeholder={instrumental
+                        ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
+                        : t('musicGeneration.stylePlaceholder')
+                      }
+                      className={cn(
+                        "min-h-[80px] resize-none pb-5",
+                        isStylePromptOverLimit && "border-red-500"
+                      )}
+                    />
+                    <div className={cn(
+                      "absolute bottom-1.5 right-2 text-xs",
+                      isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
+                    )}>
+                      {stylePrompt.length} / {STYLE_PROMPT_MAX}
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           )}
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('musicGeneration.paramsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-6">
-                <div className="space-y-2 flex-1 pr-6 border-r border-border">
-                  <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
-                  <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MUSIC_MODELS.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          <span>{m.name}</span>
-                        </SelectItem>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Settings2 className="w-5 h-5" />
+                <span className="text-base font-semibold">{t('musicGeneration.paramsTitle')}</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="flex gap-6">
+                  <div className="space-y-2 flex-1 pr-6 border-r border-border">
+                    <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
+                    <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MUSIC_MODELS.map(m => (
+                          <SelectItem key={m.id} value={m.id}>
+                            <span>{m.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="text-sm font-medium text-foreground">并发生成数量</label>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => !isGenerating && setParallelCount(n)}
+                          disabled={isGenerating}
+                          className={cn(
+                            "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
+                            parallelCount === n
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {n}
+                        </button>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 flex-1">
-                  <label className="text-sm font-medium text-foreground">并发生成数量</label>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => !isGenerating && setParallelCount(n)}
-                        disabled={isGenerating}
-                        className={cn(
-                          "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
-                          parallelCount === n
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {n}
-                      </button>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-              {(isInstrumentalAvailable || isOptimizeLyricsAvailable) && !isCoverModel && (
-                <div className="flex items-center justify-between gap-4">
-                  {isInstrumentalAvailable && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="instrumental"
-                        checked={instrumental}
-                        onCheckedChange={(checked) => setInstrumental(checked as boolean)}
-                      />
-                      <label htmlFor="instrumental" className="text-sm">
-                        纯音乐模式
-                      </label>
-                    </div>
-                  )}
-                  {isOptimizeLyricsAvailable && !instrumental && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="optimize-lyrics"
-                        checked={optimizeLyrics}
-                        onCheckedChange={(checked) => setOptimizeLyrics(checked as boolean)}
-                      />
-                      <label htmlFor="optimize-lyrics" className="text-sm">
-                        AI歌词优化
-                      </label>
-                    </div>
-                  )}
-<div className="relative" ref={advancedRef}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAdvancedOpen(!advancedOpen)}
-                      className="h-8 px-2.5 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      <Settings2 className="w-4 h-4 mr-1" />
-                      高级设置
-                    </Button>
-                    {advancedOpen && (
-                      <div className="absolute top-full mt-2 right-0 w-[360px] bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
-                        <div className="p-3 grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">采样率</label>
-                            <Select
-                              value={sampleRate.toString()}
-                              onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="16000">16000 Hz</SelectItem>
-                                <SelectItem value="24000">24000 Hz</SelectItem>
-                                <SelectItem value="32000">32000 Hz</SelectItem>
-                                <SelectItem value="44100">44100 Hz (推荐)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">比特率</label>
-                            <Select
-                              value={bitrate.toString()}
-                              onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="32000">32 kbps</SelectItem>
-                                <SelectItem value="64000">64 kbps</SelectItem>
-                                <SelectItem value="128000">128 kbps</SelectItem>
-                                <SelectItem value="256000">256 kbps (推荐)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">格式</label>
-                            <Select value={format} onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}>
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="mp3">MP3</SelectItem>
-                                <SelectItem value="wav">WAV</SelectItem>
-                                <SelectItem value="flac">FLAC</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">随机种子</label>
-                            <Input
-                              value={seed}
-                              onChange={(e) => setSeed(e.target.value)}
-                              placeholder="留空则随机"
-                              className="h-8"
-                            />
-                          </div>
-                        </div>
+                {(isInstrumentalAvailable || isOptimizeLyricsAvailable) && !isCoverModel && (
+                  <div className="flex items-center justify-between gap-4">
+                    {isInstrumentalAvailable && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="instrumental"
+                          checked={instrumental}
+                          onCheckedChange={(checked) => setInstrumental(checked as boolean)}
+                        />
+                        <label htmlFor="instrumental" className="text-sm">
+                          纯音乐模式
+                        </label>
                       </div>
                     )}
+                    {isOptimizeLyricsAvailable && !instrumental && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="optimize-lyrics"
+                          checked={optimizeLyrics}
+                          onCheckedChange={(checked) => setOptimizeLyrics(checked as boolean)}
+                        />
+                        <label htmlFor="optimize-lyrics" className="text-sm">
+                          AI歌词优化
+                        </label>
+                      </div>
+                    )}
+<div className="relative" ref={advancedRef}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAdvancedOpen(!advancedOpen)}
+                        className="h-8 px-2.5 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        <Settings2 className="w-4 h-4 mr-1" />
+                        高级设置
+                      </Button>
+                      {advancedOpen && (
+                        <div className="absolute top-full mt-2 right-0 w-[360px] bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                          <div className="p-3 grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">采样率</label>
+                              <Select
+                                value={sampleRate.toString()}
+                                onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
+                              >
+                                <SelectTrigger className="h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="16000">16000 Hz</SelectItem>
+                                  <SelectItem value="24000">24000 Hz</SelectItem>
+                                  <SelectItem value="32000">32000 Hz</SelectItem>
+                                  <SelectItem value="44100">44100 Hz (推荐)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">比特率</label>
+                              <Select
+                                value={bitrate.toString()}
+                                onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
+                              >
+                                <SelectTrigger className="h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="32000">32 kbps</SelectItem>
+                                  <SelectItem value="64000">64 kbps</SelectItem>
+                                  <SelectItem value="128000">128 kbps</SelectItem>
+                                  <SelectItem value="256000">256 kbps (推荐)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">格式</label>
+                              <Select value={format} onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}>
+                                <SelectTrigger className="h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="mp3">MP3</SelectItem>
+                                  <SelectItem value="wav">WAV</SelectItem>
+                                  <SelectItem value="flac">FLAC</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">随机种子</label>
+                              <Input
+                                value={seed}
+                                onChange={(e) => setSeed(e.target.value)}
+                                placeholder="留空则随机"
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {isCoverModel && (
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Music className="w-5 h-5" />
-                      翻唱设置
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Tabs value={coverMode} onValueChange={(v) => setCoverMode(v as 'one-step' | 'two-step')}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="one-step">一步模式</TabsTrigger>
-                        <TabsTrigger value="two-step">两步模式</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="one-step" className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            参考音频 URL *
-                          </label>
-                          <Input
-                            value={referenceAudioUrl}
-                            onChange={(e) => setReferenceAudioUrl(e.target.value)}
-                            placeholder="https://example.com/song.mp3"
-                            type="url"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            翻唱风格描述
-                          </label>
-                          <Textarea
-                            value={stylePrompt}
-                            onChange={(e) => setStylePrompt(e.target.value)}
-                            placeholder="描述翻唱风格，如更悲伤、更激昂..."
-                            className="min-h-[60px] resize-none"
-                          />
-                          <div className={cn(
-                            "text-xs",
-                            isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
-                          )}>
-                            {stylePrompt.length} / {STYLE_PROMPT_MAX}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="use-original"
-                            checked={useOriginalLyrics}
-                            onCheckedChange={(checked) => setUseOriginalLyrics(checked as boolean)}
-                          />
-                          <label htmlFor="use-original" className="text-sm">
-                            使用原歌词（自动提取）
-                          </label>
-                        </div>
-
-                        {!useOriginalLyrics && (
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">
-                              自定义歌词
-                            </label>
-                            <Textarea
-                              value={lyrics}
-                              onChange={(e) => setLyrics(e.target.value)}
-                              placeholder="输入自定义翻唱歌词..."
-                              className={cn(
-                                "min-h-[150px] resize-none font-mono text-sm",
-                                isLyricsOverLimit && "border-red-500"
-                              )}
-                            />
-                            <div className={cn(
-                              "text-xs",
-                              isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
-                            )}>
-                              {lyrics.length} / {LYRICS_MAX}
-                            </div>
-                          </div>
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="two-step" className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            上传参考音频
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="file"
-                              accept=".mp3,.wav,.flac"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (file) handlePreprocess(file)
-                              }}
-                              className="flex-1"
-                            />
-                            {preprocessLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            支持 mp3/wav/flac 格式
-                          </p>
-                        </div>
-
-                        {preprocessResult && (
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">
-                              提取的歌词（可修改）
-                            </label>
-                            <Textarea
-                              value={lyrics}
-                              onChange={(e) => setLyrics(e.target.value)}
-                              defaultValue={preprocessResult.lyrics}
-                              className={cn(
-                                "min-h-[150px] resize-none font-mono text-sm",
-                                isLyricsOverLimit && "border-red-500"
-                              )}
-                            />
-                            <div className={cn(
-                              "text-xs",
-                              isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
-                            )}>
-                              {lyrics.length} / {LYRICS_MAX}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            翻唱风格描述
-                          </label>
-                          <Textarea
-                            value={stylePrompt}
-                            onChange={(e) => setStylePrompt(e.target.value)}
-                            placeholder="描述翻唱风格..."
-                            className="min-h-[60px] resize-none"
-                          />
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Button
-                onClick={handleGenerate}
-                disabled={isSubmitDisabled()}
-                className="w-full"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t('musicGeneration.composing')}
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    {t('musicGeneration.generateMusic')}
-                  </>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
+
+                {isCoverModel && (
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Music className="w-5 h-5" />
+                        翻唱设置
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Tabs value={coverMode} onValueChange={(v) => setCoverMode(v as 'one-step' | 'two-step')}>
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="one-step">一步模式</TabsTrigger>
+                          <TabsTrigger value="two-step">两步模式</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="one-step" className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                              参考音频 URL *
+                            </label>
+                            <Input
+                              value={referenceAudioUrl}
+                              onChange={(e) => setReferenceAudioUrl(e.target.value)}
+                              placeholder="https://example.com/song.mp3"
+                              type="url"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                              翻唱风格描述
+                            </label>
+                            <Textarea
+                              value={stylePrompt}
+                              onChange={(e) => setStylePrompt(e.target.value)}
+                              placeholder="描述翻唱风格，如更悲伤、更激昂..."
+                              className="min-h-[60px] resize-none"
+                            />
+                            <div className={cn(
+                              "text-xs",
+                              isStylePromptOverLimit ? "text-red-500" : "text-muted-foreground"
+                            )}>
+                              {stylePrompt.length} / {STYLE_PROMPT_MAX}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="use-original"
+                              checked={useOriginalLyrics}
+                              onCheckedChange={(checked) => setUseOriginalLyrics(checked as boolean)}
+                            />
+                            <label htmlFor="use-original" className="text-sm">
+                              使用原歌词（自动提取）
+                            </label>
+                          </div>
+
+                          {!useOriginalLyrics && (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-foreground">
+                                自定义歌词
+                              </label>
+                              <Textarea
+                                value={lyrics}
+                                onChange={(e) => setLyrics(e.target.value)}
+                                placeholder="输入自定义翻唱歌词..."
+                                className={cn(
+                                  "min-h-[150px] resize-none font-mono text-sm",
+                                  isLyricsOverLimit && "border-red-500"
+                                )}
+                              />
+                              <div className={cn(
+                                "text-xs",
+                                isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
+                              )}>
+                                {lyrics.length} / {LYRICS_MAX}
+                              </div>
+                            </div>
+                          )}
+                        </TabsContent>
+
+                        <TabsContent value="two-step" className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                              上传参考音频
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="file"
+                                accept=".mp3,.wav,.flac"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) handlePreprocess(file)
+                                }}
+                                className="flex-1"
+                              />
+                              {preprocessLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              支持 mp3/wav/flac 格式
+                            </p>
+                          </div>
+
+                          {preprocessResult && (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-foreground">
+                                提取的歌词（可修改）
+                              </label>
+                              <Textarea
+                                value={lyrics}
+                                onChange={(e) => setLyrics(e.target.value)}
+                                defaultValue={preprocessResult.lyrics}
+                                className={cn(
+                                  "min-h-[150px] resize-none font-mono text-sm",
+                                  isLyricsOverLimit && "border-red-500"
+                                )}
+                              />
+                              <div className={cn(
+                                "text-xs",
+                                isLyricsOverLimit ? "text-red-500" : "text-muted-foreground"
+                              )}>
+                                {lyrics.length} / {LYRICS_MAX}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                              翻唱风格描述
+                            </label>
+                            <Textarea
+                              value={stylePrompt}
+                              onChange={(e) => setStylePrompt(e.target.value)}
+                              placeholder="描述翻唱风格..."
+                              className="min-h-[60px] resize-none"
+                            />
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isSubmitDisabled()}
+                  className="w-full shadow-lg shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30"
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('musicGeneration.composing')}
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      {t('musicGeneration.generateMusic')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
 
           {error && (
             <Card className="border-destructive">
