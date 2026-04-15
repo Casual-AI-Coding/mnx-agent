@@ -6,19 +6,14 @@
 
 ## ID 编号规则
 
-> 需求 ID 采用 `R-XXX` 格式，数字递增但不要求连续。
+> 需求 ID 采用 `R-XXX` 格式，数字连续递增。
 
 **编号原则**:
 - 新需求使用当前最大 ID + 1
-- 删除/合并的需求保留原 ID，不重新编号
-- ID 跳跃不补号，避免破坏历史引用
+- 删除的需求 ID 直接移除，不保留空号
+- ID 连续编号，便于追踪和引用
 
-**当前 ID 分布**:
-| 区域 | ID 范围 | 说明 |
-|------|---------|------|
-| 已分配 | R-001~R-012, R-014~R-015, R-018~R-019, R-026, R-073~R-078 | 已录入需求 |
-| 跳跃区 | R-013, R-016~R-017, R-020~R-025, R-027~R-072, R-074, R-076 | 删除/合并/预留 |
-| 可用起点 | R-079 | 新需求建议从此开始 |
+**当前 ID 范围**: R-001 ~ R-021（共 21 个需求）
 
 ---
 
@@ -109,57 +104,57 @@
 
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
-| R-014 | 结构化日志 + Trace ID | Monitoring | P0 | v2.4 | 待办 |
-| R-015 | 错误追踪集成 | Monitoring | P0 | v2.4 | 待办 |
-| R-018 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 待办 |
-| R-019 | 全局 Toast/通知系统 | UX | P1 | - | 待定 |
-| R-026 | 资源置顶功能 | UX | P2 | v2.6 | 待办 |
-| R-073 | API Playground | DevTools | P1 | v4.1 | 待办 |
-| R-075 | Prompt模板版本管理 | Content | P3 | v2.2 | 待办 |
-| R-077 | 错误码速查表 | Help | P2 | v3.4 | 待办 |
-| R-078 | 资源集成 | Content | P2 | v2.3 | 待办 |
+| R-013 | 结构化日志 + Trace ID | Monitoring | P0 | v2.4 | 待办 |
+| R-014 | 错误追踪集成 | Monitoring | P0 | v2.4 | 待办 |
+| R-015 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 待办 |
+| R-016 | 全局 Toast/通知系统 | UX | P1 | - | 待定 |
+| R-017 | 资源置顶功能 | UX | P2 | v2.6 | 待办 |
+| R-018 | API Playground | DevTools | P1 | v4.1 | 待办 |
+| R-019 | Prompt模板版本管理 | Content | P3 | v2.2 | 待办 |
+| R-020 | 错误码速查表 | Help | P2 | v3.4 | 待办 |
+| R-021 | 资源集成 | Content | P2 | v2.3 | 待办 |
 
-### R-014 - 结构化日志 + Trace ID
+### R-013 - 结构化日志 + Trace ID
 - **描述**: 所有日志携带唯一 Trace ID，支持跨服务请求追踪
 - **现状**: 已用 pino，但无 correlation ID
 - **范围**: `server/lib/logger.ts` + 所有路由注入 trace ID
 
-### R-015 - 错误追踪集成
+### R-014 - 错误追踪集成
 - **描述**: 集成 Sentry/ErrorBit，异常自动上报并聚合分析
 - **现状**: 异常仅记本地日志，无外部追踪
 - **范围**: `server/lib/error-tracking.ts` + 前端 SDK
 
-### R-018 - Rate Limiting 管理界面
+### R-015 - Rate Limiting 管理界面
 - **描述**: 管理员可在 UI 查看/调整各服务的速率限制，无需改代码
 - **现状**: `rate-limits.ts` 纯静态配置，无 UI
 - **范围**: `server/routes/admin/rate-limits.ts` + `src/pages/Admin/RateLimits.tsx`
 
-### R-019 - 全局 Toast/通知系统
+### R-016 - 全局 Toast/通知系统
 - **描述**: 统一的通知中心，聚合 WebSocket 推送 + API 错误 + 系统公告
 - **现状**: 已有 sonner wrapper (toast.ts)，但各页面独立调用，无统一 store
 - **范围**: `src/stores/notification.ts` + `src/components/NotificationCenter.tsx`
 
-### R-026 - 资源置顶功能
+### R-017 - 资源置顶功能
 - **描述**: 用户可将常用资源（模板、工作流、媒体）置顶展示，支持快速访问
 - **现状**: 收藏功能已实现（FavoriteButton.tsx + is_favorite），但无置顶功能
 - **范围**: 数据表添加 is_pinned 字段 + 列表页置顶排序 + 置顶按钮组件
 
-### R-073 - API Playground
+### R-018 - API Playground
 - **描述**: 交互式 API 调试界面，支持参数配置、实时响应查看、一键生成 Python/JS 调用代码
 - **现状**: 无类似功能
 - **范围**: `src/pages/Playground.tsx` + 各服务调试组件 + `src/components/CodeSnippetGenerator.tsx`
 
-### R-075 - Prompt模板版本管理
+### R-019 - Prompt模板版本管理
 - **描述**: prompt_templates 表添加版本字段，支持版本历史对比、版本回滚
 - **现状**: prompt_templates 无版本字段；workflow_templates 已有版本管理
 - **范围**: `prompt_templates` 表扩展 + 版本历史 API + `src/pages/TemplateLibrary.tsx` 版本对比 UI
 
-### R-077 - 错误码速查表
+### R-020 - 错误码速查表
 - **描述**: 系统错误码参考文档，包含 MiniMax API 错误码、系统内部错误码、常见解决方案
 - **现状**: 无系统级错误码参考
 - **范围**: 可合并到 R-011 帮助中心，或单独 `src/pages/ErrorCodes.tsx`
 
-### R-078 - 资源集成
+### R-021 - 资源集成
 - **描述**: 将素材、Prompt模板、工作流模板集成到各生成功能中使用，支持快速引用已有资源
 - **现状**: 各生成页面独立配置参数，无资源引用入口
 - **范围**: 各生成页面添加资源选择器 + 引用 API + 资源使用追踪
@@ -185,6 +180,7 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-15 | 重新分配需求 ID 为连续编号（R-001 ~ R-021），原 R-014→R-013, R-015→R-014, R-018→R-015, R-019→R-016, R-026→R-017, R-073→R-018, R-075→R-019, R-077→R-020, R-078→R-021 |
 | 2026-04-15 | 新增「ID 编号规则」区域，说明 ID 跳跃原因和可用起点 |
 | 2026-04-14 | 创建需求池，记录 R-001 ~ R-012 |
 | 2026-04-15 | 新增 R-014、R-015、R-018、R-019、R-026 |
