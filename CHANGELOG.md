@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.2] - 2026-04-15
+
+### Fixed
+
+- **Timezone handling** - Fix database timestamp storage to use local time
+  - `server/lib/date-utils.ts` (+10/-0) - Add `toLocalISODateString()` helper
+  - `server/lib/logger.ts` (+3/-0) - Logger timestamp fix
+  - `server/lib/minimax.ts` (+3/-0) - MiniMax client timestamp fix
+  - All repository files updated: base, capacity, deadletter, job, log, media, prompt-template, settings-history, settings, system-config, task, user, webhook, workflow
+  - All service files updated: capacity-checker, cron-scheduler, task, execution-state-manager, notification, queue-processor, user, websocket-service
+  - All route files updated: capacity, cron/index, cron/jobs, invitation-codes, users
+  - `server/database/service-async.ts` (+3/-0) - Database service fix
+  - Use `toLocalISODateString()` instead of `toISOString()` for database timestamps
+
+- **Workflow engine imports** - Correct imports after workflow-engine refactor
+  - `server/routes/workflows.ts` (+4/-2) - Use workflow/engine.ts
+  - `server/routes/cron/logs.ts` (+2/-1) - Use workflow/index
+  - `server/services/workflow/executors/action-executor.ts` (+7/-0) - Import fix
+
+### Changed
+
+- **README comprehensive update** - Full technical documentation refresh
+  - Updated tech stack (Express, PostgreSQL, React 18, etc.)
+  - Complete project structure documentation
+  - Full database table documentation
+  - API endpoint reference updated
+  - Workflow definition examples added
+
+### Added
+
+- **Documentation system** - Complete docs/ directory structure
+  - `docs/AGENTS.md` (251 lines) - Full documentation规范说明
+  - `docs/guides/testing-guide.md` (from specs/testing.md)
+  - `docs/roadmap/requirement-pools.md` (192 lines) - Unified requirement pool
+  - `docs/roadmap/v2-roadmap.md` (57 lines) - v2.x planning
+  - `docs/roadmap/v3-roadmap.md` (31 lines) - v3.x planning
+  - `docs/roadmap/v4-roadmap.md` (28 lines) - v4.x planning
+  - `docs/specs/2026-04-05-database-service-refactor-design.md` (renamed with date prefix)
+
+- **Requirement ID renumbering** - Consecutive ID allocation
+  - R-001 ~ R-021 now continuous (previously R-001~R-012, R-014~R-015, R-018~R-019, R-026, R-073~R-078)
+  - All roadmap files updated with new IDs
+
+### Documentation
+
+- **AGENTS.md updates** - Time handling specifications
+- **Archive directory structure** - Organized by version (v1.0 ~ v1.9)
+- **Path reference fixes** - Updated docs/ paths from superpowers to docs
+
 ## [1.10.1] - 2026-04-14
 
 ### Fixed
