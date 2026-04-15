@@ -91,7 +91,7 @@ export function MusicCarousel({
   }
 
   return (
-    <div className="space-y-4" ref={containerRef} tabIndex={-1}>
+    <div className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl p-4" ref={containerRef} tabIndex={-1}>
       <div className="relative">
         {tasks.length > 1 && (
           <>
@@ -101,18 +101,20 @@ export function MusicCarousel({
               className={cn(
                 "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10",
                 "p-2 rounded-lg bg-card/80 border border-border hover:bg-card transition-colors",
+                "shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30",
                 currentIndex === 0 && "opacity-50 cursor-not-allowed"
               )}
             >
               <ChevronLeft className="w-5 h-5 text-foreground" />
             </button>
-            
+
             <button
               onClick={goToNext}
               disabled={currentIndex === tasks.length - 1}
               className={cn(
                 "absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10",
                 "p-2 rounded-lg bg-card/80 border border-border hover:bg-card transition-colors",
+                "shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30",
                 currentIndex === tasks.length - 1 && "opacity-50 cursor-not-allowed"
               )}
             >
