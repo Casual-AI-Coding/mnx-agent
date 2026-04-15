@@ -135,84 +135,84 @@ export default function MediaManagement() {
             </Tabs>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-muted/30 rounded-lg p-1 gap-1">
+              <div className="flex items-center bg-muted/30 rounded-lg p-1.5 gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleFavoriteFilter('favorite')}
                   className={cn(
-                    'h-7 px-2.5 rounded-md transition-all',
+                    'h-8 px-3 rounded-md transition-all',
                     favoriteFilters.has('favorite') 
                       ? 'bg-yellow-500/15 border border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/25' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
                   title="已收藏"
                 >
-                  <Star className={cn('w-3.5 h-3.5', favoriteFilters.has('favorite') && 'fill-yellow-500/50')} />
-                  <span className="ml-1 text-xs font-medium">已收藏</span>
+                  <Star className={cn('w-4 h-4', favoriteFilters.has('favorite') && 'fill-yellow-500/50')} />
+                  <span className="ml-1 text-sm font-medium">已收藏</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleFavoriteFilter('non-favorite')}
                   className={cn(
-                    'h-7 px-2.5 rounded-md transition-all',
+                    'h-8 px-3 rounded-md transition-all',
                     favoriteFilters.has('non-favorite') 
                       ? 'bg-muted/40 border border-muted-foreground/20 text-foreground hover:bg-muted/60' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
                   title="未收藏"
                 >
-                  <StarOff className="w-3.5 h-3.5" />
-                  <span className="ml-1 text-xs font-medium">未收藏</span>
+                  <StarOff className="w-4 h-4" />
+                  <span className="ml-1 text-sm font-medium">未收藏</span>
                 </Button>
               </div>
               
-              <div className="flex items-center bg-muted/30 rounded-lg p-1 gap-1">
+              <div className="flex items-center bg-muted/30 rounded-lg p-1.5 gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => togglePublicFilter('private')}
                   className={cn(
-                    'h-7 px-2.5 rounded-md transition-all',
+                    'h-8 px-3 rounded-md transition-all',
                     publicFilters.has('private') 
                       ? 'bg-orange-500/15 border border-orange-500/30 text-orange-600 hover:bg-orange-500/25' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
                   title="私有"
                 >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span className="ml-1 text-xs font-medium">私有</span>
+                  <Lock className="w-4 h-4" />
+                  <span className="ml-1 text-sm font-medium">私有</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => togglePublicFilter('public')}
                   className={cn(
-                    'h-7 px-2.5 rounded-md transition-all',
+                    'h-8 px-3 rounded-md transition-all',
                     publicFilters.has('public') 
                       ? 'bg-green-500/15 border border-green-500/30 text-green-600 hover:bg-green-500/25' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
                   title="公开"
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span className="ml-1 text-xs font-medium">公开</span>
+                  <Globe className="w-4 h-4" />
+                  <span className="ml-1 text-sm font-medium">公开</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => togglePublicFilter('others-public')}
                   className={cn(
-                    'h-7 px-2.5 rounded-md transition-all',
+                    'h-8 px-3 rounded-md transition-all',
                     publicFilters.has('others-public') 
                       ? 'bg-blue-500/15 border border-blue-500/30 text-blue-600 hover:bg-blue-500/25' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   )}
                   title="他人公开"
                 >
-                  <Users className="w-3.5 h-3.5" />
-                  <span className="ml-1 text-xs font-medium">他人</span>
+                  <Users className="w-4 h-4" />
+                  <span className="ml-1 text-sm font-medium">他人</span>
                 </Button>
               </div>
             </div>
