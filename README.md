@@ -1,4 +1,4 @@
-# MiniMax Toolset
+# mnx-agent
 
 基于 MiniMax AI API 的多功能工具集，支持文本对话、语音合成、图像生成、音乐创作、视频生成等功能，并内置强大的定时任务调度系统。
 
