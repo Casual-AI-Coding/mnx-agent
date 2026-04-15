@@ -1,7 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron'
 import { CronExpressionParser } from 'cron-parser'
 import type { DatabaseService } from '../database/service-async.js'
-import { WorkflowResult } from './workflow-engine'
+import type { WorkflowResult } from './workflow/types.js'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
