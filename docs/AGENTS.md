@@ -67,14 +67,113 @@ docs/
 
 ### roadmap/ - 版本规划
 
-**用途**: 版本迭代计划，功能优先级排序
+**用途**: 版本迭代计划，需求收集与优先级排序
 
-**命名规范**: `v{VERSION}-roadmap.md`
+**目录结构**:
+```
+roadmap/
+├── requirement-pools.md   # 需求池（统一收集所有需求）
+├── v2-roadmap.md          # v2.x 版本规划
+├── v3-roadmap.md          # v3.x 版本规划
+└── v4-roadmap.md          # v4.x 版本规划
+```
+
+#### requirement-pools.md - 需求池
+
+**用途**: 统一收集所有需求，按日期分组记录
+
+**结构规范**:
+```markdown
+## YYYY-MM-DD
+
+**汇总**: N 个需求 | 已完成: X | 待办: Y
+
+| ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
+|----|------|------|--------|------|------|
+| R-XXX | 需求名称 | 分类 | P0-P4 | vX.X | 待办/已完成 |
+
+### R-XXX - 需求名称
+- **描述**: 需求详细说明
+- **现状**: 当前实现状态
+- **范围**: 涉及的文件路径/模块
+```
+
+**字段定义**:
+| 字段 | 说明 |
+|------|------|
+| ID | 需求唯一标识，格式 `R-XXX`（数字递增） |
+| 分类 | Admin/UX/Monitoring/Data/Security/DevTools 等 |
+| 优先级 | P0(必须)-P4(低优先级) |
+| 版本 | 分配到的版本号，`-` 表示待定 |
+| 状态 | 待办/已完成/待收集 |
+
+**来源字段**（在 roadmap table 中使用）:
+| 来源 | 说明 |
+|------|------|
+| 需求池 | 需求已在 requirement-pools.md 记录 |
+| 临时添加 | 开发时发现需要，不在需求池，实施时补记 |
+| 待收集 | 需求未确定，待后续收集 |
+
+**待收集需求区域**:
+```markdown
+## 待收集需求
+
+> 尚未确定的需求占位符
+
+| ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
+|----|------|------|--------|------|------|
+| TBD-vX.X | 需求名称 | TBD | TBD | vX.X+ | 待收集 |
+```
+
+#### vX-roadmap.md - 版本规划文档
+
+**命名规范**: `v{VERSION}-roadmap.md`（如 v2-roadmap.md, v3-roadmap.md）
+
+**结构规范**:
+```markdown
+# mnx-agent vX.x Roadmap
+
+> 版本规划文档 - vX.x 系列主题
+
+## 大版本说明
+
+vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
+
+---
+
+## Roadmap Table
+
+| 版本 | 需求ID | 需求名称 | 来源 | 状态 |
+|------|--------|----------|------|------|
+| vX.X | R-XXX | 需求名称 | 需求池 | 待办 |
+
+---
+
+## 版本依赖
+
+版本依赖关系图（ASCII 流程图）
+
+---
+
+## 当前状态
+
+- **当前版本**: vX.Y+
+- **下一版本**: vX.Z
+
+---
+
+## 变更记录
+
+| 日期 | 变更 |
+|------|------|
+| YYYY-MM-DD | 变更说明 |
+```
 
 **内容特点**:
-- 功能列表与优先级
-- 里程碑划分
-- 发布时间规划
+- 简化格式：仅 roadmap table + 需求池链接
+- 需求详情统一在 requirement-pools.md 维护
+- 版本依赖可视化（ASCII 流程图）
+- 变更记录追踪文档修改历史
 
 ## 版本历史
 
@@ -98,12 +197,23 @@ docs/
 3. **子计划**: `plans/YYYY-MM-DD-NN-主题.md`（NN 从 01 开始）
 4. **事故报告**: `incidents/YYYY-MM-DD-主题-incident.md`
 5. **版本规划**: `roadmap/v{VERSION}-roadmap.md`
+6. **新需求**: 在 `roadmap/requirement-pools.md` 添加需求卡片
+
+### 新需求录入流程
+
+1. **确定需求 ID**: 查看现有最大 R-XXX，递增分配新 ID
+2. **录入需求池**: 在 `requirement-pools.md` 当日日期区域添加：
+   - 汇总表格一行
+   - 需求卡片详情（描述、现状、范围）
+3. **分配版本**: 在对应 `vX-roadmap.md` 的 Roadmap Table 添加一行
+4. **更新变更记录**: 在两个文件末尾变更记录添加录入说明
 
 ### 版本发布后
 
 1. 创建 `archive/v{VERSION}/` 目录
 2. 移动已完成 plans 到归档目录
 3. specs 保留在原目录，永不归档
+4. 更新 `requirement-pools.md` 中已完成需求的状态
 
 ### 引用路径格式
 
@@ -112,4 +222,15 @@ docs/
 @docs/specs/workflow-core-concepts.md
 @docs/plans/2026-04-03-workflow-system-redesign.md
 @docs/incidents/2026-04-14-media-deletion-incident.md
+@docs/roadmap/requirement-pools.md
 ```
+
+---
+
+## 变更记录
+
+| 日期 | 变更 |
+|------|------|
+| 2026-04-15 | 补充 roadmap 目录详细规范：requirement-pools.md 结构、字段定义、来源字段；vX-roadmap.md 结构规范 |
+| 2026-04-15 | 新增「新需求录入流程」说明 |
+| 2026-04-15 | 引用路径添加 requirement-pools.md 示例 |

@@ -12,7 +12,9 @@
 | `plans/` | 实现计划 | 定义"怎么做"，完成后归档 |
 | `archive/` | 归档 | 已有版本 plans 的归档 |
 | `incidents/` | 事故报告 | 记录重大问题及修复 |
-| `roadmap/` | 版本规划 | 版本迭代计划 |
+| `roadmap/` | 版本规划 | `requirement-pools.md`(需求池) + `v{X}-roadmap.md`(版本规划) |
+
+详细规范见 `@docs/AGENTS.md`
 
 **命名规范**：
 - `specs/`: `YYYY-MM-DD-主题-design.md` 或 `主题.md`
@@ -23,6 +25,7 @@
 - 开发新功能前 → 查阅 `specs/` 理解设计
 - 制定实现方案时 → 在 `plans/` 创建计划
 - 实施前 → 引用相关 specs/plans 作为依据
+- 新需求提出时 → 在 `roadmap/requirement-pools.md` 录入需求卡片
 
 **引用路径格式**：
 ```
