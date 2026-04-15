@@ -1,4 +1,4 @@
-# AGENTS.md - MiniMax AI Toolset
+# AGENTS.md - mnx-agent
 
 > 本文档为 AI 助手提供项目上下文，帮助理解架构、编码规范和开发流程。
 

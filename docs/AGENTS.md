@@ -1,4 +1,4 @@
-# Documentation Structure
+# AGENTS.md - docs/ 目录结构
 
 本文档说明 `docs/` 目录的组织结构。
 
