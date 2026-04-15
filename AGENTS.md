@@ -243,6 +243,41 @@ export const listMediaQuerySchema = z.object({
 router.get('/', validateQuery(listMediaQuerySchema), handler)
 ```
 
+### 时间处理
+
+**问题背景**: PostgreSQL 使用 `TIMESTAMP WITHOUT TIME ZONE`，`new Date().toISOString()` 返回 UTC 时间（带 `Z` 后缀），导致存储和显示时间偏差。
+
+**规范**:
+
+```typescript
+// ❌ 禁止：存入数据库时使用 toISOString()
+const now = new Date().toISOString()  // UTC时间，带Z后缀
+
+// ✅ 正确：使用 toLocalISODateString()（无Z后缀）
+import { toLocalISODateString } from '../lib/date-utils.js'
+const now = toLocalISODateString()  // 本地时间字符串
+
+// ✅ 正确：转换现有 Date 对象
+const nextRun = cronParser.next().toDate()
+const localTime = toLocalISODateString(nextRun)
+
+// 🟢 例外场景（可保留 toISOString）：
+// - 外部API调用
+// - WebSocket消息时间戳
+// - 日志文件命名（按UTC日期）
+// - Health check响应（API返回）
+// - Webhook payload时间戳
+```
+
+**使用场景分类**:
+
+| 场景 | 使用函数 | 说明 |
+|-----|---------|-----|
+| 存入数据库 | `toLocalISODateString()` | 返回本地时间（无Z） |
+| API响应 | 可用 `toISOString()` | 返回给前端解析 |
+| 外部API调用 | 可用 `toISOString()` | MiniMax等外部服务 |
+| 日志/调试 | 可用 `toISOString()` | 日志文件名按UTC日期 |
+
 ### React 组件
 
 ```typescript
