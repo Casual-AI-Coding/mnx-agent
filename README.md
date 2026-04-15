@@ -46,7 +46,7 @@
 
 ### 后端
 - **Express** - Web 框架
-- **Better SQLite3** - 轻量级数据库
+- **PostgreSQL (pg)** - 关系型数据库
 - **node-cron** - 定时任务调度
 - **cron-parser** - Cron 表达式解析
 - **WebSocket (ws)** - 实时通信
@@ -225,13 +225,18 @@ npm run build
 mnx-agent/
 ├── server/                 # 后端代码
 │   ├── database/          # 数据库层
-│   │   ├── schema.ts      # 表结构定义
-│   │   ├── migrations.ts  # 迁移脚本
-│   │   ├── service.ts     # 数据服务
+│   │   ├── schema-pg.ts   # PostgreSQL 表结构定义
+│   │   ├── migrations-async.ts # 迁移脚本
+│   │   ├── service-async.ts    # 数据服务
 │   │   └── types.ts       # 类型定义
+│   ├── domain/            # 领域层
+│   │   └── events/        # 事件总线
+│   ├── repositories/      # 数据访问层
 │   ├── services/          # 业务逻辑
+│   │   ├── domain/        # 领域服务
+│   │   ├── workflow/      # 工作流引擎
+│   │   │   └── engine.ts  # DAG 执行引擎
 │   │   ├── cron-scheduler.ts      # 定时调度器
-│   │   ├── workflow-engine.ts     # 工作流引擎
 │   │   ├── task-executor.ts       # 任务执行器
 │   │   ├── queue-processor.ts     # 队列处理器
 │   │   ├── capacity-checker.ts    # 容量检查
@@ -254,20 +259,43 @@ mnx-agent/
 
 ## 数据库表
 
+### 核心业务表
 | 表名 | 描述 |
 |------|------|
+| `users` | 用户账户 |
 | `cron_jobs` | 定时任务定义 |
 | `task_queue` | 任务队列 |
 | `execution_logs` | 执行日志 |
 | `execution_log_details` | 详细执行记录 |
+| `workflow_templates` | 工作流模板 |
+| `workflow_versions` | 工作流版本 |
+| `media_records` | 媒体文件记录 |
+
+### 辅助管理表
+| 表名 | 描述 |
+|------|------|
 | `job_tags` | 任务标签 |
 | `job_dependencies` | 任务依赖关系 |
 | `webhook_configs` | Webhook 配置 |
 | `webhook_deliveries` | Webhook 投递记录 |
 | `dead_letter_queue` | 死信队列 |
 | `capacity_tracking` | API 容量追踪 |
-| `workflow_templates` | 工作流模板 |
-| `media_records` | 媒体文件记录 |
+| `prompt_templates` | Prompt 模板 |
+| `audit_logs` | 审计日志 |
+| `system_config` | 系统配置 |
+| `execution_states` | 执行状态快照 |
+
+### 权限管理表
+| 表名 | 描述 |
+|------|------|
+| `service_node_permissions` | 服务节点权限 |
+| `workflow_permissions` | 工作流权限 |
+| `invitation_codes` | 邀请码 |
+
+### 系统表
+| 表名 | 描述 |
+|------|------|
+| `_migrations` | 迁移记录 |
 
 ## 许可证
 
