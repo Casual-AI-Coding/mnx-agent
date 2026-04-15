@@ -30,7 +30,7 @@
 **引用路径格式**：
 ```
 @docs/specs/workflow-core-concepts.md
-@docs/plans/2026-04-03-workflow-system-redesign.md
+@docs/archive/v1.3/2026-04-03-workflow-system-redesign.md
 ```
 
 ## 项目概述

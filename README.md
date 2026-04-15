@@ -300,3 +300,13 @@ mnx-agent/
 ## 许可证
 
 MIT
+
+## 文档
+
+详细设计文档见 [docs/](docs/) 目录：
+
+- [设计规格](docs/specs/) - 系统架构和功能设计
+- [开发指南](docs/guides/) - 测试环境配置等开发指南
+- [版本规划](docs/roadmap/) - 需求池和路线图
+- [事故报告](docs/incidents/) - 重大问题记录
+- [文档规范](docs/AGENTS.md) - 文档组织结构说明

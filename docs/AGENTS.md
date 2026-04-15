@@ -7,6 +7,7 @@
 ```
 docs/
 ├── specs/           # 规格文档（定义"是什么"）
+├── guides/          # 开发指南（环境配置、测试指南等）
 ├── plans/           # 实现计划（定义"怎么做"）
 ├── archive/         # 已归档 plans
 │   └── v{MAJOR}.{MINOR}/
@@ -53,6 +54,17 @@ docs/
 - specs 永不归档，始终保留在 `specs/` 目录
 - plans 完成后归档到 `archive/v{MAJOR}.{MINOR}/`（如 v1.3, v1.4, v1.7）
 - 子版本 plans 归档到对应主版本目录（如 v1.3.1 → v1.3/）
+
+### guides/ - 开发指南
+
+**用途**: 环境配置、测试指南、部署说明等操作性文档
+
+**命名规范**: `主题-guide.md`
+
+**内容特点**:
+- 描述"如何配置/部署"
+- 包含操作步骤、环境配置、命令示例
+- 可随环境变化更新
 
 ### incidents/ - 事故报告
 
@@ -193,15 +205,16 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 ### 创建新文档
 
 1. **规格文档**: `specs/YYYY-MM-DD-主题-design.md`
-2. **实现计划**: `plans/YYYY-MM-DD-主题.md`
-3. **子计划**: `plans/YYYY-MM-DD-NN-主题.md`（NN 从 01 开始）
-4. **事故报告**: `incidents/YYYY-MM-DD-主题-incident.md`
-5. **版本规划**: `roadmap/v{VERSION}-roadmap.md`
-6. **新需求**: 在 `roadmap/requirement-pools.md` 添加需求卡片
+2. **开发指南**: `guides/主题-guide.md`
+3. **实现计划**: `plans/YYYY-MM-DD-主题.md`
+4. **子计划**: `plans/YYYY-MM-DD-NN-主题.md`（NN 从 01 开始）
+5. **事故报告**: `incidents/YYYY-MM-DD-主题-incident.md`
+6. **版本规划**: `roadmap/v{VERSION}-roadmap.md`
+7. **新需求**: 在 `roadmap/requirement-pools.md` 添加需求卡片
 
 ### 新需求录入流程
 
-1. **确定需求 ID**: 查看现有最大 R-XXX，递增分配新 ID
+1. **确定需求 ID**: 查看 `requirement-pools.md` 「ID 编号规则」区域的「可用起点」，递增分配新 ID
 2. **录入需求池**: 在 `requirement-pools.md` 当日日期区域添加：
    - 汇总表格一行
    - 需求卡片详情（描述、现状、范围）
@@ -220,9 +233,10 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 在文档中引用其他文档时使用：
 ```
 @docs/specs/workflow-core-concepts.md
-@docs/plans/2026-04-03-workflow-system-redesign.md
+@docs/archive/v1.3/2026-04-03-workflow-system-redesign.md
 @docs/incidents/2026-04-14-media-deletion-incident.md
 @docs/roadmap/requirement-pools.md
+@docs/guides/testing-guide.md
 ```
 
 ---
@@ -231,6 +245,7 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-15 | 新增 guides/ 目录规范，引用路径更新为 archive/v1.3/，添加 guides 引用示例 |
 | 2026-04-15 | 补充 roadmap 目录详细规范：requirement-pools.md 结构、字段定义、来源字段；vX-roadmap.md 结构规范 |
 | 2026-04-15 | 新增「新需求录入流程」说明 |
 | 2026-04-15 | 引用路径添加 requirement-pools.md 示例 |
