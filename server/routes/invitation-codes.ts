@@ -7,6 +7,7 @@ import { validate } from '../middleware/validate.js'
 import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
 import { successResponse, errorResponse } from '../middleware/api-response'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 const router = Router()
 
@@ -43,7 +44,7 @@ router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, re
   for (let i = 0; i < count; i++) {
     const id = uuidv4()
     const code = crypto.randomBytes(16).toString('hex').substring(0, 32).toUpperCase()
-    const now = new Date().toISOString()
+    const now = toLocalISODateString()
 
     await conn.execute(
       `INSERT INTO invitation_codes (id, code, created_by, max_uses, used_count, expires_at, is_active, created_at)

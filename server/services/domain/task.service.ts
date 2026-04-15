@@ -9,6 +9,7 @@ import type { DatabaseService } from '../../database/service-async.js'
 import type { TaskQueueItem, CreateTaskQueueItem, UpdateTaskQueueItem, DeadLetterQueueItem } from '../../database/types.js'
 import type { TaskStatus } from '../../database/types.js'
 import type { ITaskService, TaskQueryFilter, TaskQueryResult } from './interfaces/index.js'
+import { toLocalISODateString } from '../../lib/date-utils.js'
 
 export class TaskService implements ITaskService {
   constructor(private readonly db: DatabaseService) {}
@@ -94,7 +95,7 @@ export class TaskService implements ITaskService {
 
   async resolveDeadLetterItem(id: string, resolution: string, ownerId?: string): Promise<void> {
     await this.db.updateDeadLetterQueueItem(id, {
-      resolved_at: new Date().toISOString(),
+      resolved_at: toLocalISODateString(),
       resolution,
     }, ownerId)
   }

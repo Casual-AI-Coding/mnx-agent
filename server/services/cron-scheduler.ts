@@ -14,6 +14,7 @@ import {
   TriggerType,
 } from '../database/types'
 import { TASK_TIMEOUTS } from '../config/timeouts.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 export type { DatabaseService }
 
@@ -141,7 +142,7 @@ export class CronScheduler {
     }
 
     const startTime = Date.now()
-    const startedAt = new Date().toISOString()
+    const startedAt = toLocalISODateString()
     
     let log: { id: string } | null = null
     let executionSuccess = false
@@ -161,7 +162,7 @@ export class CronScheduler {
       await this.notificationService?.notifyJobEvent(job.id, 'on_start', {
         jobId: job.id,
         jobName: job.name,
-        timestamp: new Date().toISOString(),
+        timestamp: toLocalISODateString(),
       }).catch(err => console.error('[CronScheduler] Failed to send on_start notification:', err))
 
       // Execute with timeout
@@ -194,7 +195,7 @@ export class CronScheduler {
       const endTime = Date.now()
       durationMs = endTime - startTime
       executionSuccess = result.success
-      const completedAt = new Date().toISOString()
+      const completedAt = toLocalISODateString()
       
       const tasksExecuted = result.nodeResults.size
       let tasksSucceeded = 0
@@ -230,13 +231,13 @@ export class CronScheduler {
         jobId: job.id,
         jobName: job.name,
         duration: durationMs,
-        timestamp: new Date().toISOString(),
+        timestamp: toLocalISODateString(),
       }).catch(err => console.error('[CronScheduler] Failed to send on_success notification:', err))
     } catch (error) {
       const endTime = Date.now()
       durationMs = endTime - startTime
       executionSuccess = false
-      const completedAt = new Date().toISOString()
+      const completedAt = toLocalISODateString()
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       console.error(`[CronScheduler] Job "${job.name}" (${job.id}) failed with error:`, errorMessage)
@@ -265,7 +266,7 @@ export class CronScheduler {
         jobId: job.id,
         jobName: job.name,
         error: errorMessage,
-        timestamp: new Date().toISOString(),
+        timestamp: toLocalISODateString(),
       }).catch(err => console.error('[CronScheduler] Failed to send on_failure notification:', err))
     } finally {
       this.concurrencyManager.releaseSlot(job.id)

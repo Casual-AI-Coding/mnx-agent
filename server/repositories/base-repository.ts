@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { DatabaseConnection } from '../database/connection.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 export interface RepositoryOptions {
   conn: DatabaseConnection
@@ -22,10 +23,6 @@ export abstract class BaseRepository<T, CreateDto = Partial<T>, UpdateDto = Part
 
   protected abstract getIdColumn(): string
   protected abstract rowToEntity(row: unknown): T
-
-  protected toISODate(): string {
-    return new Date().toISOString()
-  }
 
   async getById(id: string, ownerId?: string): Promise<T | null> {
     if (ownerId) {
@@ -133,7 +130,7 @@ export abstract class BaseRepository<T, CreateDto = Partial<T>, UpdateDto = Part
 
     let currentParamIndex = paramIndex
     fields.push(`updated_at = $${currentParamIndex}`)
-    values.push(this.toISODate())
+    values.push(toLocalISODateString())
     currentParamIndex++
     values.push(id)
     if (ownerId) values.push(ownerId)

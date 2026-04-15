@@ -2,6 +2,7 @@ import { MiniMaxClient } from '../lib/minimax'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
 import type { DatabaseService } from '../database/service-async.js'
 import { SimpleCache } from '../lib/cache.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 const BALANCE_CACHE_TTL_MS = 30000
 
@@ -84,7 +85,7 @@ export class CapacityChecker {
       accountBalance,
       grantBalance,
       cashBalance,
-      lastCheckedAt: new Date().toISOString(),
+      lastCheckedAt: toLocalISODateString(),
     }
   }
 

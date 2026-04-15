@@ -3,6 +3,7 @@ import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
 import type { IRetryManager } from './interfaces/retry-manager.interface.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 export type { DatabaseService }
 export type { ITaskExecutor }
@@ -154,7 +155,7 @@ export class QueueProcessor {
 
     await this.db.updateTask(task.id, {
       status: TaskStatus.RUNNING,
-      started_at: new Date().toISOString(),
+      started_at: toLocalISODateString(),
     })
 
     try {
@@ -163,7 +164,7 @@ export class QueueProcessor {
 
       await this.db.updateTask(task.id, {
         status: TaskStatus.COMPLETED,
-        completed_at: new Date().toISOString(),
+        completed_at: toLocalISODateString(),
         result: JSON.stringify(result.data),
       })
 
@@ -176,7 +177,7 @@ export class QueueProcessor {
 
       await this.db.updateTask(task.id, {
         status: TaskStatus.FAILED,
-        completed_at: new Date().toISOString(),
+        completed_at: toLocalISODateString(),
         error_message: errorMessage,
       })
 

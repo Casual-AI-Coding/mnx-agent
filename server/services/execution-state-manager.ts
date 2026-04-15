@@ -1,6 +1,7 @@
 import type { DatabaseService } from '../database/service-async.js'
 import type { ExecutionState, ExecutionStateRow, CreateExecutionState, UpdateExecutionState } from '../database/types.js'
 import { randomUUID } from 'crypto'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 function rowToExecutionState(row: ExecutionStateRow): ExecutionState {
   return {
@@ -14,7 +15,7 @@ export class ExecutionStateManager {
 
   async create(data: CreateExecutionState): Promise<ExecutionState> {
     const id = `exec_${randomUUID().replace(/-/g, '')}`
-    const now = new Date().toISOString()
+    const now = toLocalISODateString()
     
     const status = data.status ?? 'running'
     const currentLayer = data.current_layer ?? 0
@@ -67,7 +68,7 @@ export class ExecutionStateManager {
 
   async update(id: string, data: UpdateExecutionState): Promise<void> {
     const sets: string[] = ['updated_at = $1']
-    const values: unknown[] = [new Date().toISOString()]
+    const values: unknown[] = [toLocalISODateString()]
     let paramIndex = 2
     
     for (const [key, value] of Object.entries(data)) {
@@ -108,7 +109,7 @@ export class ExecutionStateManager {
     if (!state) throw new Error(`Execution state ${id} not found`)
 
     const failedNodes = JSON.parse(state.failed_nodes) as Array<{ nodeId: string; error: string; timestamp: string }>
-    failedNodes.push({ nodeId, error, timestamp: new Date().toISOString() })
+    failedNodes.push({ nodeId, error, timestamp: toLocalISODateString() })
 
     await this.update(id, {
       failed_nodes: JSON.stringify(failedNodes),
@@ -118,28 +119,28 @@ export class ExecutionStateManager {
   async pause(id: string): Promise<void> {
     await this.update(id, {
       status: 'paused',
-      paused_at: new Date().toISOString(),
+      paused_at: toLocalISODateString(),
     })
   }
 
   async resume(id: string): Promise<void> {
     await this.update(id, {
       status: 'resumed',
-      resumed_at: new Date().toISOString(),
+      resumed_at: toLocalISODateString(),
     })
   }
 
   async complete(id: string): Promise<void> {
     await this.update(id, {
       status: 'completed',
-      completed_at: new Date().toISOString(),
+      completed_at: toLocalISODateString(),
     })
   }
 
   async fail(id: string): Promise<void> {
     await this.update(id, {
       status: 'failed',
-      completed_at: new Date().toISOString(),
+      completed_at: toLocalISODateString(),
     })
   }
 

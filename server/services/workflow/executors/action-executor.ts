@@ -2,6 +2,7 @@ import type { WorkflowNode } from '../types.js'
 import type { DatabaseService } from '../../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import type { IEventBus } from '../../interfaces/event-bus.interface.js'
+import { toLocalISODateString } from '../../../lib/date-utils.js'
 
 export interface ActionExecutorDeps {
   db: DatabaseService
@@ -57,7 +58,7 @@ export async function executeActionNode(
       service_name: service,
       method_name: method,
       input_payload: JSON.stringify(args),
-      started_at: new Date().toISOString(),
+      started_at: toLocalISODateString(),
     })
   }
 
@@ -67,7 +68,7 @@ export async function executeActionNode(
     if (detailId) {
       await db.updateExecutionLogDetail(detailId, {
         output_result: JSON.stringify(result),
-        completed_at: new Date().toISOString(),
+        completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,
       })
     }
@@ -81,7 +82,7 @@ export async function executeActionNode(
     if (detailId) {
       await db.updateExecutionLogDetail(detailId, {
         error_message: (error as Error).message,
-        completed_at: new Date().toISOString(),
+        completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,
       })
     }

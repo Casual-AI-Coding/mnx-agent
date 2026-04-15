@@ -534,14 +534,6 @@ describe('BaseRepository', () => {
     })
   })
 
-  describe('toISODate', () => {
-    it('should return ISO date string', () => {
-      const date = repo['toISODate']()
-
-      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
-    })
-  })
-
   describe('isPostgres', () => {
     it('should return true for postgres', () => {
       vi.mocked(mockDb.isPostgres).mockReturnValue(true)

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { DatabaseConnection } from '../database/connection.js'
 import type { User, UserRow, UserRole } from '../database/types.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 const BCRYPT_ROUNDS = 12
 
@@ -105,7 +106,7 @@ export class UserService {
 
       const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS)
       const id = uuidv4()
-      const now = new Date().toISOString()
+      const now = toLocalISODateString()
 
       await tx.execute(
         `INSERT INTO users (id, username, email, password_hash, minimax_api_key, minimax_region, role, is_active, created_at, updated_at)
@@ -140,7 +141,7 @@ export class UserService {
 
     await this.conn.execute(
       'UPDATE users SET last_login_at = $1 WHERE id = $2',
-      [new Date().toISOString(), userRow.id]
+      [toLocalISODateString(), userRow.id]
     )
 
     const accessToken = this.generateAccessToken({
@@ -198,7 +199,7 @@ export class UserService {
     const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
     await this.conn.execute(
       'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
-      [newHash, new Date().toISOString(), userId]
+      [newHash, toLocalISODateString(), userId]
     )
 
     return { success: true }
@@ -226,7 +227,7 @@ export class UserService {
     }
 
     setClauses.push(`updated_at = $${paramIndex}`)
-    values.push(new Date().toISOString())
+    values.push(toLocalISODateString())
     paramIndex++
 
     values.push(userId)

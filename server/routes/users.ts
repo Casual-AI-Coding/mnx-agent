@@ -8,6 +8,7 @@ import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 import { successResponse, errorResponse } from '../middleware/api-response'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 const router = Router()
 
@@ -83,7 +84,7 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
   const conn = getConnection()
   const passwordHash = await bcrypt.hash(password, 12)
   const id = uuidv4()
-  const now = new Date().toISOString()
+  const now = toLocalISODateString()
 
   await conn.execute(
     `INSERT INTO users (id, username, email, password_hash, role, minimax_api_key, is_active, created_at, updated_at)
@@ -117,7 +118,7 @@ router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) =
   }
 
   fields.push(`updated_at = $${idx++}`)
-  values.push(new Date().toISOString())
+  values.push(toLocalISODateString())
   values.push(id)
 
   await conn.execute(`UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`, values)
@@ -160,7 +161,7 @@ router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, r
     return
   }
 
-  const now = new Date().toISOString()
+  const now = toLocalISODateString()
   let successCount = 0
   let failCount = 0
 
@@ -233,7 +234,7 @@ router.post('/:id/reset-password', asyncHandler(async (req, res) => {
 
   await conn.execute(
     'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
-    [passwordHash, new Date().toISOString(), id]
+    [passwordHash, toLocalISODateString(), id]
   )
 
   successResponse(res, {
