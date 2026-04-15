@@ -1504,7 +1504,7 @@ After deploying these fixes:
 
 ## Execution Options
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-10-security-fixes.md`**
+**Plan complete and saved to `docs/plans/2026-04-10-security-fixes.md`**
 
 Two execution options:
 

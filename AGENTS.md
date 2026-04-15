@@ -4,13 +4,15 @@
 
 ## 设计与计划文档
 
-项目使用 `docs/superpowers/` 存储设计和计划文档：
+项目使用 `docs/` 存储设计和计划文档：
 
 | 目录 | 用途 | 说明 |
 |------|------|------|
 | `specs/` | 规格文档 | 定义"是什么"，永不归档 |
 | `plans/` | 实现计划 | 定义"怎么做"，完成后归档 |
 | `archive/` | 归档 | 已有版本 plans 的归档 |
+| `incidents/` | 事故报告 | 记录重大问题及修复 |
+| `roadmap/` | 版本规划 | 版本迭代计划 |
 
 **命名规范**：
 - `specs/`: `YYYY-MM-DD-主题-design.md` 或 `主题.md`
@@ -24,8 +26,8 @@
 
 **引用路径格式**：
 ```
-@docs/superpowers/specs/workflow-core-concepts.md
-@docs/superpowers/plans/2026-04-03-workflow-system-redesign.md
+@docs/specs/workflow-core-concepts.md
+@docs/plans/2026-04-03-workflow-system-redesign.md
 ```
 
 ## 项目概述

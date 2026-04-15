@@ -117,7 +117,7 @@ Duration    772ms
 **新增**:
 - `server/__tests__/workflow-stage-a.test.ts` - 阶段 A 单元测试
 - `scripts/verify-workflow.sh` - 验证脚本
-- `docs/superpowers/specs/2026-04-03-workflow-*.md` - 3 个规范文档
+- `docs/specs/2026-04-03-workflow-*.md` - 3 个规范文档
 - `server/test-workflow-stage-b.ts` - 阶段 B 集成测试
 - `server/test-api.mjs` - API 测试脚本
 

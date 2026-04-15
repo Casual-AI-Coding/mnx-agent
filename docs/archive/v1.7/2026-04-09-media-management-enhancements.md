@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 18 + TypeScript + Framer Motion v11.0.8 + Tailwind CSS
 
-**Design Doc:** @docs/superpowers/specs/2026-04-09-media-management-enhancements-design.md
+**Design Doc:** @docs/specs/2026-04-09-media-management-enhancements-design.md
 
 ---
 

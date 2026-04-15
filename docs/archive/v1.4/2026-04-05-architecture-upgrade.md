@@ -630,7 +630,7 @@ git commit -m "refactor(architecture): wave 1 - infrastructure preparation
 - Create shared validation schemas
 - Remove duplicate JsonViewer component
 
-Refs: docs/superpowers/specs/2026-04-05-architecture-upgrade-design.md"
+Refs: docs/specs/2026-04-05-architecture-upgrade-design.md"
 ```
 
 ## 回滚计划

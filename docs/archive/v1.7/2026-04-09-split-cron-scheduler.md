@@ -1404,7 +1404,7 @@ git commit -m "refactor(server): finalize CronScheduler decomposition"
 
 ## Execution Options
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-09-split-cron-scheduler.md`.**
+**Plan complete and saved to `docs/plans/2026-04-09-split-cron-scheduler.md`.**
 
 **1. Subagent-Driven (recommended)** - Dispatch fresh subagent per task, review between tasks
 

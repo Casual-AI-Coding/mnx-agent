@@ -1493,7 +1493,7 @@ git commit -m "refactor(server): split QueueProcessor into RetryManager + DLQAut
 
 ---
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-09-queue-processor-split.md`.**
+**Plan complete and saved to `docs/plans/2026-04-09-queue-processor-split.md`.**
 
 **Two execution options:**
 

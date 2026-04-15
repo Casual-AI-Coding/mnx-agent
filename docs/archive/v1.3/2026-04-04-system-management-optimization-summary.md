@@ -194,8 +194,8 @@ refactor(toast): replace all alert() with toast notifications
 
 ## 设计文档
 
-- 设计文档: `docs/superpowers/specs/system-management-optimization-design.md`
-- 实施计划: `docs/superpowers/plans/2026-04-04-system-management-optimization.md`
+- 设计文档: `docs/specs/system-management-optimization-design.md`
+- 实施计划: `docs/plans/2026-04-04-system-management-optimization.md`
 
 ---
 

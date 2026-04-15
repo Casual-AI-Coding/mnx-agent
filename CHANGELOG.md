@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
   - `scripts/restore-media-simple.ts` (95 lines) - Simple recovery
   - `scripts/soft-delete-unrestored.ts` (61 lines) - Cleanup script
   - `scripts/media-snapshot-backup.sh` (47 lines) - Backup script
-  - `docs/superpowers/incidents/2026-04-14-media-deletion-incident.md` (409 lines) - Incident report
+  - `docs/incidents/2026-04-14-media-deletion-incident.md` (409 lines) - Incident report
 
 - **Test safety** - Prevent tests from deleting production media files
   - `server/lib/media-storage.ts` (+5/-0) - Environment check for test path
@@ -188,8 +188,8 @@ All notable changes to this project will be documented in this file.
   - parallelCount: 1-5 张
 
 - **Documentation**
-  - `docs/superpowers/specs/2026-04-13-image-generation-enhancements-design.md` (222 行)
-  - `docs/superpowers/plans/2026-04-13-image-generation-enhancements.md` (781 行)
+  - `docs/specs/2026-04-13-image-generation-enhancements-design.md` (222 行)
+  - `docs/plans/2026-04-13-image-generation-enhancements.md` (781 行)
 
 **UI Improvements - 界面改进**
 
@@ -288,8 +288,8 @@ All notable changes to this project will be documented in this file.
   - super 角色可批量公开无 owner_id 的记录
 
 - **文档**
-  - `docs/superpowers/specs/2026-04-13-media-public-toggle-design.md` (495行)
-  - `docs/superpowers/plans/2026-04-13-media-public-toggle.md` (1389行)
+  - `docs/specs/2026-04-13-media-public-toggle-design.md` (495行)
+  - `docs/plans/2026-04-13-media-public-toggle.md` (1389行)
 
 ### Changed
 
@@ -438,7 +438,7 @@ All notable changes to this project will be documented in this file.
   - 失败时显示完整 API 响应（便于调试）
 
 - **Documentation**
-  - `docs/superpowers/plans/2026-04-13-ddd-architecture-upgrade-final.md` (1252行)
+  - `docs/plans/2026-04-13-ddd-architecture-upgrade-final.md` (1252行)
   - DDD 架构升级最终实现计划
 
 ### Changed
@@ -558,8 +558,8 @@ All notable changes to this project will be documented in this file.
   - 不影响正在进行的生成任务
 
 - **文档**
-  - `docs/superpowers/specs/2026-04-12-parallel-image-generation-design.md` (201行)
-  - `docs/superpowers/plans/2026-04-12-parallel-image-generation.md` (955行)
+  - `docs/specs/2026-04-12-parallel-image-generation-design.md` (201行)
+  - `docs/plans/2026-04-12-parallel-image-generation.md` (955行)
 
 ### Fixed
 
@@ -692,8 +692,8 @@ All notable changes to this project will be documented in this file.
   - `src/components/media/TimelineItem.tsx` (+10) - 时间轴视图收藏按钮
 
 - **文档**
-  - `docs/superpowers/specs/media-favorites-design.md` - 收藏功能设计 spec
-  - `docs/superpowers/plans/media-favorites-implementation.md` - 收藏实现 plan
+  - `docs/specs/media-favorites-design.md` - 收藏功能设计 spec
+  - `docs/plans/media-favorites-implementation.md` - 收藏实现 plan
 
 ### Changed
 
@@ -706,7 +706,7 @@ All notable changes to this project will be documented in this file.
 
 **文档重组**
 
-- `docs/superpowers/archive/v1.8/` - 归档 v1.8 相关计划
+- `docs/archive/v1.8/` - 归档 v1.8 相关计划
 - 设计文档位置规范化
 
 ### Fixed
@@ -762,8 +762,8 @@ All notable changes to this project will be documented in this file.
   - `server/routes/media.ts` (+20/-10) - 后端重命名 API 增强
 
 - **文档**
-  - `docs/superpowers/plans/2026-04-11-parallel-music-generation.md` (149行)
-  - `docs/superpowers/specs/2026-04-11-parallel-music-generation-design.md` (109行)
+  - `docs/plans/2026-04-11-parallel-music-generation.md` (149行)
+  - `docs/specs/2026-04-11-parallel-music-generation-design.md` (109行)
 
 ### Changed
 
@@ -855,8 +855,8 @@ All notable changes to this project will be documented in this file.
 - **AI 歌词优化范围扩展** - 2.5 / 2.5+ / 2.6 模型均支持歌词优化
 
 - **文档** 
-  - `docs/superpowers/specs/2026-04-11-music-generation-enhancements-design.md` (426行)
-  - `docs/superpowers/plans/2026-04-11-music-generation-enhancements.md` (1271行)
+  - `docs/specs/2026-04-11-music-generation-enhancements-design.md` (426行)
+  - `docs/plans/2026-04-11-music-generation-enhancements.md` (1271行)
 
 ### Changed
 
@@ -974,11 +974,11 @@ All notable changes to this project will be documented in this file.
 **Documentation Reorganization**
 
 - **Archive Structure** - 文档归档结构重组
-  - `docs/superpowers/archive/v1.3/` - v1.3 相关计划归档
-  - `docs/superpowers/archive/v1.4/` - v1.4 相关计划归档
-  - `docs/superpowers/archive/v1.6/` - v1.6 相关计划归档
-  - `docs/superpowers/archive/v1.7/` - v1.7 相关计划归档
-  - `docs/superpowers/specs/` - 规格文档集中存储
+  - `docs/archive/v1.3/` - v1.3 相关计划归档
+  - `docs/archive/v1.4/` - v1.4 相关计划归档
+  - `docs/archive/v1.6/` - v1.6 相关计划归档
+  - `docs/archive/v1.7/` - v1.7 相关计划归档
+  - `docs/specs/` - 规格文档集中存储
   - 按版本归档历史计划，保持文档结构清晰
 
 **Audit Logs Enhancements**
@@ -1115,11 +1115,11 @@ This release includes **8 security enhancements**:
 ### Documentation
 
 - Documentation reorganized according to spec
-  - `docs/superpowers/archive/v1.3/` - v1.3 plans archived
-  - `docs/superpowers/archive/v1.4/` - v1.4 plans archived
-  - `docs/superpowers/archive/v1.6/` - v1.6 plans archived
-  - `docs/superpowers/archive/v1.7/` - v1.7 plans archived
-  - `docs/superpowers/specs/` - All specs in dedicated directory
+  - `docs/archive/v1.3/` - v1.3 plans archived
+  - `docs/archive/v1.4/` - v1.4 plans archived
+  - `docs/archive/v1.6/` - v1.6 plans archived
+  - `docs/archive/v1.7/` - v1.7 plans archived
+  - `docs/specs/` - All specs in dedicated directory
 
 ## [1.7.3] - 2026-04-10
 
@@ -1233,8 +1233,8 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- `docs/superpowers/specs/2026-04-09-media-management-enhancements-design.md` - Design specification
-- `docs/superpowers/plans/2026-04-09-media-management-enhancements.md` - Implementation plan
+- `docs/specs/2026-04-09-media-management-enhancements-design.md` - Design specification
+- `docs/plans/2026-04-09-media-management-enhancements.md` - Implementation plan
 
 ## [1.7.1] - 2026-04-09
 
@@ -1330,9 +1330,9 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- `docs/superpowers/plans/2026-04-09-frontend-component-split.md` - Frontend splitting plan
-- `docs/superpowers/plans/2026-04-09-split-cron-scheduler.md` - CronScheduler split plan
-- `docs/superpowers/plans/2026-04-09-queue-processor-split.md` - QueueProcessor split plan
+- `docs/plans/2026-04-09-frontend-component-split.md` - Frontend splitting plan
+- `docs/plans/2026-04-09-split-cron-scheduler.md` - CronScheduler split plan
+- `docs/plans/2026-04-09-queue-processor-split.md` - QueueProcessor split plan
 - Architecture spec updated with Phase 4-1, 6, 7 progress
 
 ### Backward Compatibility
@@ -1383,8 +1383,8 @@ This release includes **8 security enhancements**:
 ### Documentation
 
 - `docs/token-implementation.md` - Token authentication implementation guide
-- `docs/superpowers/specs/2026-04-08-token-refresh-design.md` - Design specification
-- `docs/superpowers/plans/2026-04-08-token-refresh.md` - Implementation plan
+- `docs/specs/2026-04-08-token-refresh-design.md` - Design specification
+- `docs/plans/2026-04-08-token-refresh.md` - Implementation plan
 
 ## [1.6.2] - 2026-04-06
 
@@ -1781,19 +1781,19 @@ This release includes **8 security enhancements**:
 ### Documentation
 
 **架构设计文档新增**
-- `docs/superpowers/specs/ddd-architecture-upgrade.md` (205行) - DDD 架构升级规格
+- `docs/specs/ddd-architecture-upgrade.md` (205行) - DDD 架构升级规格
   - Problem analysis (God Classes, singletons)
   - Target architecture layers (DDD 4层架构)
   - Phase breakdown (Phase 0-4)
   - Success criteria
 
-- `docs/superpowers/specs/2026-04-06-architecture-upgrade-v2-design.md` (286行) - 架构升级 v2 设计
+- `docs/specs/2026-04-06-architecture-upgrade-v2-design.md` (286行) - 架构升级 v2 设计
   - Repository Pattern details
   - DI Container implementation plan
   - Domain Events architecture
   - Migration strategy
 
-- `docs/superpowers/plans/2026-04-06-architecture-upgrade-v2.md` (198行) - 实施计划
+- `docs/plans/2026-04-06-architecture-upgrade-v2.md` (198行) - 实施计划
   - 7-phase execution plan (P1-P7)
   - Task breakdown per phase
   - Commit checkpoint planning
@@ -1866,7 +1866,7 @@ This release includes **8 security enhancements**:
   - 自动检测残留的硬编码 Tailwind 颜色（如 `bg-blue-500`）
 
 **文档：**
-- 新增设计文档 `docs/superpowers/plans/2026-04-05-theme-adaptation-refactoring.md` (1733行)
+- 新增设计文档 `docs/plans/2026-04-05-theme-adaptation-refactoring.md` (1733行)
   - Wave 1-3 迁移计划
   - Token 设计原则
   - 测试策略
@@ -2067,8 +2067,8 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- 新增 Settings 系统设计文档 `docs/superpowers/specs/2026-04-05-settings-system-design.md` (1039行)
-- 新增 Settings 系统实施计划 `docs/superpowers/plans/2026-04-05-settings-system-implementation.md` (639行)
+- 新增 Settings 系统设计文档 `docs/specs/2026-04-05-settings-system-design.md` (1039行)
+- 新增 Settings 系统实施计划 `docs/plans/2026-04-05-settings-system-implementation.md` (639行)
 
 ## [1.5.2] - 2026-04-05
 
@@ -2129,8 +2129,8 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- 新增架构升级设计文档 `docs/superpowers/specs/2026-04-05-architecture-upgrade-design.md`
-- 新增架构升级实施计划 `docs/superpowers/plans/2026-04-05-architecture-upgrade.md`
+- 新增架构升级设计文档 `docs/specs/2026-04-05-architecture-upgrade-design.md`
+- 新增架构升级实施计划 `docs/plans/2026-04-05-architecture-upgrade.md`
 
 ## [1.5.1] - 2026-04-05
 
@@ -2179,7 +2179,7 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- 新增架构重构实施计划 `docs/superpowers/plans/2026-04-05-architecture-refactoring-implementation.md`
+- 新增架构重构实施计划 `docs/plans/2026-04-05-architecture-refactoring-implementation.md`
 
 ## [1.5.0] - 2026-04-05
 
@@ -2402,9 +2402,9 @@ This release includes **8 security enhancements**:
 
 ### Documentation
 
-- `docs/superpowers/specs/system-management-optimization-design.md` - 设计文档
-- `docs/superpowers/plans/2026-04-04-system-management-optimization.md` - 实施计划
-- `docs/superpowers/plans/2026-04-04-system-management-optimization-summary.md` - 工作总结
+- `docs/specs/system-management-optimization-design.md` - 设计文档
+- `docs/plans/2026-04-04-system-management-optimization.md` - 实施计划
+- `docs/plans/2026-04-04-system-management-optimization-summary.md` - 工作总结
 - `scripts/verify-system-management.sh` - 验证脚本
 
 ## [1.3.7] - 2026-04-04
@@ -2635,11 +2635,11 @@ This release includes **8 security enhancements**:
 
 ### Removed
 - **Archived Plans** - Clean up v1.3 planning documents
-  - Removed 12 completed planning documents from `docs/superpowers/plans/`
+  - Removed 12 completed planning documents from `docs/plans/`
   - Plans archived to `docs/planning/archive/v1.3/` (v1.3.2)
 
 ### Documentation
-- Update `docs/superpowers/specs/workflow-core-concepts.md`
+- Update `docs/specs/workflow-core-concepts.md`
 
 ## [1.3.3] - 2026-04-04
 

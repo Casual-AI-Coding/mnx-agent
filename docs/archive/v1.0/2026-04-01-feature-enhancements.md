@@ -766,7 +766,7 @@
 
 ---
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-01-feature-enhancements.md`**
+**Plan complete and saved to `docs/plans/2026-04-01-feature-enhancements.md`**
 
 **Two execution options:**
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** React + TypeScript + Zustand + WebSocket + Express + SQLite
 
-**Design Spec Reference:** @docs/superpowers/specs/2026-04-04-workflow-ux-redesign-design.md
+**Design Spec Reference:** @docs/specs/2026-04-04-workflow-ux-redesign-design.md
 
 ---
 
@@ -2480,7 +2480,7 @@ Phase 4 (Marketplace) ──can parallel with 2,3 after Phase 1
 
 ## Execution Handoff
 
-**Plan complete and saved to `docs/superpowers/plans/2026-04-04-workflow-ux-redesign.md`**
+**Plan complete and saved to `docs/plans/2026-04-04-workflow-ux-redesign.md`**
 
 **Recommended execution approach:**
 

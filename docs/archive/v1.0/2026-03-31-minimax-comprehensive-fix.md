@@ -1030,7 +1030,7 @@ Closes #P0-001
 
 ## Next Steps
 
-**Plan complete and saved to `docs/superpowers/plans/2026-03-31-minimax-comprehensive-fix.md`.**
+**Plan complete and saved to `docs/plans/2026-03-31-minimax-comprehensive-fix.md`.**
 
 **Two execution options:**
 

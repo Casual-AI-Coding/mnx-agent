@@ -1214,9 +1214,9 @@ git commit -m "docs(database): document transaction requirements"
 ## Task 14: Move Plan Drafts to Separate Directory
 
 **Files:**
-- Move: `docs/superpowers/plans/sub-plans/*.md` to `docs/planning/drafts/`
-- Move: `docs/superpowers/plans/v1.1/*.md` to `docs/planning/archive/v1.1/`
-- Move: `docs/superpowers/plans/v1.2/*.md` to `docs/planning/archive/v1.2/`
+- Move: `docs/plans/sub-plans/*.md` to `docs/planning/drafts/`
+- Move: `docs/plans/v1.1/*.md` to `docs/planning/archive/v1.1/`
+- Move: `docs/plans/v1.2/*.md` to `docs/planning/archive/v1.2/`
 
 - [ ] **Step 1: Create directory structure**
 
@@ -1229,9 +1229,9 @@ mkdir -p docs/planning/archive/v1.2
 - [ ] **Step 2: Move files**
 
 ```bash
-git mv docs/superpowers/plans/sub-plans/*.md docs/planning/drafts/
-git mv docs/superpowers/plans/v1.1/*.md docs/planning/archive/v1.1/
-git mv docs/superpowers/plans/v1.2/*.md docs/planning/archive/v1.2/
+git mv docs/plans/sub-plans/*.md docs/planning/drafts/
+git mv docs/plans/v1.1/*.md docs/planning/archive/v1.1/
+git mv docs/plans/v1.2/*.md docs/planning/archive/v1.2/
 ```
 
 - [ ] **Step 3: Update README if exists**
@@ -1371,7 +1371,7 @@ gh pr create --title "fix: workflow system refactoring issues" --body "See descr
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-04-03-workflow-refactoring-fixes.md`. 
+Plan complete and saved to `docs/plans/2026-04-03-workflow-refactoring-fixes.md`. 
 
 **Two execution options:**
 

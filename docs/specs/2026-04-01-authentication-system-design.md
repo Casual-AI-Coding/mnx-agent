@@ -9,10 +9,10 @@
 MiniMax 工作台通过 nginx + 内网穿透开放到公网，需要应用层认证保护。系统基于 JWT + RBAC，支持多用户、邀请码注册、数据隔离。
 
 **详细实施计划：**
-- v1.1.1: `docs/superpowers/plans/2026-04-01-auth-v1.1.1-core.md` — 认证核心
-- v1.1.2: `docs/superpowers/plans/2026-04-01-auth-v1.1.2-permissions.md` — 权限控制
-- v1.1.3: `docs/superpowers/plans/2026-04-01-auth-v1.1.3-management.md` — 管理功能
-- v1.1.4: `docs/superpowers/plans/2026-04-01-auth-v1.1.4-compatibility.md` — 兼容性改造
+- v1.1.1: `docs/plans/2026-04-01-auth-v1.1.1-core.md` — 认证核心
+- v1.1.2: `docs/plans/2026-04-01-auth-v1.1.2-permissions.md` — 权限控制
+- v1.1.3: `docs/plans/2026-04-01-auth-v1.1.3-management.md` — 管理功能
+- v1.1.4: `docs/plans/2026-04-01-auth-v1.1.4-compatibility.md` — 兼容性改造
 
 ---
 

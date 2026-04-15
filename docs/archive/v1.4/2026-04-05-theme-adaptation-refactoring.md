@@ -59,7 +59,7 @@ Expected: All existing tests pass
 Run: `grep -r "bg-\(blue\|green\|red\|yellow\|purple\|gray\|white\|black\)-" src --include="*.tsx" | wc -l`
 Expected: Count baseline (should be ~103 matches per grep output)
 
-Save output to: `docs/superpowers/plans/baseline-color-usage.txt`
+Save output to: `docs/plans/baseline-color-usage.txt`
 
 ---
 
@@ -72,7 +72,7 @@ Save output to: `docs/superpowers/plans/baseline-color-usage.txt`
 ### Task 1.1: Design Status Color Palette for Dark Themes
 
 **Files:**
-- Create: `docs/superpowers/plans/status-colors-design.md` (reference doc)
+- Create: `docs/plans/status-colors-design.md` (reference doc)
 
 **Dependencies:** None
 
@@ -89,7 +89,7 @@ For dark themes, status colors need sufficient contrast against dark backgrounds
 
 - [ ] **Step 1: Document color values for all dark themes**
 
-Create `docs/superpowers/plans/status-colors-design.md`:
+Create `docs/plans/status-colors-design.md`:
 
 ```markdown
 # Status Colors Design
@@ -1011,13 +1011,13 @@ git commit -m "test(themes): add semantic token unit tests
 ### Task 3.1: Create Migration Guide Document
 
 **Files:**
-- Create: `docs/superpowers/plans/theme-migration-guide.md`
+- Create: `docs/plans/theme-migration-guide.md`
 
 **Dependencies:** Wave 2 complete
 
 - [ ] **Step 1: Create migration patterns doc**
 
-Create `docs/superpowers/plans/theme-migration-guide.md`:
+Create `docs/plans/theme-migration-guide.md`:
 
 ```markdown
 # Theme Migration Guide
@@ -1082,7 +1082,7 @@ import { roles } from '@/themes/tokens'
 - [ ] **Step 2: Commit guide**
 
 ```bash
-git add docs/superpowers/plans/theme-migration-guide.md
+git add docs/plans/theme-migration-guide.md
 git commit -m "docs(themes): add component migration patterns guide"
 ```
 
@@ -1584,7 +1584,7 @@ git commit -m "chore(themes): add hardcoded color detection script
 ### Task 5.3: Final Verification and Documentation
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-04-05-theme-adaptation-refactoring.md` (this file)
+- Modify: `docs/plans/2026-04-05-theme-adaptation-refactoring.md` (this file)
 
 **Dependencies:** Task 5.2
 
@@ -1630,7 +1630,7 @@ Update this plan file header:
 - [ ] **Step 5: Final commit**
 
 ```bash
-git add docs/superpowers/plans/2026-04-05-theme-adaptation-refactoring.md
+git add docs/plans/2026-04-05-theme-adaptation-refactoring.md
 git commit -m "docs(themes): mark theme refactoring plan as complete
 
 - All waves completed

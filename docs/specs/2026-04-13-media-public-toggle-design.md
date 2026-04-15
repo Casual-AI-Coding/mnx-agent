@@ -489,7 +489,7 @@ interface MediaRecord {
 
 ## 参考
 
-- 现有收藏功能: `docs/superpowers/specs/2026-04-11-media-favorites-design.md`
+- 现有收藏功能: `docs/specs/2026-04-11-media-favorites-design.md`
 - 数据隔离模式: `server/middleware/data-isolation.ts`
 - 媒体查询模式: `server/routes/media.ts`
 - FavoriteButton 组件: `src/components/media/FavoriteButton.tsx`

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Express, cookie-parser, jsonwebtoken, React 18, Zustand, Axios, TypeScript
 
-**Reference Spec:** @docs/superpowers/specs/2026-04-08-token-refresh-design.md
+**Reference Spec:** @docs/specs/2026-04-08-token-refresh-design.md
 
 **Current State:**
 - Access tokens (15m expiry) and refresh tokens (7d expiry) are generated on login

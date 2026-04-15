@@ -4,7 +4,7 @@
 > **Date**: 2026-04-05  
 > **Status**: Planning  
 > **Type**: Implementation Plan (plans/)  
-> **Depends on**: @docs/superpowers/specs/2026-04-05-settings-system-design.md
+> **Depends on**: @docs/specs/2026-04-05-settings-system-design.md
 
 ---
 
