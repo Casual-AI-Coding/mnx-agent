@@ -208,12 +208,14 @@ export default function CapacityMonitor() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
+                  className="group"
                 >
                   <Card className={cn(
-                    'h-full',
+                    'h-full relative overflow-hidden',
                     isZeroQuota && 'opacity-40 backdrop-blur-[2px] bg-card/20 border-dashed saturate-50'
                   )}>
-                    <CardContent className="p-4">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+                    <CardContent className="p-4 relative">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2.5">
                           <div className={cn('p-1.5 rounded-lg', services.text.bg)}>
