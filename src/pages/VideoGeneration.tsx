@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera } from 'lucide-react'
+import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera, Lightbulb } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -15,6 +15,7 @@ import { useSettingsStore } from '@/settings/store'
 import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } from '@/types'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
+import { motion } from 'framer-motion'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -188,126 +189,146 @@ export default function VideoGeneration() {
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                {t('videoGeneration.promptTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={t('videoGeneration.placeholder')}
-                className="min-h-[200px] resize-none"
-              />
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t('videoGeneration.modelLabel')}</label>
-                <Select value={model} onValueChange={(v) => setModel(v as VideoModel)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VIDEO_MODELS.map(m => (
-                      <SelectItem key={m.id} value={m.id}>
-                        <div className="flex flex-col">
-                          <span>{m.name}</span>
-                          <span className="text-xs text-muted-foreground">{m.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Sparkles className="w-5 h-5 text-accent-foreground" />
+                <span className="text-sm font-medium text-foreground">{t('videoGeneration.promptTitle')}</span>
               </div>
+              <div className="p-4 space-y-4">
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={t('videoGeneration.placeholder')}
+                  className="min-h-[200px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
+                />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  镜头控制
-                </label>
-                <Select value={cameraCommand} onValueChange={(v) => setCameraCommand(v as CameraCommand)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CAMERA_COMMANDS.map(cmd => (
-                      <SelectItem key={cmd.id} value={cmd.id}>
-                        <div className="flex flex-col">
-                          <span>{cmd.name}</span>
-                          <span className="text-xs text-muted-foreground">{cmd.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {error && (
-                <div className="p-4 border border-destructive rounded-lg text-destructive">
-                  {error}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">{t('videoGeneration.modelLabel')}</label>
+                  <Select value={model} onValueChange={(v) => setModel(v as VideoModel)}>
+                    <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {VIDEO_MODELS.map(m => (
+                        <SelectItem key={m.id} value={m.id} className="text-foreground focus:bg-secondary">
+                          <div className="flex flex-col">
+                            <span>{m.name}</span>
+                            <span className="text-xs text-muted-foreground">{m.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
 
-              <Button
-                onClick={handleGenerate}
-                disabled={!prompt.trim() || isGenerating}
-                className="w-full"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t('videoGeneration.createTask')}
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    {t('videoGeneration.generateVideo')}
-                  </>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2 text-foreground">
+                    <Camera className="w-4 h-4" />
+                    镜头控制
+                  </label>
+                  <Select value={cameraCommand} onValueChange={(v) => setCameraCommand(v as CameraCommand)}>
+                    <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {CAMERA_COMMANDS.map(cmd => (
+                        <SelectItem key={cmd.id} value={cmd.id} className="text-foreground focus:bg-secondary">
+                          <div className="flex flex-col">
+                            <span>{cmd.name}</span>
+                            <span className="text-xs text-muted-foreground">{cmd.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {error && (
+                  <div className="p-4 border border-destructive rounded-lg text-destructive bg-destructive/10">
+                    {error}
+                  </div>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('videoGeneration.usageTipsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• {t('videoGeneration.tip1')}</li>
-                <li>• {t('videoGeneration.tip2')}</li>
-                <li>• {t('videoGeneration.tip3')}</li>
-                <li>• {t('videoGeneration.tip4')}</li>
-              </ul>
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!prompt.trim() || isGenerating}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('videoGeneration.createTask')}
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      {t('videoGeneration.generateVideo')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/10 via-primary/10 to-secondary/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Lightbulb className="w-5 h-5 text-secondary-foreground" />
+                <span className="text-sm font-medium text-foreground">{t('videoGeneration.usageTipsTitle')}</span>
+              </div>
+              <div className="p-4">
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• {t('videoGeneration.tip1')}</li>
+                  <li>• {t('videoGeneration.tip2')}</li>
+                  <li>• {t('videoGeneration.tip3')}</li>
+                  <li>• {t('videoGeneration.tip4')}</li>
+                </ul>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Film className="w-5 h-5" />
-                {t('videoGeneration.taskListTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{t('videoGeneration.noTasksTitle')}</p>
-                  <p className="text-sm">{t('videoGeneration.tasksAppearHere')}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {tasks.map((task) => (
-                    <div
-                      key={task.taskId}
-                      className="border rounded-lg p-4 space-y-3"
-                    >
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Film className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-foreground">{t('videoGeneration.taskListTitle')}</span>
+              </div>
+              <div className="p-4">
+                {tasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>{t('videoGeneration.noTasksTitle')}</p>
+                    <p className="text-sm">{t('videoGeneration.tasksAppearHere')}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tasks.map((task) => (
+                      <div
+                        key={task.taskId}
+                        className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4 space-y-3"
+                      >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           {getStatusIcon(task.status)}
@@ -362,12 +383,13 @@ export default function VideoGeneration() {
                       <div className="text-xs text-muted-foreground">
                         {t('videoGeneration.createdAt', { time: new Date(task.createdAt).toLocaleString() })}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
