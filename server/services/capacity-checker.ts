@@ -119,7 +119,7 @@ export class CapacityChecker {
     await this.saveCapacityRecord('all', balance.totalBalance, balance.totalBalance)
 
     const now = new Date()
-    const resetAt = new Date(now.getTime() + 60000).toISOString()
+    const resetAt = toLocalISODateString(new Date(now.getTime() + 60000))
 
     for (const [serviceType, config] of Object.entries(RATE_LIMITS)) {
       await this.saveCapacityRecord(serviceType, config.rpm, config.rpm, resetAt)

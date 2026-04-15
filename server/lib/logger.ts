@@ -1,6 +1,7 @@
 import pino from 'pino'
 import path from 'path'
 import fs from 'fs'
+import { toLocalISODateString } from './date-utils.js'
 
 type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 
@@ -30,7 +31,7 @@ function createFileTransport(logDir: string) {
   return pino.transport({
     target: 'pino/file',
     options: {
-      destination: path.join(logDir, `app-${new Date().toISOString().split('T')[0]}.log`),
+      destination: path.join(logDir, `app-${toLocalISODateString().split('T')[0]}.log`),
     },
   })
 }

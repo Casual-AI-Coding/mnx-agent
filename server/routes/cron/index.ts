@@ -3,6 +3,7 @@ import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { getDatabaseService } from '../../service-registration.js'
 import { getCronSchedulerService } from '../../service-registration.js'
+import { toLocalISODateString } from '../../lib/date-utils.js'
 import jobsRouter from './jobs'
 import queueRouter from './queue'
 import logsRouter from './logs'
@@ -19,7 +20,7 @@ router.get('/health', asyncHandler(async (_req, res) => {
 
     const health = {
       status: 'healthy',
-      timestamp: new Date().toISOString(),
+      timestamp: toLocalISODateString(),
       scheduler: {
         jobsScheduled: scheduler.getJobCount(),
         jobsRunning: scheduler.getRunningJobCount(),

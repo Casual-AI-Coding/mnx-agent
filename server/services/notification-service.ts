@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import logger from '../lib/logger.js'
+import { toLocalISODateString } from '../lib/date-utils.js'
 import type { DatabaseService } from '../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../database/types.js'
 import { WEBHOOK_RATE_LIMITS } from '../config/rate-limits.js'
@@ -45,7 +46,7 @@ export class NotificationService {
 
     const payload: WebhookPayload = {
       event,
-      timestamp: new Date().toISOString(),
+      timestamp: toLocalISODateString(),
       job_id: jobId,
       data
     }
@@ -149,7 +150,7 @@ export class NotificationService {
 
       const testPayload: WebhookPayload = {
         event: 'test',
-        timestamp: new Date().toISOString(),
+        timestamp: toLocalISODateString(),
         job_id: null,
         data: { message: 'This is a test webhook delivery' }
       }

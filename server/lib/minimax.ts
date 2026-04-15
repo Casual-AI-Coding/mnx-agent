@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { retryWithBackoff } from './retry.js'
+import { toLocalISODateString } from './date-utils.js'
 
 const API_HOSTS = {
   domestic: 'https://api.minimaxi.com',
@@ -162,7 +163,7 @@ export class MiniMaxClient {
   async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
     console.log('[MiniMax] Music Generation Request:', {
       body,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     })
     
     return retryWithBackoff(async () => {

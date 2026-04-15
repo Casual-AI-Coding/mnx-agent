@@ -18,6 +18,7 @@ import {
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
 import { formatDuration } from './utils'
 import { withEntityNotFound } from '../../utils/index.js'
+import { toLocalISODateString } from '../../lib/date-utils.js'
 
 const router = Router()
 
@@ -171,7 +172,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   try {
     const interval = CronExpressionParser.parse(job.cron_expression, { tz: job.timezone || scheduler.getTimezone() })
     for (let i = 0; i < 5; i++) {
-      nextRuns.push(interval.next().toDate().toISOString())
+      nextRuns.push(toLocalISODateString(interval.next().toDate()))
     }
   } catch {
     validation.valid = false

@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import type { Server } from 'http'
 import { UserService } from './user-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface'
+import { toLocalISODateString } from '../lib/date-utils.js'
 
 export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
@@ -19,7 +20,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('job_event', {
       type: 'job_created',
       payload: job,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -27,7 +28,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('job_event', {
       type: 'job_updated',
       payload: job,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -35,7 +36,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('job_event', {
       type: 'job_deleted',
       payload: { id: jobId },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -43,7 +44,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('job_event', {
       type: 'job_toggled',
       payload: job,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -51,7 +52,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('job_event', {
       type: 'job_executed',
       payload: { jobId, ...result },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -59,7 +60,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('task_event', {
       type: 'task_created',
       payload: task,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -67,7 +68,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('task_event', {
       type: 'task_updated',
       payload: task,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -75,7 +76,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('task_event', {
       type: 'task_completed',
       payload: task,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -83,7 +84,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('task_event', {
       type: 'task_failed',
       payload: task,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -91,7 +92,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('task_event', {
       type: 'task_moved_to_dlq',
       payload: { task, error },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -99,7 +100,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('log_event', {
       type: 'log_created',
       payload: log,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -107,7 +108,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('log_event', {
       type: 'log_updated',
       payload: log,
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -115,7 +116,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_event', {
       type: 'workflow_test_started',
       payload: { workflowId, executionId },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -123,7 +124,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_event', {
       type: 'workflow_test_completed',
       payload: { workflowId, executionId, result, error },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -131,7 +132,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_event', {
       type: 'workflow_node_output',
       payload: { nodeId, output, executionId },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -139,7 +140,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_node_event', {
       type: 'workflow_node_start',
       payload: { nodeId, executionId, workflowId },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -147,7 +148,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_node_event', {
       type: 'workflow_node_complete',
       payload: { nodeId, executionId, result, durationMs },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 
@@ -155,7 +156,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     this.emit('workflow_node_event', {
       type: 'workflow_node_error',
       payload: { nodeId, executionId, error },
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     } as CronEvent)
   }
 }
@@ -240,7 +241,7 @@ export function initCronWebSocket(server: Server): WebSocketServer {
 
     ws.send(JSON.stringify({
       type: 'connected',
-      timestamp: new Date().toISOString()
+      timestamp: toLocalISODateString()
     }))
   })
 
