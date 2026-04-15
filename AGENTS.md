@@ -38,116 +38,116 @@
 MiniMax AI API 工具集，提供文本、语音、图像、音乐、视频生成能力，并内置 cron 定时任务调度系统。
 
 **技术栈：**
-- 后端: Express + TypeScript + better-sqlite3 + node-cron + WebSocket
-- 前端: React 18 + TypeScript + Tailwind CSS + Zustand + React Router
+- 后端: Express + TypeScript + PostgreSQL (pg) + node-cron + WebSocket + pino
+- 前端: React 18 + TypeScript + Tailwind CSS + Zustand + React Router + i18next
 
 ## 架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-├─────────────────────────────────────────────────────────────┤
-│  Pages                    │  Stores (Zustand)                │
-│  - TextGeneration         │  - app (全局状态)                 │
-│  - VoiceSync/Async        │  - cronJobs, taskQueue          │
-│  - ImageGeneration        │  - executionLogs, capacity      │
-│  - VideoGeneration        │  - workflow                      │
-│  - MediaManagement        │                                  │
-│  - CronManagement         │                                  │
-│  - WorkflowBuilder        │                                  │
-├─────────────────────────────────────────────────────────────┤
-│  API Layer (src/lib/api/)                                    │
-│  - client.ts (axios instance with interceptors)              │
-│  - text.ts, voice.ts, image.ts, video.ts, music.ts          │
-│  - cron.ts, media.ts                                         │
-└───────────────────────────┬─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      Frontend (React)                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Pages                          │  Stores (Zustand)              │
+│  - TextGeneration               │  - app (全局状态)               │
+│  - VoiceSync/Async              │  - cronJobs, taskQueue         │
+│  - ImageGeneration              │  - executionLogs, capacity     │
+│  - VideoGeneration              │  - workflow                    │
+│  - WorkflowBuilder              │  - settings                    │
+├─────────────────────────────────┤                                │
+│  API Layer (src/lib/api/)       │                                │
+│  - client.ts (axios instance)   │                                │
+│  - text, voice, image, video,   │                                │
+│    music, cron, media, stats    │                                │
+└───────────────────────────┬─────┴────────────────────────────────┘
                             │ HTTP/WebSocket
-┌───────────────────────────▼─────────────────────────────────┐
-│                     Backend (Express)                        │
-├─────────────────────────────────────────────────────────────┤
-│  Routes (server/routes/)                                     │
-│  - text, voice, image, music, video, video-agent            │
-│  - voice-mgmt, files, usage, capacity                        │
-│  - cron (jobs, queue, logs, webhooks, templates)            │
-│  - media (CRUD, upload, download)                            │
-├─────────────────────────────────────────────────────────────┤
-│  Services (server/services/)                                 │
-│  - CronScheduler: node-cron 定时调度                          │
-│  - WorkflowEngine: DAG 工作流执行                              │
-│  - TaskExecutor: MiniMax API 调用                             │
-│  - QueueProcessor: 队列处理 + 重试                             │
-│  - CapacityChecker: API 配额检查                              │
-│  - WebSocketService: 实时推送                                 │
-│  - NotificationService: Webhook 通知                          │
-├─────────────────────────────────────────────────────────────┤
-│  Database (server/database/)                                 │
-│  - schema.ts: 表结构定义                                       │
-│  - migrations.ts: 迁移脚本                                     │
-│  - service.ts: CRUD 方法                                      │
-│  - types.ts: TypeScript 类型                                  │
-├─────────────────────────────────────────────────────────────┤
-│  External APIs                                               │
-│  - MiniMaxClient (server/lib/minimax.ts)                     │
-│  - 国内/国际区域切换                                            │
-│  - Mock 客户端 (无 API Key 时)                                  │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────▼─────────────────────────────────────┐
+│                     Backend (Express)                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Routes (server/routes/)                                         │
+│  - text, voice, image, music, video, video-agent                │
+│  - voice-mgmt, files, usage, capacity, stats                    │
+│  - cron (jobs, queue, logs, webhooks, templates)                │
+│  - media (CRUD, upload, download)                                │
+│  - auth, users, audit, invitation-codes, system-config          │
+├─────────────────────────────────────────────────────────────────┤
+│  Domain Layer (server/domain/)                                   │
+│  - events/event-bus.ts: 事件总线                                  │
+│  - Domain event publishing & handling                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Services (server/services/)                                     │
+│  - domain/*.service.ts: 业务逻辑层                                │
+│    (job, task, workflow, media, capacity, webhook)              │
+│  - workflow/engine.ts: DAG 工作流执行                             │
+│  - cron-scheduler.ts: node-cron 定时调度                         │
+│  - task-executor.ts: MiniMax API 调用                            │
+│  - queue-processor.ts: 队列处理 + 重试                            │
+│  - websocket-service.ts: 实时推送                                 │
+│  - notification-service.ts: Webhook 通知                         │
+│  - service-node-registry.ts: 服务节点注册                         │
+│  - settings-service.ts: 用户设置管理                              │
+│  - concurrency-manager.ts: 并发控制                               │
+│  - dlq-auto-retry-scheduler.ts: 死信队列自动重试                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Repositories (server/repositories/)                             │
+│  - base-repository.ts: 基础 CRUD                                  │
+│  - job, task, media, workflow, webhook, capacity                │
+│  - user, settings, log, prompt-template, deadletter             │
+├─────────────────────────────────────────────────────────────────┤
+│  Database (server/database/)                                     │
+│  - schema-pg.ts: PostgreSQL 表结构                                │
+│  - migrations-async.ts: 迁移脚本                                   │
+│  - service-async.ts: 数据库服务                                    │
+│  - types.ts: TypeScript 类型                                      │
+│  - connection.ts: 连接管理                                        │
+├─────────────────────────────────────────────────────────────────┤
+│  External APIs                                                   │
+│  - MiniMaxClient (server/lib/minimax.ts)                         │
+│  - 国内/国际区域切换                                               │
+│  - Mock 客户端 (无 API Key 时)                                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 核心模块
 
-### 1. CronScheduler (`server/services/cron-scheduler.ts`)
+### 1. WorkflowEngine (`server/services/workflow/engine.ts`)
 
-```typescript
-class CronScheduler {
-  scheduleJob(job: CronJob): void      // 调度任务
-  unscheduleJob(jobId: string): void   // 取消调度
-  stopAll(): void                       // 停止所有
-}
-```
-
-**并发控制：** 默认最多 5 个任务同时运行
-
-### 2. WorkflowEngine (`server/services/workflow-engine.ts`)
-
-```typescript
-class WorkflowEngine {
-  executeWorkflow(workflow: Workflow): Promise<ExecutionResult>
-  topologicalSort(nodes: Node[], edges: Edge[]): Node[]
-  resolveTemplate(template: string, context: Context): unknown
-}
-```
-
-**节点类型：**
+DAG 工作流执行引擎，支持多种节点类型：
 - `action` - API 调用 (text/voice/image/music/video)
 - `condition` - 条件判断
 - `transform` - 数据转换
 - `loop` - 循环执行
 - `queue` - 队列处理
+- `delay` - 延迟执行
+- `error-boundary` - 错误边界
 
-### 3. TaskExecutor (`server/services/task-executor.ts`)
+### 2. CronScheduler (`server/services/cron-scheduler.ts`)
 
-```typescript
-class TaskExecutor {
-  executeSync(task: Task): Promise<Result>   // 同步执行
-  executeAsync(task: Task): Promise<Result>  // 异步轮询
-}
-```
+定时任务调度器，基于 node-cron：
+- 支持标准 cron 表达式
+- 并发控制：最多 5 个任务同时运行
+- Misfire 处理策略
 
-**超时配置：**
-- 同步任务: 5 分钟
-- 异步任务: 10 分钟
+### 3. Domain Services (`server/services/domain/*.service.ts`)
 
-### 4. QueueProcessor (`server/services/queue-processor.ts`)
+业务逻辑层，遵循 DDD 原则：
+- `job.service.ts` - 定时任务管理
+- `task.service.ts` - 任务执行
+- `workflow.service.ts` - 工作流编排
+- `media.service.ts` - 媒体资源管理
+- `capacity.service.ts` - API 配额管理
+- `webhook.service.ts` - Webhook 通知
 
-```typescript
-class QueueProcessor {
-  processQueue(): Promise<void>
-  calculateBackoffDelay(retryCount: number): number
-  moveToDeadLetter(task: Task): void
-}
-```
+### 4. TaskExecutor (`server/services/task-executor.ts`)
 
-**重试策略：** 指数退避 (1s → 2s → 4s → ...)，最大 5 分钟
+MiniMax API 调用封装：
+- `executeSync` - 同步执行，超时 5 分钟
+- `executeAsync` - 异步轮询，超时 10 分钟
+
+### 5. QueueProcessor (`server/services/queue-processor.ts`)
+
+任务队列处理：
+- 指数退避重试 (1s → 2s → 4s → ...)，最大 5 分钟
+- 死信队列处理
 
 ## 认证系统
 
@@ -287,25 +287,48 @@ export const useAppStore = create<AppState>()(
 
 ### 表结构
 
+**核心业务表：**
 | 表名 | 用途 |
 |------|------|
+| `users` | 用户账户 |
 | `cron_jobs` | 定时任务定义 |
 | `task_queue` | 任务队列 |
 | `execution_logs` | 执行日志 |
 | `execution_log_details` | 详细执行记录 |
+| `workflow_templates` | 工作流模板 |
+| `workflow_versions` | 工作流版本 |
+| `media_records` | 媒体文件记录 |
+
+**辅助管理表：**
+| 表名 | 用途 |
+|------|------|
 | `job_tags` | 任务标签 |
 | `job_dependencies` | 任务依赖 |
 | `webhook_configs` | Webhook 配置 |
 | `webhook_deliveries` | Webhook 投递记录 |
 | `dead_letter_queue` | 死信队列 |
 | `capacity_tracking` | API 容量追踪 |
-| `workflow_templates` | 工作流模板 |
-| `media_records` | 媒体文件记录 |
+| `prompt_templates` | Prompt 模板 |
+| `audit_logs` | 审计日志 |
+| `system_config` | 系统配置 |
+| `execution_states` | 执行状态快照 |
+
+**权限管理表：**
+| 表名 | 用途 |
+|------|------|
+| `service_node_permissions` | 服务节点权限 |
+| `workflow_permissions` | 工作流权限 |
+| `invitation_codes` | 邀请码 |
+
+**系统表：**
+| 表名 | 用途 |
+|------|------|
+| `_migrations` | 迁移记录 |
 
 ### 迁移
 
 ```typescript
-// server/database/migrations.ts
+// server/database/migrations-async.ts
 const MIGRATIONS: Migration[] = [
   { id: 1, name: 'migration_001_initial_schema', sql: SCHEMA_SQL },
   { id: 2, name: 'migration_002_add_indexes', sql: '...' },
@@ -484,7 +507,7 @@ psql -h localhost -U mnx_agent_server -d mnx_agent -c "\dt"
 
 检查 mock 是否正确：
 ```typescript
-jest.mock('@/lib/api/client', () => ({
-  apiClient: { get: jest.fn(), post: jest.fn() }
+vi.mock('@/lib/api/client', () => ({
+  internalAxios: { get: vi.fn(), post: vi.fn() }
 }))
 ```
