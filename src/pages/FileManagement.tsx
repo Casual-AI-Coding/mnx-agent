@@ -255,8 +255,10 @@ export default function FileManagement() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
+      <div className="relative group">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+        <Card className="relative overflow-hidden">
+          <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">文件列表</CardTitle>
             <div className="relative">
@@ -370,6 +372,7 @@ export default function FileManagement() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
@@ -389,9 +392,11 @@ function StatCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      className="group"
     >
-      <Card>
-        <CardContent className="p-4">
+      <Card className="relative overflow-hidden">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+        <CardContent className="p-4 relative">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-lg bg-muted/50', color)}>
               <Icon className="w-4 h-4" />

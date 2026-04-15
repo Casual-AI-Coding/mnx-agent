@@ -128,8 +128,9 @@ export default function VoiceManagement() {
     const isFavorite = favoriteVoices.includes(voice.id)
 
     return (
-      <Card className="group">
-        <CardContent className="p-4">
+      <Card className="group relative overflow-hidden">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+        <CardContent className="p-4 relative">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className={cn(
