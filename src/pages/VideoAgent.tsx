@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { Video, Download, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Lightbulb, ChevronRight, Waves, Cpu, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -246,24 +247,32 @@ export default function VideoAgent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {!selectedTemplate ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5" />
-                  选择模板
-                </CardTitle>
-                <CardDescription>
-                  选择一个模板开始创建视频
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative group"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lightbulb className="w-5 h-5" />
+                      选择模板
+                    </CardTitle>
+                    <CardDescription>
+                      选择一个模板开始创建视频
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {VIDEO_AGENT_TEMPLATES.map((template) => {
                     const IconComponent = ICON_MAP[template.icon]
                     return (
                       <div
                         key={template.id}
-                        className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-accent/50 transition-all group"
+                        className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-accent/50 transition-all hover:shadow-lg hover:shadow-primary/25 group"
                         onClick={() => handleTemplateSelect(template)}
                       >
                         <div className={`aspect-video bg-gradient-to-br ${template.gradient} rounded-lg mb-3 flex items-center justify-center group-hover:opacity-90 transition-opacity`}>
@@ -286,73 +295,91 @@ export default function VideoAgent() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>
-                      ← 返回
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative group"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>
+                          ← 返回
+                        </Button>
+                        <CardTitle>{selectedTemplate.name}</CardTitle>
+                      </div>
+                      <Badge>{selectedTemplate.description}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {TEMPLATE_FORMS[selectedTemplate.id]?.map((field) => (
+                      <div key={field.label} className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">{field.label}</label>
+                        <Input
+                          value={inputs[field.label] || ''}
+                          onChange={(e) => handleInputChange(field.label, e.target.value)}
+                          placeholder={field.placeholder}
+                        />
+                      </div>
+                    ))}
+
+                    <div className="p-4 bg-muted rounded-lg">
+                      <label className="text-sm font-medium mb-2 block">预览提示词</label>
+                      <p className="text-sm text-muted-foreground">{generatePrompt() || '填写上方表单生成提示词'}</p>
+                    </div>
+
+                    {error && (
+                      <div className="p-4 border border-destructive rounded-lg text-destructive">
+                        {error}
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={!isFormValid() || isGenerating}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          创建任务...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4 mr-2" />
+                          生成视频
+                        </>
+                      )}
                     </Button>
-                    <CardTitle>{selectedTemplate.name}</CardTitle>
-                  </div>
-                  <Badge>{selectedTemplate.description}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {TEMPLATE_FORMS[selectedTemplate.id]?.map((field) => (
-                  <div key={field.label} className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">{field.label}</label>
-                    <Input
-                      value={inputs[field.label] || ''}
-                      onChange={(e) => handleInputChange(field.label, e.target.value)}
-                      placeholder={field.placeholder}
-                    />
-                  </div>
-                ))}
-
-                <div className="p-4 bg-muted rounded-lg">
-                  <label className="text-sm font-medium mb-2 block">预览提示词</label>
-                  <p className="text-sm text-muted-foreground">{generatePrompt() || '填写上方表单生成提示词'}</p>
-                </div>
-
-                {error && (
-                  <div className="p-4 border border-destructive rounded-lg text-destructive">
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!isFormValid() || isGenerating}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      创建任务...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4 mr-2" />
-                      生成视频
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
           )}
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Film className="w-5 h-5" />
-                任务列表
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Film className="w-5 h-5" />
+                    任务列表
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
               {tasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -364,7 +391,7 @@ export default function VideoAgent() {
                   {tasks.map((task) => (
                     <div
                       key={task.taskId}
-                      className="border rounded-lg p-4 space-y-3"
+                      className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4 space-y-3"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
@@ -429,8 +456,109 @@ export default function VideoAgent() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Film className="w-5 h-5" />
+                    任务列表
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {tasks.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>暂无任务</p>
+                      <p className="text-sm">创建任务后将显示在这里</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {tasks.map((task) => (
+                        <div
+                          key={task.taskId}
+                          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4 space-y-3"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(task.status)}
+                              <span className="font-medium text-sm">{task.taskId.slice(0, 8)}...</span>
+                              {getStatusBadge(task.status)}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeTask(task.taskId)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+
+                          <div className="text-sm">
+                            <Badge variant="outline" className="mb-1">
+                              {VIDEO_AGENT_TEMPLATES.find(t => t.id === task.templateId)?.name}
+                            </Badge>
+                            <p className="text-muted-foreground">
+                              {Object.entries(task.inputs).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                            </p>
+                          </div>
+
+                          {task.status === 'completed' && task.videoUrl && (
+                            <div className="space-y-3">
+                              <video
+                                src={task.videoUrl}
+                                controls
+                                className="w-full rounded-lg border"
+                              />
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                  时长: {formatDuration(task.duration)}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const a = document.createElement('a')
+                                    a.href = task.videoUrl!
+                                    a.download = `video-${task.taskId}.mp4`
+                                    a.click()
+                                  }}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  下载
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {task.error && (
+                            <p className="text-sm text-destructive">{task.error}</p>
+                          )}
+
+                          <div className="text-xs text-muted-foreground">
+                            创建时间: {new Date(task.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
