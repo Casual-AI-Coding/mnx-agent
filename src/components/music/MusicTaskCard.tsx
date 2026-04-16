@@ -16,11 +16,13 @@ import {
   Heart,
   Globe,
   Trash2,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { Badge } from '@/components/ui/Badge'
 import { toastSuccess, toastError } from '@/lib/toast'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 export type MusicTaskStatus = 'idle' | 'generating' | 'completed' | 'failed'
 
@@ -183,6 +185,7 @@ function AudioPlayer({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isFavoriting, setIsFavoriting] = useState(false)
   const [isTogglingPublic, setIsTogglingPublic] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
@@ -271,12 +274,16 @@ function AudioPlayer({
   }
 
   const handleDeleteClick = useCallback(async () => {
+    setShowDeleteConfirm(true)
+  }, [])
+
+  const handleConfirmDelete = useCallback(async () => {
     if (!onDelete) return
-    if (!window.confirm('确定要删除这首音乐吗？删除后无法恢复。')) return
     setIsDeleting(true)
     try {
       await onDelete()
       toastSuccess('音乐已删除')
+      setShowDeleteConfirm(false)
     } catch (err) {
       toastError('删除失败', err instanceof Error ? err.message : '请稍后重试')
     } finally {
@@ -421,10 +428,10 @@ function AudioPlayer({
                     whileHover={{ scale: isFavoriting ? 1 : 1.1 }}
                     whileTap={{ scale: isFavoriting ? 1 : 0.9 }}
                     className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
+                      'w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200',
                       isFavorite 
-                        ? 'bg-error/20 text-error border border-error/30' 
-                        : 'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10',
+                        ? 'bg-yellow-500 text-white' 
+                        : 'bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70',
                       isFavoriting && 'opacity-50 cursor-wait'
                     )}
                     title={isFavorite ? '取消收藏' : '收藏'}
@@ -440,15 +447,13 @@ function AudioPlayer({
                     whileHover={{ scale: isTogglingPublic ? 1 : 1.1 }}
                     whileTap={{ scale: isTogglingPublic ? 1 : 0.9 }}
                     className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
-                      isPublic 
-                        ? 'bg-success/20 text-success border border-success/30' 
-                        : 'bg-white/5 text-muted-foreground hover:text-success hover:bg-success/10 border border-white/10',
+                      'w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 bg-card/50 hover:bg-card/70',
+                      isPublic ? 'text-green-500' : 'text-orange-500',
                       isTogglingPublic && 'opacity-50 cursor-wait'
                     )}
                     title={isPublic ? '取消公开' : '公开'}
                   >
-                    <Globe className="w-4 h-4" />
+                    {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                   </motion.button>
                 )}
                 
@@ -459,9 +464,8 @@ function AudioPlayer({
                     whileHover={{ scale: isDeleting ? 1 : 1.1 }}
                     whileTap={{ scale: isDeleting ? 1 : 0.9 }}
                     className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center',
-                      'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10',
-                      'transition-all duration-200',
+                      'w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200',
+                      'bg-card/50 hover:bg-card/70 text-error hover:text-error/80',
                       isDeleting && 'opacity-50 cursor-wait'
                     )}
                     title="删除"
@@ -476,9 +480,8 @@ function AudioPlayer({
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     className={cn(
-                      'w-9 h-9 rounded-lg flex items-center justify-center',
-                      'bg-white/5 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-white/10',
-                      'transition-all duration-200'
+                      'w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200',
+                      'bg-card/50 hover:bg-card/70 text-primary hover:text-primary/80'
                     )}
                     title="下载"
                   >
@@ -507,6 +510,18 @@ function AudioPlayer({
           </div>
         </div>
       </div>
+      
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="删除音乐"
+        description="确定要删除这首音乐吗？删除后无法恢复。"
+        confirmText="删除"
+        cancelText="取消"
+        variant="destructive"
+        loading={isDeleting}
+      />
     </div>
   )
 }

@@ -780,6 +780,68 @@ export default function MusicGeneration() {
                         <Settings2 className="w-4 h-4 mr-1" />
                         高级设置
                       </Button>
+                      {advancedOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-[280px] bg-card/95 backdrop-blur-sm border border-border/60 rounded-xl shadow-xl z-50 animate-in fade-in-0 zoom-in-95">
+                          <div className="p-2.5 grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">采样率</label>
+                              <Select
+                                value={sampleRate.toString()}
+                                onValueChange={(v) => updateForm('sampleRate', Number(v) as 16000 | 24000 | 32000 | 44100)}
+                              >
+                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="16000" className="text-xs">16000 Hz</SelectItem>
+                                  <SelectItem value="24000" className="text-xs">24000 Hz</SelectItem>
+                                  <SelectItem value="32000" className="text-xs">32000 Hz</SelectItem>
+                                  <SelectItem value="44100" className="text-xs">44100 Hz (推荐)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">比特率</label>
+                              <Select
+                                value={bitrate.toString()}
+                                onValueChange={(v) => updateForm('bitrate', Number(v) as 32000 | 64000 | 128000 | 256000)}
+                              >
+                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="32000" className="text-xs">32 kbps</SelectItem>
+                                  <SelectItem value="64000" className="text-xs">64 kbps</SelectItem>
+                                  <SelectItem value="128000" className="text-xs">128 kbps</SelectItem>
+                                  <SelectItem value="256000" className="text-xs">256 kbps (推荐)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">格式</label>
+                              <Select value={format} onValueChange={(v) => updateForm('format', v as 'mp3' | 'wav' | 'flac')}>
+                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="mp3" className="text-xs">MP3</SelectItem>
+                                  <SelectItem value="wav" className="text-xs">WAV</SelectItem>
+                                  <SelectItem value="flac" className="text-xs">FLAC</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">随机种子</label>
+                              <Input
+                                value={seed}
+                                onChange={(e) => updateForm('seed', e.target.value)}
+                                placeholder="留空则随机"
+                                className="h-7 text-xs bg-background/50 border-border/50"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -969,76 +1031,6 @@ export default function MusicGeneration() {
           />
         </div>
       </div>
-      {advancedOpen && (
-        <div className="fixed inset-0 z-50 pointer-events-none">
-          <div 
-            className="absolute w-[280px] bg-card/95 backdrop-blur-sm border border-border/60 rounded-xl shadow-xl animate-in fade-in-0 zoom-in-95 pointer-events-auto"
-            style={{ 
-              bottom: '120px',
-              right: '5%',
-            }}
-          >
-            <div className="p-2.5 grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">采样率</label>
-                <Select
-                  value={sampleRate.toString()}
-                  onValueChange={(v) => updateForm('sampleRate', Number(v) as 16000 | 24000 | 32000 | 44100)}
-                >
-                  <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="16000" className="text-xs">16000 Hz</SelectItem>
-                    <SelectItem value="24000" className="text-xs">24000 Hz</SelectItem>
-                    <SelectItem value="32000" className="text-xs">32000 Hz</SelectItem>
-                    <SelectItem value="44100" className="text-xs">44100 Hz (推荐)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">比特率</label>
-                <Select
-                  value={bitrate.toString()}
-                  onValueChange={(v) => updateForm('bitrate', Number(v) as 32000 | 64000 | 128000 | 256000)}
-                >
-                  <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="32000" className="text-xs">32 kbps</SelectItem>
-                    <SelectItem value="64000" className="text-xs">64 kbps</SelectItem>
-                    <SelectItem value="128000" className="text-xs">128 kbps</SelectItem>
-                    <SelectItem value="256000" className="text-xs">256 kbps (推荐)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">格式</label>
-                <Select value={format} onValueChange={(v) => updateForm('format', v as 'mp3' | 'wav' | 'flac')}>
-                  <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mp3" className="text-xs">MP3</SelectItem>
-                    <SelectItem value="wav" className="text-xs">WAV</SelectItem>
-                    <SelectItem value="flac" className="text-xs">FLAC</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">随机种子</label>
-                <Input
-                  value={seed}
-                  onChange={(e) => updateForm('seed', e.target.value)}
-                  placeholder="留空则随机"
-                  className="h-7 text-xs bg-background/50 border-border/50"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
