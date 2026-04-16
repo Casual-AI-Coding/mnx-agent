@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.4] - 2026-04-17
+
+### Added
+
+- **WorkbenchActions Component** - Reusable header actions for generation pages
+  - `src/components/shared/WorkbenchActions.tsx` (+34/-0) - Combined component
+  - `src/components/shared/HelpButton.tsx` (+29/-0) - Help button with tips popup
+  - `src/components/shared/APIRefButton.tsx` (+85/-0) - API reference with copyable curl
+  - `src/components/shared/ClearButton.tsx` (+16/-0) - Clear form button
+  - `src/components/shared/HeaderPopup.tsx` (+51/-0) - Base popup with click-outside detection
+
+- **API Reference on All Generation Pages** - Add curl example for MiniMax API
+  - `src/pages/TextGeneration.tsx` (+89/-) - Text generation API reference
+  - `src/pages/ImageGeneration.tsx` (+161/-) - Image generation API reference
+  - `src/pages/VideoGeneration.tsx` (+78/-) - Video generation API reference
+  - `src/pages/VoiceSync/index.tsx` (+77/-) - Voice sync API reference
+  - `src/pages/VoiceAsync/index.tsx` (+82/-) - Voice async API reference
+  - `src/pages/MusicGeneration.tsx` (+391/-) - Music generation API reference with output_format
+
+- **Color Themes** - 8 new color-focused themes
+  - Deep series: `deep-green.css`, `deep-orange.css`, `deep-red.css`, `deep-teal.css`
+  - Bright series: `bright-green.css`, `bright-orange.css`, `bright-red.css`, `bright-teal.css`
+
+- **Music Generation Enhancements**
+  - output_format selector (url/hex) in advanced settings
+  - Audio player with play/pause, progress bar, volume control
+  - Favorite and public/private toggle buttons
+  - Delete with confirmation dialog
+
+- **Toast Styling** - Enhanced toast appearance with gradients and borders
+  - `src/App.tsx` (+19/-1) - Toast classNames configuration
+
+### Changed
+
+- **MusicCarousel Redesign** - Enhanced card layout with gradient backgrounds
+  - `src/components/music/MusicTaskCard.tsx` (+441/-44) - Full audio player with progress bar
+  - `src/components/music/MusicCarousel.tsx` (+153/-94) - Improved navigation
+
+- **Select Dropdown Animation** - Support opening from top or bottom
+  - `src/components/ui/Select/SelectContent.tsx` (+29/-11) - Dynamic animation direction
+
+- **useFormPersistence Hook** - Removed type constraint
+  - `src/hooks/useFormPersistence.ts` (+1/-1) - `<T>` instead of `<T extends object>`
+
+- **Sidebar Icon** - Updated service nodes icon
+  - `src/components/layout/Sidebar.tsx` (+2/-1) - Shield → Server
+
+### Fixed
+
+- **Popup Click-Outside Detection** - Prevent closing when clicking Select dropdowns
+  - `src/components/ui/Select/SelectContent.tsx` - Portal content exclusion
+  - `src/pages/MusicGeneration.tsx` - Tips and API reference popup detection
+
+- **Copy Button Position** - Moved inside code block
+  - `src/components/shared/APIRefButton.tsx` - Copy button overlay
+
+- **Clear Form Function** - Proper reset to default values
+  - `src/pages/MusicGeneration.tsx` - setFormData(defaultValue)
+
 ## [1.10.3] - 2026-04-16
 
 ### Added
