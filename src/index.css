@@ -11,8 +11,12 @@
 @import './styles/themes/dark/tokyo-night.css';
 @import './styles/themes/dark/purple-haze.css';
 @import './styles/themes/dark/cyberpunk.css';
+@import './styles/themes/dark/deep-red.css';
+@import './styles/themes/dark/deep-green.css';
+@import './styles/themes/dark/deep-orange.css';
+@import './styles/themes/dark/deep-teal.css';
 
-/* Light Themes (11) */
+/* Light Themes (15) */
 @import './styles/themes/light/classic-light.css';
 @import './styles/themes/light/github-light.css';
 @import './styles/themes/light/solarized-light.css';
@@ -24,6 +28,10 @@
 @import './styles/themes/light/rose-light.css';
 @import './styles/themes/light/mint-light.css';
 @import './styles/themes/light/cream-light.css';
+@import './styles/themes/light/bright-red.css';
+@import './styles/themes/light/bright-green.css';
+@import './styles/themes/light/bright-orange.css';
+@import './styles/themes/light/bright-teal.css';
 
 /* Style Themes - Games (6) */
 @import './styles/themes/style/games/wukong.css';

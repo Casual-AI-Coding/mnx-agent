@@ -12,7 +12,7 @@ export interface ThemeMeta {
 }
 
 export const THEME_REGISTRY: ThemeMeta[] = [
-  // Dark themes (11)
+  // Dark themes (15)
   { id: 'midnight', name: 'Midnight', category: 'dark', icon: '🌙',
     preview: { background: '220 20% 6%', primary: '217 91% 60%' } },
   { id: 'ocean-blue', name: 'Ocean Blue', category: 'dark', icon: '🌌',
@@ -35,8 +35,16 @@ export const THEME_REGISTRY: ThemeMeta[] = [
     preview: { background: '270 20% 10%', primary: '280 100% 60%' } },
   { id: 'cyberpunk', name: 'Cyberpunk', category: 'dark', icon: '🌃',
     preview: { background: '280 20% 8%', primary: '320 100% 50%' } },
+  { id: 'deep-red', name: 'Deep Red', category: 'dark', icon: '🔴',
+    preview: { background: '0 20% 8%', primary: '0 85% 55%' } },
+  { id: 'deep-green', name: 'Deep Green', category: 'dark', icon: '🟢',
+    preview: { background: '140 25% 8%', primary: '140 80% 45%' } },
+  { id: 'deep-orange', name: 'Deep Orange', category: 'dark', icon: '🟠',
+    preview: { background: '30 25% 8%', primary: '30 95% 55%' } },
+  { id: 'deep-teal', name: 'Deep Teal', category: 'dark', icon: '🩵',
+    preview: { background: '180 30% 8%', primary: '180 100% 45%' } },
   
-  // Light themes (11)
+  // Light themes (15)
   { id: 'classic-light', name: 'Classic Light', category: 'light', icon: '☀️',
     preview: { background: '0 0% 100%', primary: '0 0% 0%' } },
   { id: 'github-light', name: 'GitHub Light', category: 'light', icon: '🐱',
@@ -59,6 +67,14 @@ export const THEME_REGISTRY: ThemeMeta[] = [
     preview: { background: '150 30% 96%', primary: '150 100% 35%' } },
   { id: 'cream-light', name: 'Cream Light', category: 'light', icon: '🍦',
     preview: { background: '30 20% 96%', primary: '30 80% 40%' } },
+  { id: 'bright-red', name: 'Bright Red', category: 'light', icon: '🔴',
+    preview: { background: '0 20% 98%', primary: '0 85% 50%' } },
+  { id: 'bright-green', name: 'Bright Green', category: 'light', icon: '🟢',
+    preview: { background: '140 30% 98%', primary: '140 80% 40%' } },
+  { id: 'bright-orange', name: 'Bright Orange', category: 'light', icon: '🟠',
+    preview: { background: '30 30% 98%', primary: '30 95% 50%' } },
+  { id: 'bright-teal', name: 'Bright Teal', category: 'light', icon: '🩵',
+    preview: { background: '180 30% 98%', primary: '180 100% 40%' } },
   
   // Style themes - Games (6)
   { id: 'wukong', name: '黑神话悟空', category: 'style', icon: '🎮',
