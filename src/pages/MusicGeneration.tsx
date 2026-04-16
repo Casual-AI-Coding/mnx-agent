@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { cn } from '@/lib/utils'
 import { generateMusic, preprocessMusic } from '@/lib/api/music'
-import { uploadMediaFromUrl } from '@/lib/api/media'
+import { uploadMediaFromUrl, toggleFavorite, togglePublic, deleteMedia, type MediaRecord } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
@@ -132,7 +132,7 @@ export default function MusicGeneration() {
     }
   }
 
-  const saveMusicToMedia = async (audioUrl: string, title?: string, index?: number): Promise<void> => {
+  const saveMusicToMedia = async (audioUrl: string, title?: string, index?: number): Promise<MediaRecord | null> => {
     try {
       let filename: string
       if (title && title.trim()) {
@@ -145,14 +145,19 @@ export default function MusicGeneration() {
       } else {
         filename = `music_${Date.now()}.mp3`
       }
-      await uploadMediaFromUrl(
+      const result = await uploadMediaFromUrl(
         audioUrl,
         filename,
         'music',
         'music_generation'
       )
+      if (result.success && result.data) {
+        return result.data
+      }
+      return null
     } catch (error) {
       console.error('Failed to save music:', error)
+      return null
     }
   }
 
@@ -267,18 +272,27 @@ export default function MusicGeneration() {
         
         const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
 
-        updateTask(index, {
+updateTask(index, {
           status: 'completed',
           progress: 100,
           audioUrl: url,
           audioDuration: durationSec,
         })
 
-saveMusicToMedia(
+        saveMusicToMedia(
           audioData.startsWith('http') ? audioData : url,
           songTitle,
           parallelCount > 1 ? index : undefined
-        )
+        ).then(mediaRecord => {
+          if (mediaRecord) {
+            updateTask(index, {
+              mediaId: mediaRecord.id,
+              mediaTitle: mediaRecord.original_name || mediaRecord.filename,
+              isFavorite: mediaRecord.is_favorite ?? false,
+              isPublic: mediaRecord.is_public ?? false,
+            })
+          }
+        })
 
         addUsage('musicRequests', 1)
         addItem({
@@ -346,7 +360,16 @@ saveMusicToMedia(
         audioData.startsWith('http') ? audioData : url,
         songTitle,
         tasks.length > 1 ? index : undefined
-      )
+      ).then(mediaRecord => {
+        if (mediaRecord) {
+          updateTask(index, {
+            mediaId: mediaRecord.id,
+            mediaTitle: mediaRecord.original_name || mediaRecord.filename,
+            isFavorite: mediaRecord.is_favorite ?? false,
+            isPublic: mediaRecord.is_public ?? false,
+          })
+        }
+      })
       addUsage('musicRequests', 1)
     } catch (err) {
       updateTask(index, {
@@ -362,6 +385,49 @@ saveMusicToMedia(
     a.href = audioUrl
     a.download = filename
     a.click()
+  }, [])
+
+  const handleDeleteMedia = useCallback(async (mediaId: string) => {
+    try {
+      await deleteMedia(mediaId)
+      setTasks(prev => prev.map(task => 
+        task.mediaId === mediaId 
+          ? { ...task, mediaId: undefined, mediaTitle: undefined }
+          : task
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除失败')
+    }
+  }, [])
+
+  const handleFavorite = useCallback(async (mediaId: string) => {
+    try {
+      const result = await toggleFavorite(mediaId)
+      if (result.success) {
+        setTasks(prev => prev.map(task =>
+          task.mediaId === mediaId
+            ? { ...task, isFavorite: result.data.isFavorite }
+            : task
+        ))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '收藏操作失败')
+    }
+  }, [])
+
+  const handleTogglePublic = useCallback(async (mediaId: string, isPublic: boolean) => {
+    try {
+      const result = await togglePublic(mediaId, isPublic)
+      if (result.success) {
+        setTasks(prev => prev.map(task =>
+          task.mediaId === mediaId
+            ? { ...task, isPublic: result.data.is_public ?? isPublic }
+            : task
+        ))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '公开设置失败')
+    }
   }, [])
 
   const clearAll = () => {
@@ -971,6 +1037,9 @@ saveMusicToMedia(
             onIndexChange={setCurrentIndex}
             onRetry={retryTask}
             onDownload={handleDownload}
+            onDelete={handleDeleteMedia}
+            onFavorite={handleFavorite}
+            onTogglePublic={handleTogglePublic}
           />
         </div>
       </div>

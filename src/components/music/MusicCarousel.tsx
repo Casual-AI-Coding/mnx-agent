@@ -13,6 +13,9 @@ interface MusicCarouselProps {
   onIndexChange: (index: number) => void
   onRetry: (index: number) => void
   onDownload: (audioUrl: string, filename: string) => void
+  onDelete?: (mediaId: string) => void
+  onFavorite?: (mediaId: string) => void
+  onTogglePublic?: (mediaId: string, isPublic: boolean) => void
 }
 
 const slideVariants = {
@@ -35,7 +38,10 @@ export function MusicCarousel({
   currentIndex, 
   onIndexChange, 
   onRetry, 
-  onDownload 
+  onDownload,
+  onDelete,
+  onFavorite,
+  onTogglePublic 
 }: MusicCarouselProps) {
   const [direction, setDirection] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -175,6 +181,9 @@ export function MusicCarousel({
                   index={currentIndex}
                   onRetry={onRetry}
                   onDownload={onDownload}
+                  onDelete={onDelete}
+                  onFavorite={onFavorite}
+                  onTogglePublic={onTogglePublic}
                 />
               </motion.div>
             </AnimatePresence>

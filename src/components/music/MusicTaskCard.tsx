@@ -13,6 +13,9 @@ import {
   Volume1,
   VolumeX,
   Music,
+  Heart,
+  Globe,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
@@ -28,6 +31,10 @@ export interface MusicTask {
   audioDuration?: number
   error?: string
   retryCount: number
+  mediaId?: string
+  mediaTitle?: string
+  isFavorite?: boolean
+  isPublic?: boolean
 }
 
 interface MusicTaskCardProps {
@@ -35,6 +42,9 @@ interface MusicTaskCardProps {
   index: number
   onRetry: (index: number) => void
   onDownload: (audioUrl: string, filename: string) => void
+  onDelete?: (mediaId: string) => void
+  onFavorite?: (mediaId: string) => void
+  onTogglePublic?: (mediaId: string, isPublic: boolean) => void
 }
 
 const taskVariants = {
@@ -139,23 +149,36 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-function AudioPlayer({ 
-  audioUrl, 
-  duration, 
+interface AudioPlayerProps {
+  audioUrl: string
+  duration?: number
+  title?: string
+  mediaId?: string
+  isFavorite?: boolean
+  isPublic?: boolean
+  onDownload?: () => void
+  onDelete?: () => void
+  onFavorite?: () => void
+  onTogglePublic?: () => void
+}
+
+function AudioPlayer({
+  audioUrl,
+  duration,
   title,
-  onDownload 
-}: { 
-  audioUrl: string; 
-  duration?: number;
-  title?: string;
-  onDownload?: () => void;
-}) {
+  mediaId,
+  isFavorite,
+  isPublic,
+  onDownload,
+  onDelete,
+  onFavorite,
+  onTogglePublic,
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [volume, setVolume] = useState(0.8)
   const [isMuted, setIsMuted] = useState(false)
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
@@ -241,6 +264,8 @@ function AudioPlayer({
     return <Volume2 className="w-4 h-4" />
   }
 
+  const hasMediaActions = mediaId && (onDelete || onFavorite || onTogglePublic)
+
   return (
     <div className="space-y-3">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
@@ -253,11 +278,18 @@ function AudioPlayer({
       )}>
         {title && (
           <div className="px-4 pt-4 pb-2 border-b border-border/20">
-            <div className="flex items-center gap-2">
-              <Music className="w-4 h-4 text-primary/70" />
-              <span className="text-sm font-medium text-foreground/90 truncate">
-                {title}
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Music className="w-4 h-4 text-primary/70 shrink-0" />
+                <span className="text-sm font-medium text-foreground/90 truncate">
+                  {title}
+                </span>
+              </div>
+              {mediaId && (
+                <span className="text-xs text-muted-foreground/60 font-mono">
+                  ID: {mediaId.slice(0, 8)}
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -282,24 +314,48 @@ function AudioPlayer({
               )}
             </motion.button>
             
-            <div className="flex-1 space-y-2 min-w-0">
-              <div 
-                ref={progressRef}
-                className="h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
-                onClick={handleProgressClick}
-                onMouseDown={() => setIsDragging(true)}
-                onMouseUp={() => setIsDragging(false)}
-                onMouseLeave={() => setIsDragging(false)}
-                onMouseMove={handleProgressDrag}
-              >
+            <div className="flex-1 space-y-3 min-w-0">
+              <div className="flex items-center gap-3">
                 <div 
-                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-75"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                <div 
-                  className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing"
-                  style={{ left: `${progressPercent}%`, transform: `translate(-50%, -50%)` }}
-                />
+                  ref={progressRef}
+                  className="flex-1 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
+                  onClick={handleProgressClick}
+                  onMouseDown={() => setIsDragging(true)}
+                  onMouseUp={() => setIsDragging(false)}
+                  onMouseLeave={() => setIsDragging(false)}
+                  onMouseMove={handleProgressDrag}
+                >
+                  <div 
+                    className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-75"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                  <div 
+                    className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing"
+                    style={{ left: `${progressPercent}%`, transform: `translate(-50%, -50%)` }}
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2 shrink-0">
+                  <motion.button
+                    onClick={toggleMute}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    {getVolumeIcon()}
+                  </motion.button>
+                  
+                  <div 
+                    ref={volumeRef}
+                    className="w-16 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative"
+                    onClick={handleVolumeClick}
+                  >
+                    <div 
+                      className="absolute top-0 left-0 h-full rounded-full bg-primary/70 transition-all duration-150"
+                      style={{ width: `${isMuted ? 0 : volume * 100}%` }}
+                    />
+                  </div>
+                </div>
               </div>
               
               <div className="flex items-center justify-between text-xs">
@@ -312,41 +368,85 @@ function AudioPlayer({
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <motion.button
-                onClick={toggleMute}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                onMouseEnter={() => setShowVolumeSlider(true)}
-                onMouseLeave={() => setShowVolumeSlider(false)}
-              >
-                {getVolumeIcon()}
-              </motion.button>
-              
-              <div 
-                ref={volumeRef}
-                className="w-16 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
-                onClick={handleVolumeClick}
-                onMouseEnter={() => setShowVolumeSlider(true)}
-                onMouseLeave={() => setShowVolumeSlider(false)}
-              >
-                <div 
-                  className="absolute top-0 left-0 h-full rounded-full bg-primary/70 transition-all duration-150"
-                  style={{ width: `${isMuted ? 0 : volume * 100}%` }}
-                />
+            {hasMediaActions && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onFavorite && (
+                  <motion.button
+                    onClick={onFavorite}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
+                      isFavorite 
+                        ? 'bg-error/20 text-error border border-error/30' 
+                        : 'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10'
+                    )}
+                    title={isFavorite ? '取消收藏' : '收藏'}
+                  >
+                    <Heart className={cn('w-4 h-4', isFavorite && 'fill-current')} />
+                  </motion.button>
+                )}
+                
+                {onTogglePublic && (
+                  <motion.button
+                    onClick={onTogglePublic}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
+                      isPublic 
+                        ? 'bg-success/20 text-success border border-success/30' 
+                        : 'bg-white/5 text-muted-foreground hover:text-success hover:bg-success/10 border border-white/10'
+                    )}
+                    title={isPublic ? '取消公开' : '公开'}
+                  >
+                    <Globe className="w-4 h-4" />
+                  </motion.button>
+                )}
+                
+                {onDelete && (
+                  <motion.button
+                    onClick={onDelete}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center',
+                      'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10',
+                      'transition-all duration-200'
+                    )}
+                    title="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </motion.button>
+                )}
+                
+                {onDownload && (
+                  <motion.button
+                    onClick={onDownload}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center',
+                      'bg-white/5 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-white/10',
+                      'transition-all duration-200'
+                    )}
+                    title="下载"
+                  >
+                    <Download className="w-4 h-4" />
+                  </motion.button>
+                )}
               </div>
-            </div>
+            )}
             
-            {onDownload && (
+            {!hasMediaActions && onDownload && (
               <motion.button
                 onClick={onDownload}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
                   'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-                  'bg-white/5 hover:bg-success/20 border border-white/10 hover:border-success/40',
-                  'text-muted-foreground hover:text-success',
+                  'bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/40',
+                  'text-muted-foreground hover:text-primary',
                   'transition-all duration-200'
                 )}
                 title="下载音乐"
@@ -372,7 +472,15 @@ function AudioPlayer({
   )
 }
 
-export function MusicTaskCard({ task, index, onRetry, onDownload }: MusicTaskCardProps) {
+export function MusicTaskCard({ 
+  task, 
+  index, 
+  onRetry, 
+  onDownload,
+  onDelete,
+  onFavorite,
+  onTogglePublic 
+}: MusicTaskCardProps) {
   return (
     <motion.div
       variants={taskVariants}
@@ -446,8 +554,14 @@ export function MusicTaskCard({ task, index, onRetry, onDownload }: MusicTaskCar
                 <AudioPlayer 
                   audioUrl={task.audioUrl} 
                   duration={task.audioDuration}
-                  title={`音乐 ${index + 1}`}
-                  onDownload={() => onDownload(task.audioUrl!, `music-${task.id}.mp3`)}
+                  title={task.mediaTitle || `音乐 ${index + 1}`}
+                  mediaId={task.mediaId}
+                  isFavorite={task.isFavorite}
+                  isPublic={task.isPublic}
+                  onDownload={() => onDownload(task.audioUrl!, task.mediaTitle || `music-${task.id}.mp3`)}
+                  onDelete={task.mediaId && onDelete ? () => onDelete(task.mediaId!) : undefined}
+                  onFavorite={task.mediaId && onFavorite ? () => onFavorite(task.mediaId!) : undefined}
+                  onTogglePublic={task.mediaId && onTogglePublic ? () => onTogglePublic(task.mediaId!, !task.isPublic) : undefined}
                 />
               </motion.div>
             )}
