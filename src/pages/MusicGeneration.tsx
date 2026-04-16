@@ -272,7 +272,7 @@ export default function MusicGeneration() {
         
         const durationSec = Math.round((response.data.extra_info?.music_duration || 0) / 1000)
 
-updateTask(index, {
+        updateTask(index, {
           status: 'completed',
           progress: 100,
           audioUrl: url,
@@ -387,46 +387,34 @@ updateTask(index, {
     a.click()
   }, [])
 
-  const handleDeleteMedia = useCallback(async (mediaId: string) => {
-    try {
-      await deleteMedia(mediaId)
-      setTasks(prev => prev.map(task => 
-        task.mediaId === mediaId 
-          ? { ...task, mediaId: undefined, mediaTitle: undefined }
+  const handleDeleteMedia = useCallback(async (mediaId: string): Promise<void> => {
+    await deleteMedia(mediaId)
+    setTasks(prev => prev.map(task => 
+      task.mediaId === mediaId 
+        ? { ...task, mediaId: undefined, mediaTitle: undefined, isFavorite: undefined, isPublic: undefined }
+        : task
+    ))
+  }, [])
+
+  const handleFavorite = useCallback(async (mediaId: string): Promise<void> => {
+    const result = await toggleFavorite(mediaId)
+    if (result.success) {
+      setTasks(prev => prev.map(task =>
+        task.mediaId === mediaId
+          ? { ...task, isFavorite: result.data.isFavorite }
           : task
       ))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '删除失败')
     }
   }, [])
 
-  const handleFavorite = useCallback(async (mediaId: string) => {
-    try {
-      const result = await toggleFavorite(mediaId)
-      if (result.success) {
-        setTasks(prev => prev.map(task =>
-          task.mediaId === mediaId
-            ? { ...task, isFavorite: result.data.isFavorite }
-            : task
-        ))
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '收藏操作失败')
-    }
-  }, [])
-
-  const handleTogglePublic = useCallback(async (mediaId: string, isPublic: boolean) => {
-    try {
-      const result = await togglePublic(mediaId, isPublic)
-      if (result.success) {
-        setTasks(prev => prev.map(task =>
-          task.mediaId === mediaId
-            ? { ...task, isPublic: result.data.is_public ?? isPublic }
-            : task
-        ))
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '公开设置失败')
+  const handleTogglePublic = useCallback(async (mediaId: string, isPublic: boolean): Promise<void> => {
+    const result = await togglePublic(mediaId, isPublic)
+    if (result.success) {
+      setTasks(prev => prev.map(task =>
+        task.mediaId === mediaId
+          ? { ...task, isPublic: result.data.is_public ?? isPublic }
+          : task
+      ))
     }
   }, [])
 
@@ -615,7 +603,7 @@ updateTask(index, {
                       <SelectTrigger className="w-[400px]">
                         <SelectValue placeholder="选择风格模板..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent side="top">
                         {MUSIC_TEMPLATES.map(t => (
                           <SelectItem key={t.id} value={t.id}>
                             <div className="flex items-center gap-2">
@@ -687,7 +675,7 @@ updateTask(index, {
                         : t('musicGeneration.stylePlaceholder')
                       }
                       className={cn(
-                        "min-h-[80px] resize-none pb-5",
+                        "min-h-[100px] resize-none pb-5",
                         isStylePromptOverLimit && "border-red-500"
                       )}
                     />
@@ -793,7 +781,7 @@ updateTask(index, {
                         高级设置
                       </Button>
                       {advancedOpen && (
-                        <div className="absolute top-full mt-2 right-0 w-[360px] bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                        <div className="absolute bottom-full mb-2 right-0 w-[360px] bg-card border border-border rounded-lg shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
                           <div className="p-3 grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <label className="text-xs font-medium text-muted-foreground">采样率</label>
@@ -804,7 +792,7 @@ updateTask(index, {
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent side="top">
                                   <SelectItem value="16000">16000 Hz</SelectItem>
                                   <SelectItem value="24000">24000 Hz</SelectItem>
                                   <SelectItem value="32000">32000 Hz</SelectItem>
@@ -821,7 +809,7 @@ updateTask(index, {
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent side="top">
                                   <SelectItem value="32000">32 kbps</SelectItem>
                                   <SelectItem value="64000">64 kbps</SelectItem>
                                   <SelectItem value="128000">128 kbps</SelectItem>
@@ -835,7 +823,7 @@ updateTask(index, {
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent side="top">
                                   <SelectItem value="mp3">MP3</SelectItem>
                                   <SelectItem value="wav">WAV</SelectItem>
                                   <SelectItem value="flac">FLAC</SelectItem>

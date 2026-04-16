@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   CheckCircle,
   XCircle,
@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { Badge } from '@/components/ui/Badge'
+import { toastSuccess, toastError } from '@/lib/toast'
 
 export type MusicTaskStatus = 'idle' | 'generating' | 'completed' | 'failed'
 
@@ -177,11 +178,16 @@ function AudioPlayer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
-  const [volume, setVolume] = useState(0.8)
+  const [volume, setVolume] = useState(0.25)
   const [isMuted, setIsMuted] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isFavoriting, setIsFavoriting] = useState(false)
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const volumeRef = useRef<HTMLDivElement>(null)
+
+  const canPerformMediaActions = mediaId && (onDelete || onFavorite || onTogglePublic)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -205,7 +211,7 @@ function AudioPlayer({
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
     }
-  }, [])
+  }, [volume])
 
   useEffect(() => {
     if (audioRef.current) {
@@ -264,7 +270,45 @@ function AudioPlayer({
     return <Volume2 className="w-4 h-4" />
   }
 
-  const hasMediaActions = mediaId && (onDelete || onFavorite || onTogglePublic)
+  const handleDeleteClick = useCallback(async () => {
+    if (!onDelete) return
+    if (!window.confirm('确定要删除这首音乐吗？删除后无法恢复。')) return
+    setIsDeleting(true)
+    try {
+      await onDelete()
+      toastSuccess('音乐已删除')
+    } catch (err) {
+      toastError('删除失败', err instanceof Error ? err.message : '请稍后重试')
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [onDelete])
+
+  const handleFavoriteClick = useCallback(async () => {
+    if (!onFavorite) return
+    setIsFavoriting(true)
+    try {
+      await onFavorite()
+      toastSuccess(isFavorite ? '已取消收藏' : '已添加收藏')
+    } catch (err) {
+      toastError('收藏操作失败', err instanceof Error ? err.message : '请稍后重试')
+    } finally {
+      setIsFavoriting(false)
+    }
+  }, [onFavorite, isFavorite])
+
+  const handleTogglePublicClick = useCallback(async () => {
+    if (!onTogglePublic) return
+    setIsTogglingPublic(true)
+    try {
+      await onTogglePublic()
+      toastSuccess(isPublic ? '已取消公开' : '已设为公开')
+    } catch (err) {
+      toastError('公开设置失败', err instanceof Error ? err.message : '请稍后重试')
+    } finally {
+      setIsTogglingPublic(false)
+    }
+  }, [onTogglePublic, isPublic])
 
   return (
     <div className="space-y-3">
@@ -276,23 +320,47 @@ function AudioPlayer({
         'border border-border/40',
         'shadow-lg shadow-black/30'
       )}>
-        {title && (
-          <div className="px-4 pt-4 pb-2 border-b border-border/20">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Music className="w-4 h-4 text-primary/70 shrink-0" />
-                <span className="text-sm font-medium text-foreground/90 truncate">
-                  {title}
-                </span>
-              </div>
+        <div className="px-4 pt-4 pb-3 border-b border-border/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Music className="w-4 h-4 text-primary/70 shrink-0" />
+              <span className="text-sm font-medium text-foreground/90 truncate">
+                {title || '未命名音乐'}
+              </span>
               {mediaId && (
-                <span className="text-xs text-muted-foreground/60 font-mono">
-                  ID: {mediaId.slice(0, 8)}
+                <span className="text-xs text-muted-foreground/50 font-mono">
+                  #{mediaId.slice(0, 8)}
                 </span>
               )}
             </div>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <motion.button
+                onClick={toggleMute}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+              >
+                {getVolumeIcon()}
+              </motion.button>
+              
+              <div 
+                ref={volumeRef}
+                className="w-20 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
+                onClick={handleVolumeClick}
+              >
+                <div 
+                  className="absolute top-0 left-0 h-full rounded-full bg-primary/60 transition-all duration-150 group-hover:bg-primary/80"
+                  style={{ width: `${isMuted ? 0 : volume * 100}%` }}
+                />
+                <div 
+                  className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ left: `${isMuted ? 0 : volume * 100}%`, transform: 'translate(-50%, -50%)' }}
+                />
+              </div>
+            </div>
           </div>
-        )}
+        </div>
         
         <div className="p-4">
           <div className="flex items-center gap-4">
@@ -314,51 +382,27 @@ function AudioPlayer({
               )}
             </motion.button>
             
-            <div className="flex-1 space-y-3 min-w-0">
-              <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div 
+                ref={progressRef}
+                className="h-2 rounded-full bg-dark-600/70 cursor-pointer relative group"
+                onClick={handleProgressClick}
+                onMouseDown={() => setIsDragging(true)}
+                onMouseUp={() => setIsDragging(false)}
+                onMouseLeave={() => setIsDragging(false)}
+                onMouseMove={handleProgressDrag}
+              >
                 <div 
-                  ref={progressRef}
-                  className="flex-1 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
-                  onClick={handleProgressClick}
-                  onMouseDown={() => setIsDragging(true)}
-                  onMouseUp={() => setIsDragging(false)}
-                  onMouseLeave={() => setIsDragging(false)}
-                  onMouseMove={handleProgressDrag}
-                >
-                  <div 
-                    className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-75"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                  <div 
-                    className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing"
-                    style={{ left: `${progressPercent}%`, transform: `translate(-50%, -50%)` }}
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2 shrink-0">
-                  <motion.button
-                    onClick={toggleMute}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    {getVolumeIcon()}
-                  </motion.button>
-                  
-                  <div 
-                    ref={volumeRef}
-                    className="w-16 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative"
-                    onClick={handleVolumeClick}
-                  >
-                    <div 
-                      className="absolute top-0 left-0 h-full rounded-full bg-primary/70 transition-all duration-150"
-                      style={{ width: `${isMuted ? 0 : volume * 100}%` }}
-                    />
-                  </div>
-                </div>
+                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-75"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <div 
+                  className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing"
+                  style={{ left: `${progressPercent}%`, transform: 'translate(-50%, -50%)' }}
+                />
               </div>
               
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between mt-2 text-xs">
                 <span className="text-muted-foreground font-mono">
                   {formatDuration(currentTime)}
                 </span>
@@ -368,18 +412,20 @@ function AudioPlayer({
               </div>
             </div>
             
-            {hasMediaActions && (
+            {canPerformMediaActions && (
               <div className="flex items-center gap-1.5 shrink-0">
                 {onFavorite && (
                   <motion.button
-                    onClick={onFavorite}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    onClick={handleFavoriteClick}
+                    disabled={isFavoriting}
+                    whileHover={{ scale: isFavoriting ? 1 : 1.1 }}
+                    whileTap={{ scale: isFavoriting ? 1 : 0.9 }}
                     className={cn(
                       'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
                       isFavorite 
                         ? 'bg-error/20 text-error border border-error/30' 
-                        : 'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10'
+                        : 'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10',
+                      isFavoriting && 'opacity-50 cursor-wait'
                     )}
                     title={isFavorite ? '取消收藏' : '收藏'}
                   >
@@ -389,14 +435,16 @@ function AudioPlayer({
                 
                 {onTogglePublic && (
                   <motion.button
-                    onClick={onTogglePublic}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    onClick={handleTogglePublicClick}
+                    disabled={isTogglingPublic}
+                    whileHover={{ scale: isTogglingPublic ? 1 : 1.1 }}
+                    whileTap={{ scale: isTogglingPublic ? 1 : 0.9 }}
                     className={cn(
                       'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
                       isPublic 
                         ? 'bg-success/20 text-success border border-success/30' 
-                        : 'bg-white/5 text-muted-foreground hover:text-success hover:bg-success/10 border border-white/10'
+                        : 'bg-white/5 text-muted-foreground hover:text-success hover:bg-success/10 border border-white/10',
+                      isTogglingPublic && 'opacity-50 cursor-wait'
                     )}
                     title={isPublic ? '取消公开' : '公开'}
                   >
@@ -406,13 +454,15 @@ function AudioPlayer({
                 
                 {onDelete && (
                   <motion.button
-                    onClick={onDelete}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    onClick={handleDeleteClick}
+                    disabled={isDeleting}
+                    whileHover={{ scale: isDeleting ? 1 : 1.1 }}
+                    whileTap={{ scale: isDeleting ? 1 : 0.9 }}
                     className={cn(
                       'w-9 h-9 rounded-lg flex items-center justify-center',
                       'bg-white/5 text-muted-foreground hover:text-error hover:bg-error/10 border border-white/10',
-                      'transition-all duration-200'
+                      'transition-all duration-200',
+                      isDeleting && 'opacity-50 cursor-wait'
                     )}
                     title="删除"
                   >
@@ -438,7 +488,7 @@ function AudioPlayer({
               </div>
             )}
             
-            {!hasMediaActions && onDownload && (
+            {!canPerformMediaActions && onDownload && (
               <motion.button
                 onClick={onDownload}
                 whileHover={{ scale: 1.05 }}
@@ -456,17 +506,6 @@ function AudioPlayer({
             )}
           </div>
         </div>
-        
-        {!title && duration && (
-          <div className="flex items-center justify-center gap-2 px-4 pb-4">
-            <span className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-              'bg-primary/10 text-primary/90 border border-primary/20'
-            )}>
-              时长 {formatDuration(duration)}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )
