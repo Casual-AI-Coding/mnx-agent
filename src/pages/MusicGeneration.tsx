@@ -934,15 +934,13 @@ saveMusicToMedia(
             </Card>
           )}
 
-          {tasks.length > 0 && (
-            <MusicCarousel
-              tasks={tasks}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
-              onRetry={retryTask}
-              onDownload={handleDownload}
-            />
-          )}
+          <MusicCarousel
+            tasks={tasks}
+            currentIndex={currentIndex}
+            onIndexChange={setCurrentIndex}
+            onRetry={retryTask}
+            onDownload={handleDownload}
+          />
         </div>
       </div>
     </div>
