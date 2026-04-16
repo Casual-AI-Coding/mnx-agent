@@ -10,6 +10,9 @@ import {
   Play,
   Pause,
   Volume2,
+  Volume1,
+  VolumeX,
+  Music,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
@@ -136,12 +139,26 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: number }) {
+function AudioPlayer({ 
+  audioUrl, 
+  duration, 
+  title,
+  onDownload 
+}: { 
+  audioUrl: string; 
+  duration?: number;
+  title?: string;
+  onDownload?: () => void;
+}) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [volume, setVolume] = useState(0.8)
+  const [isMuted, setIsMuted] = useState(false)
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
+  const volumeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -155,6 +172,7 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
       }
     }
 
+    audio.volume = volume
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -165,6 +183,12 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
     }
   }, [])
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume
+    }
+  }, [volume, isMuted])
 
   const totalDuration = audioRef.current?.duration || duration || 0
 
@@ -197,27 +221,58 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
     setCurrentTime(newTime)
   }
 
+  const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!volumeRef.current || !audioRef.current) return
+    const rect = volumeRef.current.getBoundingClientRect()
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    setVolume(percent)
+    setIsMuted(false)
+  }
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted)
+  }
+
   const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
 
+  const getVolumeIcon = () => {
+    if (isMuted || volume === 0) return <VolumeX className="w-4 h-4" />
+    if (volume < 0.5) return <Volume1 className="w-4 h-4" />
+    return <Volume2 className="w-4 h-4" />
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
       <div className={cn(
         'relative rounded-2xl overflow-hidden',
-        'bg-gradient-to-br from-dark-800/80 to-dark-900/80',
-        'border border-border/60',
-        'shadow-inner shadow-black/20'
+        'bg-gradient-to-br from-dark-800/90 to-dark-900',
+        'border border-border/40',
+        'shadow-lg shadow-black/30'
       )}>
-        <div className="p-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <button
+        {title && (
+          <div className="px-4 pt-4 pb-2 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <Music className="w-4 h-4 text-primary/70" />
+              <span className="text-sm font-medium text-foreground/90 truncate">
+                {title}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        <div className="p-4">
+          <div className="flex items-center gap-4">
+            <motion.button
               onClick={togglePlay}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center',
-                'bg-primary/90 hover:bg-primary transition-all duration-200',
-                'shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30',
-                'active:scale-95'
+                'w-12 h-12 rounded-full flex items-center justify-center shrink-0',
+                'bg-primary hover:bg-primary/90 transition-all duration-200',
+                'shadow-lg shadow-primary/30',
+                'border-0'
               )}
             >
               {isPlaying ? (
@@ -225,12 +280,12 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
               ) : (
                 <Play className="w-5 h-5 text-primary-foreground ml-0.5" />
               )}
-            </button>
+            </motion.button>
             
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 min-w-0">
               <div 
                 ref={progressRef}
-                className="h-2 rounded-full bg-dark-600/50 cursor-pointer relative group"
+                className="h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
                 onClick={handleProgressClick}
                 onMouseDown={() => setIsDragging(true)}
                 onMouseUp={() => setIsDragging(false)}
@@ -238,11 +293,11 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
                 onMouseMove={handleProgressDrag}
               >
                 <div 
-                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-100"
+                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all duration-75"
                   style={{ width: `${progressPercent}%` }}
                 />
                 <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing"
                   style={{ left: `${progressPercent}%`, transform: `translate(-50%, -50%)` }}
                 />
               </div>
@@ -256,16 +311,58 @@ function AudioPlayer({ audioUrl, duration }: { audioUrl: string; duration?: numb
                 </span>
               </div>
             </div>
+            
+            <div className="flex items-center gap-2">
+              <motion.button
+                onClick={toggleMute}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                {getVolumeIcon()}
+              </motion.button>
+              
+              <div 
+                ref={volumeRef}
+                className="w-16 h-1.5 rounded-full bg-dark-600/70 cursor-pointer relative group"
+                onClick={handleVolumeClick}
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                <div 
+                  className="absolute top-0 left-0 h-full rounded-full bg-primary/70 transition-all duration-150"
+                  style={{ width: `${isMuted ? 0 : volume * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            {onDownload && (
+              <motion.button
+                onClick={onDownload}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                  'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+                  'bg-white/5 hover:bg-success/20 border border-white/10 hover:border-success/40',
+                  'text-muted-foreground hover:text-success',
+                  'transition-all duration-200'
+                )}
+                title="下载音乐"
+              >
+                <Download className="w-4 h-4" />
+              </motion.button>
+            )}
           </div>
         </div>
         
-        {duration && (
-          <div className="flex items-center justify-center gap-2 px-4 pb-4 pt-2">
+        {!title && duration && (
+          <div className="flex items-center justify-center gap-2 px-4 pb-4">
             <span className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium',
-              'bg-primary/10 text-primary border border-primary/20'
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+              'bg-primary/10 text-primary/90 border border-primary/20'
             )}>
-              <Volume2 className="w-3.5 h-3.5" />
               时长 {formatDuration(duration)}
             </span>
           </div>
@@ -345,26 +442,13 @@ export function MusicTaskCard({ task, index, onRetry, onDownload }: MusicTaskCar
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
               >
-                <AudioPlayer audioUrl={task.audioUrl} duration={task.audioDuration} />
-                
-                <motion.button
-                  onClick={() => onDownload(task.audioUrl!, `music-${task.id}.mp3`)}
-                  whileHover={{ scale: 1.02, y: -1 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    'w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all duration-200',
-                    'px-4 py-3',
-                    'bg-gradient-to-r from-success/90 to-success',
-                    'text-white',
-                    'shadow-lg shadow-success/20 hover:shadow-xl hover:shadow-success/30',
-                    'border-0'
-                  )}
-                >
-                  <Download className="w-4 h-4" />
-                  下载音乐
-                </motion.button>
+                <AudioPlayer 
+                  audioUrl={task.audioUrl} 
+                  duration={task.audioDuration}
+                  title={`音乐 ${index + 1}`}
+                  onDownload={() => onDownload(task.audioUrl!, `music-${task.id}.mp3`)}
+                />
               </motion.div>
             )}
 
