@@ -970,8 +970,14 @@ export default function MusicGeneration() {
         </div>
       </div>
       {advancedOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="absolute top-[50%] right-[10%] w-[280px] bg-card/95 backdrop-blur-sm border border-border/60 rounded-xl shadow-xl animate-in fade-in-0 zoom-in-95 pointer-events-auto">
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div 
+            className="absolute w-[280px] bg-card/95 backdrop-blur-sm border border-border/60 rounded-xl shadow-xl animate-in fade-in-0 zoom-in-95 pointer-events-auto"
+            style={{ 
+              bottom: '120px',
+              right: '5%',
+            }}
+          >
             <div className="p-2.5 grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">采样率</label>
