@@ -359,7 +359,25 @@ function App() {
       <ErrorBoundary
         fallback={<ErrorFallback className="min-h-screen" onRetry={() => window.location.reload()} />}
       >
-        <Toaster position="top-right" theme="dark" richColors offset={64} closeButton />
+        <Toaster 
+          position="top-right" 
+          theme="dark" 
+          richColors 
+          offset={64} 
+          closeButton
+          toastOptions={{
+            classNames: {
+              toast: 'group relative pr-8 pl-4 py-3 rounded-xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-lg shadow-primary/10',
+              title: 'text-sm font-medium text-foreground',
+              description: 'text-xs text-muted-foreground mt-0.5',
+              closeButton: '!right-2 !top-1/2 !-translate-y-1/2 !left-auto bg-transparent border-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity',
+              success: 'border-l-4 border-l-success bg-gradient-to-r from-success/10 to-transparent',
+              error: 'border-l-4 border-l-error bg-gradient-to-r from-error/10 to-transparent',
+              warning: 'border-l-4 border-l-warning bg-gradient-to-r from-warning/10 to-transparent',
+              info: 'border-l-4 border-l-info bg-gradient-to-r from-info/10 to-transparent',
+            },
+          }}
+        />
         <AppContent />
       </ErrorBoundary>
     </BrowserRouter>

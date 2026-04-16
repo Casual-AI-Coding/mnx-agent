@@ -197,4 +197,29 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.35);
   }
+
+  /* Sonner Toast Custom Styles */
+  [data-sonner-toast] {
+    padding-right: 2rem !important;
+  }
+
+  [data-sonner-toast] [data-close-button] {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    left: auto !important;
+    background: transparent !important;
+    border: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  [data-sonner-toast]:hover [data-close-button] {
+    opacity: 1 !important;
+  }
+
+  [data-sonner-toast] [data-close-button]:hover {
+    transform: translateY(-50%) scale(1.1) !important;
+  }
 }
