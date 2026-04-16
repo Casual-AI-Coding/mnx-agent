@@ -33,6 +33,7 @@ import {
   Settings,
   ChevronRight,
   ChevronLeft,
+  Server,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -176,7 +177,7 @@ const toggleSection = (sectionId: string) => {
       items: [
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
-        { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Shield },
+        { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Server },
       ],
     },
   ]
