@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera, Lightbulb } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -11,7 +12,7 @@ import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
-import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } from '@/types'
+import { VIDEO_MODELS, CAMERA_COMMANDS, DEFAULT_MODELS, type VideoModel, type CameraCommand } from '@/types'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { motion } from 'framer-motion'
@@ -31,6 +32,7 @@ interface VideoTask {
 }
 
 interface VideoGenerationFormData {
+  [key: string]: unknown
   prompt: string
   model: VideoModel
   cameraCommand: CameraCommand
@@ -44,7 +46,7 @@ export default function VideoGeneration() {
     storageKey: DEBUG_FORM_KEYS.VIDEO_GENERATION,
     defaultValue: {
       prompt: '',
-      model: videoSettings.model as VideoModel,
+      model: (videoSettings?.model as VideoModel) || DEFAULT_MODELS.video,
       cameraCommand: 'static',
     },
   })
@@ -198,6 +200,36 @@ export default function VideoGeneration() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const generateCurl = () => {
+    const payload = {
+      model,
+      prompt: prompt.trim() || 'your prompt here',
+      camera_control: cameraCommand !== 'static' ? { type: cameraCommand } : undefined,
+    }
+    return `curl -X POST https://api.minimaxi.com/api/video-generation/create \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer $MINIMAX_API_KEY" \\\n  -d '${JSON.stringify(payload, null, 2)}'`
+  }
+
+  const clearAll = () => {
+    updateForm({
+      prompt: '',
+      model: DEFAULT_MODELS.video,
+      cameraCommand: 'static',
+    })
+  }
+
+  const helpTips = (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-foreground">视频生成使用技巧：</p>
+      <ul className="text-sm text-muted-foreground space-y-1.5">
+        <li>• <strong>提示词质量</strong>：提供详细、清晰的场景描述，包括主体、动作、环境、光照等要素</li>
+        <li>• <strong>分辨率选择</strong>：标准模型适合大多数场景，实时模型提供更快速响应</li>
+        <li>• <strong>时长限制</strong>：生成视频通常为 5-10 秒，适合短视频和动态演示</li>
+        <li>• <strong>镜头控制</strong>：使用镜头运动指令（推近、拉远、平移等）增强视觉表现力</li>
+        <li>• <strong>模型选择</strong>：video-01 为标准模型，video-01-live 为实时生成模型</li>
+      </ul>
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -205,6 +237,15 @@ export default function VideoGeneration() {
         title="视频生成"
         description="AI 视频内容生成"
         gradient="orange-amber"
+        actions={
+          <WorkbenchActions
+            helpTitle="视频生成帮助"
+            helpTips={helpTips}
+            generateCurl={generateCurl}
+            onClear={clearAll}
+            clearLabel="清空表单"
+          />
+        }
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">

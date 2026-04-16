@@ -11,6 +11,7 @@ import { AspectRatioPopup, type AspectRatioState } from '@/components/ui/AspectR
 import WarningBanner from '@/components/shared/WarningBanner'
 import { APIReference } from '@/components/shared/APIReference'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { generateImage } from '@/lib/api/image'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
@@ -108,6 +109,70 @@ export default function ImageGeneration() {
   const updateForm = (updates: Partial<ImageGenerationFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
   }
+
+  const generateCurl = () => {
+    const aspectRatioValue = aspectRatioState.type === 'preset' 
+      ? aspectRatioState.preset 
+      : `${aspectRatioState.width}:${aspectRatioState.height}`
+    
+    const payload = {
+      model,
+      prompt: prompt.trim() || 'your prompt here',
+      aspect_ratio: aspectRatioValue,
+      n: numImages,
+      response_format: 'url',
+      ...(seed !== undefined && { seed }),
+      prompt_optimizer: promptOptimizer,
+      aigc_watermark: aigcWatermark,
+    }
+
+    return `curl -X POST "https://api.minimaxi.com/v1/image_generation" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -d '${JSON.stringify(payload, null, 2)}'`
+  }
+
+  const clearAll = () => {
+    setFormData({
+      prompt: '',
+      model: imageSettings.model as ImageModel,
+      aspectRatioState: {
+        type: 'preset',
+        preset: imageSettings.aspectRatio as AspectRatio,
+      },
+      numImages: imageSettings.numImages ?? 9,
+      referenceImageMode: 'upload',
+      referenceImageUrl: '',
+      seed: undefined,
+      promptOptimizer: false,
+      aigcWatermark: false,
+      imageTitle: '',
+      parallelCount: 1,
+    })
+    setReferenceImage(null)
+    setActiveTemplate(null)
+  }
+
+  const helpTips = (
+    <div className="space-y-3 text-sm">
+      <div>
+        <p className="font-medium text-foreground">提示词质量</p>
+        <p className="text-muted-foreground">使用详细的描述性语言，包含主体、场景、风格、光线等要素。提示词长度最多支持 1500 个字符。</p>
+      </div>
+      <div>
+        <p className="font-medium text-foreground">宽高比选项</p>
+        <p className="text-muted-foreground">支持多种预设比例：1:1（正方形）、16:9（宽屏）、4:3（标准）、9:16（竖屏）等，也支持自定义尺寸。</p>
+      </div>
+      <div>
+        <p className="font-medium text-foreground">模型选择</p>
+        <p className="text-muted-foreground">image-01 是默认推荐模型，提供高质量的图像生成效果。</p>
+      </div>
+      <div>
+        <p className="font-medium text-foreground">生成数量</p>
+        <p className="text-muted-foreground">每次可生成 1-9 张图片，使用并发功能可同时运行多个任务。</p>
+      </div>
+    </div>
+  )
   
   const [showAspectRatioPopup, setShowAspectRatioPopup] = useState(false)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
@@ -460,6 +525,15 @@ export default function ImageGeneration() {
         title="图像生成"
         description="AI 图像生成与编辑"
         gradient="rose-pink"
+        actions={
+          <WorkbenchActions
+            helpTitle="图像生成使用提示"
+            helpTips={helpTips}
+            generateCurl={generateCurl}
+            onClear={clearAll}
+            clearLabel="清空"
+          />
+        }
       />
 
       {!apiKey && (

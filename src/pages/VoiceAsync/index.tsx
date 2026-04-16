@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { MicOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useSettingsStore } from '@/settings/store'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
 import { uploadMedia, type MediaSource } from '@/lib/api/media'
@@ -72,6 +73,57 @@ export default function VoiceAsync() {
 
   const handleFormChange = (data: Partial<VoiceFormData>) => {
     setFormData(prev => ({ ...prev, ...data }))
+  }
+
+  const handleClearAll = () => {
+    setFormData({
+      text: '',
+      model: 'speech-2.6-hd',
+      voiceId: VOICE_OPTIONS[0].id,
+      emotion: 'auto',
+      speed: 1.0,
+      volume: 1.0,
+      pitch: 0,
+      activeTab: 'text',
+      fileId: null,
+    })
+    setUploadError(null)
+    setPendingFile(null)
+    setUploadRetryCount(0)
+  }
+
+  const generateCurl = () => {
+    const { settings } = useSettingsStore.getState()
+    const apiKey = settings.api.minimaxKey || 'YOUR_API_KEY'
+    const baseUrl = settings.api.region === 'intl' 
+      ? 'https://api.minimaxi.com' 
+      : 'https://api.minimax.chat'
+
+    const payload = {
+      model: formData.model,
+      text: formData.activeTab === 'text' ? formData.text : undefined,
+      file_id: formData.activeTab === 'file' ? formData.fileId : undefined,
+      voice_setting: {
+        voice_id: formData.voiceId,
+        speed: formData.speed,
+        vol: formData.volume,
+        pitch: formData.pitch,
+        emotion: formData.emotion,
+      },
+      audio_setting: {
+        sample_rate: 24000,
+        bitrate: 128000,
+        format: 'mp3',
+        channel: 1,
+      },
+    }
+
+    const cleanPayload = JSON.parse(JSON.stringify(payload))
+
+    return `curl -X POST "${baseUrl}/v1/t2a_async" \\
+  -H "Authorization: Bearer ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify(cleanPayload, null, 2)}'`
   }
 
   const createTask = async () => {
@@ -292,6 +344,36 @@ export default function VoiceAsync() {
         title="语音异步合成"
         description="批量语音合成与长文本处理"
         gradient="sky-blue"
+        actions={
+          <WorkbenchActions
+            helpTitle="异步语音合成帮助"
+            helpTips={
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="font-medium text-foreground mb-1">异步工作流程</p>
+                  <p className="text-muted-foreground">
+                    提交任务后系统会立即返回任务ID，您可以在任务历史中查看进度。任务完成后可下载生成的音频文件。
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground mb-1">长文本处理</p>
+                  <p className="text-muted-foreground">
+                    支持最长 50,000 字符的文本输入。对于超长文本，建议使用文件上传方式（支持 .txt 和 .zip 格式）。
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground mb-1">语音选择</p>
+                  <p className="text-muted-foreground">
+                    提供多种预设音色，支持调整语速、音量、音高和情绪。选择合适的语音和参数可获得最佳效果。
+                  </p>
+                </div>
+              </div>
+            }
+            generateCurl={generateCurl}
+            onClear={handleClearAll}
+            clearLabel="清空"
+          />
+        }
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VoiceAsyncForm

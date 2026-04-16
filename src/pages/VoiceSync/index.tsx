@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mic } from 'lucide-react'
+import { Mic, HelpCircle, Music } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
@@ -11,6 +11,7 @@ import { uploadMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
 import { VoiceSyncForm } from './VoiceSyncForm'
 import { VoiceResult } from './VoiceResult'
@@ -128,6 +129,44 @@ export default function VoiceSync() {
     a.click()
   }
 
+  const generateCurl = () => {
+    const curlBody = JSON.stringify({
+      model,
+      text: text.trim() || '请输入要合成的文本',
+      voice_setting: {
+        voice_id: voiceId,
+        speed,
+        vol: volume,
+        pitch,
+        emotion,
+      },
+      audio_setting: {
+        sample_rate: 24000,
+        bitrate: 128000,
+        format: 'mp3',
+        channel: 1,
+      },
+    }, null, 2)
+
+    return `curl -X POST https://api.minimaxi.com/api/ts \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer \${MINIMAX_API_KEY}" \\
+  -d '${curlBody}'`
+  }
+
+  const clearAll = () => {
+    setText('')
+    setAudioUrl(null)
+    setError(null)
+    const defaultSettings = useSettingsStore.getState().settings.generation.voice
+    setModel(defaultSettings.model as SpeechModel)
+    setVoiceId(defaultSettings.voiceId)
+    setEmotion(defaultSettings.emotion as Emotion)
+    setSpeed(defaultSettings.speed)
+    setVolume(defaultSettings.volume)
+    setPitch(defaultSettings.pitch)
+  }
+
   const selectedVoice = VOICE_OPTIONS.find((v) => v.id === voiceId)
   const selectedModel = SPEECH_MODELS.find((m) => m.id === model)
   const selectedEmotion = EMOTIONS.find((e) => e.id === emotion)
@@ -155,6 +194,42 @@ export default function VoiceSync() {
         title="语音同步合成"
         description="实时语音合成服务"
         gradient="sky-blue"
+        actions={
+          <WorkbenchActions
+            helpTitle="语音合成使用帮助"
+            helpTips={
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <HelpCircle className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">文本质量</p>
+                    <p>使用清晰、准确的文本，避免特殊字符。支持中文、英文等多种语言。</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Music className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">音色选择</p>
+                    <p>提供多种高质量音色，可根据场景选择男声、女声或特定情感风格。</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Mic className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">音频设置</p>
+                    <p>可调节语速、音量和音调。建议保持默认设置以获得最佳效果。</p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-border/60 text-xs">
+                  <p>API 端点: POST https://api.minimaxi.com/api/tts</p>
+                </div>
+              </div>
+            }
+            generateCurl={generateCurl}
+            onClear={clearAll}
+            clearLabel="清空"
+          />
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

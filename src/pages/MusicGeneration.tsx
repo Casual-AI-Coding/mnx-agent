@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, HelpCircle, X, Palette, Save, Code, Copy, Check } from 'lucide-react'
+import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, Palette, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -17,6 +17,7 @@ import { toastSuccess, toastError } from '@/lib/toast'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
@@ -84,12 +85,7 @@ export default function MusicGeneration() {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [tipsOpen, setTipsOpen] = useState(false)
-  const [apiRefOpen, setApiRefOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
   const advancedRef = useRef<HTMLDivElement>(null)
-  const tipsRef = useRef<HTMLDivElement>(null)
-  const apiRefRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -100,22 +96,16 @@ export default function MusicGeneration() {
       if (isPortalContent) {
         return // 不关闭弹窗，让用户完成选择
       }
-      // 检测三个弹窗的点击外部
+      // 检测高级设置弹窗的点击外部
       if (advancedOpen && advancedRef.current && !advancedRef.current.contains(target)) {
         setAdvancedOpen(false)
       }
-      if (tipsOpen && tipsRef.current && !tipsRef.current.contains(target)) {
-        setTipsOpen(false)
-      }
-      if (apiRefOpen && apiRefRef.current && !apiRefRef.current.contains(target)) {
-        setApiRefOpen(false)
-      }
     }
-    if (advancedOpen || tipsOpen || apiRefOpen) {
+    if (advancedOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [advancedOpen, tipsOpen, apiRefOpen])
+  }, [advancedOpen])
 
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
@@ -551,120 +541,25 @@ export default function MusicGeneration() {
         description="AI 音乐创作与生成"
         gradient="violet-purple"
         actions={
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTipsOpen(!tipsOpen)}
-                className="h-8 w-8"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
-              {tipsOpen && (
-                <div ref={tipsRef} className="absolute right-0 top-full mt-2 w-[480px] z-50 bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
-                  <div className="flex items-center justify-between p-3 border-b border-border">
-                    <span className="text-sm font-medium">{t('musicGeneration.creationTipsTitle')}</span>
-                    <Button variant="ghost" size="icon" onClick={() => setTipsOpen(false)} className="h-6 w-6">
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <div className="p-3">
-                    <ul className="text-xs text-muted-foreground space-y-2">
-                      <li className="whitespace-normal">• {t('musicGeneration.tip1')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip2')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip3')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip4')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip5')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip6')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip7')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip8')}</li>
-                      <li className="whitespace-normal">• {t('musicGeneration.tip9')}</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setApiRefOpen(!apiRefOpen)}
-                className="h-8 w-8"
-                title="API 参考"
-              >
-                <Code className="w-4 h-4" />
-              </Button>
-              {apiRefOpen && (
-                <div ref={apiRefRef} className="absolute right-0 top-full mt-2 w-[480px] z-50 bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
-                  <div className="flex items-center justify-between p-3 border-b border-border">
-                    <span className="text-sm font-medium">API 参考</span>
-                    <Button variant="ghost" size="icon" onClick={() => setApiRefOpen(false)} className="h-6 w-6">
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <div className="p-3">
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          const text = generateApiCurl()
-                          const copyToClipboard = () => {
-                            const textarea = document.createElement('textarea')
-                            textarea.value = text
-                            textarea.style.position = 'fixed'
-                            textarea.style.opacity = '0'
-                            document.body.appendChild(textarea)
-                            textarea.select()
-                            try {
-                              document.execCommand('copy')
-                              setCopied(true)
-                              setTimeout(() => setCopied(false), 2000)
-                              toastSuccess('已复制到剪贴板')
-                            } catch {
-                              toastError('复制失败')
-                            }
-                            document.body.removeChild(textarea)
-                          }
-
-                          if (navigator.clipboard && navigator.clipboard.writeText) {
-                            navigator.clipboard.writeText(text)
-                              .then(() => {
-                                setCopied(true)
-                                setTimeout(() => setCopied(false), 2000)
-                                toastSuccess('已复制到剪贴板')
-                              })
-                              .catch(copyToClipboard)
-                          } else {
-                            copyToClipboard()
-                          }
-                        }}
-                        className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent/80 bg-secondary/50"
-                      >
-                        {copied ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            <span>已复制</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>复制</span>
-                          </>
-                        )}
-                      </button>
-                      <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap bg-secondary/50 p-3 rounded-lg overflow-x-auto max-h-[300px]">
-                        {generateApiCurl()}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <Button variant="outline" size="sm" onClick={clearAll}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              {t('musicGeneration.clearBtn')}
-            </Button>
-          </div>
+          <WorkbenchActions
+            helpTitle={t('musicGeneration.creationTipsTitle')}
+            helpTips={(
+              <ul className="text-xs text-muted-foreground space-y-2">
+                <li className="whitespace-normal">• {t('musicGeneration.tip1')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip2')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip3')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip4')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip5')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip6')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip7')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip8')}</li>
+                <li className="whitespace-normal">• {t('musicGeneration.tip9')}</li>
+              </ul>
+            )}
+            generateCurl={generateApiCurl}
+            onClear={clearAll}
+            clearLabel={t('musicGeneration.clearBtn')}
+          />
         }
       />
 

@@ -7,7 +7,7 @@ export interface FormPersistenceConfig<T> {
   enabled?: boolean
 }
 
-export function useFormPersistence<T extends object>(
+export function useFormPersistence<T>(
   config: FormPersistenceConfig<T>
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   const { storageKey, defaultValue, enabled = true } = config
