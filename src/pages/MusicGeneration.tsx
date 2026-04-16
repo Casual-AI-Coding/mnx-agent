@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, HelpCircle, X, Palette, Save } from 'lucide-react'
+import { Music, Loader2, Wand2, RefreshCw, Music2, Settings2, HelpCircle, X, Palette, Save, Code, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { cn } from '@/lib/utils'
 import { generateMusic, preprocessMusic } from '@/lib/api/music'
 import { uploadMediaFromUrl, toggleFavorite, togglePublic, deleteMedia, type MediaRecord } from '@/lib/api/media'
+import { toastSuccess, toastError } from '@/lib/toast'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
@@ -33,6 +34,7 @@ type MusicFormData = {
   bitrate: 32000 | 64000 | 128000 | 256000
   format: 'mp3' | 'wav' | 'flac'
   seed: string
+  outputFormat: 'url' | 'hex'
   coverMode: 'one-step' | 'two-step'
   referenceAudioUrl: string
   useOriginalLyrics: boolean
@@ -44,24 +46,27 @@ export default function MusicGeneration() {
   const validModel = MUSIC_MODELS.some(m => m.id === musicSettings.model)
   const defaultModel: MusicModel = validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music
 
+  const defaultValue: MusicFormData = {
+    lyrics: '',
+    songTitle: '',
+    stylePrompt: '',
+    model: defaultModel,
+    optimizeLyrics: musicSettings.optimizeLyrics,
+    parallelCount: 1,
+    instrumental: false,
+    sampleRate: 44100,
+    bitrate: 256000,
+    format: 'mp3',
+    seed: '',
+    outputFormat: 'url',
+    coverMode: 'one-step',
+    referenceAudioUrl: '',
+    useOriginalLyrics: true,
+  }
+
   const [formData, setFormData] = useFormPersistence<MusicFormData>({
     storageKey: DEBUG_FORM_KEYS.MUSIC_GENERATION,
-    defaultValue: {
-      lyrics: '',
-      songTitle: '',
-      stylePrompt: '',
-      model: defaultModel,
-      optimizeLyrics: musicSettings.optimizeLyrics,
-      parallelCount: 1,
-      instrumental: false,
-      sampleRate: 44100,
-      bitrate: 256000,
-      format: 'mp3',
-      seed: '',
-      coverMode: 'one-step',
-      referenceAudioUrl: '',
-      useOriginalLyrics: true,
-    },
+    defaultValue,
   })
 
   const updateForm = useCallback((key: keyof MusicFormData, value: MusicFormData[keyof MusicFormData]) => {
@@ -69,7 +74,7 @@ export default function MusicGeneration() {
   }, [setFormData])
 
   const { lyrics, songTitle, stylePrompt, model, optimizeLyrics, parallelCount, instrumental,
-          sampleRate, bitrate, format, seed, coverMode, referenceAudioUrl, useOriginalLyrics } = formData
+          sampleRate, bitrate, format, seed, outputFormat, coverMode, referenceAudioUrl, useOriginalLyrics } = formData
 
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
@@ -80,19 +85,37 @@ export default function MusicGeneration() {
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [tipsOpen, setTipsOpen] = useState(false)
+  const [apiRefOpen, setApiRefOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const advancedRef = useRef<HTMLDivElement>(null)
+  const tipsRef = useRef<HTMLDivElement>(null)
+  const apiRefRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (advancedRef.current && !advancedRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      // 排除 Portal 内容的点击（Select 下拉菜单等渲染在 document.body）
+      const isPortalContent = target instanceof Element &&
+        (target.closest('[role="listbox"]') || target.closest('.bg-popover'))
+      if (isPortalContent) {
+        return // 不关闭弹窗，让用户完成选择
+      }
+      // 检测三个弹窗的点击外部
+      if (advancedOpen && advancedRef.current && !advancedRef.current.contains(target)) {
         setAdvancedOpen(false)
       }
+      if (tipsOpen && tipsRef.current && !tipsRef.current.contains(target)) {
+        setTipsOpen(false)
+      }
+      if (apiRefOpen && apiRefRef.current && !apiRefRef.current.contains(target)) {
+        setApiRefOpen(false)
+      }
     }
-    if (advancedOpen) {
+    if (advancedOpen || tipsOpen || apiRefOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [advancedOpen])
+  }, [advancedOpen, tipsOpen, apiRefOpen])
 
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
@@ -183,7 +206,7 @@ export default function MusicGeneration() {
   const buildRequest = useCallback((): MusicGenerationRequest => {
     const request: MusicGenerationRequest = {
       model,
-      output_format: 'url',
+      output_format: outputFormat,
     }
 
     if (isCoverModel) {
@@ -218,7 +241,56 @@ export default function MusicGeneration() {
     }
 
     return request
-  }, [model, lyrics, stylePrompt, sampleRate, bitrate, format, optimizeLyrics, seed, instrumental, isCoverModel, referenceAudioUrl, useOriginalLyrics])
+  }, [model, lyrics, stylePrompt, sampleRate, bitrate, format, optimizeLyrics, seed, outputFormat, instrumental, isCoverModel, referenceAudioUrl, useOriginalLyrics])
+
+  const generateApiCurl = useCallback(() => {
+    const baseUrl = 'https://api.minimaxi.com'
+    const endpoint = '/v1/music_generation'
+    
+    const body: Record<string, unknown> = {
+      model,
+      output_format: outputFormat,
+      audio_setting: {
+        sample_rate: sampleRate,
+        bitrate: bitrate,
+        format: format,
+      },
+    }
+    
+    if (isCoverModel) {
+      if (referenceAudioUrl.trim()) {
+        body.reference_audio_url = referenceAudioUrl.trim()
+      }
+      if (!useOriginalLyrics && lyrics.trim()) {
+        body.lyrics = lyrics.trim()
+      }
+      if (stylePrompt.trim()) {
+        body.prompt = stylePrompt.trim()
+      }
+    } else {
+      if (lyrics.trim()) {
+        body.lyrics = lyrics.trim()
+      }
+      if (stylePrompt.trim()) {
+        body.prompt = stylePrompt.trim()
+      }
+      if (instrumental) {
+        body.instrumental = true
+      }
+      if (optimizeLyrics && isOptimizeLyricsAvailable) {
+        body.optimize_lyrics = true
+      }
+      if (isSeedAvailable && seed.trim()) {
+        body.seed = parseInt(seed, 10)
+      }
+    }
+
+    return `curl --request POST \\
+  --url '${baseUrl}${endpoint}' \\
+  --header 'Authorization: Bearer YOUR_API_KEY' \\
+  --header 'Content-Type: application/json' \\
+  --data '${JSON.stringify(body, null, 2)}'`
+  }, [model, sampleRate, bitrate, format, outputFormat, instrumental, optimizeLyrics, seed, isCoverModel, useOriginalLyrics, lyrics, stylePrompt, referenceAudioUrl, isSeedAvailable, isOptimizeLyricsAvailable])
 
   const decodeAudioData = useCallback(async (audioData: string): Promise<string> => {
     const mimeType = format === 'mp3' ? 'audio/mp3' 
@@ -425,8 +497,7 @@ export default function MusicGeneration() {
     blobUrlsRef.current.clear()
     setTasks([])
     setCurrentIndex(0)
-    updateForm('lyrics', '')
-    updateForm('stylePrompt', '')
+    setFormData(defaultValue)
     setError(null)
   }
 
@@ -491,7 +562,7 @@ export default function MusicGeneration() {
                 <HelpCircle className="w-4 h-4" />
               </Button>
               {tipsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 z-50 bg-card border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
+                <div ref={tipsRef} className="absolute right-0 top-full mt-2 w-[480px] z-50 bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
                   <div className="flex items-center justify-between p-3 border-b border-border">
                     <span className="text-sm font-medium">{t('musicGeneration.creationTipsTitle')}</span>
                     <Button variant="ghost" size="icon" onClick={() => setTipsOpen(false)} className="h-6 w-6">
@@ -510,6 +581,81 @@ export default function MusicGeneration() {
                       <li className="whitespace-normal">• {t('musicGeneration.tip8')}</li>
                       <li className="whitespace-normal">• {t('musicGeneration.tip9')}</li>
                     </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setApiRefOpen(!apiRefOpen)}
+                className="h-8 w-8"
+                title="API 参考"
+              >
+                <Code className="w-4 h-4" />
+              </Button>
+              {apiRefOpen && (
+                <div ref={apiRefRef} className="absolute right-0 top-full mt-2 w-[480px] z-50 bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95">
+                  <div className="flex items-center justify-between p-3 border-b border-border">
+                    <span className="text-sm font-medium">API 参考</span>
+                    <Button variant="ghost" size="icon" onClick={() => setApiRefOpen(false)} className="h-6 w-6">
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="p-3">
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          const text = generateApiCurl()
+                          const copyToClipboard = () => {
+                            const textarea = document.createElement('textarea')
+                            textarea.value = text
+                            textarea.style.position = 'fixed'
+                            textarea.style.opacity = '0'
+                            document.body.appendChild(textarea)
+                            textarea.select()
+                            try {
+                              document.execCommand('copy')
+                              setCopied(true)
+                              setTimeout(() => setCopied(false), 2000)
+                              toastSuccess('已复制到剪贴板')
+                            } catch {
+                              toastError('复制失败')
+                            }
+                            document.body.removeChild(textarea)
+                          }
+
+                          if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(text)
+                              .then(() => {
+                                setCopied(true)
+                                setTimeout(() => setCopied(false), 2000)
+                                toastSuccess('已复制到剪贴板')
+                              })
+                              .catch(copyToClipboard)
+                          } else {
+                            copyToClipboard()
+                          }
+                        }}
+                        className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent/80 bg-secondary/50"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            <span>已复制</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>复制</span>
+                          </>
+                        )}
+                      </button>
+                      <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap bg-secondary/50 p-3 rounded-lg overflow-x-auto max-h-[300px]">
+                        {generateApiCurl()}
+                      </pre>
+                    </div>
                   </div>
                 </div>
               )}
@@ -697,7 +843,7 @@ export default function MusicGeneration() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-            className="relative group"
+            className="relative group z-20"
           >
             <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
             <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-visible">
@@ -770,7 +916,7 @@ export default function MusicGeneration() {
                         </label>
                       </div>
                     )}
-<div className="relative" ref={advancedRef}>
+<div className="relative z-20" ref={advancedRef}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -789,7 +935,7 @@ export default function MusicGeneration() {
                                 value={sampleRate.toString()}
                                 onValueChange={(v) => updateForm('sampleRate', Number(v) as 16000 | 24000 | 32000 | 44100)}
                               >
-                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                <SelectTrigger className="h-7 w-full text-xs bg-background/50 border-border/50">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -806,7 +952,7 @@ export default function MusicGeneration() {
                                 value={bitrate.toString()}
                                 onValueChange={(v) => updateForm('bitrate', Number(v) as 32000 | 64000 | 128000 | 256000)}
                               >
-                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                <SelectTrigger className="h-7 w-full text-xs bg-background/50 border-border/50">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -820,7 +966,7 @@ export default function MusicGeneration() {
                             <div className="space-y-1.5">
                               <label className="text-xs font-medium text-muted-foreground">格式</label>
                               <Select value={format} onValueChange={(v) => updateForm('format', v as 'mp3' | 'wav' | 'flac')}>
-                                <SelectTrigger className="h-7 text-xs bg-background/50 border-border/50">
+                                <SelectTrigger className="h-7 w-full text-xs bg-background/50 border-border/50">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -831,12 +977,24 @@ export default function MusicGeneration() {
                               </Select>
                             </div>
                             <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">返回格式</label>
+                              <Select value={outputFormat} onValueChange={(v) => updateForm('outputFormat', v as 'url' | 'hex')}>
+                                <SelectTrigger className="h-7 w-full text-xs bg-background/50 border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="url" className="text-xs">URL (推荐)</SelectItem>
+                                  <SelectItem value="hex" className="text-xs">Hex</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="col-span-2 space-y-1.5">
                               <label className="text-xs font-medium text-muted-foreground">随机种子</label>
                               <Input
                                 value={seed}
                                 onChange={(e) => updateForm('seed', e.target.value)}
                                 placeholder="留空则随机"
-                                className="h-7 text-xs bg-background/50 border-border/50"
+                                className="h-7 w-full text-xs bg-background/50 border-border/50"
                               />
                             </div>
                           </div>
