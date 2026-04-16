@@ -5,7 +5,6 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { uploadMediaFromUrl } from '@/lib/api/media'
@@ -16,6 +15,7 @@ import { VIDEO_MODELS, CAMERA_COMMANDS, type VideoModel, type CameraCommand } fr
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { motion } from 'framer-motion'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -30,12 +30,31 @@ interface VideoTask {
   error?: string
 }
 
+interface VideoGenerationFormData {
+  prompt: string
+  model: VideoModel
+  cameraCommand: CameraCommand
+}
+
 export default function VideoGeneration() {
   const { t } = useTranslation()
   const videoSettings = useSettingsStore(s => s.settings.generation.video)
-  const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState<VideoModel>(videoSettings.model as VideoModel)
-  const [cameraCommand, setCameraCommand] = useState<CameraCommand>('static')
+  
+  const [formData, setFormData] = useFormPersistence<VideoGenerationFormData>({
+    storageKey: DEBUG_FORM_KEYS.VIDEO_GENERATION,
+    defaultValue: {
+      prompt: '',
+      model: videoSettings.model as VideoModel,
+      cameraCommand: 'static',
+    },
+  })
+  
+  const { prompt, model, cameraCommand } = formData
+  
+  const updateForm = (updates: Partial<VideoGenerationFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }))
+  }
+  
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<VideoTask[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -64,7 +83,7 @@ export default function VideoGeneration() {
       }
 
       setTasks(prev => [newTask, ...prev])
-      setPrompt('')
+      updateForm({ prompt: '' })
 
       addUsage('videoRequests', 1)
 
@@ -204,14 +223,14 @@ export default function VideoGeneration() {
               <div className="p-4 space-y-4">
                 <Textarea
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  onChange={(e) => updateForm({ prompt: e.target.value })}
                   placeholder={t('videoGeneration.placeholder')}
                   className="min-h-[200px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
                 />
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">{t('videoGeneration.modelLabel')}</label>
-                  <Select value={model} onValueChange={(v) => setModel(v as VideoModel)}>
+                  <Select value={model} onValueChange={(v) => updateForm({ model: v as VideoModel })}>
                     <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
                       <SelectValue />
                     </SelectTrigger>
@@ -233,7 +252,7 @@ export default function VideoGeneration() {
                     <Camera className="w-4 h-4" />
                     镜头控制
                   </label>
-                  <Select value={cameraCommand} onValueChange={(v) => setCameraCommand(v as CameraCommand)}>
+                  <Select value={cameraCommand} onValueChange={(v) => updateForm({ cameraCommand: v as CameraCommand })}>
                     <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
                       <SelectValue />
                     </SelectTrigger>

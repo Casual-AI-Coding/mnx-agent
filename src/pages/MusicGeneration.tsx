@@ -19,25 +19,64 @@ import { useSettingsStore } from '@/settings/store'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
+
+type MusicFormData = {
+  lyrics: string
+  songTitle: string
+  stylePrompt: string
+  model: MusicModel
+  optimizeLyrics: boolean
+  parallelCount: number
+  instrumental: boolean
+  sampleRate: 16000 | 24000 | 32000 | 44100
+  bitrate: 32000 | 64000 | 128000 | 256000
+  format: 'mp3' | 'wav' | 'flac'
+  seed: string
+  coverMode: 'one-step' | 'two-step'
+  referenceAudioUrl: string
+  useOriginalLyrics: boolean
+}
 
 export default function MusicGeneration() {
   const { t } = useTranslation()
   const musicSettings = useSettingsStore(s => s.settings.generation.music)
-  const [lyrics, setLyrics] = useState('')
-  const [songTitle, setSongTitle] = useState('')
-  const [stylePrompt, setStylePrompt] = useState('')
   const validModel = MUSIC_MODELS.some(m => m.id === musicSettings.model)
-  const [model, setModel] = useState<MusicModel>(validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music)
-  const [optimizeLyrics, setOptimizeLyrics] = useState(musicSettings.optimizeLyrics)
+  const defaultModel: MusicModel = validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music
+
+  const [formData, setFormData] = useFormPersistence<MusicFormData>({
+    storageKey: DEBUG_FORM_KEYS.MUSIC_GENERATION,
+    defaultValue: {
+      lyrics: '',
+      songTitle: '',
+      stylePrompt: '',
+      model: defaultModel,
+      optimizeLyrics: musicSettings.optimizeLyrics,
+      parallelCount: 1,
+      instrumental: false,
+      sampleRate: 44100,
+      bitrate: 256000,
+      format: 'mp3',
+      seed: '',
+      coverMode: 'one-step',
+      referenceAudioUrl: '',
+      useOriginalLyrics: true,
+    },
+  })
+
+  const updateForm = useCallback((key: keyof MusicFormData, value: MusicFormData[keyof MusicFormData]) => {
+    setFormData(prev => ({ ...prev, [key]: value }))
+  }, [setFormData])
+
+  const { lyrics, songTitle, stylePrompt, model, optimizeLyrics, parallelCount, instrumental,
+          sampleRate, bitrate, format, seed, coverMode, referenceAudioUrl, useOriginalLyrics } = formData
+
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
   const [tasks, setTasks] = useState<MusicTask[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [parallelCount, setParallelCount] = useState(1)
-
-  const [instrumental, setInstrumental] = useState(false)
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [tipsOpen, setTipsOpen] = useState(false)
@@ -54,23 +93,15 @@ export default function MusicGeneration() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [advancedOpen])
-  const [sampleRate, setSampleRate] = useState<16000 | 24000 | 32000 | 44100>(44100)
-  const [bitrate, setBitrate] = useState<32000 | 64000 | 128000 | 256000>(256000)
-  const [format, setFormat] = useState<'mp3' | 'wav' | 'flac'>('mp3')
-  const [seed, setSeed] = useState<string>('')
-  
+
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
 
-  const [coverMode, setCoverMode] = useState<'one-step' | 'two-step'>('one-step')
-  const [referenceAudioUrl, setReferenceAudioUrl] = useState('')
-  const [useOriginalLyrics, setUseOriginalLyrics] = useState(true)
   const [preprocessLoading, setPreprocessLoading] = useState(false)
   const [preprocessResult, setPreprocessResult] = useState<{ lyrics: string; audio_url: string } | null>(null)
 
   const blobUrlsRef = useRef<Set<string>>(new Set())
 
-  // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       blobUrlsRef.current.forEach(url => {
@@ -83,7 +114,7 @@ export default function MusicGeneration() {
   const handleTemplateSelect = (templateId: string) => {
     const template = MUSIC_TEMPLATES.find(t => t.id === templateId)
     if (template) {
-      setStylePrompt(template.style)
+      updateForm('stylePrompt', template.style)
     }
   }
 
@@ -93,7 +124,7 @@ export default function MusicGeneration() {
       const start = textarea.selectionStart
       const end = textarea.selectionEnd
       const newLyrics = lyrics.substring(0, start) + tag + '\n' + lyrics.substring(end)
-      setLyrics(newLyrics)
+      updateForm('lyrics', newLyrics)
       setTimeout(() => {
         textarea.focus()
         textarea.setSelectionRange(start + tag.length + 1, start + tag.length + 1)
@@ -340,8 +371,8 @@ saveMusicToMedia(
     blobUrlsRef.current.clear()
     setTasks([])
     setCurrentIndex(0)
-    setLyrics('')
-    setStylePrompt('')
+    updateForm('lyrics', '')
+    updateForm('stylePrompt', '')
     setError(null)
   }
 
@@ -359,8 +390,8 @@ saveMusicToMedia(
     try {
       const result = await preprocessMusic(file)
       setPreprocessResult(result)
-      setLyrics(result.lyrics)
-      setReferenceAudioUrl(result.audio_url)
+      updateForm('lyrics', result.lyrics)
+      updateForm('referenceAudioUrl', result.audio_url)
     } catch (err) {
       setError(err instanceof Error ? err.message : '预处理失败')
     } finally {
@@ -457,7 +488,7 @@ saveMusicToMedia(
                     <label className="text-sm font-medium shrink-0">歌曲标题</label>
                     <Input
                       value={songTitle}
-                      onChange={(e) => setSongTitle(e.target.value)}
+                      onChange={(e) => updateForm('songTitle', e.target.value)}
                       placeholder="可选，用于命名生成的音乐文件"
                     />
                   </div>
@@ -478,7 +509,7 @@ saveMusicToMedia(
                     <Textarea
                       id="lyrics-editor"
                       value={lyrics}
-                      onChange={(e) => setLyrics(e.target.value)}
+                      onChange={(e) => updateForm('lyrics', e.target.value)}
                       placeholder={t('musicGeneration.lyricsPlaceholder')}
                       className={cn(
                         "min-h-[300px] resize-none font-mono text-sm pb-6",
@@ -584,7 +615,7 @@ saveMusicToMedia(
                   <div className="relative">
                     <Textarea
                       value={stylePrompt}
-                      onChange={(e) => setStylePrompt(e.target.value)}
+                      onChange={(e) => updateForm('stylePrompt', e.target.value)}
                       placeholder={instrumental
                         ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构'
                         : t('musicGeneration.stylePlaceholder')
@@ -624,7 +655,7 @@ saveMusicToMedia(
                 <div className="flex gap-6">
                   <div className="space-y-2 flex-1 pr-6 border-r border-border">
                     <label className="text-sm font-medium text-foreground">{t('musicGeneration.modelLabel')}</label>
-                    <Select value={model} onValueChange={(v) => setModel(v as MusicModel)}>
+                    <Select value={model} onValueChange={(v) => updateForm('model', v as MusicModel)}>
                       <SelectTrigger className="w-[200px]">
                         <SelectValue />
                       </SelectTrigger>
@@ -644,7 +675,7 @@ saveMusicToMedia(
                         <button
                           key={n}
                           type="button"
-                          onClick={() => !isGenerating && setParallelCount(n)}
+                          onClick={() => !isGenerating && updateForm('parallelCount', n)}
                           disabled={isGenerating}
                           className={cn(
                             "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
@@ -666,7 +697,7 @@ saveMusicToMedia(
                         <Checkbox
                           id="instrumental"
                           checked={instrumental}
-                          onCheckedChange={(checked) => setInstrumental(checked as boolean)}
+                          onCheckedChange={(checked) => updateForm('instrumental', checked as boolean)}
                         />
                         <label htmlFor="instrumental" className="text-sm">
                           纯音乐模式
@@ -678,7 +709,7 @@ saveMusicToMedia(
                         <Checkbox
                           id="optimize-lyrics"
                           checked={optimizeLyrics}
-                          onCheckedChange={(checked) => setOptimizeLyrics(checked as boolean)}
+                          onCheckedChange={(checked) => updateForm('optimizeLyrics', checked as boolean)}
                         />
                         <label htmlFor="optimize-lyrics" className="text-sm">
                           AI歌词优化
@@ -702,7 +733,7 @@ saveMusicToMedia(
                               <label className="text-xs font-medium text-muted-foreground">采样率</label>
                               <Select
                                 value={sampleRate.toString()}
-                                onValueChange={(v) => setSampleRate(Number(v) as 16000 | 24000 | 32000 | 44100)}
+                                onValueChange={(v) => updateForm('sampleRate', Number(v) as 16000 | 24000 | 32000 | 44100)}
                               >
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
@@ -719,7 +750,7 @@ saveMusicToMedia(
                               <label className="text-xs font-medium text-muted-foreground">比特率</label>
                               <Select
                                 value={bitrate.toString()}
-                                onValueChange={(v) => setBitrate(Number(v) as 32000 | 64000 | 128000 | 256000)}
+                                onValueChange={(v) => updateForm('bitrate', Number(v) as 32000 | 64000 | 128000 | 256000)}
                               >
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
@@ -734,7 +765,7 @@ saveMusicToMedia(
                             </div>
                             <div className="space-y-2">
                               <label className="text-xs font-medium text-muted-foreground">格式</label>
-                              <Select value={format} onValueChange={(v) => setFormat(v as 'mp3' | 'wav' | 'flac')}>
+                              <Select value={format} onValueChange={(v) => updateForm('format', v as 'mp3' | 'wav' | 'flac')}>
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
@@ -749,7 +780,7 @@ saveMusicToMedia(
                               <label className="text-xs font-medium text-muted-foreground">随机种子</label>
                               <Input
                                 value={seed}
-                                onChange={(e) => setSeed(e.target.value)}
+                                onChange={(e) => updateForm('seed', e.target.value)}
                                 placeholder="留空则随机"
                                 className="h-8"
                               />
@@ -770,7 +801,7 @@ saveMusicToMedia(
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <Tabs value={coverMode} onValueChange={(v) => setCoverMode(v as 'one-step' | 'two-step')}>
+                      <Tabs value={coverMode} onValueChange={(v) => updateForm('coverMode', v as 'one-step' | 'two-step')}>
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="one-step">一步模式</TabsTrigger>
                           <TabsTrigger value="two-step">两步模式</TabsTrigger>
@@ -783,7 +814,7 @@ saveMusicToMedia(
                             </label>
                             <Input
                               value={referenceAudioUrl}
-                              onChange={(e) => setReferenceAudioUrl(e.target.value)}
+                              onChange={(e) => updateForm('referenceAudioUrl', e.target.value)}
                               placeholder="https://example.com/song.mp3"
                               type="url"
                             />
@@ -795,7 +826,7 @@ saveMusicToMedia(
                             </label>
                             <Textarea
                               value={stylePrompt}
-                              onChange={(e) => setStylePrompt(e.target.value)}
+                              onChange={(e) => updateForm('stylePrompt', e.target.value)}
                               placeholder="描述翻唱风格，如更悲伤、更激昂..."
                               className="min-h-[60px] resize-none"
                             />
@@ -811,7 +842,7 @@ saveMusicToMedia(
                             <Checkbox
                               id="use-original"
                               checked={useOriginalLyrics}
-                              onCheckedChange={(checked) => setUseOriginalLyrics(checked as boolean)}
+                              onCheckedChange={(checked) => updateForm('useOriginalLyrics', checked as boolean)}
                             />
                             <label htmlFor="use-original" className="text-sm">
                               使用原歌词（自动提取）
@@ -825,7 +856,7 @@ saveMusicToMedia(
                               </label>
                               <Textarea
                                 value={lyrics}
-                                onChange={(e) => setLyrics(e.target.value)}
+                                onChange={(e) => updateForm('lyrics', e.target.value)}
                                 placeholder="输入自定义翻唱歌词..."
                                 className={cn(
                                   "min-h-[150px] resize-none font-mono text-sm",
@@ -871,7 +902,7 @@ saveMusicToMedia(
                               </label>
                               <Textarea
                                 value={lyrics}
-                                onChange={(e) => setLyrics(e.target.value)}
+                                onChange={(e) => updateForm('lyrics', e.target.value)}
                                 defaultValue={preprocessResult.lyrics}
                                 className={cn(
                                   "min-h-[150px] resize-none font-mono text-sm",
@@ -893,7 +924,7 @@ saveMusicToMedia(
                             </label>
                             <Textarea
                               value={stylePrompt}
-                              onChange={(e) => setStylePrompt(e.target.value)}
+                              onChange={(e) => updateForm('stylePrompt', e.target.value)}
                               placeholder="描述翻唱风格..."
                               className="min-h-[60px] resize-none"
                             />

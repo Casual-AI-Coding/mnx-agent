@@ -13,9 +13,9 @@ import { useSettingsStore } from '@/settings/store'
 import { TEXT_MODELS, SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
-import { services, status } from '@/themes/tokens'
 
 interface Message {
   id: string
@@ -25,15 +25,34 @@ interface Message {
   error?: boolean
 }
 
+interface TextGenerationFormData {
+  selectedModel: string
+  selectedTemplate: string
+  promptCaching: boolean
+}
+
 export default function TextGeneration() {
   const { t } = useTranslation()
   const textSettings = useSettingsStore(s => s.settings.generation.text)
+  
+  const [formData, setFormData] = useFormPersistence<TextGenerationFormData>({
+    storageKey: DEBUG_FORM_KEYS.TEXT_GENERATION,
+    defaultValue: {
+      selectedModel: textSettings.model,
+      selectedTemplate: 'general',
+      promptCaching: textSettings.promptCaching,
+    },
+  })
+  
+  const { selectedModel, selectedTemplate, promptCaching } = formData
+  
+  const updateForm = (updates: Partial<TextGenerationFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }))
+  }
+  
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<string>(textSettings.model)
-  const [selectedTemplate, setSelectedTemplate] = useState('general')
-  const [promptCaching, setPromptCaching] = useState(textSettings.promptCaching)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -190,7 +209,7 @@ export default function TextGeneration() {
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as typeof TEXT_MODELS[number]['id'])}>
+          <Select value={selectedModel} onValueChange={(v) => updateForm({ selectedModel: v as typeof TEXT_MODELS[number]['id'] })}>
             <SelectTrigger className="w-48 bg-card/50 border-border text-foreground hover:border-primary/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
@@ -206,7 +225,7 @@ export default function TextGeneration() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+          <Select value={selectedTemplate} onValueChange={(v) => updateForm({ selectedTemplate: v })}>
             <SelectTrigger className="w-36 bg-card/50 border-border text-foreground hover:border-primary/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
@@ -227,10 +246,10 @@ export default function TextGeneration() {
             )}
             <Switch
               checked={promptCaching}
-              onCheckedChange={setPromptCaching}
+              onCheckedChange={(v) => updateForm({ promptCaching: v })}
               className="data-[state=checked]:bg-warning"
             />
-            <Label className="text-sm text-muted-foreground cursor-pointer" onClick={() => setPromptCaching(!promptCaching)}>
+            <Label className="text-sm text-muted-foreground cursor-pointer" onClick={() => updateForm({ promptCaching: !promptCaching })}>
               {t('textGeneration.promptCaching') || '缓存'}
             </Label>
           </div>

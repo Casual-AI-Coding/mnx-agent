@@ -12,6 +12,7 @@ import { useUsageStore } from '@/stores/usage'
 import { VIDEO_AGENT_TEMPLATES, type VideoAgentTemplate } from '@/types'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -25,6 +26,11 @@ interface AgentTask {
   videoUrl?: string
   duration?: number
   error?: string
+}
+
+interface VideoAgentFormData {
+  selectedTemplateId: string | null
+  inputs: Record<string, string>
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -50,8 +56,24 @@ const TEMPLATE_FORMS: Record<string, { label: string; placeholder: string }[]> =
 }
 
 export default function VideoAgent() {
-  const [selectedTemplate, setSelectedTemplate] = useState<VideoAgentTemplate | null>(null)
-  const [inputs, setInputs] = useState<Record<string, string>>({})
+  const [formData, setFormData] = useFormPersistence<VideoAgentFormData>({
+    storageKey: DEBUG_FORM_KEYS.VIDEO_AGENT,
+    defaultValue: {
+      selectedTemplateId: null,
+      inputs: {},
+    },
+  })
+  
+  const { selectedTemplateId, inputs } = formData
+  
+  const selectedTemplate = selectedTemplateId 
+    ? VIDEO_AGENT_TEMPLATES.find(t => t.id === selectedTemplateId) ?? null
+    : null
+  
+  const updateForm = (updates: Partial<VideoAgentFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }))
+  }
+  
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<AgentTask[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -59,13 +81,12 @@ export default function VideoAgent() {
   const { addUsage } = useUsageStore()
 
   const handleTemplateSelect = (template: VideoAgentTemplate) => {
-    setSelectedTemplate(template)
-    setInputs({})
+    updateForm({ selectedTemplateId: template.id, inputs: {} })
     setError(null)
   }
 
   const handleInputChange = (key: string, value: string) => {
-    setInputs(prev => ({ ...prev, [key]: value }))
+    updateForm({ inputs: { ...inputs, [key]: value } })
   }
 
   const generatePrompt = () => {
@@ -113,7 +134,7 @@ export default function VideoAgent() {
       }
 
       setTasks(prev => [newTask, ...prev])
-      setInputs({})
+      updateForm({ inputs: {} })
 
       addUsage('videoRequests', 1)
 
@@ -309,7 +330,7 @@ export default function VideoAgent() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>
+                        <Button variant="ghost" size="sm" onClick={() => updateForm({ selectedTemplateId: null })}>
                           ← 返回
                         </Button>
                         <CardTitle>{selectedTemplate.name}</CardTitle>

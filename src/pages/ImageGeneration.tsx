@@ -20,8 +20,22 @@ import { IMAGE_MODELS, ASPECT_RATIOS, PROMPT_TEMPLATES, type ImageModel, type As
 import { motion, AnimatePresence } from 'framer-motion'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
-import { services } from '@/themes/tokens'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { type ImageTask, type ImageTaskStatus } from '@/components/image/ImageTaskCard'
+
+interface ImageGenerationFormData {
+  prompt: string
+  model: ImageModel
+  aspectRatioState: AspectRatioState
+  numImages: number
+  referenceImageMode: 'upload' | 'url'
+  referenceImageUrl: string
+  seed: number | undefined
+  promptOptimizer: boolean
+  aigcWatermark: boolean
+  imageTitle: string
+  parallelCount: number
+}
 
 // Animation variants
 const containerVariants = {
@@ -64,31 +78,48 @@ export default function ImageGeneration() {
   const { settings } = useSettingsStore()
   const apiKey = settings.api.minimaxKey
   const imageSettings = useSettingsStore(s => s.settings.generation.image)
-  const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState<ImageModel>(imageSettings.model as ImageModel)
-  const [aspectRatioState, setAspectRatioState] = useState<AspectRatioState>({
-    type: 'preset',
-    preset: imageSettings.aspectRatio as AspectRatio,
+  
+  const [formData, setFormData] = useFormPersistence<ImageGenerationFormData>({
+    storageKey: DEBUG_FORM_KEYS.IMAGE_GENERATION,
+    defaultValue: {
+      prompt: '',
+      model: imageSettings.model as ImageModel,
+      aspectRatioState: {
+        type: 'preset',
+        preset: imageSettings.aspectRatio as AspectRatio,
+      },
+      numImages: imageSettings.numImages ?? 9,
+      referenceImageMode: 'upload',
+      referenceImageUrl: '',
+      seed: undefined,
+      promptOptimizer: false,
+      aigcWatermark: false,
+      imageTitle: '',
+      parallelCount: 1,
+    },
   })
+  
+  const { 
+    prompt, model, aspectRatioState, numImages, 
+    referenceImageMode, referenceImageUrl, seed,
+    promptOptimizer, aigcWatermark, imageTitle, parallelCount
+  } = formData
+  
+  const updateForm = (updates: Partial<ImageGenerationFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }))
+  }
+  
   const [showAspectRatioPopup, setShowAspectRatioPopup] = useState(false)
-  const [numImages, setNumImages] = useState(imageSettings.numImages ?? 9)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)
-  const [referenceImageMode, setReferenceImageMode] = useState<'upload' | 'url'>('upload')
-  const [referenceImageUrl, setReferenceImageUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [seed, setSeed] = useState<number | undefined>()
-  const [promptOptimizer, setPromptOptimizer] = useState(false)
-  const [aigcWatermark, setAigcWatermark] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [tasks, setTasks] = useState<ImageTask[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [parallelCount, setParallelCount] = useState(1)
-  const [imageTitle, setImageTitle] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
@@ -100,7 +131,7 @@ export default function ImageGeneration() {
   const handleTemplateSelect = useCallback((templateId: string) => {
     const template = PROMPT_TEMPLATES.find(t => t.id === templateId)
     if (template) {
-      setPrompt(template.prompt)
+      updateForm({ prompt: template.prompt })
       setActiveTemplate(templateId)
     }
   }, [])
@@ -123,7 +154,7 @@ export default function ImageGeneration() {
 
   const removeReferenceImage = useCallback(() => {
     setReferenceImage(null)
-    setReferenceImageUrl('')
+    updateForm({ referenceImageUrl: '' })
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -454,7 +485,7 @@ export default function ImageGeneration() {
                   <label className="text-sm font-medium text-foreground shrink-0">标题</label>
                   <Input
                     value={imageTitle}
-                    onChange={(e) => setImageTitle(e.target.value)}
+                    onChange={(e) => updateForm({ imageTitle: e.target.value })}
                     placeholder="输入标题名称..."
                     className="bg-background/50 border-border"
                   />
@@ -462,7 +493,7 @@ export default function ImageGeneration() {
 
                 <Textarea
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  onChange={(e) => updateForm({ prompt: e.target.value })}
                   placeholder={t('imageGeneration.placeholder') || "描述你想要生成的图片，例如：一只戴着墨镜的猫在海滩上..."}
                   className="min-h-[120px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
                 />
@@ -514,7 +545,7 @@ export default function ImageGeneration() {
                     </button>
                   </div>
                 ) : (
-                  <Tabs value={referenceImageMode} onValueChange={(v) => setReferenceImageMode(v as 'upload' | 'url')}>
+                  <Tabs value={referenceImageMode} onValueChange={(v) => updateForm({ referenceImageMode: v as 'upload' | 'url' })}>
                     <TabsList className="w-full">
                       <TabsTrigger value="upload" className="flex-1">
                         <Upload className="w-4 h-4 mr-2" />
@@ -553,7 +584,7 @@ export default function ImageGeneration() {
                       <div className="space-y-3">
                         <Input
                           value={referenceImageUrl}
-                          onChange={(e) => setReferenceImageUrl(e.target.value)}
+                          onChange={(e) => updateForm({ referenceImageUrl: e.target.value })}
                           placeholder="输入图片 URL..."
                           className="w-full bg-background/50 border-border"
                         />
@@ -592,7 +623,7 @@ export default function ImageGeneration() {
                   {/* Model Selection */}
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">模型选择</label>
-                    <Select value={model} onValueChange={(v) => setModel(v as ImageModel)}>
+                    <Select value={model} onValueChange={(v) => updateForm({ model: v as ImageModel })}>
                       <SelectTrigger className="w-full bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
                         <SelectValue />
                       </SelectTrigger>
@@ -627,7 +658,7 @@ export default function ImageGeneration() {
                       open={showAspectRatioPopup}
                       onClose={() => setShowAspectRatioPopup(false)}
                       value={aspectRatioState}
-                      onChange={setAspectRatioState}
+                      onChange={(v) => updateForm({ aspectRatioState: v })}
                     />
                   </div>
                 </div>
@@ -641,7 +672,7 @@ export default function ImageGeneration() {
                       {[4, 5, 6, 7, 8, 9].map(n => (
                         <button
                           key={n}
-                          onClick={() => setNumImages(n)}
+                          onClick={() => updateForm({ numImages: n })}
                           className={`flex-1 min-w-[32px] py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
                             numImages === n
                               ? 'bg-gradient-to-r from-primary to-accent border-primary/50 text-primary-foreground shadow-lg shadow-primary/20'
@@ -664,7 +695,7 @@ export default function ImageGeneration() {
                           type="button"
                           onClick={() => {
                             if (!isGenerating) {
-                              setParallelCount(n)
+                              updateForm({ parallelCount: n })
                               if (tasks.length > 0) {
                                 setTasks([])
                                 setCurrentIndex(0)
@@ -717,7 +748,7 @@ export default function ImageGeneration() {
                           </div>
                           <Switch
                             checked={promptOptimizer}
-                            onCheckedChange={setPromptOptimizer}
+                            onCheckedChange={(v) => updateForm({ promptOptimizer: v })}
                           />
                         </div>
 
@@ -728,7 +759,7 @@ export default function ImageGeneration() {
                           </div>
                           <Switch
                             checked={aigcWatermark}
-                            onCheckedChange={setAigcWatermark}
+                            onCheckedChange={(v) => updateForm({ aigcWatermark: v })}
                           />
                         </div>
                       </div>
@@ -738,12 +769,12 @@ export default function ImageGeneration() {
                         <Input
                           type="number"
                           value={seed || ''}
-                          onChange={(e) => setSeed(e.target.value ? parseInt(e.target.value) : undefined)}
+                          onChange={(e) => updateForm({ seed: e.target.value ? parseInt(e.target.value) : undefined })}
                           placeholder={t('imageGeneration.seedPlaceholder') || '留空则随机'}
                           className="flex-1 bg-background/50 border-border text-foreground focus:border-primary/50"
                         />
                         <button
-                          onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
+                          onClick={() => updateForm({ seed: Math.floor(Math.random() * 1000000) })}
                           className="px-3 py-2 rounded-lg bg-secondary text-muted-foreground/70 hover:text-foreground hover:bg-secondary/80 transition-colors"
                         >
                           <RefreshCw className="w-4 h-4" />
