@@ -319,7 +319,7 @@ function AudioPlayer({
   }, [onTogglePublic, isPublic])
 
   return (
-    <div className="space-y-3">
+    <div className="min-h-[130px]">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
       <div className={cn(
@@ -542,7 +542,6 @@ export function MusicTaskCard({
       variants={taskVariants}
       initial="hidden"
       animate="visible"
-      layout
       className="group"
     >
       <div className="relative group">
@@ -626,9 +625,8 @@ export function MusicTaskCard({
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="py-6"
               >
-                <div className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-muted/10 border border-muted/20">
+                <div className="min-h-[130px] flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-muted/10 border border-muted/20">
                   <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
                     <Trash2 className="w-6 h-6 text-muted-foreground" />
                   </div>
