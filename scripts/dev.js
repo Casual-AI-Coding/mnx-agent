@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, exec, execSync } from 'child_process'
-import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -18,8 +18,8 @@ const SERVICES = {
     port: 4311,
     pidFile: join(PID_DIR, 'dev.pid'),
     logFile: join(LOG_DIR, 'dev.log'),
-    command: 'vite',
-    args: ['--port', '4311', '--host', '0.0.0.0'],
+    command: 'npx',
+    args: ['vite', '--port', '4311', '--host', '0.0.0.0'],
     type: 'frontend',
   },
   prod: {
@@ -27,8 +27,8 @@ const SERVICES = {
     port: 4411,
     pidFile: join(PID_DIR, 'prod.pid'),
     logFile: join(LOG_DIR, 'prod.log'),
-    command: 'vite',
-    args: ['preview', '--port', '4411', '--host', '0.0.0.0'],
+    command: 'npx',
+    args: ['vite', 'preview', '--port', '4411', '--host', '0.0.0.0'],
     type: 'frontend',
     requiresBuild: true,
   },
@@ -37,8 +37,8 @@ const SERVICES = {
     port: 4511,
     pidFile: join(PID_DIR, 'backend.pid'),
     logFile: join(LOG_DIR, 'backend.log'),
-    command: 'tsx',
-    args: ['server/index.ts'],
+    command: 'npx',
+    args: ['tsx', 'server/index.ts'],
     type: 'backend',
   },
 }
@@ -156,13 +156,12 @@ async function startService(serviceKey, skipIfRunning = false) {
   // Start process
   log(`Starting ${service.name} on port ${service.port}...`)
 
-  const { createWriteStream } = require('fs')
-  const logStream = createWriteStream(service.logFile, { flags: 'a' })
+  const logFd = openSync(service.logFile, 'a')
 
   const child = spawn(service.command, service.args, {
     cwd: ROOT_DIR,
     detached: true,
-    stdio: ['ignore', logStream, logStream],
+    stdio: ['ignore', logFd, logFd],
   })
 
   child.unref()
@@ -354,8 +353,8 @@ async function main() {
   const command = args[0] || 'status'
   const target = args[1] || 'dev'
 
-  // Validate command
-  const validCommands = Object.keys(COMMANDS)
+  // Validate command (extract base command from COMMANDS keys)
+  const validCommands = Object.keys(COMMANDS).map(k => k.split(' ')[0])
   if (!validCommands.includes(command)) {
     error(`Unknown command: ${command}`)
     log(`Available commands: ${validCommands.join(', ')}`)
