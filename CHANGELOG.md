@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-04-17
+
+### Added
+
+- **Auth Guard System** - Enhanced authentication state management
+  - `src/components/auth/AuthGuard.tsx` - Route guard component preventing unauthenticated access
+  - `isHydrated` state to detect Zustand persistence hydration completion
+  - `waitForAuth` request interceptor ensuring API calls wait for auth readiness
+
+- **CLI Individual Service Control** - Granular service management
+  - Individual start/stop for frontend or backend services
+
+### Fixed
+
+- **Page Refresh Authentication** - Critical fix for login state loss on browser refresh
+  - Persist `accessToken` to localStorage (was missing in partialize config)
+  - Extended `isHydrated` check to all high-risk pages, components, and hooks
+  - Corrected `waitForAuth` logic and refreshToken storage flow
+
+- **Duplicate API Calls** - Eliminated redundant API requests
+  - Fixed media and settings interfaces duplicate call issue
+  - Shared workflow available-actions API cache preventing repeated calls
+
+- **CLI Reliability** - Production deployment stability
+  - Added `cwd` parameter to sync execSync commands
+  - Auto-sync static assets on production startup
+
+### Changed
+
+- **Documentation Structure**
+  - Reorganized environment config from spec to guide section
+
 ## [2.0.0] - 2026-04-17
 
 ### Added
