@@ -420,50 +420,43 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [selectedIds])
 
-  // Initial load
-  useEffect(() => {
-    if (isInitialLoad) {
-      fetchMedia(true)
-    }
-  }, [fetchMedia, isInitialLoad])
-
-  // Reset pagination when tab changes
-  useEffect(() => {
-    if (!isInitialLoad) {
-      setPagination((prev) => ({ ...prev, page: 1 }))
-    }
-  }, [activeTab, isInitialLoad])
-
   // Track previous activeTab and page to detect changes
   const prevActiveTabRef = useRef(activeTab)
   const prevPageRef = useRef(pagination.page)
   const prevSearchQueryRef = useRef(searchQuery)
   const prevFavoriteFiltersRef = useRef(favoriteFilters)
   const prevPublicFiltersRef = useRef(publicFilters)
+  const isFetchingRef = useRef(false)
+  const hasInitializedRef = useRef(false)
 
-  // Auto-fetch when filters change
   useEffect(() => {
-    if (!isInitialLoad && currentUser?.id) {
+    if (!currentUser?.id || isFetchingRef.current) return
+
+    const tabChanged = activeTab !== prevActiveTabRef.current
+    const pageChanged = pagination.page !== prevPageRef.current
+    const filtersChanged =
+      favoriteFilters !== prevFavoriteFiltersRef.current ||
+      publicFilters !== prevPublicFiltersRef.current
+
+    const shouldFetch = (!hasInitializedRef.current && isInitialLoad) || tabChanged || pageChanged || filtersChanged
+
+    if (shouldFetch) {
+      isFetchingRef.current = true
+      hasInitializedRef.current = true
+      prevActiveTabRef.current = activeTab
+      prevPageRef.current = pagination.page
       prevFavoriteFiltersRef.current = favoriteFilters
       prevPublicFiltersRef.current = publicFilters
-      setPagination(prev => ({ ...prev, page: 1 }))
-      fetchMedia(true, 1)
-    }
-  }, [favoriteFilters, publicFilters, currentUser?.id])
 
-  // Initial fetch and refetch on tab/page changes
-  useEffect(() => {
-    if (isInitialLoad || activeTab !== prevActiveTabRef.current || pagination.page !== prevPageRef.current) {
-      const tabChanged = activeTab !== prevActiveTabRef.current
-      const pageChanged = pagination.page !== prevPageRef.current
-      
-      if (tabChanged || pageChanged) {
-        prevActiveTabRef.current = activeTab
-        prevPageRef.current = pagination.page
-        fetchMedia(false)
-      }
+      const fetchPromise = isInitialLoad || filtersChanged
+        ? fetchMedia(true, isInitialLoad ? undefined : 1)
+        : fetchMedia(false)
+
+      fetchPromise.finally(() => {
+        isFetchingRef.current = false
+      })
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilters, publicFilters, currentUser?.id])
 
   // Manual search trigger - applies current filters and search query
   const handleManualSearch = useCallback(() => {

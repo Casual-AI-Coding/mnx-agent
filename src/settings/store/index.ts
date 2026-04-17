@@ -51,19 +51,23 @@ export const useSettingsStore = create<SettingsState>()(
       lastSyncedAt: null,
       syncError: null,
       dirtyCategories: new Set(),
-      
+
       initialize: async () => {
+        const state = get()
+        if (state.isLoading || state.lastSyncedAt) {
+          return
+        }
+
         set({ isLoading: true, syncError: null })
         try {
-          // Load from backend API
           const { getSettings } = await import('@/lib/api/settings')
           const response = await getSettings()
-          
+
           if (response.success && response.data) {
             const serverSettings = response.data as Partial<AllSettings>
             set(state => ({
-              settings: { 
-                ...state.settings, 
+              settings: {
+                ...state.settings,
                 ...serverSettings,
                 api: serverSettings.api ?? state.settings.api
               },
@@ -72,7 +76,7 @@ export const useSettingsStore = create<SettingsState>()(
             }))
           }
         } catch (error) {
-          set({  syncError: error as Error })
+          set({ syncError: error as Error })
         } finally {
           set({ isLoading: false })
         }
