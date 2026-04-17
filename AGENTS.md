@@ -438,24 +438,24 @@ vitest run --coverage
 
 ```bash
 # 启动开发服务器（后台运行）
-node scripts/run.js start
+mnx-agent start dev
 
 # 查看状态
-node scripts/run.js status
+mnx-agent status
 
 # 查看日志（实时）
-node scripts/run.js log
+mnx-agent log dev
 
 # 停止服务器
-node scripts/run.js stop
+mnx-agent stop
 
 # 重启服务器
-node scripts/run.js restart
+mnx-agent restart dev
 ```
 
 **与 `npm run dev:full` 的区别**：
 - `dev:full`: 前台运行，Ctrl+C 停止
-- `dev.js`: 后台运行，支持 start/stop/status/log 命令
+- `mnx-agent`: 后台运行，支持 start/stop/status/log/restart/sync 命令
 
 ## 开发流程
 
