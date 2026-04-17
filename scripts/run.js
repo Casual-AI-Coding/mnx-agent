@@ -355,6 +355,12 @@ async function main() {
   const command = args[0] || 'status'
   const target = args[1] || 'dev'
 
+  // Handle help flags
+  if (command === '--help' || command === '-h' || command === 'help') {
+    printHelp()
+    process.exit(0)
+  }
+
   // Validate command (extract base command from COMMANDS keys)
   const validCommands = Object.keys(COMMANDS).map(k => k.split(' ')[0])
   if (!validCommands.includes(command)) {
