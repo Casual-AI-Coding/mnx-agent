@@ -208,9 +208,30 @@ async function stopAll() {
   log('All services stopped')
 }
 
+function getTargetServices(target) {
+  switch (target) {
+    case 'dev':
+      return ['dev', 'backend']
+    case 'prod':
+      return ['prod', 'backend']
+    case 'all':
+      return ['prod', 'dev', 'backend']  // prod first for stable startup
+    default:
+      error(`Unknown target: ${target}. Use dev, prod, or all.`)
+  }
+}
+
 async function startCommand(target) {
-  // Placeholder - Task 6 will implement
-  log(`start(${target}) placeholder - Task 6`)
+  ensureRunDirs()
+
+  const services = getTargetServices(target)
+  log(`Starting ${target} environment...`)
+
+  for (const serviceId of services) {
+    await startService(serviceId, true)
+  }
+
+  log(`${target} environment ready`)
 }
 
 async function restartCommand(target) {
