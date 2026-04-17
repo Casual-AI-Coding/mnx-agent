@@ -17,13 +17,10 @@ class InternalAPIClient {
    * 避免 accessToken 未恢复时发送请求导致 401
    */
   private async waitForAuth(): Promise<void> {
-    const { isHydrated, isAuthenticated } = useAuthStore.getState()
+    const { isHydrated } = useAuthStore.getState()
     
     // 已经 hydration 完成，直接返回
     if (isHydrated) return
-    
-    // 未登录状态不需要等待（如 login 页面）
-    if (!isAuthenticated && !isHydrated) return
     
     const start = Date.now()
     while (!useAuthStore.getState().isHydrated) {
