@@ -66,6 +66,7 @@ data/
 # Dev CLI
 .dev.pid
 .dev.log
+.run/
 .worktrees/
 
 # Dev tools (internal scripts)
