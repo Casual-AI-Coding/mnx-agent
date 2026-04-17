@@ -44,13 +44,15 @@ const SERVICES = {
 }
 
 const COMMANDS = {
-  'start <target>': 'Start services (dev/prod/all)',
-  'stop': 'Stop all services',
-  'restart <target>': 'Restart services (dev/prod/all)',
-  'log <target>': 'Tail logs (dev/prod/all)',
+  'start <target>': 'Start services',
+  'stop [target]': 'Stop services (default: all)',
+  'restart <target>': 'Restart services',
+  'log <target>': 'Tail logs',
   'status': 'Show all service status',
   'sync': 'Sync static files to nginx directory',
 }
+
+const VALID_TARGETS = ['dev', 'prod', 'all', 'backend', 'frontend', 'frontend:dev', 'frontend:prod']
 
 // Helper functions
 function log(msg) {
@@ -197,14 +199,15 @@ async function stopService(serviceKey) {
   }
 }
 
-async function stopAll() {
-  log('Stopping all services...')
+async function stopServices(target) {
+  const services = target ? getTargetServices(target) : ['dev', 'prod', 'backend']
+  log(`Stopping ${target || 'all'} services...`)
 
-  for (const key of ['dev', 'prod', 'backend']) {
+  for (const key of services) {
     await stopService(key)
   }
 
-  log('All services stopped')
+  log('Services stopped')
 }
 
 function getTargetServices(target) {
@@ -214,9 +217,17 @@ function getTargetServices(target) {
     case 'prod':
       return ['prod', 'backend']
     case 'all':
-      return ['prod', 'dev', 'backend']  // prod first for stable startup
+      return ['prod', 'dev', 'backend']
+    case 'backend':
+      return ['backend']
+    case 'frontend':
+      return ['dev', 'prod']
+    case 'frontend:dev':
+      return ['dev']
+    case 'frontend:prod':
+      return ['prod']
     default:
-      error(`Unknown target: ${target}. Use dev, prod, or all.`)
+      error(`Unknown target: ${target}`)
   }
 }
 
@@ -234,11 +245,11 @@ async function startCommand(target) {
 }
 
 async function restartCommand(target) {
-  log(`Restarting ${target} environment...`)
-  await stopAll()
+  log(`Restarting ${target}...`)
+  await stopServices(target)
   await new Promise(resolve => setTimeout(resolve, 1000))
   await startCommand(target)
-  log(`${target} environment restarted`)
+  log(`${target} restarted`)
 }
 
 async function checkPortHealth(port) {
@@ -335,18 +346,29 @@ Commands:
 ${Object.entries(COMMANDS).map(([cmd, desc]) => `  ${cmd.padEnd(20)} ${desc}`).join('\n')}
 
 Targets:
-  dev     Dev frontend (port 4311) + backend
-  prod    Prod frontend (port 4411) + backend
-  all     Dev + Prod + Backend (all services)
+  Environments (frontend + backend):
+    dev       Dev frontend + backend
+    prod      Prod frontend + backend
+    all       All services (dev + prod + backend)
+
+  Individual services:
+    backend           Backend only
+    frontend          Both frontends (dev + prod)
+    frontend:dev      Dev frontend only
+    frontend:prod     Prod frontend only
 
 Examples:
-  mnx-agent start dev      Start dev environment
-  mnx-agent start prod     Build and start prod environment
-  mnx-agent start all      Start both dev and prod
-  mnx-agent stop           Stop all services
-  mnx-agent status         Show all service status
-  mnx-agent log dev        Tail dev + backend logs
-  mnx-agent sync           Sync static files to nginx
+  mnx-agent start dev          Start dev environment
+  mnx-agent start prod         Build and start prod environment
+  mnx-agent start backend      Start backend only
+  mnx-agent start frontend     Start both frontends
+  mnx-agent start frontend:dev Start dev frontend only
+  mnx-agent stop               Stop all services
+  mnx-agent stop backend       Stop backend only
+  mnx-agent restart dev        Restart dev environment
+  mnx-agent log backend        Tail backend logs
+  mnx-agent status             Show all service status
+  mnx-agent sync               Sync static files to nginx
 `)
 }
 
@@ -371,9 +393,16 @@ async function main() {
 
   // Validate target for commands that need it
   const needsTarget = ['start', 'restart', 'log']
-  if (needsTarget.includes(command) && !['dev', 'prod', 'all'].includes(target)) {
+  if (needsTarget.includes(command) && !VALID_TARGETS.includes(target)) {
     error(`Invalid target: ${target}`)
-    log(`Valid targets: dev, prod, all`)
+    log(`Valid targets: ${VALID_TARGETS.join(', ')}`)
+    process.exit(1)
+  }
+
+  // Validate target for stop command (optional)
+  if (command === 'stop' && target && !VALID_TARGETS.includes(target)) {
+    error(`Invalid target: ${target}`)
+    log(`Valid targets: ${VALID_TARGETS.join(', ')}`)
     process.exit(1)
   }
 
@@ -383,7 +412,7 @@ async function main() {
         await startCommand(target)
         break
       case 'stop':
-        await stopAll()
+        await stopServices(target)
         break
       case 'restart':
         await restartCommand(target)
