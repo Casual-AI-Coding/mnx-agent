@@ -437,25 +437,51 @@ vitest run --coverage
 项目提供 `mnx-agent` CLI 工具，用于管理开发服务器：
 
 ```bash
-# 启动开发服务器（后台运行）
+# 启动开发环境（dev前端 + backend）
 mnx-agent start dev
+
+# 启动生产环境（prod前端 + backend）
+mnx-agent start prod
+
+# 启动所有服务
+mnx-agent start all
+
+# 单独操作服务
+mnx-agent start backend           # 仅 backend
+mnx-agent start frontend          # 两个前端
+mnx-agent start frontend:dev      # 仅 dev 前端
+mnx-agent start frontend:prod     # 仅 prod 前端
 
 # 查看状态
 mnx-agent status
 
 # 查看日志（实时）
 mnx-agent log dev
+mnx-agent log backend             # 仅 backend 日志
 
-# 停止服务器
-mnx-agent stop
+# 停止服务
+mnx-agent stop                    # 停止所有
+mnx-agent stop backend            # 仅停止 backend
 
 # 重启服务器
 mnx-agent restart dev
 ```
 
+**Targets 说明**:
+
+| Target | 操作的服务 |
+|--------|-----------|
+| `dev` | dev 前端 + backend |
+| `prod` | prod 前端 + backend |
+| `all` | 所有 3 个服务 |
+| `backend` | 仅 backend |
+| `frontend` | dev + prod 前端 |
+| `frontend:dev` | 仅 dev 前端 |
+| `frontend:prod` | 仅 prod 前端 |
+
 **与 `npm run dev:full` 的区别**：
 - `dev:full`: 前台运行，Ctrl+C 停止
-- `mnx-agent`: 后台运行，支持 start/stop/status/log/restart/sync 命令
+- `mnx-agent`: 后台运行，支持 start/stop/status/log/restart/sync 命令，可单独操作各服务
 
 ## 开发流程
 

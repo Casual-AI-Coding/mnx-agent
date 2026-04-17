@@ -523,6 +523,35 @@ mnx-agent log all
 mnx-agent restart all
 ```
 
+### 单独操作服务
+
+```bash
+# 仅操作 backend
+mnx-agent start backend
+mnx-agent stop backend
+mnx-agent log backend
+mnx-agent restart backend
+
+# 仅操作前端
+mnx-agent start frontend          # 两个前端
+mnx-agent start frontend:dev      # 仅 dev 前端
+mnx-agent start frontend:prod     # 仅 prod 前端
+mnx-agent log frontend:dev        # 仅 dev 前端日志
+mnx-agent stop frontend           # 停止两个前端
+```
+
+**Targets 说明**:
+
+| Target | 操作的服务 |
+|--------|-----------|
+| `dev` | dev 前端 + backend |
+| `prod` | prod 前端 + backend |
+| `all` | 所有 3 个服务 |
+| `backend` | 仅 backend |
+| `frontend` | dev + prod 前端 |
+| `frontend:dev` | 仅 dev 前端 |
+| `frontend:prod` | 仅 prod 前端 |
+
 ### 状态检查
 
 ```bash
