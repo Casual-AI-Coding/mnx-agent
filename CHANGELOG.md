@@ -2,7 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.1] - 2026-04-17
+## [2.0.2] - 2026-04-18
+
+### Fixed
+
+- **Token Refresh Race Condition** - Critical fix for concurrent API calls during auth hydration
+  - `src/lib/api/client.ts` - Shared `hydrationRefreshPromise` prevents multiple parallel token refreshes
+  - Eliminates redundant refresh calls when multiple API requests fire simultaneously
+
+- **Settings Store Re-initialization** - Fix for logout/re-login sync failure
+  - `src/settings/store/index.ts` - Removed blocking `lastSyncedAt` check, added `resetSync()` method
+  - Settings now load correctly after logout without stale state
+
+- **Media Fetch Blocking** - Fix for permanent loading state
+  - `src/hooks/useMediaManagement.ts` - Changed `.finally()` to try/finally pattern
+  - Ensures `isFetchingRef` always resets, preventing UI freeze
+
+- **CLI Shell Command Security** - Replace shell commands with safe Node.js APIs
+  - `scripts/run.js` - Use `fs.rmSync/cpSync` instead of `rm -rf` shell commands
+  - Added whitelist validation for sync targets
+
+- **Music Deletion UX** - Improved deletion experience
+  - `MusicCarousel.tsx` - Deleted items show muted gray dots, disabled click
+  - `MusicTaskCard.tsx` - Fixed height jump with `min-h-[130px]`, removed layout animation
+  - `MusicGeneration.tsx` - Added `isDeleted` flag for deleted music items
+
+- **ConfirmDialog Size** - Compact sm-size variant
+  - `ConfirmDialog.tsx`, `Dialog.tsx` - Smaller padding, fonts, buttons for quick confirmations
+
+- **Documentation Typo** - `docs/roadmap/v2-roadmap.md` - Fixed "求ID" → "需求ID"
+
+### Changed
+
+- **LoadingSpinner Component** - Extracted shared component
+  - `src/components/shared/LoadingSpinner.tsx` - New reusable spinner with size variants
+  - `AuthGuard.tsx` - Uses shared LoadingSpinner instead of inline
 
 ### Added
 
