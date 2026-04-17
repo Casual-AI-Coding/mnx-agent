@@ -90,6 +90,23 @@ function waitForPort(port, timeout = 10000) {
   return false
 }
 
+function killProcess(pid, timeout = 5000) {
+  try {
+    process.kill(pid, 'SIGTERM')
+  } catch {}
+
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    if (!isProcessRunning(pid)) return true
+  }
+
+  try {
+    process.kill(pid, 'SIGKILL')
+  } catch {}
+
+  return !isProcessRunning(pid)
+}
+
 function getPid(serviceId) {
   const pidFile = SERVICES[serviceId].pidFile
   if (!existsSync(pidFile)) return null
@@ -162,14 +179,33 @@ async function startService(serviceKey, skipIfRunning = false) {
   return pid
 }
 
-async function stopService(serviceId) {
-  // Placeholder - Task 5 will implement
-  log(`stopService(${serviceId}) placeholder - Task 5`)
+async function stopService(serviceKey) {
+  const service = SERVICES[serviceKey]
+
+  const pid = getPid(serviceKey)
+  if (!pid) {
+    log(`${service.name} not running - skipped`)
+    return
+  }
+
+  log(`Stopping ${service.name} (PID ${pid})...`)
+
+  if (killProcess(pid)) {
+    clearPid(serviceKey)
+    log(`${service.name} stopped`)
+  } else {
+    error(`Failed to stop ${service.name}`)
+  }
 }
 
 async function stopAll() {
-  // Placeholder - Task 5 will implement
-  log('stopAll() placeholder - Task 5')
+  log('Stopping all services...')
+
+  for (const key of ['dev', 'prod', 'backend']) {
+    await stopService(key)
+  }
+
+  log('All services stopped')
 }
 
 async function startCommand(target) {
