@@ -157,10 +157,10 @@ async function startService(serviceKey, skipIfRunning = false) {
     // Sync to nginx directory
     const targetDir = '/var/www/mnx-agent/assets'
     log(`Syncing to ${targetDir}...`)
-    execSync(`rm -rf ${targetDir}/*`)
-    execSync(`mkdir -p ${targetDir}`)
-    execSync(`cp -r dist/assets/* ${targetDir}/`)
-    execSync(`cp dist/index.html ${targetDir}/index.html`)
+    execSync(`rm -rf ${targetDir}/*`, { cwd: ROOT_DIR })
+    execSync(`mkdir -p ${targetDir}`, { cwd: ROOT_DIR })
+    execSync(`cp -r dist/assets/* ${targetDir}/`, { cwd: ROOT_DIR })
+    execSync(`cp dist/index.html ${targetDir}/index.html`, { cwd: ROOT_DIR })
     log(`Synced ${targetDir}`)
   }
 
