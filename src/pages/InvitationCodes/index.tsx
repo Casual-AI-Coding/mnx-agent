@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Key,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { status } from '@/themes/tokens'
 import { InvitationCodeTable } from './InvitationCodeTable'
 import { InvitationCodeModal } from './InvitationCodeModal'
+import { useAuthStore } from '@/stores/auth'
 import type {
   InvitationCode,
   StatusFilter,
@@ -129,6 +130,8 @@ function SortButton({
 }
 
 export default function InvitationCodes() {
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [codes, setCodes] = useState<InvitationCode[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -158,8 +161,10 @@ export default function InvitationCodes() {
   }
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchCodes()
-  }, [])
+  }, [isHydrated])
 
   const filteredAndSortedCodes = useMemo(() => {
     let result = codes.filter(code => {

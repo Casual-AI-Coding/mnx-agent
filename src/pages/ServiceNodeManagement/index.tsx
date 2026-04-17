@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/lib/api/client'
+import { useAuthStore } from '@/stores/auth'
 import { roles, status } from '@/themes/tokens/index'
 import { CategorySection } from './CategorySection'
 import { StatCard } from './StatCard'
@@ -29,6 +30,8 @@ const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
 
 export default function ServiceNodeManagement() {
   const { t } = useTranslation()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [nodes, setNodes] = useState<ServiceNodePermission[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -52,8 +55,10 @@ export default function ServiceNodeManagement() {
   }
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchNodes()
-  }, [])
+  }, [isHydrated])
 
   const updateNode = async (id: string, updates: { min_role?: UserRole; is_enabled?: boolean }) => {
     setSaving(id)

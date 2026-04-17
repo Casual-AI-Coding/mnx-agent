@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Settings, Save, RefreshCw, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react'
 import { toastSuccess, toastError } from '@/lib/toast'
@@ -12,6 +12,7 @@ import {
   updateSystemConfig,
   type SystemConfig,
 } from '@/lib/api/system-config'
+import { useAuthStore } from '@/stores/auth'
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -35,6 +36,8 @@ interface EditableConfig extends SystemConfig {
 }
 
 export default function SystemConfigPage() {
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [configs, setConfigs] = useState<EditableConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -57,8 +60,10 @@ export default function SystemConfigPage() {
   }
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     loadConfigs()
-  }, [])
+  }, [isHydrated])
 
   const handleRefresh = () => {
     setIsRefreshing(true)

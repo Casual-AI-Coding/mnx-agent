@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -17,6 +17,7 @@ import { DLQTable } from './DLQTable'
 import { DLQFilters, DLQActions } from './DLQFilters'
 import { DLQStatsCards, DLQAutoRetryCard } from './DLQStats'
 import { ErrorDetailModal, AutoRetryConfigModal, BulkRetryModal } from './DLQModals'
+import { useAuthStore } from '@/stores/auth'
 
 export default function DeadLetterQueue() {
   const [items, setItems] = useState<DeadLetterQueueItem[]>([])
@@ -32,6 +33,9 @@ export default function DeadLetterQueue() {
   const [showAutoRetryConfig, setShowAutoRetryConfig] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useState<DeadLetterQueueItem | null>(null)
+
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -51,8 +55,10 @@ export default function DeadLetterQueue() {
   }, [])
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchItems()
-  }, [fetchItems])
+  }, [isHydrated, fetchItems])
 
   const filteredItems = items.filter((item) => {
     if (!showResolved && item.resolvedAt) return false

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ import { WorkflowPreviewWrapper } from '@/components/workflow/WorkflowPreview'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { apiClient } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth'
 import { status, services } from '@/themes/tokens'
 
 interface WorkflowTemplate {
@@ -91,6 +92,9 @@ export default function WorkflowTemplateManagement() {
     workflow: WorkflowTemplate | null
   }>({ open: false, workflow: null })
 
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
+
   const fetchWorkflows = async () => {
     setLoading(true)
     setError(null)
@@ -109,8 +113,10 @@ export default function WorkflowTemplateManagement() {
   }
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchWorkflows()
-  }, [])
+  }, [isHydrated])
 
   const fetchPermissions = async (workflowId: string) => {
     setPermissionsDialog(prev => ({ ...prev, loading: true }))
