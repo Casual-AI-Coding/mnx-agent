@@ -79,6 +79,17 @@ function isProcessRunning(pid) {
   }
 }
 
+function waitForPort(port, timeout = 10000) {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    try {
+      execSync(`curl -s -o /dev/null http://localhost:${port}`, { timeout: 1000 })
+      return true
+    } catch {}
+  }
+  return false
+}
+
 function getPid(serviceId) {
   const pidFile = SERVICES[serviceId].pidFile
   if (!existsSync(pidFile)) return null
@@ -99,10 +110,56 @@ function clearPid(serviceId) {
   if (existsSync(pidFile)) unlinkSync(pidFile)
 }
 
-// Placeholder functions for remaining tasks (will be implemented in Task 4-11)
-async function startService(serviceId, skipIfRunning = false) {
-  // Placeholder - Task 4 will implement
-  log(`startService(${serviceId}) placeholder - Task 4`)
+async function startService(serviceKey, skipIfRunning = false) {
+  const service = SERVICES[serviceKey]
+  ensureRunDirs()
+
+  // Check if already running
+  const runningPid = getPid(serviceKey)
+  if (runningPid) {
+    if (skipIfRunning) {
+      log(`${service.name} already running (PID ${runningPid}) - skipped`)
+      return runningPid
+    }
+    // Stop existing process first
+    await stopService(serviceKey)
+  }
+
+  // Build if required (prod frontend)
+  if (service.requiresBuild) {
+    log(`Building ${service.name}...`)
+    try {
+      execSync('npm run build', { cwd: ROOT_DIR, stdio: 'inherit' })
+      log(`Build complete`)
+    } catch (err) {
+      error(`Build failed: ${err.message}`)
+    }
+  }
+
+  // Start process
+  log(`Starting ${service.name} on port ${service.port}...`)
+
+  const { createWriteStream } = require('fs')
+  const logStream = createWriteStream(service.logFile, { flags: 'a' })
+
+  const child = spawn(service.command, service.args, {
+    cwd: ROOT_DIR,
+    detached: true,
+    stdio: ['ignore', logStream, logStream],
+  })
+
+  child.unref()
+
+  const pid = child.pid
+  setPid(serviceKey, pid)
+
+  // Wait for port to be ready
+  if (!waitForPort(service.port, 10000)) {
+    error(`${service.name} failed to start on port ${service.port}`)
+  }
+
+  log(`${service.name} started (PID ${pid}) - http://localhost:${service.port}`)
+  return pid
 }
 
 async function stopService(serviceId) {
