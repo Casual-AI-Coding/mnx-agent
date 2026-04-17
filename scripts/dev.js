@@ -235,8 +235,11 @@ async function startCommand(target) {
 }
 
 async function restartCommand(target) {
-  // Placeholder - Task 7 will implement
-  log(`restart(${target}) placeholder - Task 7`)
+  log(`Restarting ${target} environment...`)
+  await stopAll()
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  await startCommand(target)
+  log(`${target} environment restarted`)
 }
 
 async function statusCommand() {
