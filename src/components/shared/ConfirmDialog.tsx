@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { cn } from '@/lib/utils'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -47,42 +48,46 @@ export function ConfirmDialog({
     onClose()
   }
 
+  const isSm = size === 'sm'
+
   return (
-    <Dialog open={open} onClose={handleClose} title={title} description={description} size={size}>
-      <div className="space-y-4">
-        {variant === 'destructive' && (
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-            <p className="text-sm text-destructive">
-              此操作无法撤销，请谨慎操作。
-            </p>
-          </div>
-        )}
+    <Dialog open={open} onClose={handleClose} title={title} description={isSm ? undefined : description} size={size}>
+      {variant === 'destructive' && (
+        <div className={cn(
+          "flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20",
+          isSm ? "p-2" : "p-4"
+        )}>
+          <AlertTriangle className={cn("text-destructive flex-shrink-0", isSm ? "w-4 h-4" : "w-5 h-5")} />
+          <p className={cn("text-destructive", isSm ? "text-xs" : "text-sm")}>
+            {isSm ? "删除后无法恢复" : "此操作无法撤销，请谨慎操作。"}
+          </p>
+        </div>
+      )}
 
-        {requireInput && (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              请输入 <span className="font-mono font-semibold text-foreground">{requireInput}</span> 以确认操作
-            </p>
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={requireInput}
-              className="font-mono"
-              autoFocus
-            />
-          </div>
-        )}
-      </div>
+      {requireInput && (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            请输入 <span className="font-mono font-semibold text-foreground">{requireInput}</span> 以确认操作
+          </p>
+          <Input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={requireInput}
+            className="font-mono"
+            autoFocus
+          />
+        </div>
+      )}
 
-      <DialogFooter className="mt-6">
-        <Button variant="outline" onClick={handleClose} disabled={loading}>
+      <DialogFooter className={cn(isSm ? "mt-3" : "mt-6")}>
+        <Button variant="outline" onClick={handleClose} disabled={loading} size={isSm ? "sm" : "default"}>
           {cancelText}
         </Button>
         <Button
           variant={variant === 'destructive' ? 'destructive' : 'default'}
           onClick={handleConfirm}
           disabled={!canConfirm || loading}
+          size={isSm ? "sm" : "default"}
         >
           {loading && (
             <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
