@@ -78,15 +78,15 @@ function CategoryPanel({ category }: { category: string }) {
 export default function SettingsPage() {
   const { category } = useParams<{ category: string }>()
   const activeCategory = category || 'account'
-  const { user } = useAuthStore()
+  const { user, isHydrated } = useAuthStore()
   const { settings, isLoading, isSaving, initialize, saveSettings, resetCategory } = useAllSettings()
   const hasUnsavedChanges = useHasUnsavedChanges()
 
   useEffect(() => {
-    if (user) {
+    if (user && isHydrated) {
       initialize()
     }
-  }, [user, initialize])
+  }, [user, isHydrated, initialize])
 
   const categoryInfo = CATEGORY_TITLES[activeCategory] || CATEGORY_TITLES.account
 

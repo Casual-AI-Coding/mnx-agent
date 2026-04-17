@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { Shield, RefreshCw, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Copy, Check, ArrowUpDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
@@ -13,6 +13,7 @@ import { getAuditLogs, getAuditStats, getUniqueRequestPaths, getUniqueAuditUsers
 import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
+import { useAuthStore } from '@/stores/auth'
 
 const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
   create: { color: cn(status.success.bgSubtle, status.success.icon, status.success.border), label: '创建' },
@@ -37,6 +38,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AuditLogs() {
   const { t } = useTranslation()
+  const { isHydrated } = useAuthStore()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [stats, setStats] = useState<AuditStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -55,15 +57,31 @@ export default function AuditLogs() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [uniquePaths, setUniquePaths] = useState<string[]>([])
   const [uniqueUsers, setUniqueUsers] = useState<{ id: string; username: string }[]>([])
+  
+  const hasInitializedRef = useRef(false)
+  const isFetchingRef = useRef(false)
 
   useEffect(() => {
-    loadData()
-    loadAllPaths()
-    loadAllUsers()
-  }, [])
+    if (!isHydrated || isFetchingRef.current) return
+    
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true
+      isFetchingRef.current = true
+      loadData()
+      loadAllPaths()
+      loadAllUsers().finally(() => {
+        isFetchingRef.current = false
+      })
+    }
+  }, [isHydrated])
 
   useEffect(() => {
-    loadData()
+    if (!hasInitializedRef.current || isFetchingRef.current) return
+    
+    isFetchingRef.current = true
+    loadData().finally(() => {
+      isFetchingRef.current = false
+    })
   }, [page, filters, sortBy, sortOrder])
 
   const loadAllPaths = async () => {

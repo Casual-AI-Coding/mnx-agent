@@ -9,12 +9,14 @@ import HistoryPanel from './HistoryPanel'
 import { AudioPlayer } from '@/components/media/AudioPlayer'
 import { useSettingsStore } from '@/settings/store'
 import { useAudioStore } from '@/stores/audio'
+import { useAuthStore } from '@/stores/auth'
 import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
   const { t, i18n } = useTranslation()
   const { settings, setCategory, initialize, saveSettings } = useSettingsStore()
+  const { isHydrated } = useAuthStore()
   const apiKey = settings?.api?.minimaxKey ?? DEFAULT_SETTINGS.api.minimaxKey
   const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
@@ -33,8 +35,10 @@ export default function AppLayout() {
   } = useAudioStore()
 
   useEffect(() => {
-    initialize()
-  }, [initialize])
+    if (isHydrated) {
+      initialize()
+    }
+  }, [initialize, isHydrated])
 
   const handleOpenKeyModal = () => {
     setTempKey(apiKey)

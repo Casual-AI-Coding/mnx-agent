@@ -112,6 +112,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [favoriteFilters, setFavoriteFilters] = useState<Set<'favorite' | 'non-favorite'>>(new Set(['favorite', 'non-favorite']))
   const [publicFilters, setPublicFilters] = useState<Set<'private' | 'public' | 'others-public'>>(new Set(['private', 'public', 'others-public']))
   const currentUser = useAuthStore((state) => state.user)
+  const isHydrated = useAuthStore((state) => state.isHydrated)
 
   // Ref to track pagination values (to avoid dependency issues with setPagination)
   const paginationRef = useRef(pagination)
@@ -430,7 +431,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const hasInitializedRef = useRef(false)
 
   useEffect(() => {
-    if (!currentUser?.id || isFetchingRef.current) return
+    if (!currentUser?.id || isFetchingRef.current || !isHydrated) return
 
     const tabChanged = activeTab !== prevActiveTabRef.current
     const pageChanged = pagination.page !== prevPageRef.current
@@ -456,7 +457,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
         isFetchingRef.current = false
       })
     }
-  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilters, publicFilters, currentUser?.id])
+  }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilters, publicFilters, currentUser?.id, isHydrated])
 
   // Manual search trigger - applies current filters and search query
   const handleManualSearch = useCallback(() => {
