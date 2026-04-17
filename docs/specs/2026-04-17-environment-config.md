@@ -213,7 +213,7 @@ server {
 
     # 静态文件直接服务（性能最优，绕过 Vite preview）
     location /assets/ {
-        alias /var/www/mnx-agent/assets/assets/;
+        alias /var/www/mnx-agent/assets/;
         expires 365d;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
@@ -392,7 +392,8 @@ dist/                    # Vite 构建产物（临时）
 ```
 /var/www/mnx-agent/
 └── assets/              # prod 静态文件（nginx 直接服务）
-    ├── assets/          # JS/CSS/images
+    ├── index-xxx.js     # JS bundle（单层结构）
+    ├── index-xxx.css    # CSS bundle
     └── index.html       # SPA 入口
 ```
 
