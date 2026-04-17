@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { apiClient } from '@/lib/api/client'
 import {
   Select,
   SelectContent,
@@ -13,46 +12,11 @@ import { FieldBuilder } from './FieldBuilder'
 import { ACTION_FIELDS } from './action-fields'
 import { ActionNodeConfig, GroupedActionNodes } from '@/types/cron'
 import { useAuthStore } from '@/stores/auth'
+import { fetchAvailableActions } from '@/lib/api/workflow-actions'
 
 interface ActionConfigPanelProps {
   config: ActionNodeConfig
   onChange: (config: ActionNodeConfig) => void
-}
-
-const actionsCache: {
-  data: GroupedActionNodes | null
-  timestamp: number
-  promise: Promise<GroupedActionNodes> | null
-} = {
-  data: null,
-  timestamp: 0,
-  promise: null,
-}
-
-const CACHE_TTL = 5 * 60 * 1000
-
-async function fetchAvailableActions(): Promise<GroupedActionNodes> {
-  const now = Date.now()
-
-  if (actionsCache.data && (now - actionsCache.timestamp) < CACHE_TTL) {
-    return actionsCache.data
-  }
-
-  if (actionsCache.promise) {
-    return actionsCache.promise
-  }
-
-  actionsCache.promise = apiClient.get<GroupedActionNodes>('/workflows/available-actions')
-    .then(data => {
-      actionsCache.data = data
-      actionsCache.timestamp = now
-      return data
-    })
-    .finally(() => {
-      actionsCache.promise = null
-    })
-
-  return actionsCache.promise
 }
 
 export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) {

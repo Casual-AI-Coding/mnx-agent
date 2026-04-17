@@ -13,7 +13,8 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { GroupedActionNodes } from '@/types/cron'
-import { apiClient } from '@/lib/api/client'
+import { fetchAvailableActions } from '@/lib/api/workflow-actions'
+import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
 
@@ -81,19 +82,20 @@ interface WorkflowNodePaletteProps {
 }
 
 export function WorkflowNodePalette({ onDragStart }: WorkflowNodePaletteProps) {
+  const { isHydrated } = useAuthStore()
   const [availableActions, setAvailableActions] = React.useState<GroupedActionNodes>({})
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null)
+  const hasInitializedRef = React.useRef(false)
 
   React.useEffect(() => {
-    apiClient.get<{ success: boolean; data: GroupedActionNodes }>('/workflows/available-actions')
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
+
+    fetchAvailableActions()
       .then(data => {
-        if (data.success && data.data) {
-          setAvailableActions(data.data)
-        } else {
-          setError('Failed to load actions')
-        }
+        setAvailableActions(data)
       })
       .catch(err => {
         console.error('Failed to load available actions:', err)
@@ -102,7 +104,7 @@ export function WorkflowNodePalette({ onDragStart }: WorkflowNodePaletteProps) {
       .finally(() => {
         setLoading(false)
       })
-  }, [])
+  }, [isHydrated])
 
   const toggleCategory = (category: string) => {
     setExpandedCategory(prev => prev === category ? null : category)
