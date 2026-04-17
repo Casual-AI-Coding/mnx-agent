@@ -153,6 +153,15 @@ async function startService(serviceKey, skipIfRunning = false) {
     } catch (err) {
       error(`Build failed: ${err.message}`)
     }
+
+    // Sync to nginx directory
+    const targetDir = '/var/www/mnx-agent/assets'
+    log(`Syncing to ${targetDir}...`)
+    execSync(`rm -rf ${targetDir}/*`)
+    execSync(`mkdir -p ${targetDir}`)
+    execSync(`cp -r dist/assets/* ${targetDir}/`)
+    execSync(`cp dist/index.html ${targetDir}/index.html`)
+    log(`Synced ${targetDir}`)
   }
 
   // Start process
