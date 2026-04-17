@@ -350,17 +350,51 @@ Examples:
 }
 
 async function main() {
-  // Placeholder - Task 11 will implement
   const args = process.argv.slice(2)
-  if (args.length === 0 || args[0] === 'help' || args[0] === '--help' || args[0] === '-h') {
-    printHelp()
-    process.exit(0)
+  const command = args[0] || 'status'
+  const target = args[1] || 'dev'
+
+  // Validate command
+  const validCommands = Object.keys(COMMANDS)
+  if (!validCommands.includes(command)) {
+    error(`Unknown command: ${command}`)
+    log(`Available commands: ${validCommands.join(', ')}`)
+    process.exit(1)
   }
-  
-  log('main() placeholder - Task 11 will implement full command routing')
-  printHelp()
+
+  // Validate target for commands that need it
+  const needsTarget = ['start', 'restart', 'log']
+  if (needsTarget.includes(command) && !['dev', 'prod', 'all'].includes(target)) {
+    error(`Invalid target: ${target}`)
+    log(`Valid targets: dev, prod, all`)
+    process.exit(1)
+  }
+
+  try {
+    switch (command) {
+      case 'start':
+        await startCommand(target)
+        break
+      case 'stop':
+        await stopAll()
+        break
+      case 'restart':
+        await restartCommand(target)
+        break
+      case 'status':
+        await statusCommand()
+        break
+      case 'log':
+        await logCommand(target)
+        break
+      case 'sync':
+        await syncCommand()
+        break
+    }
+  } catch (err) {
+    error(`Command failed: ${err.message}`)
+    process.exit(1)
+  }
 }
 
-main().catch(err => {
-  error(err.message)
-})
+main()
