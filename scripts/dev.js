@@ -318,7 +318,9 @@ async function syncCommand() {
   log(`Syncing to ${targetDir}...`)
 
   execSync(`rm -rf ${targetDir}/*`)
-  execSync(`cp -r dist/* ${targetDir}/`)
+  execSync(`mkdir -p ${targetDir}`)
+  execSync(`cp -r dist/assets/* ${targetDir}/`)
+  execSync(`cp dist/index.html ${targetDir}/index.html`)
 
   log(`Synced ${targetDir} ✓`)
   log('─'.repeat(60))
