@@ -242,9 +242,31 @@ async function restartCommand(target) {
   log(`${target} environment restarted`)
 }
 
+async function checkPortHealth(port) {
+  try {
+    execSync(`curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}`, { timeout: 2000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function statusCommand() {
-  // Placeholder - Task 8 will implement
-  log('status() placeholder - Task 8')
+  log('Service status:')
+
+  for (const [key, service] of Object.entries(SERVICES)) {
+    const pid = getPid(key)
+    const status = pid ? '运行中' : '停止'
+    const pidInfo = pid ? ` (PID ${pid})` : ''
+    const urlInfo = pid ? ` - http://localhost:${service.port}` : ''
+
+    log(`${service.name}: ${status}${pidInfo}${urlInfo}`)
+
+    if (pid) {
+      const healthy = await checkPortHealth(service.port)
+      log(`  Health check: ${healthy ? '✓ OK' : '✗ Not responding'}`)
+    }
+  }
 }
 
 async function logCommand(target) {
