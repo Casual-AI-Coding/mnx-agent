@@ -4,12 +4,12 @@
   "version": "1.10.4",
   "type": "module",
   "bin": {
-    "mnx-dev": "./scripts/dev.js"
+    "mnx-agent": "./scripts/run.js"
   },
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
-    "dev:cli": "node scripts/dev.js",
+    "run:cli": "node scripts/run.js",
     "server": "tsx server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

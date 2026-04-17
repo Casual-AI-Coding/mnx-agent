@@ -434,23 +434,23 @@ vitest run --coverage
 
 ## 开发 CLI 工具
 
-项目提供 `mnx-dev` CLI 工具，用于管理开发服务器：
+项目提供 `mnx-agent` CLI 工具，用于管理开发服务器：
 
 ```bash
 # 启动开发服务器（后台运行）
-node scripts/dev.js start
+node scripts/run.js start
 
 # 查看状态
-node scripts/dev.js status
+node scripts/run.js status
 
 # 查看日志（实时）
-node scripts/dev.js log
+node scripts/run.js log
 
 # 停止服务器
-node scripts/dev.js stop
+node scripts/run.js stop
 
 # 重启服务器
-node scripts/dev.js restart
+node scripts/run.js restart
 ```
 
 **与 `npm run dev:full` 的区别**：

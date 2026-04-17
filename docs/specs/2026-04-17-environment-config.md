@@ -274,7 +274,7 @@ server {
 
 ## CLI 命令设计
 
-使用现有的 `mnx-dev` CLI 工具（`scripts/dev.js`）扩展命令：
+使用现有的 `mnx-agent` CLI 工具（`scripts/dev.js`）扩展命令：
 
 ### 命令列表
 
@@ -442,8 +442,8 @@ scripts/
 
 示例：
 ```
-2026-04-17 10:30:15 [mnx-dev] Dev 前端已启动 (PID 12345) - http://localhost:4311
-2026-04-17 10:30:16 [mnx-dev] 后端已启动 (PID 12347) - http://localhost:4511
+2026-04-17 10:30:15 [mnx-agent] Dev 前端已启动 (PID 12345) - http://localhost:4311
+2026-04-17 10:30:16 [mnx-agent] 后端已启动 (PID 12347) - http://localhost:4511
 ```
 
 ### 日志合并
@@ -482,58 +482,58 @@ scripts/
 
 ```bash
 # 启动开发环境
-mnx-dev start dev
+mnx-agent start dev
 
 # 查看日志
-mnx-dev log dev
+mnx-agent log dev
 
 # 重启开发环境
-mnx-dev restart dev
+mnx-agent restart dev
 
 # 停止
-mnx-dev stop
+mnx-agent stop
 ```
 
 ### 公网部署
 
 ```bash
 # 启动生产环境（自动构建 + 同步静态文件）
-mnx-dev start prod
+mnx-agent start prod
 
 # 查看日志
-mnx-dev log prod
+mnx-agent log prod
 
 # 重启
-mnx-dev restart prod
+mnx-agent restart prod
 
 # 仅同步静态文件（不重启服务）
-mnx-dev sync
+mnx-agent sync
 ```
 
 ### 同时运行两种模式
 
 ```bash
 # 本地开发 + 公网访问
-mnx-dev start all
+mnx-agent start all
 
 # 查看所有日志
-mnx-dev log all
+mnx-agent log all
 
 # 重启全部
-mnx-dev restart all
+mnx-agent restart all
 ```
 
 ### 状态检查
 
 ```bash
-mnx-dev status
+mnx-agent status
 ```
 
 输出示例：
 ```
-[mnx-dev] Dev 前端: 运行中 (PID 12345) - http://localhost:4311 ✓
-[mnx-dev] Prod 前端: 运行中 (PID 12346) - http://localhost:4411 ✓
-[mnx-dev] 后端: 运行中 (PID 12347) - http://localhost:4511 ✓
+[mnx-agent] Dev 前端: 运行中 (PID 12345) - http://localhost:4311 ✓
+[mnx-agent] Prod 前端: 运行中 (PID 12346) - http://localhost:4411 ✓
+[mnx-agent] 后端: 运行中 (PID 12347) - http://localhost:4511 ✓
 ```
 
 ---
@@ -544,17 +544,17 @@ mnx-dev status
 
 | 问题 | 原因 | 解决方案 |
 |------|------|----------|
-| 端口已被占用 | 其他进程占用端口 | `fuser -k <端口>/tcp` 或 `mnx-dev stop` |
+| 端口已被占用 | 其他进程占用端口 | `fuser -k <端口>/tcp` 或 `mnx-agent stop` |
 | 构建失败 | 依赖问题/代码错误 | 检查 `npm run build` 输出 |
 | PID 文件残留 | 进程异常退出 | 手动删除 `.run/pids/*.pid` |
 | nginx 403 | 权限问题 | `sudo chown -R ogslp:www-data /var/www/mnx-agent` |
-| 静态文件不更新 | 同步未执行 | 手动 `mnx-dev sync` |
+| 静态文件不更新 | 同步未执行 | 手动 `mnx-agent sync` |
 
 ### 手动清理
 
 ```bash
 # 停止所有服务
-mnx-dev stop
+mnx-agent stop
 
 # 强制清理残留进程
 fuser -k 4311/tcp 4411/tcp 4511/tcp
@@ -573,8 +573,8 @@ rm -rf dist
 rm -rf dist
 rm -rf /var/www/mnx-agent/assets/*
 npm run build
-mnx-dev sync
-mnx-dev start prod
+mnx-agent sync
+mnx-agent start prod
 ```
 
 ### 检查端口冲突
@@ -598,7 +598,7 @@ tail -50 .run/logs/prod.log
 tail -50 .run/logs/backend.log
 
 # 实时追踪
-mnx-dev log all
+mnx-agent log all
 ```
 
 ---

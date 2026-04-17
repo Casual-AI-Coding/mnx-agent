@@ -144,11 +144,11 @@ const COMMANDS = {
 ```javascript
 function log(msg) {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  console.log(`[${timestamp}] [mnx-dev] ${msg}`)
+  console.log(`[${timestamp}] [mnx-agent] ${msg}`)
 }
 
 function error(msg) {
-  console.error(`[mnx-dev] ERROR: ${msg}`)
+  console.error(`[mnx-agent] ERROR: ${msg}`)
   process.exit(1)
 }
 

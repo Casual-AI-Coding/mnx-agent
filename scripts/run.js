@@ -55,12 +55,12 @@ const COMMANDS = {
 // Helper functions
 function log(msg) {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  console.log(`[${timestamp}] [mnx-dev] ${msg}`)
+  console.log(`[${timestamp}] [mnx-agent] ${msg}`)
 }
 
 function error(msg) {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  console.error(`[${timestamp}] [mnx-dev] ERROR: ${msg}`)
+  console.error(`[${timestamp}] [mnx-agent] ERROR: ${msg}`)
   process.exit(1)
 }
 
@@ -329,7 +329,7 @@ async function syncCommand() {
 
 function printHelp() {
   console.log(`
-Usage: mnx-dev <command> [target]
+Usage: mnx-agent <command> [target]
 
 Commands:
 ${Object.entries(COMMANDS).map(([cmd, desc]) => `  ${cmd.padEnd(20)} ${desc}`).join('\n')}
@@ -340,13 +340,13 @@ Targets:
   all     Dev + Prod + Backend (all services)
 
 Examples:
-  mnx-dev start dev      Start dev environment
-  mnx-dev start prod     Build and start prod environment
-  mnx-dev start all      Start both dev and prod
-  mnx-dev stop           Stop all services
-  mnx-dev status         Show all service status
-  mnx-dev log dev        Tail dev + backend logs
-  mnx-dev sync           Sync static files to nginx
+  mnx-agent start dev      Start dev environment
+  mnx-agent start prod     Build and start prod environment
+  mnx-agent start all      Start both dev and prod
+  mnx-agent stop           Stop all services
+  mnx-agent status         Show all service status
+  mnx-agent log dev        Tail dev + backend logs
+  mnx-agent sync           Sync static files to nginx
 `)
 }
 
