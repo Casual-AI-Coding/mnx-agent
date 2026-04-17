@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Gauge,
@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useCapacityStore } from '@/stores/capacity'
+import { useAuthStore } from '@/stores/auth'
 import type { ServiceType } from '@/types/cron'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
@@ -67,15 +68,19 @@ const serviceLabels: Record<ServiceType, string> = {
 }
 
 export default function CapacityMonitor() {
+  const { isHydrated } = useAuthStore()
   const { records, codingPlan, loading, fetchCapacity, refreshCapacity, lastRefresh } = useCapacityStore()
   const [error, setError] = useState<string | null>(null)
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchCapacity().catch((err) => {
       console.error('[CapacityMonitor] Initial load error:', err)
       setError((err as Error).message)
     })
-  }, [fetchCapacity])
+  }, [isHydrated, fetchCapacity])
 
   const handleRefresh = async () => {
     setError(null)

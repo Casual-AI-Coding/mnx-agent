@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { BarChart3, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
@@ -9,20 +9,25 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { getStatsOverview, getSuccessRateTrend, getTaskDistribution, getErrorRanking } from '@/lib/api/stats'
 import type { StatsOverview, StatsTrendItem, StatsDistributionItem, StatsErrorItem } from '@/lib/api/stats'
 import { toastError } from '@/lib/toast'
+import { useAuthStore } from '@/stores/auth'
 import { status, services } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
 export default function StatsDashboard() {
   const { t } = useTranslation()
+  const { isHydrated } = useAuthStore()
   const [overview, setOverview] = useState<StatsOverview | null>(null)
   const [trend, setTrend] = useState<StatsTrendItem[]>([])
   const [distribution, setDistribution] = useState<StatsDistributionItem[]>([])
   const [errors, setErrors] = useState<StatsErrorItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     loadStats()
-  }, [])
+  }, [isHydrated])
 
   const loadStats = async () => {
     setIsLoading(true)

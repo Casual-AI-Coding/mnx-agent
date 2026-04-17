@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api/client'
+import { useAuthStore } from '@/stores/auth'
 import type { User, UserRole, SortField, SortOrder, FilterChip, FormData, UseUserManagementReturn } from './types'
 import { ROLE_CONFIG } from './types'
 
 export function useUserManagement(): UseUserManagementReturn {
+  const { isHydrated } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Data state
@@ -84,9 +86,13 @@ export function useUserManagement(): UseUserManagementReturn {
     }
   }, [currentPage, pageSize])
 
+  const hasInitializedRef = useRef(false)
+  
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchUsers()
-  }, [fetchUsers])
+  }, [isHydrated, fetchUsers])
 
   // Computed values
   const activeUsers = useMemo(() => users.filter(u => u.is_active).length, [users])
