@@ -2,6 +2,76 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-04-17
+
+### Added
+
+- **mnx-agent CLI Tool** - Unified multi-service management CLI
+  - `scripts/run.js` (+407/-223) - Main entry point replacing scripts/dev.js
+  - Commands: `start`, `stop`, `status`, `log`, `restart`, `sync`, `--help`
+  - Multi-service architecture: dev frontend (4311), prod frontend (4411), backend (4511)
+  - Service lifecycle management with process tracking
+  - Real-time log streaming via WebSocket proxy
+  - Static file sync for production deployment
+
+- **Pool Stats Endpoint** - Connection pool monitoring
+  - `server/routes/stats.ts` (+29/-0) - `/api/stats/pool-stats` endpoint
+  - Monitor active/idle connections, wait queue size
+
+- **Help Flags** - CLI help documentation
+  - Support `--help`, `-h`, `help` flags
+  - Command-specific help output
+
+### Changed
+
+- **CLI Rename (BREAKING)** - mnx-dev → mnx-agent
+  - Command name changed from `mnx-dev` to `mnx-agent`
+  - Update your workflow: use `mnx-agent` instead of `mnx-dev`
+  - Scripts renamed: `dev.js` → `run.js`
+
+- **Dev Server Port** - Frontend dev server port change
+  - `vite.config.js`, `vite.config.ts` - Port changed to 4311
+  - Aligns with multi-service port scheme (dev: 4311, prod: 4411, backend: 4511)
+
+- **Runtime Directory** - Service runtime tracking
+  - `.run/` directory added to `.gitignore`
+  - Stores service process IDs and state files
+
+- **Documentation Updates**
+  - `docs/specs/2026-04-17-environment-config.md` (+618/-0) - Environment config spec
+  - `docs/archive/v2.0/` - Plans archived for v2.0 release
+  - nginx config updated for single-level assets structure
+
+### Fixed
+
+- **CLI Reliability** - Multiple fixes for CLI stability
+  - Use `npx` for vite/tsx commands (avoid global dependency)
+  - Fix COMMANDS validation logic
+  - Fix ESM stdio handling for child processes
+  - Use single-level structure for static file sync
+
+### Migration Guide (v1.x → v2.0)
+
+**BREAKING**: CLI command name changed.
+
+```bash
+# Old (v1.x)
+mnx-dev start dev
+mnx-dev status
+mnx-dev log dev
+
+# New (v2.0)
+mnx-agent start dev    # or just: mnx-agent start
+mnx-agent status
+mnx-agent log dev
+mnx-agent --help       # New help command
+```
+
+**Port Changes**:
+- Dev frontend: default → 4311
+- Prod frontend: 4411 (unchanged)
+- Backend: 4511 (unchanged)
+
 ## [1.10.4] - 2026-04-17
 
 ### Added
