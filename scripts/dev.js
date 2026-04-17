@@ -299,8 +299,31 @@ async function logCommand(target) {
 }
 
 async function syncCommand() {
-  // Placeholder - Task 10 will implement
-  log('sync() placeholder - Task 10')
+  log('Building production frontend...')
+
+  const build = spawn('npm', ['run', 'build'], {
+    stdio: 'inherit',
+  })
+
+  await new Promise((resolve, reject) => {
+    build.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`Build failed with code ${code}`))
+    })
+    build.on('error', reject)
+  })
+
+  log('Build complete ✓')
+
+  const targetDir = '/var/www/mnx-agent/assets'
+  log(`Syncing to ${targetDir}...`)
+
+  execSync(`rm -rf ${targetDir}/*`)
+  execSync(`cp -r dist/* ${targetDir}/`)
+
+  log(`Synced ${targetDir} ✓`)
+  log('─'.repeat(60))
+  log('Production frontend ready at mnx.ogslp.top')
 }
 
 function printHelp() {
