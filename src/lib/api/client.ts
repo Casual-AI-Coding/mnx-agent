@@ -12,23 +12,30 @@ class InternalAPIClient {
   private refreshSubscribers: Array<(token: string) => void> = []
   private authWaitTimeout = 5000 // 最多等待 5 秒
 
-  /**
-   * 等待 auth store hydration 完成
-   * 避免 accessToken 未恢复时发送请求导致 401
-   */
   private async waitForAuth(): Promise<void> {
-    const { isHydrated } = useAuthStore.getState()
-    
-    // 已经 hydration 完成，直接返回
-    if (isHydrated) return
-    
     const start = Date.now()
+    
     while (!useAuthStore.getState().isHydrated) {
       if (Date.now() - start > this.authWaitTimeout) {
-        console.warn('[API Client] Auth hydration timeout, proceeding without waiting')
+        console.warn('[API Client] Auth hydration timeout')
         break
       }
       await new Promise(r => setTimeout(r, 50))
+    }
+    
+    const { isAuthenticated, accessToken, updateAccessToken } = useAuthStore.getState()
+    if (isAuthenticated && !accessToken && !this.isRefreshing) {
+      try {
+        this.isRefreshing = true
+        const response = await refreshToken()
+        if (response.success && response.data?.accessToken) {
+          updateAccessToken(response.data.accessToken)
+        }
+      } catch (err) {
+        console.warn('[API Client] Failed to refresh token:', err)
+      } finally {
+        this.isRefreshing = false
+      }
     }
   }
 
