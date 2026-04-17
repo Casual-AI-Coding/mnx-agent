@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/Select'
 import { FormError } from '@/components/ui/FormError'
 import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
+import { useAuthStore } from '@/stores/auth'
 import {
   COMMON_TIMEZONES,
   getLocalTimezone,
@@ -35,6 +36,7 @@ interface EditJobModalProps {
 
 export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalProps) {
   const { templates, fetchTemplates } = useWorkflowTemplatesStore()
+  const { isHydrated } = useAuthStore()
 
   const {
     register,
@@ -61,7 +63,7 @@ export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalPro
   const workflowId = watch('workflow_id')
 
   useEffect(() => {
-    if (isOpen && job) {
+    if (isOpen && job && isHydrated) {
       reset({
         name: job.name,
         description: job.description || '',
@@ -73,7 +75,7 @@ export function EditJobModal({ isOpen, onClose, onSubmit, job }: EditJobModalPro
       })
       fetchTemplates()
     }
-  }, [isOpen, job, fetchTemplates, reset])
+  }, [isOpen, job, isHydrated, fetchTemplates, reset])
 
   const handleFormSubmit = (data: CronJobFormData) => {
     onSubmit({

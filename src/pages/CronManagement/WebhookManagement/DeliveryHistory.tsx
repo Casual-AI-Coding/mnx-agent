@@ -1,8 +1,9 @@
-import { memo, useEffect } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { X, RefreshCw, History } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { useWebhooksStore } from '@/stores/webhooks'
+import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 import { status } from '@/themes/tokens'
 import type { WebhookEvent } from '@/types/cron'
@@ -45,12 +46,17 @@ export const DeliveryLogModal = memo(function DeliveryLogModal({
   onClose,
 }: DeliveryLogModalProps) {
   const { deliveries, loading, fetchDeliveries } = useWebhooksStore()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated) return
+    if (hasInitializedRef.current) return
     if (isOpen && webhook) {
+      hasInitializedRef.current = true
       fetchDeliveries(webhook.id)
     }
-  }, [isOpen, webhook, fetchDeliveries])
+  }, [isHydrated, isOpen, webhook, fetchDeliveries])
 
   if (!isOpen || !webhook) return null
 

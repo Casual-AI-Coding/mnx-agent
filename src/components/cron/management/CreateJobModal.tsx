@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/Select'
 import { FormError } from '@/components/ui/FormError'
 import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
+import { useAuthStore } from '@/stores/auth'
 import { TIMEOUTS } from '@/lib/config'
 import {
   COMMON_TIMEZONES,
@@ -36,6 +37,8 @@ interface CreateJobModalProps {
 export function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProps) {
   const localTimezone = getLocalTimezone()
   const { templates, fetchTemplates } = useWorkflowTemplatesStore()
+  const { isHydrated } = useAuthStore()
+  const hasFetchedTemplates = useRef(false)
 
   const {
     register,
@@ -72,9 +75,13 @@ export function CreateJobModal({ isOpen, onClose, onSubmit }: CreateJobModalProp
         timeout_ms: TIMEOUTS.DEFAULT_CRON,
         is_active: true,
       })
-      fetchTemplates()
+      hasFetchedTemplates.current = false
+      if (isHydrated && !hasFetchedTemplates.current) {
+        fetchTemplates()
+        hasFetchedTemplates.current = true
+      }
     }
-  }, [isOpen, fetchTemplates, localTimezone, reset])
+  }, [isOpen, fetchTemplates, localTimezone, reset, isHydrated])
 
   const handleFormSubmit = (data: CronJobFormData) => {
     onSubmit({
