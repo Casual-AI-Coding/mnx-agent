@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { apiClient } from '@/lib/api/client'
@@ -12,6 +12,7 @@ import {
 import { FieldBuilder } from './FieldBuilder'
 import { ACTION_FIELDS } from './action-fields'
 import { ActionNodeConfig, GroupedActionNodes } from '@/types/cron'
+import { useAuthStore } from '@/stores/auth'
 
 interface ActionConfigPanelProps {
   config: ActionNodeConfig
@@ -60,8 +61,13 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
+
     fetchAvailableActions()
       .then(setAvailableNodes)
       .catch(err => {
@@ -69,7 +75,7 @@ export function ActionConfigPanel({ config, onChange }: ActionConfigPanelProps) 
         setError('Failed to load available actions')
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [isHydrated])
 
   const fieldDefinitions = useMemo(() => {
     const { service, method } = config

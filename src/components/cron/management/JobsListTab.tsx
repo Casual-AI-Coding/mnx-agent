@@ -1,4 +1,5 @@
 import { useState, useEffect, memo, useRef, useMemo } from 'react'
+import { useAuthStore } from '@/stores/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
@@ -46,6 +47,8 @@ import { EditJobModal } from '@/components/cron/management/EditJobModal'
 export const JobsListTab = memo(function JobsListTab() {
   const { jobs, loading, fetchJobs, createJob, updateJob, deleteJob, toggleJob, runJobManually } =
     useCronJobsStore()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [jobToEdit, setJobToEdit] = useState<CronJob | null>(null)
@@ -54,8 +57,10 @@ export const JobsListTab = memo(function JobsListTab() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchJobs()
-  }, [fetchJobs])
+  }, [fetchJobs, isHydrated])
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {

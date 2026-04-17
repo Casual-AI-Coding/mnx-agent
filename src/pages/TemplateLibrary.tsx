@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { CreateTemplateModal } from '@/components/templates/CreateTemplateModal'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useTemplatesStore } from '@/stores/templates'
+import { useAuthStore } from '@/stores/auth'
 import type { PromptTemplate, TemplateCategory } from '@/lib/api/templates'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -34,14 +35,18 @@ const CATEGORY_COLORS: Record<TemplateCategory, string> = {
 export default function TemplateLibrary() {
   const { t } = useTranslation()
   const { templates, isLoading, fetchTemplates, removeTemplate } = useTemplatesStore()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all')
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchTemplates(selectedCategory === 'all' ? undefined : selectedCategory)
-  }, [selectedCategory, fetchTemplates])
+  }, [isHydrated, selectedCategory, fetchTemplates])
 
   const filteredTemplates = templates.filter(template =>
     template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

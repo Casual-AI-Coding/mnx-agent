@@ -26,6 +26,7 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { useTaskQueueStore } from '@/stores/taskQueue'
+import { useAuthStore } from '@/stores/auth'
 import { TaskStatus } from '@/types/cron'
 import type { TaskQueueItem } from '@/types/cron'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -36,13 +37,17 @@ import { cn } from '@/lib/utils'
 
 export const TaskQueueTab = memo(function TaskQueueTab() {
   const { tasks, loading, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
+  const { isHydrated } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [taskToDelete, setTaskToDelete] = useState<TaskQueueItem | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchTasks(statusFilter === 'all' ? {} : { status: statusFilter })
-  }, [fetchTasks, statusFilter])
+  }, [isHydrated, fetchTasks, statusFilter])
 
   const handleRetry = async (task: TaskQueueItem) => {
     await updateTask(task.id, { status: TaskStatus.Pending, retryCount: task.retryCount + 1 })

@@ -1,10 +1,11 @@
-import { memo, useState, useEffect } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import { Webhook, Plus, Edit3, Trash2, RefreshCw, Play, CheckCircle2, XCircle, Clock, History, Link2, Bell, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent } from '@/components/ui/Card'
 import { useWebhooksStore } from '@/stores/webhooks'
 import { useCronJobsStore } from '@/stores/cronJobs'
+import { useAuthStore } from '@/stores/auth'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { cn } from '@/lib/utils'
@@ -64,15 +65,19 @@ export const WebhooksListTab = memo(function WebhooksListTab({
 }: WebhooksListTabProps) {
   const { webhooks, loading, fetchWebhooks, removeWebhook, testWebhook } = useWebhooksStore()
   const { jobs, fetchJobs } = useCronJobsStore()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [webhookToEdit, setWebhookToEdit] = useState<WebhookConfig | null>(null)
   const [webhookToDelete, setWebhookToDelete] = useState<WebhookConfig | null>(null)
   const [deliveryModalWebhook, setDeliveryModalWebhook] = useState<WebhookConfig | null>(null)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchWebhooks()
     fetchJobs()
-  }, [fetchWebhooks, fetchJobs])
+  }, [isHydrated, fetchWebhooks, fetchJobs])
 
   const handleEdit = async (data: CreateWebhookConfig | UpdateWebhookConfig) => {
     if (!webhookToEdit) return

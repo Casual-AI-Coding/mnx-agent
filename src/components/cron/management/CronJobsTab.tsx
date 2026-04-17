@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/Select'
 import { useCronJobsStore } from '@/stores/cronJobs'
 import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
+import { useAuthStore } from '@/stores/auth'
 import type { CronJob, CreateCronJobDTO, UpdateCronJobDTO } from '@/types/cron'
 import { getCronDescription } from '@/lib/cron-utils'
 import { CreateJobModal } from './CreateJobModal'
@@ -34,6 +35,8 @@ import { formatDate } from '@/components/shared/dateUtils'
 export const CronJobsTab = memo(function CronJobsTab() {
   const { jobs, loading, fetchJobs, createJob, updateJob, deleteJob, toggleJob, runJobManually } =
     useCronJobsStore()
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [jobToEdit, setJobToEdit] = useState<CronJob | null>(null)
@@ -42,8 +45,10 @@ export const CronJobsTab = memo(function CronJobsTab() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchJobs()
-  }, [fetchJobs])
+  }, [isHydrated, fetchJobs])
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {

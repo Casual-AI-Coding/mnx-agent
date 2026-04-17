@@ -20,6 +20,7 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { useExecutionLogsStore } from '@/stores/executionLogs'
+import { useAuthStore } from '@/stores/auth'
 import type { TaskStatus } from '@/types/cron'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { formatDate, formatDuration } from '@/components/shared/dateUtils'
@@ -28,13 +29,17 @@ import { status } from '@/themes/tokens'
 
 export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
   const { logs, logDetails, loading, detailsLoading, fetchLogs, fetchLogDetails } = useExecutionLogsStore()
+  const { isHydrated } = useAuthStore()
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const parentRef = useRef<HTMLDivElement>(null)
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchLogs()
-  }, [fetchLogs])
+  }, [isHydrated, fetchLogs])
 
   const toggleExpand = useCallback(async (logId: string) => {
     const newExpandedId = expandedLogId === logId ? null : logId

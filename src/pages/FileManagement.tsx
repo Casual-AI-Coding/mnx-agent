@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useSettingsStore } from '@/settings/store'
+import { useAuthStore } from '@/stores/auth'
 import { usePagination } from '@/hooks/usePagination'
 import { listFiles, uploadFile, deleteFile } from '@/lib/api/file'
 import { cn } from '@/lib/utils'
@@ -93,6 +94,8 @@ export default function FileManagement() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { settings } = useSettingsStore()
   const apiKey = settings.api.minimaxKey
+  const { isHydrated } = useAuthStore()
+  const hasInitializedRef = useRef(false)
 
   const ITEMS_PER_PAGE = 20
 
@@ -113,8 +116,10 @@ export default function FileManagement() {
   }
 
   useEffect(() => {
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
     fetchFiles()
-  }, [apiKey])
+  }, [isHydrated, apiKey])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
