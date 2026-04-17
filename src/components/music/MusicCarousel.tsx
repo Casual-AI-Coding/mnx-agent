@@ -210,20 +210,23 @@ export function MusicCarousel({
                   <button
                     key={task.id}
                     onClick={() => {
+                      if (task.isDeleted) return
                       setDirection(index > currentIndex ? 1 : -1)
                       onIndexChange(index)
                     }}
+                    disabled={task.isDeleted}
                     className={cn(
                       "w-2 h-2 rounded-full transition-all duration-300 ease-out",
                       index === currentIndex 
                         ? "w-6 bg-primary shadow-sm shadow-primary/30" 
                         : "hover:scale-125",
-                      task.status === 'completed' && index !== currentIndex && "bg-success/60",
+                      task.isDeleted && index !== currentIndex && "bg-muted-foreground/30 cursor-not-allowed hover:scale-100",
+                      !task.isDeleted && task.status === 'completed' && index !== currentIndex && "bg-success/60",
                       task.status === 'generating' && index !== currentIndex && "bg-info/60 animate-pulse",
                       task.status === 'failed' && index !== currentIndex && "bg-error/60",
-                      task.status === 'idle' && index !== currentIndex && "bg-muted-foreground/20 hover:bg-muted-foreground/40"
+                      task.status === 'idle' && index !== currentIndex && !task.isDeleted && "bg-muted-foreground/20 hover:bg-muted-foreground/40"
                     )}
-                    aria-label={`跳转到任务 ${index + 1}`}
+                    aria-label={`跳转到任务 ${index + 1}${task.isDeleted ? ' (已删除)' : ''}`}
                   />
                 ))}
               </div>

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, exec, execSync } from 'child_process'
-import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync, rmSync, cpSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -53,6 +53,14 @@ const COMMANDS = {
 }
 
 const VALID_TARGETS = ['dev', 'prod', 'all', 'backend', 'frontend', 'frontend:dev', 'frontend:prod']
+
+const ALLOWED_SYNC_TARGETS = ['/var/www/mnx-agent/assets']
+
+function validateSyncTarget(targetDir) {
+  if (!ALLOWED_SYNC_TARGETS.includes(targetDir)) {
+    error(`Invalid sync target: ${targetDir}. Allowed: ${ALLOWED_SYNC_TARGETS.join(', ')}`)
+  }
+}
 
 // Helper functions
 function log(msg) {
@@ -156,11 +164,16 @@ async function startService(serviceKey, skipIfRunning = false) {
 
     // Sync to nginx directory
     const targetDir = '/var/www/mnx-agent/assets'
+    validateSyncTarget(targetDir)
     log(`Syncing to ${targetDir}...`)
-    execSync(`rm -rf ${targetDir}/*`, { cwd: ROOT_DIR })
-    execSync(`mkdir -p ${targetDir}`, { cwd: ROOT_DIR })
-    execSync(`cp -r dist/assets/* ${targetDir}/`, { cwd: ROOT_DIR })
-    execSync(`cp dist/index.html ${targetDir}/index.html`, { cwd: ROOT_DIR })
+    
+    const assetsSource = join(ROOT_DIR, 'dist', 'assets')
+    const indexSource = join(ROOT_DIR, 'dist', 'index.html')
+    
+    rmSync(targetDir, { recursive: true, force: true })
+    mkdirSync(targetDir, { recursive: true })
+    cpSync(assetsSource, targetDir, { recursive: true })
+    cpSync(indexSource, join(targetDir, 'index.html'))
     log(`Synced ${targetDir}`)
   }
 
@@ -335,12 +348,16 @@ async function syncCommand() {
   log('Build complete ✓')
 
   const targetDir = '/var/www/mnx-agent/assets'
+  validateSyncTarget(targetDir)
   log(`Syncing to ${targetDir}...`)
 
-  execSync(`rm -rf ${targetDir}/*`)
-  execSync(`mkdir -p ${targetDir}`)
-  execSync(`cp -r dist/assets/* ${targetDir}/`)
-  execSync(`cp dist/index.html ${targetDir}/index.html`)
+  const assetsSource = join(ROOT_DIR, 'dist', 'assets')
+  const indexSource = join(ROOT_DIR, 'dist', 'index.html')
+  
+  rmSync(targetDir, { recursive: true, force: true })
+  mkdirSync(targetDir, { recursive: true })
+  cpSync(assetsSource, targetDir, { recursive: true })
+  cpSync(indexSource, join(targetDir, 'index.html'))
 
   log(`Synced ${targetDir} ✓`)
   log('─'.repeat(60))

@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   variant?: 'default' | 'destructive'
   requireInput?: string
   loading?: boolean
+  size?: 'sm' | 'default' | 'lg'
 }
 
 export function ConfirmDialog({
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   variant = 'default',
   requireInput,
   loading = false,
+  size = 'default',
 }: ConfirmDialogProps) {
   const [inputValue, setInputValue] = useState('')
 
@@ -46,7 +48,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} title={title} description={description}>
+    <Dialog open={open} onClose={handleClose} title={title} description={description} size={size}>
       <div className="space-y-4">
         {variant === 'destructive' && (
           <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20">

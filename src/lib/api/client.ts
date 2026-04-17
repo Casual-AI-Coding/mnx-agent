@@ -11,6 +11,22 @@ class InternalAPIClient {
   private isRefreshing = false
   private refreshSubscribers: Array<(token: string) => void> = []
   private authWaitTimeout = 5000 // 最多等待 5 秒
+  private hydrationRefreshPromise: Promise<void> | null = null // 防止 hydration 时 token 刷新竞态
+
+  /**
+   * 执行 token 刷新（hydration 阶段专用）
+   * 所有调用者共享同一个 Promise，避免竞态
+   */
+  private async doHydrationRefresh(updateAccessToken: (token: string) => void): Promise<void> {
+    try {
+      const response = await refreshToken()
+      if (response.success && response.data?.accessToken) {
+        updateAccessToken(response.data.accessToken)
+      }
+    } catch (err) {
+      console.warn('[API Client] Failed to refresh token during hydration:', err)
+    }
+  }
 
   private async waitForAuth(): Promise<void> {
     const start = Date.now()
@@ -24,18 +40,15 @@ class InternalAPIClient {
     }
     
     const { isAuthenticated, accessToken, updateAccessToken } = useAuthStore.getState()
-    if (isAuthenticated && !accessToken && !this.isRefreshing) {
-      try {
-        this.isRefreshing = true
-        const response = await refreshToken()
-        if (response.success && response.data?.accessToken) {
-          updateAccessToken(response.data.accessToken)
-        }
-      } catch (err) {
-        console.warn('[API Client] Failed to refresh token:', err)
-      } finally {
-        this.isRefreshing = false
+    if (isAuthenticated && !accessToken) {
+      // 使用共享 Promise 防止多个并发请求同时触发刷新
+      if (!this.hydrationRefreshPromise) {
+        this.hydrationRefreshPromise = this.doHydrationRefresh(updateAccessToken)
+          .finally(() => {
+            this.hydrationRefreshPromise = null
+          })
       }
+      await this.hydrationRefreshPromise
     }
   }
 

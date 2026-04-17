@@ -33,6 +33,7 @@ interface SettingsState {
   saveSettings: (category?: SettingsCategory) => Promise<void>
   resetCategory: (category: SettingsCategory) => void
   resetAll: () => void
+  resetSync: () => void
   
   // Getters
   getSetting: <C extends SettingsCategory, K extends keyof AllSettings[C]>(
@@ -54,7 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       initialize: async () => {
         const state = get()
-        if (state.isLoading || state.lastSyncedAt) {
+        if (state.isLoading) {
           return
         }
 
@@ -154,6 +155,13 @@ export const useSettingsStore = create<SettingsState>()(
         set({
           settings: DEFAULT_SETTINGS,
           dirtyCategories: new Set(),
+        })
+      },
+      
+      resetSync: () => {
+        set({
+          lastSyncedAt: null,
+          syncError: null,
         })
       },
       

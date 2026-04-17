@@ -449,13 +449,19 @@ export function useMediaManagement(): UseMediaManagementReturn {
       prevFavoriteFiltersRef.current = favoriteFilters
       prevPublicFiltersRef.current = publicFilters
 
-      const fetchPromise = isInitialLoad || filtersChanged
-        ? fetchMedia(true, isInitialLoad ? undefined : 1)
-        : fetchMedia(false)
+      const runFetch = async () => {
+        try {
+          if (isInitialLoad || filtersChanged) {
+            await fetchMedia(true, isInitialLoad ? undefined : 1)
+          } else {
+            await fetchMedia(false)
+          }
+        } finally {
+          isFetchingRef.current = false
+        }
+      }
 
-      fetchPromise.finally(() => {
-        isFetchingRef.current = false
-      })
+      runFetch()
     }
   }, [fetchMedia, isInitialLoad, activeTab, pagination.page, favoriteFilters, publicFilters, currentUser?.id, isHydrated])
 

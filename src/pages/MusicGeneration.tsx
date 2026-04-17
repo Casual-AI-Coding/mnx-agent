@@ -453,7 +453,7 @@ export default function MusicGeneration() {
     await deleteMedia(mediaId)
     setTasks(prev => prev.map(task => 
       task.mediaId === mediaId 
-        ? { ...task, mediaId: undefined, mediaTitle: undefined, isFavorite: undefined, isPublic: undefined }
+        ? { ...task, mediaId: undefined, mediaTitle: undefined, isFavorite: undefined, isPublic: undefined, isDeleted: true }
         : task
     ))
   }, [])

@@ -38,6 +38,7 @@ export interface MusicTask {
   mediaTitle?: string
   isFavorite?: boolean
   isPublic?: boolean
+  isDeleted?: boolean
 }
 
 interface MusicTaskCardProps {
@@ -521,6 +522,7 @@ function AudioPlayer({
         cancelText="取消"
         variant="destructive"
         loading={isDeleting}
+        size="sm"
       />
     </div>
   )
@@ -600,7 +602,7 @@ export function MusicTaskCard({
               </div>
             )}
 
-            {task.status === 'completed' && task.audioUrl && (
+            {task.status === 'completed' && task.audioUrl && !task.isDeleted && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -617,6 +619,21 @@ export function MusicTaskCard({
                   onFavorite={task.mediaId && onFavorite ? () => onFavorite(task.mediaId!) : undefined}
                   onTogglePublic={task.mediaId && onTogglePublic ? () => onTogglePublic(task.mediaId!, !task.isPublic) : undefined}
                 />
+              </motion.div>
+            )}
+
+            {task.status === 'completed' && task.isDeleted && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-6"
+              >
+                <div className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-muted/10 border border-muted/20">
+                  <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
+                    <Trash2 className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">音乐已删除</p>
+                </div>
               </motion.div>
             )}
 

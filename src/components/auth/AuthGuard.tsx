@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { useAuthStore } from '@/stores/auth'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -7,11 +7,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   if (!isHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (!isAuthenticated) {
