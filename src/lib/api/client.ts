@@ -10,6 +10,30 @@ class InternalAPIClient {
   private client: AxiosInstance
   private isRefreshing = false
   private refreshSubscribers: Array<(token: string) => void> = []
+  private authWaitTimeout = 5000 // 最多等待 5 秒
+
+  /**
+   * 等待 auth store hydration 完成
+   * 避免 accessToken 未恢复时发送请求导致 401
+   */
+  private async waitForAuth(): Promise<void> {
+    const { isHydrated, isAuthenticated } = useAuthStore.getState()
+    
+    // 已经 hydration 完成，直接返回
+    if (isHydrated) return
+    
+    // 未登录状态不需要等待（如 login 页面）
+    if (!isAuthenticated && !isHydrated) return
+    
+    const start = Date.now()
+    while (!useAuthStore.getState().isHydrated) {
+      if (Date.now() - start > this.authWaitTimeout) {
+        console.warn('[API Client] Auth hydration timeout, proceeding without waiting')
+        break
+      }
+      await new Promise(r => setTimeout(r, 50))
+    }
+  }
 
   constructor() {
     this.client = axios.create({
@@ -21,7 +45,9 @@ class InternalAPIClient {
       },
     })
 
-    this.client.interceptors.request.use((config) => {
+    this.client.interceptors.request.use(async (config) => {
+      await this.waitForAuth()
+      
       const { settings } = useSettingsStore.getState()
       const { minimaxKey: apiKey, region } = settings.api
       const { accessToken } = useAuthStore.getState()
