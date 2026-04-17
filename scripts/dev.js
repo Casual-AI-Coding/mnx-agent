@@ -270,8 +270,32 @@ async function statusCommand() {
 }
 
 async function logCommand(target) {
-  // Placeholder - Task 9 will implement
-  log(`log(${target}) placeholder - Task 9`)
+  const services = getTargetServices(target)
+  const logFiles = services.map(key => SERVICES[key].logFile)
+
+  // Check if any log files exist
+  const existingLogs = logFiles.filter(f => existsSync(f))
+  if (existingLogs.length === 0) {
+    error('No log files found. Start services first.')
+    return
+  }
+
+  log(`Tailing ${target} logs (Ctrl+C to exit)...`)
+  log('─'.repeat(60))
+
+  // Use tail -f on multiple files
+  const tail = spawn('tail', ['-f', ...existingLogs], {
+    stdio: 'inherit',
+  })
+
+  tail.on('error', (err) => {
+    error(`Failed to tail logs: ${err.message}`)
+  })
+
+  process.on('SIGINT', () => {
+    tail.kill()
+    process.exit(0)
+  })
 }
 
 async function syncCommand() {
