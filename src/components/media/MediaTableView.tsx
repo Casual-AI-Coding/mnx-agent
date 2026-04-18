@@ -225,7 +225,7 @@ export function MediaTableView({
               </td>
               <td className="px-4 py-3 text-foreground">
                 <div className="flex items-center justify-end gap-2">
-                  {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
+                  {(record.type === 'image' || record.type === 'audio' || record.type === 'music' || record.type === 'lyrics') && (
                     <Button
                       variant="ghost"
                       size="sm"

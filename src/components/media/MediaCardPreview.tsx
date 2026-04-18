@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { MediaRecord } from '@/types/media'
+import { LyricsHoverPreview } from '@/components/lyrics'
 
 interface MediaCardPreviewProps {
   record: MediaRecord
-  signedUrl: string
+  signedUrl?: string
   mousePosition: { x: number; y: number }
   visible: boolean
 }
@@ -16,6 +17,16 @@ export function MediaCardPreview({
   mousePosition,
   visible,
 }: MediaCardPreviewProps) {
+  if (record.type === 'lyrics') {
+    return (
+      <LyricsHoverPreview
+        record={record}
+        mousePosition={mousePosition}
+        visible={visible}
+      />
+    )
+  }
+
   const previewRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
 
