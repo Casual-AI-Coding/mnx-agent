@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Label } from '@/components/ui/Label'
 import { generateLyrics } from '@/lib/api/lyrics'
 import { toastSuccess, toastError } from '@/lib/toast'
@@ -251,40 +251,18 @@ export default function LyricsGeneration() {
                 <span className="text-base font-semibold">生成模式</span>
               </div>
               <div className="p-4">
-                <Select
-                  value={mode}
-                  onValueChange={(value) => updateForm('mode', value as LyricsMode)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="选择生成模式">
-                      {mode === 'write_full_song' ? (
-                        <div className="flex items-center gap-2">
-                          <Wand2 className="w-4 h-4" />
-                          <span>创作模式</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Edit3 className="w-4 h-4" />
-                          <span>编辑模式</span>
-                        </div>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="write_full_song">
-                      <div className="flex items-center gap-2">
-                        <Wand2 className="w-3 h-3" />
-                        <span>创作模式</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="edit">
-                      <div className="flex items-center gap-2">
-                        <Edit3 className="w-3 h-3" />
-                        <span>编辑模式</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Tabs value={mode} onValueChange={(v) => updateForm('mode', v as LyricsMode)}>
+                  <TabsList className="w-full">
+                    <TabsTrigger value="write_full_song" className="flex-1">
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      创作模式
+                    </TabsTrigger>
+                    <TabsTrigger value="edit" className="flex-1">
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      编辑模式
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             </div>
           </motion.div>
