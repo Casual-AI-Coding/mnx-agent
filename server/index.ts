@@ -6,7 +6,7 @@ import { errorHandler } from './middleware/errorHandler'
 import { rateLimiter } from './middleware/rateLimit'
 import { requestLogger } from './middleware/logger-middleware'
 import { auditMiddleware } from './middleware/audit-middleware'
-import { auditContextMiddleware } from './services/audit-context.service.js'
+import { auditContextMiddleware, updateAuditContextUserIdMiddleware } from './services/audit-context.service.js'
 import { getLogger } from './lib/logger'
 import textRouter from './routes/text'
 import voiceRouter from './routes/voice'
@@ -36,7 +36,7 @@ import systemConfigRouter from './routes/system-config.js'
 import settingsRouter from './routes/settings/index.js'
 import { authenticateJWT } from './middleware/auth-middleware.js'
 import { closeDatabase } from './database/service-async.js'
-import { initCronWebSocket } from './services/websocket-service'
+import { initCronWebSocket, closeCronWebSocket } from './services/websocket-service'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from './lib/media-storage'
 import { toCSV } from './lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from './lib/media-token'
@@ -81,6 +81,8 @@ app.use('/api', (req, res, next) => {
   if (req.path.match(/\/media\/[^/]+\/download$/)) return next()
   authenticateJWT(req, res, next)
 })
+
+app.use('/api', updateAuditContextUserIdMiddleware)
 
 // Protected routes
 app.use('/api/text', textRouter)
@@ -242,38 +244,61 @@ async function initializeServices() {
   logger.info({ msg: 'Services initialized successfully via DI Container' })
 }
 
-const server = app.listen(PORT, () => {
-  logger.info({ msg: 'MiniMax Proxy Server started', port: PORT })
-})
-
-initializeServices().catch((error) => {
-  logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
-  console.error('Full error:', error)
-  process.exit(1)
-})
-
-initCronWebSocket(server)
-logger.info({ msg: 'WebSocket server initialized', path: '/ws/cron' })
-
-async function gracefulShutdown(signal: string) {
-  logger.info({ msg: `${signal} received, starting graceful shutdown` })
-  
-  const shutdownTimeout = setTimeout(() => {
-    logger.warn({ msg: 'Graceful shutdown timed out, forcing exit' })
-    process.exit(1)
-  }, 10000)
-  
+// Start server after services are initialized (fixes audit log issue)
+async function startServer() {
   try {
-    await closeDatabase()
-    clearTimeout(shutdownTimeout)
-    logger.info({ msg: 'Database connection closed' })
-    process.exit(0)
+    await initializeServices()
+    
+    const server = app.listen(PORT, () => {
+      logger.info({ msg: 'MiniMax Proxy Server started', port: PORT })
+    })
+    
+    initCronWebSocket(server)
+    logger.info({ msg: 'WebSocket server initialized', path: '/ws/cron' })
+    
+    // Setup graceful shutdown with proper server cleanup
+    const gracefulShutdown = async (signal: string) => {
+      logger.info({ msg: `${signal} received, starting graceful shutdown` })
+      
+      const shutdownTimeout = setTimeout(() => {
+        logger.warn({ msg: 'Graceful shutdown timed out, forcing exit' })
+        process.exit(1)
+      }, 10000)
+      
+      try {
+        // Close HTTP server first (stops accepting new connections)
+        await new Promise<void>((resolve) => {
+          server.close(() => {
+            logger.info({ msg: 'HTTP server closed' })
+            resolve()
+          })
+        })
+        
+        // Close WebSocket server
+        closeCronWebSocket()
+        logger.info({ msg: 'WebSocket server closed' })
+        
+        // Close database connection
+        await closeDatabase()
+        logger.info({ msg: 'Database connection closed' })
+        
+        clearTimeout(shutdownTimeout)
+        process.exit(0)
+      } catch (error) {
+        clearTimeout(shutdownTimeout)
+        logger.error({ msg: 'Error during shutdown', error: (error as Error).message })
+        process.exit(1)
+      }
+    }
+    
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+    
   } catch (error) {
-    clearTimeout(shutdownTimeout)
-    logger.error({ msg: 'Error during shutdown', error: (error as Error).message })
+    logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
+    console.error('Full error:', error)
     process.exit(1)
   }
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
-process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+startServer()

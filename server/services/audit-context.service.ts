@@ -12,16 +12,21 @@ import type { Request, Response, NextFunction } from 'express'
  */
 export class AuditContext {
   userId: string | null
-  traceId: string | null  // v2.4 填充
+  traceId: string | null
 
   constructor(userId: string | null, traceId: string | null = null) {
     this.userId = userId
     this.traceId = traceId
   }
 
-  /**
-   * 创建新的上下文（用于外部 API 调用等场景）
-   */
+  setUserId(userId: string | null): void {
+    this.userId = userId
+  }
+
+  setTraceId(traceId: string | null): void {
+    this.traceId = traceId
+  }
+
   static create(userId: string | null, traceId: string | null = null): AuditContext {
     return new AuditContext(userId, traceId)
   }
@@ -56,23 +61,23 @@ export function auditContextMiddleware(req: Request, _res: Response, next: NextF
   const userId = req.user?.userId ?? null
   const context = new AuditContext(userId, null)
   
-  // 使用 AsyncLocalStorage 存储上下文
   auditContextStorage.run(context, () => {
     next()
   })
 }
 
-/**
- * 获取当前用户 ID（便捷方法）
- */
+export function updateAuditContextUserIdMiddleware(req: Request, _res: Response, next: NextFunction): void {
+  const context = getAuditContext()
+  if (context && req.user?.userId) {
+    context.setUserId(req.user.userId)
+  }
+  next()
+}
+
 export function getCurrentUserId(): string | null {
   return getAuditContext()?.userId ?? null
 }
 
-/**
- * 获取当前 Trace ID（便捷方法）
- * v2.4 将返回实际值
- */
 export function getCurrentTraceId(): string | null {
   return getAuditContext()?.traceId ?? null
 }

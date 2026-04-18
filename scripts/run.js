@@ -100,10 +100,14 @@ function waitForPort(port, timeout = 10000) {
   return false
 }
 
-function killProcess(pid, timeout = 5000) {
+function killProcess(pid, timeout = 8000) {
+  // Kill entire process group (including child processes from detached spawn)
   try {
-    process.kill(pid, 'SIGTERM')
-  } catch {}
+    process.kill(-pid, 'SIGTERM')
+  } catch (e) {
+    // Process group might not exist, try killing just the process
+    try { process.kill(pid, 'SIGTERM') } catch {}
+  }
 
   const start = Date.now()
   while (Date.now() - start < timeout) {
@@ -111,8 +115,10 @@ function killProcess(pid, timeout = 5000) {
   }
 
   try {
-    process.kill(pid, 'SIGKILL')
-  } catch {}
+    process.kill(-pid, 'SIGKILL')
+  } catch (e) {
+    try { process.kill(pid, 'SIGKILL') } catch {}
+  }
 
   return !isProcessRunning(pid)
 }
@@ -177,6 +183,9 @@ async function startService(serviceKey, skipIfRunning = false) {
     log(`Synced ${targetDir}`)
   }
 
+  // Ensure port is clear before starting
+  killPortProcess(service.port)
+
   // Start process
   log(`Starting ${service.name} on port ${service.port}...`)
 
@@ -191,34 +200,47 @@ async function startService(serviceKey, skipIfRunning = false) {
   child.unref()
 
   const pid = child.pid
-  setPid(serviceKey, pid)
 
-  // Wait for port to be ready
+  // Wait for port to be ready before recording PID
   if (!waitForPort(service.port, 10000)) {
+    clearPid(serviceKey)
     error(`${service.name} failed to start on port ${service.port}`)
   }
 
+  setPid(serviceKey, pid)
   log(`${service.name} started (PID ${pid}) - http://localhost:${service.port}`)
   return pid
+}
+
+function killPortProcess(port, timeout = 10000) {
+  try {
+    const pid = parseInt(execSync(`lsof -ti:${port}`, { encoding: 'utf-8' }).trim())
+    if (pid && isProcessRunning(pid)) {
+      log(`Found orphan process on port ${port} (PID ${pid}), killing...`)
+      return killProcess(pid, timeout)
+    }
+  } catch {}
+  return true
 }
 
 async function stopService(serviceKey) {
   const service = SERVICES[serviceKey]
 
   const pid = getPid(serviceKey)
-  if (!pid) {
-    log(`${service.name} not running - skipped`)
-    return
-  }
-
-  log(`Stopping ${service.name} (PID ${pid})...`)
-
-  if (killProcess(pid)) {
-    clearPid(serviceKey)
-    log(`${service.name} stopped`)
+  if (pid) {
+    log(`Stopping ${service.name} (PID ${pid})...`)
+    if (killProcess(pid)) {
+      clearPid(serviceKey)
+      log(`${service.name} stopped`)
+    } else {
+      error(`Failed to stop ${service.name}`)
+    }
   } else {
-    error(`Failed to stop ${service.name}`)
+    log(`No PID file for ${service.name}, checking port ${service.port}...`)
   }
+
+  // Always verify port is clear (handle orphan processes)
+  killPortProcess(service.port)
 }
 
 async function stopServices(target) {
@@ -269,7 +291,8 @@ async function startCommand(target) {
 async function restartCommand(target) {
   log(`Restarting ${target}...`)
   await stopServices(target)
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  // Wait for ports to be fully released
+  await new Promise(resolve => setTimeout(resolve, 500))
   await startCommand(target)
   log(`${target} restarted`)
 }
