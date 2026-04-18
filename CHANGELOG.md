@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2026-04-18
+
+### Added
+
+- **歌词生成前端实现 (R-023)** - 歌词生成页面完整功能
+  - `src/pages/LyricsGeneration.tsx` (+312) - 歌词生成页面，支持创作和编辑两种模式
+  - `src/components/lyrics/LyricsTaskCard.tsx` (+231) - 歌词任务卡片组件，显示生成状态和结果预览
+  - `src/components/lyrics/LyricsTaskCarousel.tsx` (+101) - 歌词任务轮播组件，支持历史任务切换
+  - `src/lib/api/lyrics.ts` (+14) - 歌词生成 API 客户端
+  - `src/types/lyrics.ts` (+38) - 歌词类型定义
+  - 支持歌词导出为 TXT 文件
+  - 支持任务历史管理（最多保留10条）
+  - 表单数据持久化，刷新不丢失
+
+- **路由与导航** - 歌词生成入口
+  - `src/App.tsx` (+9) - 新增歌词生成路由 `/lyrics`
+  - `src/components/layout/Sidebar.tsx` (+1) - Sidebar 导航入口
+
+- **国际化翻译** - 歌词生成多语言支持
+  - `src/i18n/locales/en.json` (+33) - 英文翻译
+  - `src/i18n/locales/zh.json` (+33) - 中文翻译
+  - 支持创作模式、编辑模式、状态提示等翻译
+
+### Changed
+
+- **Form Persistence** - 新增歌词表单持久化键
+  - `src/hooks/useFormPersistence.ts` (+1) - 添加 `DEBUG_FORM_KEYS.LYRICS_GENERATION`
+  - `src/lib/config/constants.ts` (+2) - 常量定义
+
+### Performance
+
+**Code Quality Metrics**
+- **12 files changed** (+774 insertions, -2 deletions)
+- **新增页面**: 1 个 (LyricsGeneration)
+- **新增组件**: 2 个 (LyricsTaskCard, LyricsTaskCarousel)
+- **新增 API 客户端**: 1 个 (lyrics)
+- **新增类型定义**: 1 个 (lyrics)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（后端 API 在 v2.1.1 已实现）
+- ✅ 歌词生成功能为增量功能，不影响现有系统
+- ✅ 路由新增为独立路径，不影响现有路由
+- ✅ 国际化翻译为新增条目，不影响现有翻译
+
 ## [2.1.1] - 2026-04-18
 
 ### Added
