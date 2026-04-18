@@ -190,10 +190,7 @@ export default function LyricsGeneration() {
     const baseUrl = 'https://api.minimaxi.com'
     const endpoint = '/v1/lyrics_generation'
     
-    const body: Record<string, unknown> = {
-      model: 'lyrics-0',
-      mode,
-    }
+    const body: Record<string, unknown> = { mode }
     
     if (mode === 'write_full_song') {
       body.prompt = prompt.trim()
