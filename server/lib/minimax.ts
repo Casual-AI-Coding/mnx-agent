@@ -226,6 +226,32 @@ export class MiniMaxClient {
     )()
   }
 
+  async lyricsGeneration(body: Record<string, unknown>): Promise<unknown> {
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/lyrics_generation',
+      'lyrics_generation',
+      body,
+      async () => {
+        console.log('[MiniMax] Lyrics Generation Request:', {
+          body,
+          timestamp: toLocalISODateString()
+        })
+        
+        return retryWithBackoff(async () => {
+          try {
+            const response = await this.client.post('/v1/lyrics_generation', body, {
+              timeout: 60000, // 1 minute for lyrics generation
+            })
+            return response.data
+          } catch (error) {
+            return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+          }
+        })
+      }
+    )()
+  }
+
   async musicPreprocess(formData: FormData): Promise<unknown> {
     return withExternalApiAudit(
       'minimax',
@@ -508,6 +534,7 @@ class MockMiniMaxClient extends MiniMaxClient {
   async textToAudioAsyncStatus(): Promise<unknown> { return this.createErrorResponse('textToAudioAsyncStatus') }
   async imageGeneration(): Promise<unknown> { return this.createErrorResponse('imageGeneration') }
   async musicGeneration(): Promise<unknown> { return this.createErrorResponse('musicGeneration') }
+  async lyricsGeneration(): Promise<unknown> { return this.createErrorResponse('lyricsGeneration') }
   async musicPreprocess(): Promise<unknown> { return this.createErrorResponse('musicPreprocess') }
   async videoGeneration(): Promise<unknown> { return this.createErrorResponse('videoGeneration') }
   async videoGenerationStatus(): Promise<unknown> { return this.createErrorResponse('videoGenerationStatus') }

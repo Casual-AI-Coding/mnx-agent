@@ -488,6 +488,55 @@ describe('MiniMaxClient', () => {
     })
   })
 
+  describe('lyricsGeneration method', () => {
+    it('should call /v1/lyrics_generation with correct body', async () => {
+      const mockResponse = {
+        song_title: 'Test Song',
+        style_tags: ['pop', 'emotional'],
+        lyrics: '[Verse 1]\nTest lyrics...',
+        base_resp: { status_code: 0, status_msg: 'success' }
+      }
+      
+      mockClient.post.mockResolvedValueOnce({ data: mockResponse })
+      
+      const client = new MiniMaxClient('test-key')
+      const result = await client.lyricsGeneration({
+        mode: 'write_full_song',
+        prompt: 'A song about love'
+      })
+      
+      expect(mockClient.post).toHaveBeenCalledWith('/v1/lyrics_generation', {
+        mode: 'write_full_song',
+        prompt: 'A song about love'
+      }, {
+        timeout: 60000, // 1 minute for lyrics generation
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should handle error', async () => {
+      const error = new AxiosError('Request failed')
+      error.response = {
+        status: 500,
+        data: {
+          base_resp: {
+            status_code: 1001,
+            status_msg: 'Internal error',
+          },
+        },
+      }
+      
+      mockClient.post.mockRejectedValueOnce(error)
+      
+      const client = new MiniMaxClient('test-key')
+      
+      await expect(client.lyricsGeneration({})).rejects.toMatchObject({
+        message: 'Internal error',
+        code: 1001,
+      })
+    })
+  })
+
   describe('textToAudioSync method', () => {
     it('should return successful response', async () => {
       const mockResponse = {

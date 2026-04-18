@@ -12,6 +12,7 @@ import textRouter from './routes/text'
 import voiceRouter from './routes/voice'
 import imageRouter from './routes/image'
 import musicRouter from './routes/music'
+import lyricsRouter from './routes/lyrics'
 import videoRouter from './routes/video'
 import videoAgentRouter from './routes/videoAgent'
 import voiceMgmtRouter from './routes/voiceMgmt'
@@ -89,6 +90,7 @@ app.use('/api/text', textRouter)
 app.use('/api/voice', voiceRouter)
 app.use('/api/image', imageRouter)
 app.use('/api/music', musicRouter)
+app.use('/api/lyrics', lyricsRouter)
 app.use('/api/video', videoRouter)
 app.use('/api/video-agent', videoAgentRouter)
 app.use('/api/voice-mgmt', voiceMgmtRouter)
@@ -133,6 +135,7 @@ async function initializeServices() {
       { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
       { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
       { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
+      { name: 'lyricsGeneration', displayName: 'Lyrics Generation', category: 'MiniMax API' },
       { name: 'textToAudioAsyncStatus', displayName: 'Voice Async Status', category: 'MiniMax API' },
       { name: 'videoGenerationStatus', displayName: 'Video Generation Status', category: 'MiniMax API' },
       { name: 'videoAgentGenerate', displayName: 'Video Agent Generate', category: 'MiniMax Video' },
