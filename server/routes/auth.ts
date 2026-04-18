@@ -44,6 +44,8 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
     return
   }
 
+  req.user = { userId: result.user!.id, username: result.user!.username, role: result.user!.role }
+
   res.cookie('refreshToken', result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -71,6 +73,8 @@ router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler
   }
 
   const loginResult = await userService.login(username, password)
+
+  req.user = { userId: result.user!.id, username: result.user!.username, role: result.user!.role }
 
   res.cookie('refreshToken', loginResult.refreshToken, {
     httpOnly: true,
