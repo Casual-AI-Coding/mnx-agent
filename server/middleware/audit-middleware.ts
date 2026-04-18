@@ -24,6 +24,66 @@ const REGEX_SKIP_PATHS = [
   /^\/api\/cron\/jobs\/[^/]+\/tags\/[^/]+$/,
 ]
 
+const RESOURCE_TYPE_MAP: Record<string, string> = {
+  '/api/cron/jobs': 'job',
+  '/api/cron/queue': 'task',
+  '/api/cron/webhooks': 'webhook',
+  '/api/cron/templates': 'job_template',
+  '/api/cron/logs': 'execution_log',
+  '/api/media': 'media',
+  '/api/users': 'user',
+  '/api/workflows': 'workflow',
+  '/api/templates': 'workflow_template',
+  '/api/settings': 'settings',
+  '/api/system-config': 'system_config',
+  '/api/invitation-codes': 'invitation_code',
+  '/api/audit': 'audit_log',
+  '/api/external-api-logs': 'external_api_log',
+  '/api/auth': 'auth',
+  '/api/text': 'text_generation',
+  '/api/voice': 'voice',
+  '/api/image': 'image_generation',
+  '/api/music': 'music_generation',
+  '/api/video': 'video_generation',
+  '/api/video-agent': 'video_agent',
+  '/api/files': 'file',
+  '/api/stats': 'stats',
+  '/api/capacity': 'capacity',
+  '/api/usage': 'usage',
+  '/api/export': 'export',
+  '/api/admin/service-nodes': 'service_node',
+  '/api/admin/workflows': 'admin_workflow',
+  '/api/admin/service-permissions': 'service_permission',
+}
+
+const ACTION_VERBS = [
+  'toggle', 'run', 'test', 'retry', 'upload', 'download',
+  'delete', 'clone', 'favorite', 'refresh', 'validate',
+  'generate', 'preprocess', 'stream', 'token', 'stats',
+  'dry-run', 'batch', 'sync', 'async', 'status', 'health',
+  'reset-password', 'change-password', 'login', 'logout', 'register',
+]
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const NUMERIC_PATTERN = /^\d+$/
+
+function getClientIp(req: Request): string | null {
+  const forwardedFor = req.get('X-Forwarded-For')
+  if (forwardedFor) {
+    const ips = forwardedFor.split(',').map(ip => ip.trim())
+    if (ips.length > 0 && ips[0]) {
+      return ips[0]
+    }
+  }
+
+  const realIp = req.get('X-Real-IP')
+  if (realIp) {
+    return realIp
+  }
+
+  return req.ip || null
+}
+
 function redactSensitiveData(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj
   if (typeof obj !== 'object') return obj
@@ -65,19 +125,25 @@ function methodToAction(method: string): AuditAction {
 }
 
 function extractResourceType(path: string): string {
+  for (const [prefix, type] of Object.entries(RESOURCE_TYPE_MAP)) {
+    if (path.startsWith(prefix)) {
+      return type
+    }
+  }
+
   const segments = path.split('/').filter(Boolean)
   if (segments.length === 0) return 'unknown'
 
-  let resourceType = segments[segments.length - 1]
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const segment = segments[i]
+    if (UUID_PATTERN.test(segment) || NUMERIC_PATTERN.test(segment)) continue
+    if (ACTION_VERBS.some(verb => segment === verb || segment.includes(verb))) continue
+    if (segment.startsWith(':')) continue
 
-  if (resourceType === 'logs' && segments.length >= 2) {
-    resourceType = `${segments[segments.length - 2]}_logs`
+    return segment.replace(/s$/, '').replace(/-/g, '_')
   }
 
-  resourceType = resourceType.replace(/s$/, '')
-  resourceType = resourceType.replace(/-/g, '_')
-
-  return resourceType
+  return 'unknown'
 }
 
 function shouldSkipAudit(path: string): boolean {
@@ -143,7 +209,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
       resource_type: resourceType,
       resource_id: resourceId,
       user_id: req.user?.userId ?? null,
-      ip_address: req.ip || null,
+      ip_address: getClientIp(req),
       user_agent: req.get('user-agent') || null,
       request_method: req.method,
       request_path: req.originalUrl,
