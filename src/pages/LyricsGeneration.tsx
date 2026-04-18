@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { Label } from '@/components/ui/Label'
 import { generateLyrics } from '@/lib/api/lyrics'
+import { createMedia } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
 import { LyricsTaskCarousel } from '@/components/lyrics/LyricsTaskCarousel'
@@ -74,6 +75,57 @@ export default function LyricsGeneration() {
     })
   }, [])
 
+  const saveLyricsToMedia = async (
+    result: LyricsGenerationResponse,
+    taskTitle?: string,
+    index?: number
+  ): Promise<{ id: string; title: string } | null> => {
+    try {
+      const songTitle = result.song_title || taskTitle || 'Unnamed'
+      let filename: string
+      if (songTitle && songTitle.trim()) {
+        const sanitizedTitle = songTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')
+        if (index !== undefined) {
+          filename = `${sanitizedTitle} (${index + 1}).txt`
+        } else {
+          filename = `${sanitizedTitle}.txt`
+        }
+      } else {
+        filename = `lyrics_${Date.now()}.txt`
+      }
+
+      const styleTags = Array.isArray(result.style_tags)
+        ? result.style_tags
+        : (result.style_tags ? result.style_tags.split(',').map(s => s.trim()) : [])
+
+      const mediaResult = await createMedia({
+        filename,
+        filepath: `lyrics://virtual/${Date.now()}`,
+        type: 'lyrics',
+        source: 'lyrics_generation',
+        size_bytes: new TextEncoder().encode(result.lyrics).length,
+        metadata: {
+          title: songTitle,
+          style_tags: styleTags,
+          lyrics: result.lyrics,
+          mode: formData.mode,
+          generated_at: new Date().toISOString(),
+        },
+      })
+
+      if (mediaResult.success && mediaResult.data) {
+        return {
+          id: mediaResult.data.id,
+          title: mediaResult.data.original_name || mediaResult.data.filename,
+        }
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to save lyrics:', error)
+      return null
+    }
+  }
+
   const handleGenerate = async () => {
     if (mode === 'edit' && !lyrics.trim()) {
       toastError(t('lyrics.errorEditModeEmpty'))
@@ -111,10 +163,21 @@ export default function LyricsGeneration() {
       try {
         const response = await generateLyrics(request)
         const result = response.data
+        if (!result) {
+          throw new Error('No result from lyrics generation')
+        }
         setTasks(prev => prev.map(task =>
           task.id === taskId ? { ...task, status: 'completed', result } : task
         ))
         toastSuccess(t('lyrics.successGenerated'))
+
+        saveLyricsToMedia(result, title).then(mediaInfo => {
+          if (mediaInfo) {
+            setTasks(prev => prev.map(task =>
+              task.id === taskId ? { ...task, mediaId: mediaInfo.id, mediaTitle: mediaInfo.title } : task
+            ))
+          }
+        })
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
         setTasks(prev => prev.map(task =>
@@ -139,6 +202,9 @@ export default function LyricsGeneration() {
         try {
           const response = await generateLyrics(request)
           const result = response.data
+          if (!result) {
+            throw new Error('No result from lyrics generation')
+          }
           updateTask(index, { status: 'completed', result })
           return { success: true, index }
         } catch (error) {

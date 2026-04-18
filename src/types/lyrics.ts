@@ -35,4 +35,8 @@ export interface LyricsTask {
   error?: string
   request?: LyricsGenerationRequest
   createdAt: string
+  mediaId?: string
+  mediaTitle?: string
+  isFavorite?: boolean
+  isPublic?: boolean
 }

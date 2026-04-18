@@ -4,7 +4,7 @@ import { idSchema } from './common.js'
 
 export { mediaTypeEnum } from './schemas/enums.js'
 
-export const mediaSourceEnum = z.enum(['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation'])
+export const mediaSourceEnum = z.enum(['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation', 'lyrics_generation'])
 
 export const favoriteFilterValues = ['favorite', 'non-favorite'] as const
 export const publicFilterValues = ['private', 'public', 'others-public'] as const
