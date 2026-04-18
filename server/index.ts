@@ -72,28 +72,15 @@ app.use(cookieParser())
 app.use(requestLogger)
 app.use(rateLimiter)
 
-// Auth routes (public - no authentication required)
+app.use('/api', auditContextMiddleware)
+app.use('/api', auditMiddleware)
 app.use('/api/auth', authRouter)
 
-// JWT authentication for all other API routes
 app.use('/api', (req, res, next) => {
-  // Skip auth for login/register routes
-  if (req.path.startsWith('/auth')) {
-    return next()
-  }
-  // Media downloads use signed tokens instead of JWT (see media-token.ts)
-  // This allows direct browser downloads with short-lived tokens
-  if (req.path.match(/\/media\/[^/]+\/download$/)) {
-    return next()
-  }
+  if (req.path.startsWith('/auth')) return next()
+  if (req.path.match(/\/media\/[^/]+\/download$/)) return next()
   authenticateJWT(req, res, next)
 })
-
-// Audit context middleware - must be after authenticateJWT to access req.user
-app.use('/api', auditContextMiddleware)
-
-// Audit middleware - must be after auditContextMiddleware
-app.use('/api', auditMiddleware)
 
 // Protected routes
 app.use('/api/text', textRouter)
