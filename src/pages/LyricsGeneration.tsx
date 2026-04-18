@@ -265,13 +265,13 @@ export default function LyricsGeneration() {
                     <SelectItem value="write_full_song">
                       <div className="flex items-center gap-2">
                         <Wand2 className="w-3 h-3" />
-                        {t('lyrics.modeWrite')}
+                        <span>创作模式</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="edit">
                       <div className="flex items-center gap-2">
                         <Edit3 className="w-3 h-3" />
-                        {t('lyrics.modeEdit')}
+                        <span>编辑模式</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -294,7 +294,6 @@ export default function LyricsGeneration() {
                 <span className="text-base font-semibold">参数配置</span>
               </div>
               <div className="p-4 space-y-4">
-                {/* Title (optional for both modes) */}
                 <div className="space-y-2">
                   <Label>{t('lyrics.titleInput')}</Label>
                   <Input
@@ -304,6 +303,39 @@ export default function LyricsGeneration() {
                     maxLength={100}
                   />
                 </div>
+
+                {mode === 'write_full_song' && (
+                  <div className="space-y-2">
+                    <Label>{t('lyrics.prompt')}</Label>
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => updateForm('prompt', e.target.value)}
+                      placeholder={t('lyrics.promptPlaceholder')}
+                      maxLength={2000}
+                      rows={8}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {prompt.length}/2000 {t('common.characters')}
+                    </p>
+                  </div>
+                )}
+
+                {mode === 'edit' && (
+                  <div className="space-y-2">
+                    <Label>{t('lyrics.lyricsInput')}</Label>
+                    <Textarea
+                      value={lyrics}
+                      onChange={(e) => updateForm('lyrics', e.target.value)}
+                      placeholder={t('lyrics.lyricsPlaceholder')}
+                      rows={8}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {lyrics.length} {t('common.characters')}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>并发生成数量</Label>
@@ -327,41 +359,6 @@ export default function LyricsGeneration() {
                     ))}
                   </div>
                 </div>
-
-                {/* Prompt (write_full_song mode) */}
-                {mode === 'write_full_song' && (
-                  <div className="space-y-2">
-                    <Label>{t('lyrics.prompt')}</Label>
-                    <Textarea
-                      value={prompt}
-                      onChange={(e) => updateForm('prompt', e.target.value)}
-                      placeholder={t('lyrics.promptPlaceholder')}
-                      maxLength={2000}
-                      rows={4}
-                      className="resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground text-right">
-                      {prompt.length}/2000 {t('common.characters')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Lyrics input (edit mode) */}
-                {mode === 'edit' && (
-                  <div className="space-y-2">
-                    <Label>{t('lyrics.lyricsInput')}</Label>
-                    <Textarea
-                      value={lyrics}
-                      onChange={(e) => updateForm('lyrics', e.target.value)}
-                      placeholder={t('lyrics.lyricsPlaceholder')}
-                      rows={8}
-                      className="resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground text-right">
-                      {lyrics.length} {t('common.characters')}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </motion.div>
