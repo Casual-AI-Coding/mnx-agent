@@ -206,6 +206,7 @@ export default function LyricsGeneration() {
             throw new Error('No result from lyrics generation')
           }
           updateTask(index, { status: 'completed', result })
+          saveLyricsToMedia(result, title, index)
           return { success: true, index }
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
@@ -220,19 +221,23 @@ export default function LyricsGeneration() {
     }
   }
 
-  const handleRetry = async (index: number) => {
+const handleRetry = async (index: number) => {
     const task = tasks[index]
     if (!task.request) return
 
     updateTask(index, { status: 'generating' })
     setIsGenerating(true)
 
-try {
-        const response = await generateLyrics(task.request)
-        const result = response.data
-        updateTask(index, { status: 'completed', result })
-        toastSuccess(t('lyrics.successGenerated'))
-      } catch (error) {
+    try {
+      const response = await generateLyrics(task.request)
+      const result = response.data
+      if (!result) {
+        throw new Error('No result from lyrics generation')
+      }
+      updateTask(index, { status: 'completed', result })
+      toastSuccess(t('lyrics.successGenerated'))
+      saveLyricsToMedia(result, task.request.title, index)
+    } catch (error) {
       const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
       updateTask(index, { status: 'failed', error: errorMsg })
       toastError(errorMsg)

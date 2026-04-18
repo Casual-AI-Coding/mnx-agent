@@ -127,17 +127,16 @@ export function LyricsTaskCarousel({
     }
 
     return (
-      <div className="h-full flex flex-col">
-        {/* Lyrics content */}
-        <div className="flex-1 overflow-auto p-6">
+      <div className="h-full flex flex-col max-h-[500px]">
+        <div className="flex-1 overflow-auto p-4">
           <div className="max-w-2xl mx-auto">
             {currentTask.result.song_title && (
-              <h2 className="text-2xl font-bold text-center mb-2 text-foreground">
+              <h2 className="text-xl font-bold text-center mb-2 text-foreground">
                 {currentTask.result.song_title}
               </h2>
             )}
             {currentTask.result.style_tags && (
-              <div className="flex justify-center gap-2 mb-6">
+              <div className="flex justify-center gap-2 mb-4">
                 {(Array.isArray(currentTask.result.style_tags)
                   ? currentTask.result.style_tags
                   : currentTask.result.style_tags.split(',').map(s => s.trim())
@@ -151,9 +150,7 @@ export function LyricsTaskCarousel({
                 ))}
               </div>
             )}
-            {/* Lyrics box with action buttons in top-right corner */}
-            <div className="relative bg-muted/30 rounded-xl p-6 group">
-              {/* Action buttons - top right */}
+            <div className="relative bg-muted/30 rounded-xl p-4 group">
               <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => currentTask.result && onEdit(currentTask.result)}
@@ -177,7 +174,7 @@ export function LyricsTaskCarousel({
                   <Download className="w-4 h-4" />
                 </button>
               </div>
-              <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed text-foreground pt-2">
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground pt-2 max-h-[400px] overflow-auto">
                 {currentTask.result.lyrics}
               </pre>
             </div>
