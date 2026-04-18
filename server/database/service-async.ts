@@ -45,6 +45,9 @@ import type {
   SystemConfig,
   CreateSystemConfig,
   UpdateSystemConfig,
+  ExternalApiLog,
+  ExternalApiLogQuery,
+  ExternalApiLogStats,
 } from './types.js'
 import {
   JobRepository,
@@ -58,6 +61,7 @@ import {
   DeadLetterRepository,
   PromptTemplateRepository,
   SystemConfigRepository,
+  ExternalApiLogRepository,
 } from '../repositories/index.js'
 
 export class DatabaseService {
@@ -74,6 +78,7 @@ export class DatabaseService {
   private _deadLetterRepo: DeadLetterRepository | null = null
   private _promptTemplateRepo: PromptTemplateRepository | null = null
   private _systemConfigRepo: SystemConfigRepository | null = null
+  private _externalApiLogRepo: ExternalApiLogRepository | null = null
 
   constructor(conn: DatabaseConnection) {
     this.conn = conn
@@ -132,6 +137,11 @@ export class DatabaseService {
   private get systemConfigRepo(): SystemConfigRepository {
     if (!this._systemConfigRepo) this._systemConfigRepo = new SystemConfigRepository(this.conn)
     return this._systemConfigRepo
+  }
+
+  private get externalApiLogRepo(): ExternalApiLogRepository {
+    if (!this._externalApiLogRepo) this._externalApiLogRepo = new ExternalApiLogRepository(this.conn)
+    return this._externalApiLogRepo
   }
 
   async init(): Promise<void> {
@@ -552,6 +562,26 @@ export class DatabaseService {
 
   async getUniqueAuditUsers(userId?: string): Promise<{ id: string; username: string }[]> {
     return this.userRepo.getUniqueAuditUsers(userId)
+  }
+
+  async getExternalApiLogById(id: number): Promise<ExternalApiLog | null> {
+    return this.externalApiLogRepo.getById(String(id))
+  }
+
+  async getExternalApiLogs(query: ExternalApiLogQuery): Promise<{ logs: ExternalApiLog[]; total: number }> {
+    return this.externalApiLogRepo.queryLogs(query)
+  }
+
+  async getExternalApiLogStats(userId?: string): Promise<ExternalApiLogStats> {
+    return this.externalApiLogRepo.getStats(userId)
+  }
+
+  async getUniqueExternalApiOperations(userId?: string): Promise<string[]> {
+    return this.externalApiLogRepo.getUniqueOperations(userId)
+  }
+
+  async getUniqueExternalApiProviders(): Promise<string[]> {
+    return this.externalApiLogRepo.getUniqueServiceProviders()
   }
 
   // =====================================================================

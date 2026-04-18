@@ -19,6 +19,7 @@ import {
   FileText,
   BarChart3,
   Shield,
+  Globe,
   Users,
   Key,
   FolderCog,
@@ -152,7 +153,8 @@ const toggleSection = (sectionId: string) => {
       items: [
         { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
         { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
-        { path: '/audit', label: t('sidebar.audit', '审计日志'), icon: Shield },
+        { path: '/audit', label: t('sidebar.audit', 'HTTP 审计日志'), icon: Shield },
+        { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
       ],
     },
       {

@@ -2,8 +2,27 @@ import type { Request, Response, NextFunction } from 'express'
 import { getDatabaseService } from '../service-registration.js'
 import type { AuditAction } from '../database/types'
 import { getLogger } from '../lib/logger'
+import { getCurrentTraceId } from '../services/audit-context.service.js'
 
 const SENSITIVE_FIELDS = ['password', 'token', 'apiKey', 'api_key', 'secret', 'authorization', 'cookie']
+
+const MAX_RESPONSE_BODY_LENGTH = 4096
+
+const EXACT_SKIP_PATHS = [
+  '/api/health',
+  '/api/text/chat/stream',
+  '/api/capacity/refresh',
+  '/api/auth/refresh',
+  '/api/settings/preferences',
+  '/api/settings/display',
+  '/api/settings/theme',
+]
+
+const REGEX_SKIP_PATHS = [
+  /^\/api\/media\/[^/]+\/favorite$/,
+  /^\/api\/cron\/jobs\/[^/]+\/tags$/,
+  /^\/api\/cron\/jobs\/[^/]+\/tags\/[^/]+$/,
+]
 
 function redactSensitiveData(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj
@@ -61,15 +80,24 @@ function extractResourceType(path: string): string {
   return resourceType
 }
 
-const SKIP_PATHS = [
-  '/cron/health',
-  '/ws',
-  '/api/health',
-]
+function shouldSkipAudit(path: string): boolean {
+  if (EXACT_SKIP_PATHS.includes(path)) return true
+  if (REGEX_SKIP_PATHS.some(regex => regex.test(path))) return true
+  return false
+}
+
+function truncateResponseBody(body: unknown, maxSize: number): string | null {
+  if (body === null || body === undefined) return null
+  
+  const str = typeof body === 'string' ? body : JSON.stringify(body)
+  if (str.length > maxSize) {
+    return str.substring(0, maxSize) + '...[truncated]'
+  }
+  return str
+}
 
 export function auditMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const shouldSkip = SKIP_PATHS.some(path => req.path.startsWith(path)) || !shouldAudit(req.method)
-  if (shouldSkip) {
+  if (shouldSkipAudit(req.path) || !shouldAudit(req.method)) {
     return next()
   }
 
@@ -94,6 +122,12 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
       ? JSON.stringify(redactSensitiveData(req.body))
       : null
 
+    const queryParams = req.query && Object.keys(req.query).length > 0
+      ? redactSensitiveData(req.query) as Record<string, unknown>
+      : null
+
+    const truncatedResponseBody = truncateResponseBody(responseBody, MAX_RESPONSE_BODY_LENGTH)
+
     let errorMessage: string | null = null
     if (res.statusCode >= 400 && responseBody) {
       if (typeof responseBody === 'object' && responseBody !== null) {
@@ -101,6 +135,8 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         errorMessage = (body.error as string) || (body.message as string) || null
       }
     }
+
+    const traceId = getCurrentTraceId()
 
     db.createAuditLog({
       action: methodToAction(req.method),
@@ -112,9 +148,12 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
       request_method: req.method,
       request_path: req.originalUrl,
       request_body: requestBody,
+      query_params: queryParams,
+      response_body: truncatedResponseBody,
       response_status: res.statusCode,
       error_message: errorMessage,
       duration_ms: duration,
+      trace_id: traceId,
     }).catch(error => {
       const logger = getLogger()
       logger.error({

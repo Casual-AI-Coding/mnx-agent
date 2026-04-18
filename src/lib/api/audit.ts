@@ -20,9 +20,12 @@ export interface AuditLog {
   request_method: string
   request_path: string
   request_body: string | Record<string, unknown> | null
+  query_params: Record<string, unknown> | null
+  response_body: string | null
   response_status: number | null
   error_message: string | null
   duration_ms: number | null
+  trace_id: string | null
   created_at: string
 }
 

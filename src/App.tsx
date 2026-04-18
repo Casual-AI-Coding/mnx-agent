@@ -29,6 +29,7 @@ const CapacityMonitor = lazy(() => import('@/pages/CapacityMonitor'))
 const TemplateLibrary = lazy(() => import('@/pages/TemplateLibrary'))
 const StatsDashboard = lazy(() => import('@/pages/StatsDashboard'))
 const AuditLogs = lazy(() => import('@/pages/AuditLogs'))
+const ExternalApiLogs = lazy(() => import('@/pages/ExternalApiLogs'))
 const Login = lazy(() => import('@/pages/Login'))
 const UserManagement = lazy(() => import('@/pages/UserManagement'))
 const InvitationCodes = lazy(() => import('@/pages/InvitationCodes'))
@@ -280,6 +281,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="审计日志">
               <AuditLogs />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="external-api-logs"
+          element={
+            <RouteWithErrorBoundary pageName="外部调用日志">
+              <ExternalApiLogs />
             </RouteWithErrorBoundary>
           }
         />

@@ -109,6 +109,16 @@ export type {
 } from '@mnx/shared-types/entities'
 
 export type {
+  ExternalApiLog,
+  ExternalApiLogRow,
+  CreateExternalApiLog,
+  ExternalApiLogQuery,
+  ExternalApiLogStats,
+  ServiceProvider,
+  ExternalApiStatus,
+} from '@mnx/shared-types/entities'
+
+export type {
   TemplateCategory,
   TemplateVariable,
   PromptTemplate,

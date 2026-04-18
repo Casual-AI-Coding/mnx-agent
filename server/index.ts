@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler'
 import { rateLimiter } from './middleware/rateLimit'
 import { requestLogger } from './middleware/logger-middleware'
 import { auditMiddleware } from './middleware/audit-middleware'
+import { auditContextMiddleware } from './services/audit-context.service.js'
 import { getLogger } from './lib/logger'
 import textRouter from './routes/text'
 import voiceRouter from './routes/voice'
@@ -27,6 +28,7 @@ import adminServicePermissionsRouter from './routes/admin/service-permissions'
 import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
+import externalApiLogsRouter from './routes/external-api-logs'
 import authRouter from './routes/auth.js'
 import usersRouter from './routes/users.js'
 import invitationCodesRouter from './routes/invitation-codes.js'
@@ -69,7 +71,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 app.use(cookieParser())
 app.use(requestLogger)
 app.use(rateLimiter)
-app.use(auditMiddleware)
 
 // Auth routes (public - no authentication required)
 app.use('/api/auth', authRouter)
@@ -87,6 +88,12 @@ app.use('/api', (req, res, next) => {
   }
   authenticateJWT(req, res, next)
 })
+
+// Audit context middleware - must be after authenticateJWT to access req.user
+app.use('/api', auditContextMiddleware)
+
+// Audit middleware - must be after auditContextMiddleware
+app.use('/api', auditMiddleware)
 
 // Protected routes
 app.use('/api/text', textRouter)
@@ -109,6 +116,7 @@ app.use('/api/admin/service-permissions', adminServicePermissionsRouter)
 app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
+app.use('/api/external-api-logs', externalApiLogsRouter)
 app.use('/api/users', authenticateJWT, usersRouter)
 app.use('/api/invitation-codes', authenticateJWT, invitationCodesRouter)
 app.use('/api/system-config', authenticateJWT, systemConfigRouter)

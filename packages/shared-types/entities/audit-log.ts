@@ -16,9 +16,12 @@ export interface AuditLog {
   request_method: string | null
   request_path: string | null
   request_body: string | null
+  query_params: Record<string, unknown> | null
+  response_body: string | null
   response_status: number | null
   error_message: string | null
   duration_ms: number | null
+  trace_id: string | null
   created_at: string
 }
 
@@ -33,9 +36,12 @@ export interface AuditLogRow {
   request_method: string | null
   request_path: string | null
   request_body: string | null
+  query_params: string | null
+  response_body: string | null
   response_status: number | null
   error_message: string | null
   duration_ms: number | null
+  trace_id: string | null
   created_at: string
 }
 
@@ -49,9 +55,12 @@ export interface CreateAuditLog {
   request_method?: string | null
   request_path?: string | null
   request_body?: string | null
+  query_params?: Record<string, unknown> | null
+  response_body?: string | null
   response_status?: number | null
   error_message?: string | null
   duration_ms?: number | null
+  trace_id?: string | null
 }
 
 export interface AuditLogQuery {

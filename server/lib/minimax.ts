@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { retryWithBackoff } from './retry.js'
 import { toLocalISODateString } from './date-utils.js'
+import { withExternalApiAudit, withExternalApiLog } from '../services/external-api-audit.service.js'
 
 const API_HOSTS = {
   domestic: 'https://api.minimaxi.com',
@@ -79,253 +80,397 @@ export class MiniMaxClient {
   }
 
   async chatCompletion(body: Record<string, unknown>): Promise<unknown> {
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/text/chatcompletion_v2', body)
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-      }
-    })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/text/chatcompletion_v2',
+      'chat_completion',
+      async () => retryWithBackoff(async () => {
+        try {
+          const response = await this.client.post('/v1/text/chatcompletion_v2', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      })
+    )()
   }
 
   async chatCompletionStream(body: Record<string, unknown>): Promise<{ data: string; isEnd: boolean }[]> {
-    try {
-      const response = await this.client.post('/v1/text/chatcompletion_v2', body, {
-        responseType: 'stream',
-      })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/text/chatcompletion_v2',
+      'chat_completion_stream',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/text/chatcompletion_v2', body, {
+            responseType: 'stream',
+          })
 
-      const stream = response.data as AsyncIterable<Buffer>
-      const chunks: { data: string; isEnd: boolean }[] = []
+          const stream = response.data as AsyncIterable<Buffer>
+          const chunks: { data: string; isEnd: boolean }[] = []
 
-      for await (const chunk of stream) {
-        const lines = chunk.toString().split('\n').filter(Boolean)
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              chunks.push({ data: '[DONE]', isEnd: true })
-            } else {
-              chunks.push({ data, isEnd: false })
+          for await (const chunk of stream) {
+            const lines = chunk.toString().split('\n').filter(Boolean)
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') {
+                  chunks.push({ data: '[DONE]', isEnd: true })
+                } else {
+                  chunks.push({ data, isEnd: false })
+                }
+              }
             }
           }
+
+          return chunks
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
         }
       }
-
-      return chunks
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    )()
   }
 
   async textToAudioSync(body: Record<string, unknown>): Promise<unknown> {
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/t2a_v2', body)
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-      }
-    })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/t2a_v2',
+      'text_to_audio_sync',
+      async () => retryWithBackoff(async () => {
+        try {
+          const response = await this.client.post('/v1/t2a_v2', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      })
+    )()
   }
 
   async textToAudioAsync(body: Record<string, unknown>): Promise<unknown> {
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/t2a_async_v2', body)
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-      }
-    })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/t2a_async_v2',
+      'text_to_audio_async',
+      async () => retryWithBackoff(async () => {
+        try {
+          const response = await this.client.post('/v1/t2a_async_v2', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      })
+    )()
   }
 
   async textToAudioAsyncStatus(taskId: string): Promise<unknown> {
-    try {
-      const response = await this.client.get(`/v1/t2a_async_v2?task_id=${taskId}`)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/t2a_async_v2',
+      'text_to_audio_async_status',
+      async () => {
+        try {
+          const response = await this.client.get(`/v1/t2a_async_v2?task_id=${taskId}`)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async imageGeneration(body: Record<string, unknown>): Promise<unknown> {
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/image_generation', body)
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-      }
-    })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/image_generation',
+      'image_generation',
+      async () => retryWithBackoff(async () => {
+        try {
+          const response = await this.client.post('/v1/image_generation', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      })
+    )()
   }
 
   async musicGeneration(body: Record<string, unknown>): Promise<unknown> {
-    console.log('[MiniMax] Music Generation Request:', {
-      body,
-      timestamp: toLocalISODateString()
-    })
-    
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/music_generation', body, {
-          timeout: 300000, // 5 minutes for music generation
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/music_generation',
+      'music_generation',
+      async () => {
+        console.log('[MiniMax] Music Generation Request:', {
+          body,
+          timestamp: toLocalISODateString()
         })
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        
+        return retryWithBackoff(async () => {
+          try {
+            const response = await this.client.post('/v1/music_generation', body, {
+              timeout: 300000, // 5 minutes for music generation
+            })
+            return response.data
+          } catch (error) {
+            return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+          }
+        })
       }
-    })
+    )()
   }
 
   async musicPreprocess(formData: FormData): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/music_cover_preprocess', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/music_cover_preprocess',
+      'music_preprocess',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/music_cover_preprocess', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async videoGeneration(body: Record<string, unknown>): Promise<unknown> {
-    return retryWithBackoff(async () => {
-      try {
-        const response = await this.client.post('/v1/video_generation', body)
-        return response.data
-      } catch (error) {
-        return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-      }
-    })
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/video_generation',
+      'video_generation',
+      async () => retryWithBackoff(async () => {
+        try {
+          const response = await this.client.post('/v1/video_generation', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      })
+    )()
   }
 
   async videoGenerationStatus(taskId: string): Promise<unknown> {
-    try {
-      const response = await this.client.get(`/v1/query/video_generation?task_id=${taskId}`)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/query/video_generation',
+      'video_generation_status',
+      async () => {
+        try {
+          const response = await this.client.get(`/v1/query/video_generation?task_id=${taskId}`)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async videoAgentGenerate(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/video_template_generation', body)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/video_template_generation',
+      'video_agent_generate',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/video_template_generation', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async videoAgentStatus(taskId: string): Promise<unknown> {
-    try {
-      const response = await this.client.get(`/v1/query/video_template_generation?task_id=${taskId}`)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/query/video_template_generation',
+      'video_agent_status',
+      async () => {
+        try {
+          const response = await this.client.get(`/v1/query/video_template_generation?task_id=${taskId}`)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async fileList(purpose?: string): Promise<unknown> {
-    try {
-      const url = purpose ? `/v1/files/list?purpose=${purpose}` : '/v1/files/list'
-      const response = await this.client.get(url)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/files/list',
+      'file_list',
+      async () => {
+        try {
+          const url = purpose ? `/v1/files/list?purpose=${purpose}` : '/v1/files/list'
+          const response = await this.client.get(url)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async fileUpload(formData: FormData): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/files/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/files/upload',
+      'file_upload',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/files/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async fileRetrieve(fileId: number): Promise<unknown> {
-    try {
-      const response = await this.client.get(`/v1/files/retrieve?file_id=${fileId}`)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/files/retrieve',
+      'file_retrieve',
+      async () => {
+        try {
+          const response = await this.client.get(`/v1/files/retrieve?file_id=${fileId}`)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async fileDelete(fileId: number, purpose: string): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/files/delete', { file_id: fileId, purpose })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/files/delete',
+      'file_delete',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/files/delete', { file_id: fileId, purpose })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async voiceList(voiceType: string = 'all'): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/get_voice', { voice_type: voiceType })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'POST /v1/get_voice',
+      'voice_list',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/get_voice', { voice_type: voiceType })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async voiceDelete(voiceId: string, voiceType: string): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/delete_voice', { voice_id: voiceId, voice_type: voiceType })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/delete_voice',
+      'voice_delete',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/delete_voice', { voice_id: voiceId, voice_type: voiceType })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async voiceClone(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/voice_clone', body)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/voice_clone',
+      'voice_clone',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/voice_clone', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async voiceDesign(body: Record<string, unknown>): Promise<unknown> {
-    try {
-      const response = await this.client.post('/v1/voice_design', body)
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiAudit(
+      'minimax',
+      'POST /v1/voice_design',
+      'voice_design',
+      async () => {
+        try {
+          const response = await this.client.post('/v1/voice_design', body)
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async getBalance(): Promise<unknown> {
-    try {
-      const response = await this.client.get('/v1/user/balance')
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/user/balance',
+      'get_balance',
+      async () => {
+        try {
+          const response = await this.client.get('/v1/user/balance')
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 
   async getCodingPlanRemains(productId: string = '1001'): Promise<unknown> {
-    try {
-      const response = await this.client.get('/v1/api/openplatform/coding_plan/remains', {
-        headers: {
-          'productId': productId,
-        },
-      })
-      return response.data
-    } catch (error) {
-      return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
-    }
+    return withExternalApiLog(
+      'minimax',
+      'GET /v1/api/openplatform/coding_plan/remains',
+      'get_coding_plan_remains',
+      async () => {
+        try {
+          const response = await this.client.get('/v1/api/openplatform/coding_plan/remains', {
+            headers: {
+              'productId': productId,
+            },
+          })
+          return response.data
+        } catch (error) {
+          return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
+        }
+      }
+    )()
   }
 }
 
