@@ -11,3 +11,4 @@ export * from './video'
 // Re-export other types
 export * from './usage'
 export * from './cron'
+export * from './lyrics'
