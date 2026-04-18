@@ -7,7 +7,6 @@ import { FileText, Loader2, Wand2, Edit3, Settings2, Palette } from 'lucide-reac
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
@@ -16,6 +15,7 @@ import { toastSuccess, toastError } from '@/lib/toast'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
 import { LyricsTaskCarousel } from '@/components/lyrics/LyricsTaskCarousel'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
+import { cn } from '@/lib/utils'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 
 type LyricsFormData = {
@@ -23,6 +23,7 @@ type LyricsFormData = {
   prompt: string
   lyrics: string
   title: string
+  parallelCount: number
 }
 
 const DEFAULT_FORM: LyricsFormData = {
@@ -30,6 +31,7 @@ const DEFAULT_FORM: LyricsFormData = {
   prompt: '',
   lyrics: '',
   title: '',
+  parallelCount: 1,
 }
 
 // Export lyrics to txt file
@@ -58,15 +60,21 @@ export default function LyricsGeneration() {
     setFormData(prev => ({ ...prev, [key]: value }))
   }, [setFormData])
 
-  const { mode, prompt, lyrics, title } = formData
+  const { mode, prompt, lyrics, title, parallelCount } = formData
 
   const [tasks, setTasks] = useState<LyricsTask[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
 
-  // Generate lyrics
+  const updateTask = useCallback((index: number, updates: Partial<LyricsTask>) => {
+    setTasks(prev => {
+      const newTasks = [...prev]
+      newTasks[index] = { ...newTasks[index], ...updates }
+      return newTasks
+    })
+  }, [])
+
   const handleGenerate = async () => {
-    // Validation
     if (mode === 'edit' && !lyrics.trim()) {
       toastError(t('lyrics.errorEditModeEmpty'))
       return
@@ -80,78 +88,84 @@ export default function LyricsGeneration() {
       return
     }
 
-    const taskId = `lyrics-${Date.now()}`
-    const newTask: LyricsTask = {
-      id: taskId,
-      status: 'generating',
-      request: { mode, prompt, lyrics, title },
-      createdAt: new Date().toISOString(),
+    const request: LyricsGenerationRequest = {
+      mode,
+      prompt: mode === 'write_full_song' ? prompt : undefined,
+      lyrics: mode === 'edit' ? lyrics : undefined,
+      title,
     }
 
-    setTasks(prev => [newTask, ...prev].slice(0, 10))
-    setCurrentIndex(0)
-    setIsGenerating(true)
-
-    try {
-      const request: LyricsGenerationRequest = {
-        mode,
-        prompt: mode === 'write_full_song' ? prompt : undefined,
-        lyrics: mode === 'edit' ? lyrics : undefined,
-        title,
+    if (parallelCount === 1) {
+      const taskId = `lyrics-${Date.now()}`
+      const newTask: LyricsTask = {
+        id: taskId,
+        status: 'generating',
+        request,
+        createdAt: new Date().toISOString(),
       }
 
-      const result = await generateLyrics(request)
+      setTasks(prev => [newTask, ...prev].slice(0, 10))
+      setCurrentIndex(0)
+      setIsGenerating(true)
 
-      setTasks(prev => prev.map(task =>
-        task.id === taskId
-          ? { ...task, status: 'completed', result }
-          : task
-      ))
-      toastSuccess(t('lyrics.successGenerated'))
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
-      setTasks(prev => prev.map(task =>
-        task.id === taskId
-          ? { ...task, status: 'failed', error: errorMsg }
-          : task
-      ))
-      toastError(errorMsg)
-    } finally {
+      try {
+        const result = await generateLyrics(request)
+        setTasks(prev => prev.map(task =>
+          task.id === taskId ? { ...task, status: 'completed', result } : task
+        ))
+        toastSuccess(t('lyrics.successGenerated'))
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
+        setTasks(prev => prev.map(task =>
+          task.id === taskId ? { ...task, status: 'failed', error: errorMsg } : task
+        ))
+        toastError(errorMsg)
+      } finally {
+        setIsGenerating(false)
+      }
+    } else {
+      const newTasks: LyricsTask[] = Array.from({ length: parallelCount }, (_, i) => ({
+        id: `lyrics-${Date.now()}-${i}`,
+        status: 'generating' as const,
+        request,
+        createdAt: new Date().toISOString(),
+      }))
+      setTasks(newTasks)
+      setCurrentIndex(0)
+      setIsGenerating(true)
+
+      const promises = newTasks.map(async (_task, index) => {
+        try {
+          const result = await generateLyrics(request)
+          updateTask(index, { status: 'completed', result })
+          return { success: true, index }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
+          updateTask(index, { status: 'failed', error: errorMsg })
+          return { success: false, index }
+        }
+      })
+
+      await Promise.allSettled(promises)
       setIsGenerating(false)
+      toastSuccess(t('lyrics.successGenerated'))
     }
   }
 
-  // Retry failed task
   const handleRetry = async (index: number) => {
     const task = tasks[index]
     if (!task.request) return
 
-    const taskId = `lyrics-${Date.now()}`
-    const newTask: LyricsTask = {
-      id: taskId,
-      status: 'generating',
-      request: task.request,
-      createdAt: new Date().toISOString(),
-    }
-
-    setTasks(prev => {
-      const updated = [...prev]
-      updated[index] = newTask
-      return updated
-    })
+    updateTask(index, { status: 'generating' })
     setIsGenerating(true)
 
     try {
       const result = await generateLyrics(task.request)
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, status: 'completed', result } : t
-      ))
+      updateTask(index, { status: 'completed', result })
       toastSuccess(t('lyrics.successGenerated'))
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, status: 'failed', error: errorMsg } : t
-      ))
+      updateTask(index, { status: 'failed', error: errorMsg })
       toastError(errorMsg)
     } finally {
       setIsGenerating(false)
@@ -289,6 +303,29 @@ export default function LyricsGeneration() {
                     placeholder="歌曲标题（可选）"
                     maxLength={100}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>并发生成数量</Label>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => !isGenerating && updateForm('parallelCount', n)}
+                        disabled={isGenerating}
+                        className={cn(
+                          "w-8 h-8 rounded-md text-sm font-medium transition-all duration-200",
+                          parallelCount === n
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground",
+                          isGenerating && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Prompt (write_full_song mode) */}
