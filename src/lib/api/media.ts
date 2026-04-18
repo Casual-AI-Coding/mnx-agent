@@ -2,8 +2,8 @@ import { apiClient } from './client'
 
 const client = apiClient.client_
 
-export type MediaType = 'audio' | 'image' | 'video' | 'music'
-export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation'
+export type MediaType = 'audio' | 'image' | 'video' | 'music' | 'lyrics'
+export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation' | 'lyrics_generation'
 
 export interface MediaRecord {
   id: string
@@ -139,6 +139,7 @@ export function getMediaTypeLabel(type: MediaType): string {
     image: '图片',
     video: '视频',
     music: '音乐',
+    lyrics: '歌词',
   }
   return labels[type]
 }
@@ -150,6 +151,7 @@ export function getMediaSourceLabel(source: MediaSource): string {
     image_generation: '图像生成',
     video_generation: '视频生成',
     music_generation: '音乐生成',
+    lyrics_generation: '歌词生成',
   }
   return labels[source]
 }

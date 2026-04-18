@@ -1,4 +1,4 @@
-import { Image, Music, Video, FileAudio } from 'lucide-react'
+import { Image, Music, Video, FileAudio, FileText } from 'lucide-react'
 import type { MediaType } from '@/types/media'
 
 export function formatFileSize(bytes: number): string {
@@ -45,6 +45,8 @@ export function getTypeIcon(type: MediaType): React.ReactNode {
       return <Video className="w-4 h-4" />
     case 'music':
       return <Music className="w-4 h-4" />
+    case 'lyrics':
+      return <FileText className="w-4 h-4" />
     default:
       return <FileAudio className="w-4 h-4" />
   }

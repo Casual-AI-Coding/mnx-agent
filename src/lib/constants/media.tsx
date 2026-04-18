@@ -1,4 +1,4 @@
-import { Image, Music, Video, FileAudio, RefreshCw } from 'lucide-react'
+import { Image, Music, Video, FileAudio, FileText, RefreshCw } from 'lucide-react'
 import type { MediaType, MediaSource } from '@/types/media'
 import { services } from '@/themes/tokens'
 
@@ -8,6 +8,7 @@ export const MEDIA_TABS: { value: string; label: string; icon: React.ReactNode }
   { value: 'audio', label: '音频', icon: <FileAudio className="w-4 h-4" /> },
   { value: 'video', label: '视频', icon: <Video className="w-4 h-4" /> },
   { value: 'music', label: '音乐', icon: <Music className="w-4 h-4" /> },
+  { value: 'lyrics', label: '歌词', icon: <FileText className="w-4 h-4" /> },
 ]
 
 export const TYPE_VARIANTS: Record<MediaType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -15,6 +16,7 @@ export const TYPE_VARIANTS: Record<MediaType, 'default' | 'secondary' | 'destruc
   audio: 'secondary',
   video: 'destructive',
   music: 'outline',
+  lyrics: 'outline',
 }
 
 export const TYPE_LABELS: Record<MediaType, string> = {
@@ -22,6 +24,7 @@ export const TYPE_LABELS: Record<MediaType, string> = {
   audio: '音频',
   video: '视频',
   music: '音乐',
+  lyrics: '歌词',
 }
 
 export const SOURCE_LABELS: Record<MediaSource, string> = {
@@ -30,6 +33,7 @@ export const SOURCE_LABELS: Record<MediaSource, string> = {
   image_generation: '图像生成',
   video_generation: '视频生成',
   music_generation: '音乐生成',
+  lyrics_generation: '歌词生成',
 }
 
 export const TYPE_GRADIENTS: Record<MediaType, string> = {
@@ -37,4 +41,5 @@ export const TYPE_GRADIENTS: Record<MediaType, string> = {
   audio: services.voice.bg,
   video: 'bg-destructive-950/50',
   music: services.music.bg,
+  lyrics: 'bg-purple-950/50',
 }
