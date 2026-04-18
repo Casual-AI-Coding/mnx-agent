@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.3] - 2026-04-19
+
+### Added
+
+- **歌词预览组件** - 歌词 HoverPreview 和 PreviewModal 组件
+  - `src/components/lyrics/LyricsHoverPreview.tsx` (+117) - Hover 预览组件，鼠标悬停显示歌词片段
+  - `src/components/lyrics/LyricsPreviewModal.tsx` (+200) - Modal 预览组件，全屏查看歌词、段落导航、导出 TXT
+  - `src/components/lyrics/index.ts` (+6) - Barrel export 导出所有歌词组件
+  - `src/index.css` (+10) - 歌词段落标签高亮样式 `.lyrics-section-tag`
+
+- **歌词解析工具函数** - 结构化歌词解析和显示
+  - `src/lib/utils/lyrics.ts` (+111) - 歌词解析、片段提取、段落高亮函数
+  - 支持段落类型：Verse/Chorus/Bridge/Outro/Hook/Intro
+  - XSS 安全：HTML 实体转义防止注入攻击
+
+- **MediaType/MediaSource 扩展** - 支持 lyrics 类型
+  - `src/types/media.ts` (+2/-2) - 新增 `lyrics` 和 `lyrics_generation` 类型
+  - `src/lib/constants/media.tsx` (+6/-1) - 歌词类型图标、标签、渐变配置
+  - `src/lib/utils/media.tsx` (+3/-1) - getTypeIcon 支持 lyrics
+
+### Fixed
+
+- **XSS 漏洞修复** - 歌词显示安全加固
+  - `src/lib/utils/lyrics.ts` - 添加 `escapeHtml()` 函数转义 HTML 特殊字符
+  - 防止 MiniMax API 返回的歌词内容包含恶意脚本
+
+- **正则状态竞态修复** - matchAll 替代手动 lastIndex 操作
+  - `src/lib/utils/lyrics.ts` - 使用 `String.matchAll()` 避免并发调用状态污染
+
+- **类型强制转换修复** - LyricsPreviewModal title 传递方式
+  - `src/components/lyrics/LyricsPreviewModal.tsx` - 移除 `as unknown as string`，传纯字符串
+
+### Changed
+
+- **类型定义重复消除** - DRY 原则
+  - `src/lib/api/media.ts` (+4/-3) - 移除重复定义，改为从 `@/types/media` 导入并重新导出
+
+### Performance
+
+**Code Quality Metrics**
+- **9 files changed** (+455 insertions, -7 deletions)
+- **新增组件**: 2 个 (LyricsHoverPreview, LyricsPreviewModal)
+- **新增工具函数**: 1 个模块
+- **安全修复**: XSS 防护 + 正则状态修复
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 歌词预览组件为增量功能，不影响现有系统
+- ✅ MediaType 扩展向后兼容（新增类型）
+- ✅ 类型定义重构为内部改进，不影响导入方
+
 ## [2.1.2] - 2026-04-18
 
 ### Added
