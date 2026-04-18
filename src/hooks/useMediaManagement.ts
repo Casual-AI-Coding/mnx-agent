@@ -244,7 +244,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     const page = forcePage ?? paginationRef.current.page
 
     try {
-      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
+      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music', 'lyrics']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
 
       const response = await listMedia({
@@ -279,7 +279,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
     setIsLoadingMore(true)
     try {
-      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music']
+      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music', 'lyrics']
       const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
 
       const response = await listMedia({
