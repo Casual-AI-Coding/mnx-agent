@@ -244,8 +244,9 @@ try {
   const handleEdit = (result: LyricsGenerationResponse) => {
     updateForm('mode', 'edit')
     updateForm('lyrics', result.lyrics)
-    updateForm('title', result.song_title)
+    updateForm('title', result.song_title || '')
     updateForm('prompt', '')
+    toastSuccess('已切换到编辑模式，歌词已填入左侧输入框')
   }
 
   const clearAll = () => {

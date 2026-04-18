@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, CheckCircle, X, Loader2, Edit3, Download, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toastSuccess } from '@/lib/toast'
+import { toastSuccess, toastError } from '@/lib/toast'
 import type { LyricsTask, LyricsGenerationResponse } from '@/types/lyrics'
 
 interface LyricsTaskCarouselProps {
@@ -100,7 +100,7 @@ export function LyricsTaskCarousel({
         await navigator.clipboard.writeText(currentTask.result.lyrics)
         toastSuccess('歌词已复制到剪贴板')
       } catch {
-        toastSuccess('复制失败')
+        toastError('复制失败，请手动复制')
       }
     }
 
