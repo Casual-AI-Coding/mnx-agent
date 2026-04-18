@@ -8,7 +8,7 @@ import {
   Image,
   Music,
   Video,
-  VideoIcon,
+  Film,
   User,
   FolderOpen,
   Terminal,
@@ -35,6 +35,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Server,
+  Coins,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
@@ -50,14 +51,6 @@ const roleHierarchy: Record<UserRole, number> = {
 
 const EXPANDED_KEY = 'sidebar-expanded-sections'
 const COLLAPSED_KEY = 'sidebar-collapsed'
-
-const MENU_ICONS = {
-  shield: Shield,
-  users: Users,
-  key: Key,
-  server: Shield,
-  gitBranch: GitBranch,
-}
 
 function getStoredExpanded(): Record<string, boolean> {
   try {
@@ -129,7 +122,7 @@ const toggleSection = (sectionId: string) => {
     { path: '/image', label: t('sidebar.imageGeneration'), icon: Image },
     { path: '/music', label: t('sidebar.musicGeneration'), icon: Music },
     { path: '/video', label: t('sidebar.videoGeneration'), icon: Video },
-    { path: '/video-agent', label: t('sidebar.videoAgent'), icon: VideoIcon },
+    { path: '/video-agent', label: t('sidebar.videoAgent'), icon: Film },
   ]
 
   const menuSections = [
@@ -151,9 +144,10 @@ const toggleSection = (sectionId: string) => {
       icon: Activity,
       minRole: 'pro' as UserRole,
       items: [
+        { path: '/token', label: t('sidebar.tokenMonitor', '用量监控'), icon: Coins },
         { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
         { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
-        { path: '/audit', label: t('sidebar.audit', 'HTTP 审计日志'), icon: Shield },
+        { path: '/audit', label: t('sidebar.audit', '内部审计日志'), icon: Shield },
         { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
       ],
     },

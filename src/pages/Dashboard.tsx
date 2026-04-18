@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  MessageSquare, Mic, MicOff, Image, Music, Video, VideoIcon,
+  MessageSquare, Mic, MicOff, Image, Music, Video, Film,
   User, FolderOpen, BarChart3, TrendingUp, Zap, Clock,
   Wifi, WifiOff, Loader2
 } from 'lucide-react'
@@ -92,7 +92,7 @@ export default function Dashboard() {
     { title: t('dashboard.aiImageCreation'), desc: t('dashboard.aiImageCreation'), icon: Image, path: '/image', color: 'hover:border-accent' },
     { title: t('dashboard.aiMusicCreation'), desc: t('dashboard.aiMusicCreation'), icon: Music, path: '/music', color: 'hover:border-primary-400' },
     { title: t('dashboard.aiVideoCreation'), desc: t('dashboard.aiVideoCreation'), icon: Video, path: '/video', color: 'hover:border-destructive' },
-    { title: t('dashboard.videoIntelligentAgent'), desc: t('dashboard.videoIntelligentAgent'), icon: VideoIcon, path: '/video-agent', color: 'hover:border-error' },
+    { title: t('dashboard.videoIntelligentAgent'), desc: t('dashboard.videoIntelligentAgent'), icon: Film, path: '/video-agent', color: 'hover:border-error' },
     { title: t('dashboard.customVoiceManagement'), desc: t('dashboard.customVoiceManagement'), icon: User, path: '/voice-mgmt', color: 'hover:border-secondary' },
     { title: t('dashboard.uploadedFileManagement'), desc: t('dashboard.uploadedFileManagement'), icon: FolderOpen, path: '/files', color: 'hover:border-info' },
     { title: t('dashboard.apiUsageStatistics'), desc: t('dashboard.apiUsageStatistics'), icon: BarChart3, path: '/token', color: 'hover:border-warning' },

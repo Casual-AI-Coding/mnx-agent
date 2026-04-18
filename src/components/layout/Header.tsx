@@ -1,6 +1,6 @@
 import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/settings/store'
@@ -51,7 +51,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
       <header className="fixed top-0 left-0 right-0 h-[60px] bg-card/80 backdrop-blur-xl border-b border-border/50 z-50">
         <div className="h-full flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <svg
                 width="32"
                 height="32"
@@ -73,7 +73,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 <span className="text-xl font-bold bg-gradient-to-r from-primary-400 via-secondary-400 to-rose-400 bg-clip-text text-transparent">
                   Mnx-Agent 工作台
                 </span>
-            </div>
+            </Link>
           </div>
 
           <div className="flex items-center gap-2">

@@ -131,7 +131,7 @@ function AppContent() {
         }
       />
       <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
-        <Route index element={<Navigate to="/text" replace />} />
+        <Route index element={<RouteWithErrorBoundary pageName="仪表盘"><Dashboard /></RouteWithErrorBoundary>} />
         <Route
           path="text"
           element={
