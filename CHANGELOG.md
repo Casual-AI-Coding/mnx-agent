@@ -2,6 +2,102 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.4] - 2026-04-19
+
+### Added
+
+- **歌词并行生成** - 支持 1-10 个并行生成
+  - `src/pages/LyricsGeneration.tsx` (+545/-XX) - 并行数量选择器，批量生成逻辑
+  - 使用 Promise.all 并发执行多个歌词生成请求
+  - 每个生成结果独立显示状态和进度
+
+- **歌词结果区域重新设计** - 全屏加载和显示优化
+  - `src/pages/LyricsGeneration.tsx` - 结果区域布局重构
+  - 全屏加载动画，更好的用户反馈
+  - 生成完成后的轮播展示优化
+
+- **Tab风格模式选择** - 替代下拉选择器
+  - `src/pages/LyricsGeneration.tsx` - 创作/编辑模式 Tab 切换
+  - 更直观的模式切换体验
+
+- **歌词保存到 media_records** - 生成结果持久化
+  - `src/pages/LyricsGeneration.tsx` (+4e0a187) - createMedia with metadata
+  - 歌词生成完成后自动保存到媒体库
+  - 支持并行生成结果批量保存
+
+- **操作按钮移到歌词框角落** - UI优化
+  - `src/components/lyrics/LyricsTaskCarousel.tsx` (+219/-XX) - 移除重复轮播
+  - 操作按钮（复制、编辑、保存）移到卡片角落
+  - 使用图标按钮替代文字按钮
+
+- **媒体管理集成歌词预览** - 歌词预览功能集成
+  - `src/pages/MediaManagement.tsx` (+11/-0) - 歌词预览功能接入
+  - `src/components/media/MediaCard.tsx` (+47/-XX) - 歌词卡片预览
+  - Hover 预览和 Modal 全屏查看
+
+### Fixed
+
+- **剪贴板复制 fallback** - 非 HTTPS 环境备用方案
+  - `src/pages/LyricsGeneration.tsx` - 添加 fallback clipboard copy
+  - 支持 navigator.clipboard API 不可用时的备用方案
+
+- **style_tags 类型兼容** - string 或 array 处理
+  - `src/components/lyrics/LyricsTaskCard.tsx` (+7/-XX) - optional chaining
+  - `src/pages/LyricsGeneration.tsx` - style_tags string/array 兼容
+  - 后端 API 返回 string，前端统一处理
+
+- **API 响应数据提取** - ApiResponse wrapper 处理
+  - `src/pages/LyricsGeneration.tsx` - 正确提取 ApiResponse.data
+  - `server/routes/lyrics.ts` (+3/-1) - extractData 配置
+  - MiniMax API 响应正确解析
+
+- **布局和双滚动条修复**
+  - `src/pages/LyricsGeneration.tsx` - 布局比例调整
+  - `src/components/lyrics/LyricsTaskCarousel.tsx` - 双滚动条消除
+
+- **'lyrics' 类型过滤支持** - 媒体类型枚举扩展
+  - `server/validation/schemas/enums.ts` (+2/-1) - mediaTypeEnum 添加 'lyrics'
+  - `server/validation/media-schemas.ts` (+2/-1) - mediaSourceEnum 添加 'lyrics_generation'
+  - `src/hooks/useMediaManagement.ts` (+15/-XX) - validTypes 添加 'lyrics'
+  - 支持在媒体管理中筛选歌词类型
+
+### Changed
+
+- **页面样式统一** - 与 MusicGeneration 一致
+  - `src/pages/LyricsGeneration.tsx` - 整体样式重构
+  - 卡片布局、间距、颜色与音乐生成页面一致
+
+- **布局比例调整** - 5:7 和轮播指示器
+  - `src/components/lyrics/LyricsTaskCarousel.tsx` - 左右比例 5:7
+  - 添加轮播指示器，更好的导航体验
+
+- **文本区域增大** - prompt/lyrics textarea 12行
+  - `src/pages/LyricsGeneration.tsx` - textarea rows 增加至 12
+  - 更舒适的输入体验
+
+- **中文标签显示** - mode 显示中文
+  - `src/pages/LyricsGeneration.tsx` - SelectTrigger 中文标签
+  - 创作模式/编辑模式中文显示
+
+- **API curl清理** - 移除不必要的 model 参数
+  - `src/pages/LyricsGeneration.tsx` - curl 示例清理
+  - 更准确的 API 参考示例
+
+### Performance
+
+**Code Quality Metrics**
+- **16 files changed** (+645 insertions, -255 deletions)
+- **新增功能**: 歌词并行生成、结果区域重设计、媒体集成预览
+- **修复**: 剪贴板fallback、类型兼容、API响应提取、布局优化
+- **UI改进**: Tab风格、中文标签、样式统一
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 歌词并行生成为增量功能，向后兼容
+- ✅ 媒体类型扩展不影响现有类型
+- ✅ UI改进为纯前端变更，不影响功能逻辑
+
 ## [2.1.3] - 2026-04-19
 
 ### Added
