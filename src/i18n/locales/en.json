@@ -104,7 +104,22 @@
     "result": "Result",
     "styleTags": "Style Tags",
     "exportTxt": "Export TXT",
-    "editThis": "Edit This Lyrics"
+    "editThis": "Edit This Lyrics",
+    "statusIdle": "Pending",
+    "statusGenerating": "Generating",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "unnamedSong": "Untitled Song",
+    "generatingMessage": "Creating lyrics...",
+    "waitingMessage": "Waiting",
+    "errorEditModeEmpty": "Edit mode requires lyrics input",
+    "errorWriteModeEmpty": "Write mode requires a creation prompt",
+    "errorPromptTooLong": "Creation prompt cannot exceed 2000 characters",
+    "successGenerated": "Lyrics generated successfully",
+    "errorGenerationFailed": "Generation failed",
+    "successExported": "Lyrics exported",
+    "errorExportFailed": "Export failed",
+    "historyHint": "Recent lyrics (max 10 retained)"
   },
   "dashboard": {
     "title": "MiniMax AI Tools",

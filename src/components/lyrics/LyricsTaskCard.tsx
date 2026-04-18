@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CheckCircle,
   XCircle,
@@ -10,8 +11,6 @@ import {
   Download,
   RotateCcw,
   Edit3,
-  FileText,
-  Heart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
@@ -37,46 +36,47 @@ const taskVariants = {
   },
 }
 
-function getStatusIcon(status: LyricsTask['status']) {
-  switch (status) {
-    case 'idle':
-      return (
+// Unified status UI helper
+function getStatusUI(status: LyricsTask['status'], t: (key: string) => string) {
+  const statusMap = {
+    idle: {
+      icon: (
         <div className="w-8 h-8 rounded-full bg-muted/10 flex items-center justify-center">
           <AlertCircle className="w-4 h-4 text-muted-foreground/70" />
         </div>
-      )
-    case 'generating':
-      return (
+      ),
+      badge: <Badge className="bg-muted/10 text-foreground border-muted/20">{t('lyrics.statusIdle')}</Badge>,
+      gradient: 'from-muted/40 to-muted-foreground/70/40',
+    },
+    generating: {
+      icon: (
         <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.info.bgSubtle)}>
           <Loader2 className={cn('w-4 h-4 animate-spin', statusTokens.info.icon)} />
         </div>
-      )
-    case 'completed':
-      return (
+      ),
+      badge: <Badge className={cn(statusTokens.info.bgSubtle, statusTokens.info.text, statusTokens.info.border)}>{t('lyrics.statusGenerating')}</Badge>,
+      gradient: statusTokens.info.gradient,
+    },
+    completed: {
+      icon: (
         <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.success.bgSubtle)}>
           <CheckCircle className={cn('w-4 h-4', statusTokens.success.icon)} />
         </div>
-      )
-    case 'failed':
-      return (
+      ),
+      badge: <Badge className={cn(statusTokens.success.bgSubtle, statusTokens.success.text, statusTokens.success.border)}>{t('lyrics.statusCompleted')}</Badge>,
+      gradient: statusTokens.success.gradient,
+    },
+    failed: {
+      icon: (
         <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', statusTokens.error.bgSubtle)}>
           <XCircle className={cn('w-4 h-4', statusTokens.error.icon)} />
         </div>
-      )
+      ),
+      badge: <Badge className={cn(statusTokens.error.bgSubtle, statusTokens.error.text, statusTokens.error.border)}>{t('lyrics.statusFailed')}</Badge>,
+      gradient: statusTokens.error.gradient,
+    },
   }
-}
-
-function getStatusBadge(status: LyricsTask['status']) {
-  switch (status) {
-    case 'idle':
-      return <Badge className="bg-muted/10 text-foreground border-muted/20">待生成</Badge>
-    case 'generating':
-      return <Badge className={cn(statusTokens.info.bgSubtle, statusTokens.info.text, statusTokens.info.border)}>生成中</Badge>
-    case 'completed':
-      return <Badge className={cn(statusTokens.success.bgSubtle, statusTokens.success.text, statusTokens.success.border)}>已完成</Badge>
-    case 'failed':
-      return <Badge className={cn(statusTokens.error.bgSubtle, statusTokens.error.text, statusTokens.error.border)}>失败</Badge>
-  }
+  return statusMap[status]
 }
 
 function truncateLyrics(lyrics: string, maxLines: number = 4): string {
@@ -91,6 +91,7 @@ export function LyricsTaskCard({
   onEdit,
   onExport,
 }: LyricsTaskCardProps) {
+  const { t } = useTranslation()
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async () => {
@@ -98,21 +99,15 @@ export function LyricsTaskCard({
     setIsExporting(true)
     try {
       onExport(task.result)
-      toastSuccess('歌词已导出')
+      toastSuccess(t('lyrics.successExported'))
     } catch (error) {
-      toastError('导出失败')
+      toastError(t('lyrics.errorExportFailed'))
     } finally {
       setIsExporting(false)
     }
   }
 
-  const progressColor = task.status === 'generating' 
-    ? statusTokens.info.gradient 
-    : task.status === 'completed'
-      ? statusTokens.success.gradient
-      : task.status === 'failed'
-        ? statusTokens.error.gradient
-        : 'from-muted/40 to-muted-foreground/70/40'
+  const statusUI = getStatusUI(task.status, t)
 
   return (
     <motion.div
@@ -129,18 +124,18 @@ export function LyricsTaskCard({
       <div className={cn(
         'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300',
         'bg-gradient-to-r',
-        progressColor,
+        statusUI.gradient,
         'blur-sm -z-10'
       )} />
 
       {/* Header: status + title */}
       <div className="p-4 flex items-start gap-3">
-        {getStatusIcon(task.status)}
+        {statusUI.icon}
         <div className="flex-1 min-w-0">
           {task.result ? (
             <>
               <h3 className="text-sm font-medium truncate">
-                {task.result.song_title || '未命名歌曲'}
+                {task.result.song_title || t('lyrics.unnamedSong')}
               </h3>
               {task.result.style_tags.length > 0 && (
                 <div className="flex gap-1 mt-1 flex-wrap">
@@ -157,11 +152,11 @@ export function LyricsTaskCard({
             </>
           ) : (
             <div className="text-sm text-muted-foreground">
-              {task.status === 'generating' ? '正在创作歌词...' : '等待生成'}
+              {task.status === 'generating' ? t('lyrics.generatingMessage') : t('lyrics.waitingMessage')}
             </div>
           )}
         </div>
-        {getStatusBadge(task.status)}
+        {statusUI.badge}
       </div>
 
       {/* Lyrics preview */}
@@ -186,7 +181,7 @@ export function LyricsTaskCard({
       {task.status === 'generating' && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
           <div 
-            className={cn('h-full bg-gradient-to-r animate-pulse', progressColor)}
+            className={cn('h-full bg-gradient-to-r animate-pulse', statusUI.gradient)}
             style={{ width: '60%' }}
           />
         </div>
@@ -202,7 +197,7 @@ export function LyricsTaskCard({
             className="flex items-center gap-1"
           >
             <Edit3 className="w-3 h-3" />
-            编辑此歌词
+            {t('lyrics.editThis')}
           </Button>
           <Button
             size="sm"
@@ -212,7 +207,7 @@ export function LyricsTaskCard({
             className="flex items-center gap-1"
           >
             <Download className="w-3 h-3" />
-            导出 TXT
+            {t('lyrics.exportTxt')}
           </Button>
         </div>
       )}
@@ -227,7 +222,7 @@ export function LyricsTaskCard({
             className="flex items-center gap-1"
           >
             <RotateCcw className="w-3 h-3" />
-            重试
+            {t('common.retry')}
           </Button>
         </div>
       )}

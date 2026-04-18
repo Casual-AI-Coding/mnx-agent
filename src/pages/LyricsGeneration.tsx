@@ -12,7 +12,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Label } from '@/components/ui/Label'
 import { generateLyrics } from '@/lib/api/lyrics'
 import { toastSuccess, toastError } from '@/lib/toast'
-import { useFormPersistence } from '@/hooks'
+import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
 import { LyricsTaskCarousel } from '@/components/lyrics/LyricsTaskCarousel'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 
@@ -48,7 +48,7 @@ export default function LyricsGeneration() {
   const { t } = useTranslation()
 
   const [formData, setFormData] = useFormPersistence<LyricsFormData>({
-    storageKey: 'lyrics-generation',
+    storageKey: DEBUG_FORM_KEYS.LYRICS_GENERATION,
     defaultValue: DEFAULT_FORM,
   })
 
@@ -66,15 +66,15 @@ export default function LyricsGeneration() {
   const handleGenerate = async () => {
     // Validation
     if (mode === 'edit' && !lyrics.trim()) {
-      toastError('编辑模式需要输入歌词')
+      toastError(t('lyrics.errorEditModeEmpty'))
       return
     }
     if (mode === 'write_full_song' && !prompt.trim()) {
-      toastError('创作模式需要输入创作提示')
+      toastError(t('lyrics.errorWriteModeEmpty'))
       return
     }
     if (prompt.length > 2000) {
-      toastError('创作提示不能超过2000字符')
+      toastError(t('lyrics.errorPromptTooLong'))
       return
     }
 
@@ -86,7 +86,7 @@ export default function LyricsGeneration() {
       createdAt: new Date().toISOString(),
     }
 
-    setTasks(prev => [newTask, ...prev])
+    setTasks(prev => [newTask, ...prev].slice(0, 10))
     setCurrentIndex(0)
     setIsGenerating(true)
 
@@ -105,9 +105,9 @@ export default function LyricsGeneration() {
           ? { ...task, status: 'completed', result }
           : task
       ))
-      toastSuccess('歌词生成完成')
+      toastSuccess(t('lyrics.successGenerated'))
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '生成失败'
+      const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
       setTasks(prev => prev.map(task =>
         task.id === taskId
           ? { ...task, status: 'failed', error: errorMsg }
@@ -144,9 +144,9 @@ export default function LyricsGeneration() {
       setTasks(prev => prev.map(t =>
         t.id === taskId ? { ...t, status: 'completed', result } : t
       ))
-      toastSuccess('歌词生成完成')
+      toastSuccess(t('lyrics.successGenerated'))
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '生成失败'
+      const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
       setTasks(prev => prev.map(t =>
         t.id === taskId ? { ...t, status: 'failed', error: errorMsg } : t
       ))
@@ -302,7 +302,7 @@ export default function LyricsGeneration() {
           {/* History note */}
           {tasks.length > 0 && (
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              最近生成的歌词（最多保留10条）
+              {t('lyrics.historyHint')}
             </p>
           )}
         </div>

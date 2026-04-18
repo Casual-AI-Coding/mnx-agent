@@ -104,7 +104,22 @@
     "result": "生成结果",
     "styleTags": "风格标签",
     "exportTxt": "导出 TXT",
-    "editThis": "编辑此歌词"
+    "editThis": "编辑此歌词",
+    "statusIdle": "待生成",
+    "statusGenerating": "生成中",
+    "statusCompleted": "已完成",
+    "statusFailed": "失败",
+    "unnamedSong": "未命名歌曲",
+    "generatingMessage": "正在创作歌词...",
+    "waitingMessage": "等待生成",
+    "errorEditModeEmpty": "编辑模式需要输入歌词",
+    "errorWriteModeEmpty": "创作模式需要输入创作提示",
+    "errorPromptTooLong": "创作提示不能超过2000字符",
+    "successGenerated": "歌词生成完成",
+    "errorGenerationFailed": "生成失败",
+    "successExported": "歌词已导出",
+    "errorExportFailed": "导出失败",
+    "historyHint": "最近生成的歌词（最多保留10条)"
   },
   "dashboard": {
     "title": "MiniMax AI 工具集",

@@ -41,4 +41,5 @@ export const DEBUG_FORM_KEYS = {
   VIDEO_AGENT: 'video-agent',
   VOICE_SYNC: 'voice-sync',
   VOICE_ASYNC: 'voice-async',
+  LYRICS_GENERATION: 'lyrics-generation',
 } as const
