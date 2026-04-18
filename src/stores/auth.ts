@@ -35,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
         user,
         accessToken,
         isAuthenticated: true,
+        isHydrated: true,
       }),
       logout: () => set({
         user: null,
