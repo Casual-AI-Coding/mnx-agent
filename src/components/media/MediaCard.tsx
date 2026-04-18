@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { MediaCardPreview } from './MediaCardPreview'
 import { PublicButton } from './PublicButton'
+import { extractLyricsSnippet } from '@/lib/utils/lyrics'
 
 interface MediaCardProps {
   record: MediaRecord
@@ -63,7 +64,7 @@ export function MediaCard({
       } hover:scale-[1.02] hover:shadow-xl`}
       onMouseEnter={() => {
         setShowActions(true)
-        if (record.type === 'image' && signedUrl) {
+        if ((record.type === 'image' && signedUrl) || record.type === 'lyrics') {
           setShowPreview(true)
         }
       }}
@@ -250,13 +251,47 @@ export function MediaCard({
                 {record.original_name || record.filename}
               </p>
             )}
-            <p className="text-foreground/60 text-xs mt-0.5">
-              {formatFileSize(record.size_bytes)}
-            </p>
+            {record.type === 'lyrics' ? (
+              <>
+                {(() => {
+                  const metadata = record.metadata as { style_tags?: string | string[] } | null
+                  const styleTags = Array.isArray(metadata?.style_tags)
+                    ? metadata.style_tags
+                    : (metadata?.style_tags ? metadata.style_tags.split(',').map(s => s.trim()) : [])
+                  return styleTags.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {styleTags.slice(0, 3).map((tag, i) => (
+                        <span
+                          key={i}
+                          className="text-xs px-1 py-0.5 rounded bg-primary/20 text-primary/80"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {(() => {
+                  const metadata = record.metadata as { lyrics?: string } | null
+                  const lyrics = metadata?.lyrics || ''
+                  if (!lyrics) return null
+                  const snippet = extractLyricsSnippet(lyrics, 4)
+                  return (
+                    <pre className="text-foreground/70 text-xs mt-1.5 whitespace-pre-wrap font-sans leading-relaxed line-clamp-4 overflow-hidden">
+                      {snippet}
+                    </pre>
+                  )
+                })()}
+              </>
+            ) : (
+              <p className="text-foreground/60 text-xs mt-0.5">
+                {formatFileSize(record.size_bytes)}
+              </p>
+            )}
           </div>
         </div>
       </div>
-      {record.type === 'image' && signedUrl && (
+      {(record.type === 'image' && signedUrl || record.type === 'lyrics') && (
         <MediaCardPreview
           record={record}
           signedUrl={signedUrl}

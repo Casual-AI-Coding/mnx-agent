@@ -12,6 +12,7 @@ import { MediaTableView } from '@/components/media/MediaTableView'
 import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/BatchOperationsToolbar'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LyricsPreviewModal } from '@/components/lyrics'
 import { MEDIA_TABS } from '@/lib/constants/media'
 import { formatDateHeader, getDateKey } from '@/lib/utils/media'
 import { useAuthStore } from '@/stores/auth'
@@ -74,6 +75,8 @@ export default function MediaManagement() {
     toggleFavoriteFilter,
     publicFilters,
     togglePublicFilter,
+    lyricsPreviewRecord,
+    setLyricsPreviewRecord,
   } = useMediaManagement()
 
   return (
@@ -467,6 +470,14 @@ export default function MediaManagement() {
         on={{ view: ({ index }) => setLightboxIndex(index) }}
         slides={lightboxSlides}
       />
+
+      {lyricsPreviewRecord && (
+        <LyricsPreviewModal
+          record={lyricsPreviewRecord}
+          open={true}
+          onClose={() => setLyricsPreviewRecord(null)}
+        />
+      )}
     </div>
   )
 }

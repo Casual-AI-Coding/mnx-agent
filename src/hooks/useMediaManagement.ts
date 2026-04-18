@@ -52,6 +52,8 @@ export interface UseMediaManagementReturn {
   setPageInput: (input: string) => void
   audioPreviewRecord: MediaRecord | null
   setAudioPreviewRecord: (record: MediaRecord | null) => void
+  lyricsPreviewRecord: MediaRecord | null
+  setLyricsPreviewRecord: (record: MediaRecord | null) => void
   favoriteFilters: Set<'favorite' | 'non-favorite'>
   toggleFavoriteFilter: (filter: 'favorite' | 'non-favorite') => void
   publicFilters: Set<'private' | 'public' | 'others-public'>
@@ -145,6 +147,9 @@ export function useMediaManagement(): UseMediaManagementReturn {
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Lyrics preview state
+  const [lyricsPreviewRecord, setLyricsPreviewRecord] = useState<MediaRecord | null>(null)
 
   // Track fetched IDs to avoid duplicate requests
   const fetchedIdsRef = useRef<Set<string>>(new Set())
@@ -335,7 +340,7 @@ export function useMediaManagement(): UseMediaManagementReturn {
     window.open(url, '_blank')
   }, [signedUrls])
 
-  // Handle preview (for images)
+  // Handle preview (for images, audio/music, lyrics)
   const handlePreview = useCallback((record: MediaRecord) => {
     if (record.type === 'image' && signedUrls[record.id]) {
       const slidesWithIds = imageRecords.filter(r => signedUrls[r.id])
@@ -346,6 +351,8 @@ export function useMediaManagement(): UseMediaManagementReturn {
       }
     } else if ((record.type === 'audio' || record.type === 'music') && signedUrls[record.id]) {
       setAudioPreviewRecord(record)
+    } else if (record.type === 'lyrics') {
+      setLyricsPreviewRecord(record)
     }
   }, [imageRecords, signedUrls])
 
@@ -770,6 +777,8 @@ pageInput,
     setPageInput,
     audioPreviewRecord,
     setAudioPreviewRecord,
+    lyricsPreviewRecord,
+    setLyricsPreviewRecord,
     favoriteFilters,
     toggleFavoriteFilter,
     publicFilters,
