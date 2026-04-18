@@ -257,9 +257,12 @@ export function LyricsTaskCarousel({
                 {currentTask.result.song_title}
               </h2>
             )}
-            {currentTask.result.style_tags && currentTask.result.style_tags.length > 0 && (
+            {currentTask.result.style_tags && (
               <div className="flex justify-center gap-2 mb-6">
-                {currentTask.result.style_tags.map((tag, i) => (
+                {(Array.isArray(currentTask.result.style_tags)
+                  ? currentTask.result.style_tags
+                  : [currentTask.result.style_tags]
+                ).map((tag, i) => (
                   <span
                     key={i}
                     className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"

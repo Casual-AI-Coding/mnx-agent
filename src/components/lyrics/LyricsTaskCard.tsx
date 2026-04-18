@@ -137,9 +137,12 @@ export function LyricsTaskCard({
               <h3 className="text-sm font-medium truncate">
                 {task.result.song_title || t('lyrics.unnamedSong')}
               </h3>
-              {task.result.style_tags?.length > 0 && (
+              {task.result.style_tags && (
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {task.result.style_tags.slice(0, 3).map((tag, i) => (
+                  {(Array.isArray(task.result.style_tags)
+                    ? task.result.style_tags
+                    : [task.result.style_tags]
+                  ).slice(0, 3).map((tag, i) => (
                     <span 
                       key={i}
                       className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary"

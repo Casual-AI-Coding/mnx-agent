@@ -38,7 +38,7 @@ export function LyricsPreviewModal({
 
   const lyrics = metadata?.lyrics || ''
   const title = metadata?.title || record.filename
-  const styleTags = metadata?.style_tags || []
+  const styleTags = Array.isArray(metadata?.style_tags) ? metadata.style_tags : (metadata?.style_tags ? [metadata.style_tags] : [])
   const generatedAt = metadata?.generated_at || record.created_at
 
   const sections = parseLyricsSections(lyrics)

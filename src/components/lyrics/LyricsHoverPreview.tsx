@@ -30,7 +30,7 @@ export function LyricsHoverPreview({
 
   const lyrics = metadata?.lyrics || ''
   const title = metadata?.title || record.filename
-  const styleTags = metadata?.style_tags || []
+  const styleTags = Array.isArray(metadata?.style_tags) ? metadata.style_tags : (metadata?.style_tags ? [metadata.style_tags] : [])
 
   useEffect(() => {
     if (!visible || !previewRef.current) return
