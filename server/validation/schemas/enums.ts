@@ -22,7 +22,7 @@ export const taskTypeEnum = z.enum([
 /**
  * Media type enum for file types
  */
-export const mediaTypeEnum = z.enum(['audio', 'image', 'video', 'music'])
+export const mediaTypeEnum = z.enum(['audio', 'image', 'video', 'music', 'lyrics'])
 
 /**
  * Execution status enum for job/task execution states

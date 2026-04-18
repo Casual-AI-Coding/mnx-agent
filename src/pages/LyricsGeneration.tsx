@@ -256,15 +256,15 @@ export default function LyricsGeneration() {
                   onValueChange={(value) => updateForm('mode', value as LyricsMode)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue>
+                    <SelectValue placeholder="选择生成模式">
                       {mode === 'write_full_song' ? (
                         <div className="flex items-center gap-2">
-                          <Wand2 className="w-3 h-3" />
+                          <Wand2 className="w-4 h-4" />
                           <span>创作模式</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <Edit3 className="w-3 h-3" />
+                          <Edit3 className="w-4 h-4" />
                           <span>编辑模式</span>
                         </div>
                       )}
