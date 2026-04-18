@@ -11,6 +11,7 @@ export interface ExternalApiLog {
   api_endpoint: string
   operation: string
   request_params: Record<string, unknown> | null
+  request_body: string | null
   response_body: string | null
   status: ExternalApiStatus
   error_message: string | null
@@ -26,6 +27,7 @@ export interface ExternalApiLogRow {
   api_endpoint: string
   operation: string
   request_params: string | null
+  request_body: string | null
   response_body: string | null
   status: string
   error_message: string | null
@@ -40,6 +42,7 @@ export interface CreateExternalApiLog {
   api_endpoint: string
   operation: string
   request_params?: Record<string, unknown> | null
+  request_body?: string | null
   response_body?: string | null
   status: ExternalApiStatus
   error_message?: string | null

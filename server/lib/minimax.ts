@@ -84,6 +84,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/text/chatcompletion_v2',
       'chat_completion',
+      body,
       async () => retryWithBackoff(async () => {
         try {
           const response = await this.client.post('/v1/text/chatcompletion_v2', body)
@@ -100,6 +101,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/text/chatcompletion_v2',
       'chat_completion_stream',
+      body,
       async () => {
         try {
           const response = await this.client.post('/v1/text/chatcompletion_v2', body, {
@@ -136,6 +138,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/t2a_v2',
       'text_to_audio_sync',
+      body,
       async () => retryWithBackoff(async () => {
         try {
           const response = await this.client.post('/v1/t2a_v2', body)
@@ -152,6 +155,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/t2a_async_v2',
       'text_to_audio_async',
+      body,
       async () => retryWithBackoff(async () => {
         try {
           const response = await this.client.post('/v1/t2a_async_v2', body)
@@ -184,6 +188,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/image_generation',
       'image_generation',
+      body,
       async () => retryWithBackoff(async () => {
         try {
           const response = await this.client.post('/v1/image_generation', body)
@@ -200,6 +205,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/music_generation',
       'music_generation',
+      body,
       async () => {
         console.log('[MiniMax] Music Generation Request:', {
           body,
@@ -225,6 +231,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/music_cover_preprocess',
       'music_preprocess',
+      formData,
       async () => {
         try {
           const response = await this.client.post('/v1/music_cover_preprocess', formData, {
@@ -245,6 +252,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/video_generation',
       'video_generation',
+      body,
       async () => retryWithBackoff(async () => {
         try {
           const response = await this.client.post('/v1/video_generation', body)
@@ -277,6 +285,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/video_template_generation',
       'video_agent_generate',
+      body,
       async () => {
         try {
           const response = await this.client.post('/v1/video_template_generation', body)
@@ -326,6 +335,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/files/upload',
       'file_upload',
+      formData,
       async () => {
         try {
           const response = await this.client.post('/v1/files/upload', formData, {
@@ -362,6 +372,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/files/delete',
       'file_delete',
+      { file_id: fileId, purpose },
       async () => {
         try {
           const response = await this.client.post('/v1/files/delete', { file_id: fileId, purpose })
@@ -394,6 +405,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/delete_voice',
       'voice_delete',
+      { voice_id: voiceId, voice_type: voiceType },
       async () => {
         try {
           const response = await this.client.post('/v1/delete_voice', { voice_id: voiceId, voice_type: voiceType })
@@ -410,6 +422,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/voice_clone',
       'voice_clone',
+      body,
       async () => {
         try {
           const response = await this.client.post('/v1/voice_clone', body)
@@ -426,6 +439,7 @@ export class MiniMaxClient {
       'minimax',
       'POST /v1/voice_design',
       'voice_design',
+      body,
       async () => {
         try {
           const response = await this.client.post('/v1/voice_design', body)

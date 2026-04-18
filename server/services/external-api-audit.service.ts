@@ -57,6 +57,7 @@ export function withExternalApiAudit<T>(
   serviceProvider: ServiceProvider,
   apiEndpoint: string,
   operation: string,
+  requestBody: unknown,
   fn: T
 ): T {
   return (async (...args: unknown[]) => {
@@ -64,17 +65,18 @@ export function withExternalApiAudit<T>(
     const userId = getCurrentUserId()
     const traceId = getCurrentTraceId()
     const sanitizedParams = args.length > 0 ? sanitizeSensitiveData(args[0]) : null
+    const sanitizedBody = truncateResponseBody(requestBody, MAX_RESPONSE_BODY_LENGTH)
 
     try {
       const result = await (fn as (...args: unknown[]) => Promise<unknown>)(...args)
       const durationMs = Date.now() - startTime
 
-      // 写入审计日志
       await writeExternalApiLog({
         service_provider: serviceProvider,
         api_endpoint: apiEndpoint,
         operation,
         request_params: sanitizedParams,
+        request_body: sanitizedBody,
         response_body: truncateResponseBody(result, MAX_RESPONSE_BODY_LENGTH),
         status: 'success' as ExternalApiStatus,
         duration_ms: durationMs,
@@ -87,12 +89,12 @@ export function withExternalApiAudit<T>(
       const durationMs = Date.now() - startTime
       const errorMessage = error instanceof Error ? error.message : String(error)
 
-      // 写入失败日志
       await writeExternalApiLog({
         service_provider: serviceProvider,
         api_endpoint: apiEndpoint,
         operation,
         request_params: sanitizedParams,
+        request_body: sanitizedBody,
         status: 'failed' as ExternalApiStatus,
         error_message: errorMessage,
         duration_ms: durationMs,

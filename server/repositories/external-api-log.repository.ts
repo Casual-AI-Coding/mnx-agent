@@ -43,15 +43,16 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     const now = toLocalISODateString()
     const result = await this.conn.query<{ id: number }>(
       `INSERT INTO external_api_logs (
-        service_provider, api_endpoint, operation, request_params, response_body,
+        service_provider, api_endpoint, operation, request_params, request_body, response_body,
         status, error_message, duration_ms, user_id, trace_id, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id`,
       [
         data.service_provider,
         data.api_endpoint,
         data.operation,
         data.request_params ? JSON.stringify(data.request_params) : null,
+        data.request_body ?? null,
         data.response_body ?? null,
         data.status,
         data.error_message ?? null,
