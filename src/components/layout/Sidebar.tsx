@@ -121,6 +121,7 @@ const toggleSection = (sectionId: string) => {
     { path: '/voice-async', label: t('sidebar.voiceAsync'), icon: MicOff },
     { path: '/image', label: t('sidebar.imageGeneration'), icon: Image },
     { path: '/music', label: t('sidebar.musicGeneration'), icon: Music },
+    { path: '/lyrics', label: t('sidebar.lyricsGeneration'), icon: FileText },
     { path: '/video', label: t('sidebar.videoGeneration'), icon: Video },
     { path: '/video-agent', label: t('sidebar.videoAgent'), icon: Film },
   ]

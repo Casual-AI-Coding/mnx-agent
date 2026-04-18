@@ -15,6 +15,7 @@ const VoiceSync = lazy(() => import('@/pages/VoiceSync'))
 const VoiceAsync = lazy(() => import('@/pages/VoiceAsync'))
 const ImageGeneration = lazy(() => import('@/pages/ImageGeneration'))
 const MusicGeneration = lazy(() => import('@/pages/MusicGeneration'))
+const LyricsGeneration = lazy(() => import('@/pages/LyricsGeneration'))
 const VideoGeneration = lazy(() => import('@/pages/VideoGeneration'))
 const VideoAgent = lazy(() => import('@/pages/VideoAgent'))
 const VoiceManagement = lazy(() => import('@/pages/VoiceManagement'))
@@ -169,6 +170,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="音乐生成">
               <MusicGeneration />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="lyrics"
+          element={
+            <RouteWithErrorBoundary pageName="歌词生成">
+              <LyricsGeneration />
             </RouteWithErrorBoundary>
           }
         />
