@@ -303,13 +303,14 @@ export default function LyricsGeneration() {
                 <span className="text-base font-semibold">参数配置</span>
               </div>
               <div className="p-4 space-y-4">
-                <div className="space-y-2">
-                  <Label>{t('lyrics.titleInput')}</Label>
+                <div className="flex items-center gap-4">
+                  <Label className="flex-shrink-0">{t('lyrics.titleInput')}</Label>
                   <Input
                     value={title}
                     onChange={(e) => updateForm('title', e.target.value)}
                     placeholder="歌曲标题（可选）"
                     maxLength={100}
+                    className="flex-1"
                   />
                 </div>
 
@@ -321,7 +322,7 @@ export default function LyricsGeneration() {
                       onChange={(e) => updateForm('prompt', e.target.value)}
                       placeholder={t('lyrics.promptPlaceholder')}
                       maxLength={2000}
-                      rows={8}
+                      rows={12}
                       className="resize-none"
                     />
                     <p className="text-xs text-muted-foreground text-right">
