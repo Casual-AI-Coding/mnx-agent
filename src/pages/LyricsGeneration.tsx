@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { FileText, Loader2, Wand2, Edit3, Settings2, Palette } from 'lucide-react'
+import { FileText, Loader2, Wand2, Edit3, Settings2, Palette, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -234,9 +234,9 @@ export default function LyricsGeneration() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left: Form */}
-        <div className="space-y-4">
+        <div className="xl:col-span-5 space-y-4">
           {/* Mode selection */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -395,19 +395,66 @@ export default function LyricsGeneration() {
         </div>
 
         {/* Right: Results */}
-        <div className="space-y-4">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-            className="relative group z-20"
-          >
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-visible">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <FileText className="w-5 h-5" />
-                <span className="text-base font-semibold">{t('lyrics.result')}</span>
+        <div className="xl:col-span-7">
+          <div className="relative h-full">
+            <div className="absolute -inset-0.5 bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/20 rounded-2xl blur opacity-50" />
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full min-h-[500px] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-accent-foreground" />
+                  <span className="text-sm font-medium text-foreground">{t('lyrics.result')}</span>
+                </div>
+                {tasks.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                      disabled={currentIndex === 0}
+                      className={cn(
+                        "p-1 rounded-md transition-colors",
+                        currentIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"
+                      )}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {tasks.map((task, idx) => (
+                        <button
+                          key={task.id}
+                          onClick={() => setCurrentIndex(idx)}
+                          className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all",
+                            idx === currentIndex && task.status === 'generating' && "ring-[3px] ring-blue-500 bg-blue-500/20 text-blue-500 font-bold",
+                            idx === currentIndex && task.status === 'completed' && "ring-[3px] ring-green-500 bg-green-500/20 text-green-600 font-bold",
+                            idx === currentIndex && task.status === 'failed' && "ring-[3px] ring-red-500 bg-red-500/20 text-red-600 font-bold",
+                            idx !== currentIndex && task.status === 'generating' && "bg-blue-500/20 text-blue-500 animate-pulse font-medium",
+                            idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 text-green-600 font-medium",
+                            idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 text-red-600 font-medium"
+                          )}
+                        >
+                          {task.status === 'generating' ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : task.status === 'failed' ? (
+                            <X className="w-3 h-3" />
+                          ) : (
+                            idx + 1
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentIndex(Math.min(tasks.length - 1, currentIndex + 1))}
+                      disabled={currentIndex === tasks.length - 1}
+                      className={cn(
+                        "p-1 rounded-md transition-colors",
+                        currentIndex === tasks.length - 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"
+                      )}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div className="p-4">
                 <LyricsTaskCarousel
                   tasks={tasks}
@@ -419,14 +466,7 @@ export default function LyricsGeneration() {
                 />
               </div>
             </div>
-          </motion.div>
-
-          {/* History note */}
-          {tasks.length > 0 && (
-            <p className="text-xs text-muted-foreground text-center">
-              {t('lyrics.historyHint')}
-            </p>
-          )}
+          </div>
         </div>
       </div>
     </div>
