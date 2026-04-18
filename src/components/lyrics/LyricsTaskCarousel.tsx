@@ -261,7 +261,7 @@ export function LyricsTaskCarousel({
               <div className="flex justify-center gap-2 mb-6">
                 {(Array.isArray(currentTask.result.style_tags)
                   ? currentTask.result.style_tags
-                  : [currentTask.result.style_tags]
+                  : currentTask.result.style_tags.split(',').map(s => s.trim())
                 ).map((tag, i) => (
                   <span
                     key={i}

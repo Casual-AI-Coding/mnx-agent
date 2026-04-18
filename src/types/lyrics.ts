@@ -9,7 +9,7 @@ export interface LyricsGenerationRequest {
 
 export interface LyricsGenerationResponse {
   song_title: string
-  style_tags: string[]
+  style_tags: string | string[]
   lyrics: string
   base_resp: {
     status_code: number

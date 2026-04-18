@@ -29,7 +29,7 @@ export function LyricsPreviewModal({
   // Get lyrics from metadata
   const metadata = record.metadata as {
     title?: string
-    style_tags?: string[]
+    style_tags?: string | string[]
     lyrics?: string
     mode?: string
     prompt?: string
@@ -38,7 +38,9 @@ export function LyricsPreviewModal({
 
   const lyrics = metadata?.lyrics || ''
   const title = metadata?.title || record.filename
-  const styleTags = Array.isArray(metadata?.style_tags) ? metadata.style_tags : (metadata?.style_tags ? [metadata.style_tags] : [])
+  const styleTags = Array.isArray(metadata?.style_tags)
+    ? metadata.style_tags
+    : (metadata?.style_tags ? metadata.style_tags.split(',').map(s => s.trim()) : [])
   const generatedAt = metadata?.generated_at || record.created_at
 
   const sections = parseLyricsSections(lyrics)

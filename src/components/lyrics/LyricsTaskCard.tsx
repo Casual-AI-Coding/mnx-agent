@@ -141,7 +141,7 @@ export function LyricsTaskCard({
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {(Array.isArray(task.result.style_tags)
                     ? task.result.style_tags
-                    : [task.result.style_tags]
+                    : task.result.style_tags.split(',').map(s => s.trim())
                   ).slice(0, 3).map((tag, i) => (
                     <span 
                       key={i}

@@ -24,13 +24,15 @@ export function LyricsHoverPreview({
   // Get lyrics from metadata
   const metadata = record.metadata as {
     title?: string
-    style_tags?: string[]
+    style_tags?: string | string[]
     lyrics?: string
   } | null
 
   const lyrics = metadata?.lyrics || ''
   const title = metadata?.title || record.filename
-  const styleTags = Array.isArray(metadata?.style_tags) ? metadata.style_tags : (metadata?.style_tags ? [metadata.style_tags] : [])
+  const styleTags = Array.isArray(metadata?.style_tags)
+    ? metadata.style_tags
+    : (metadata?.style_tags ? metadata.style_tags.split(',').map(s => s.trim()) : [])
 
   useEffect(() => {
     if (!visible || !previewRef.current) return
