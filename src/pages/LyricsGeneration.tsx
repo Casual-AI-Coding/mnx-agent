@@ -109,7 +109,8 @@ export default function LyricsGeneration() {
       setIsGenerating(true)
 
       try {
-        const result = await generateLyrics(request)
+        const response = await generateLyrics(request)
+        const result = response.data
         setTasks(prev => prev.map(task =>
           task.id === taskId ? { ...task, status: 'completed', result } : task
         ))
@@ -136,7 +137,8 @@ export default function LyricsGeneration() {
 
       const promises = newTasks.map(async (_task, index) => {
         try {
-          const result = await generateLyrics(request)
+          const response = await generateLyrics(request)
+          const result = response.data
           updateTask(index, { status: 'completed', result })
           return { success: true, index }
         } catch (error) {
@@ -159,11 +161,12 @@ export default function LyricsGeneration() {
     updateTask(index, { status: 'generating' })
     setIsGenerating(true)
 
-    try {
-      const result = await generateLyrics(task.request)
-      updateTask(index, { status: 'completed', result })
-      toastSuccess(t('lyrics.successGenerated'))
-    } catch (error) {
+try {
+        const response = await generateLyrics(task.request)
+        const result = response.data
+        updateTask(index, { status: 'completed', result })
+        toastSuccess(t('lyrics.successGenerated'))
+      } catch (error) {
       const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
       updateTask(index, { status: 'failed', error: errorMsg })
       toastError(errorMsg)
