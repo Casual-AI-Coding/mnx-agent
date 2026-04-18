@@ -28,13 +28,13 @@ export const MAX_RESPONSE_BODY_LENGTH = 4096 // 4KB
  * Exact paths to skip for audit logging
  */
 export const EXACT_SKIP_PATHS = [
-  '/api/health',
-  '/api/text/chat/stream',
-  '/api/capacity/refresh',
-  '/api/auth/refresh',
-  '/api/settings/preferences',
-  '/api/settings/display',
-  '/api/settings/theme',
+  '/health',
+  '/text/chat/stream',
+  '/capacity/refresh',
+  '/auth/refresh',
+  '/settings/preferences',
+  '/settings/display',
+  '/settings/theme',
 ] as const
 
 /**
