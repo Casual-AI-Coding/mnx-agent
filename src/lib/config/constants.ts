@@ -14,6 +14,8 @@ export const TIMEOUTS = {
   API_REQUEST: 30000,
   /** Music generation timeout (5 minutes) */
   MUSIC_GENERATION: 300000,
+  /** Lyrics generation timeout (1 minute) */
+  LYRICS_GENERATION: 60000,
   /** Default cron job timeout (5 minutes) */
   DEFAULT_CRON: 300000,
   /** Maximum cron job timeout (10 minutes) */
