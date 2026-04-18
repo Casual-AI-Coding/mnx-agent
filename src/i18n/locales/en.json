@@ -88,7 +88,23 @@
     "capacityMonitor": "Capacity",
     "workflowBuilder": "Workflow Builder",
     "settings": "Settings",
-    "createdBy": "Created by oGsLP"
+    "createdBy": "Created by oGsLP",
+    "lyricsGeneration": "Lyrics Generation"
+  },
+  "lyrics": {
+    "title": "Lyrics Generation",
+    "modeWrite": "Write Mode",
+    "modeEdit": "Edit Mode",
+    "prompt": "Creation Prompt",
+    "promptPlaceholder": "Describe the lyrics style, theme, emotion you want...",
+    "lyricsInput": "Lyrics to Edit",
+    "lyricsPlaceholder": "Enter lyrics to optimize...",
+    "titleInput": "Song Title",
+    "generate": "Generate Lyrics",
+    "result": "Result",
+    "styleTags": "Style Tags",
+    "exportTxt": "Export TXT",
+    "editThis": "Edit This Lyrics"
   },
   "dashboard": {
     "title": "MiniMax AI Tools",

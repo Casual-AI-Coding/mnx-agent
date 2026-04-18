@@ -88,7 +88,23 @@
     "capacityMonitor": "用量配额",
     "workflowBuilder": "工作流编排",
     "settings": "设置",
-    "createdBy": "Created by oGsLP"
+    "createdBy": "Created by oGsLP",
+    "lyricsGeneration": "歌词生成"
+  },
+  "lyrics": {
+    "title": "歌词生成",
+    "modeWrite": "创作模式",
+    "modeEdit": "编辑模式",
+    "prompt": "创作提示",
+    "promptPlaceholder": "描述你想要的歌词风格、主题、情感...",
+    "lyricsInput": "待编辑歌词",
+    "lyricsPlaceholder": "输入需要优化的歌词...",
+    "titleInput": "歌曲标题",
+    "generate": "生成歌词",
+    "result": "生成结果",
+    "styleTags": "风格标签",
+    "exportTxt": "导出 TXT",
+    "editThis": "编辑此歌词"
   },
   "dashboard": {
     "title": "MiniMax AI 工具集",
