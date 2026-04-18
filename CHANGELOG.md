@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-04-18
+
+### Added
+
+- **歌词生成后端 API 集成 (R-023)** - 后端歌词生成功能
+  - `server/routes/lyrics.ts` (+29) - 新增 `/api/lyrics` 路由
+  - `server/lib/minimax.ts` (+25) - 新增 `generateLyrics()` 方法
+  - `packages/shared-types/entities/lyrics.ts` (+69) - 歌词类型定义
+  - `server/database/migrations/029_lyrics_type_source.ts` (+15) - 新增 `lyrics` 类型到 `media_records`
+  - 支持歌词生成请求的 MiniMax API 集成
+
+- **歌词生成文档** - 完整设计和实现计划
+  - `docs/specs/lyrics-generation-design.md` (+327) - 歌词生成设计规格
+  - `docs/plans/2026-04-18-01-lyrics-generation-backend.md` (+360) - 后端实现计划
+  - `docs/plans/2026-04-18-02-lyrics-generation-frontend.md` (+992) - 前端实现计划
+  - `docs/plans/2026-04-18-03-lyrics-generation-preview.md` (+603) - 预览功能计划
+  - `docs/plans/2026-04-18-04-lyrics-generation-media-integration.md` (+492) - 媒体集成计划
+
+### Fixed
+
+- **歌词路由重构** - Zod验证和共享类型
+  - `server/routes/lyrics.ts` - 添加 Zod 验证 schema
+  - 使用共享类型定义确保前后端类型一致性
+
+- **前端计划修复** - RadioGroup→Select, DEBUG_FORM_KEYS
+  - `docs/plans/2026-04-18-02-lyrics-generation-frontend.md` - UI组件调整
+
+### Documentation
+
+- **Roadmap 更新** - 需求池和版本规划
+  - `docs/roadmap/requirement-pools.md` (+11) - 新增 R-023 歌词生成需求
+  - `docs/roadmap/v2-roadmap.md` (+8) - 分配 R-023 到 v2.1 版本
+
+### Performance
+
+**Code Quality Metrics**
+- **17 files changed** (+2,986 insertions, -9 deletions)
+- **新增路由**: 1 个 (lyrics)
+- **新增类型定义**: 1 个 (lyrics entity)
+- **新增数据库迁移**: 1 个 (lyrics_type_source)
+- **新增文档**: 6 个 (1 spec + 4 plans + 2 roadmap)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（新增 `/api/lyrics`）
+- ✅ 歌词生成功能为增量功能，不影响现有系统
+- ✅ 数据库迁移向后兼容（新增 `lyrics` 类型）
+- ✅ 类型定义扩展不影响现有类型
+
 ## [2.1.0] - 2026-04-18
 
 ### Added
