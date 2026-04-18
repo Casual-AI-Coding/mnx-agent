@@ -127,56 +127,58 @@ export function LyricsTaskCarousel({
     }
 
     return (
-      <div className="h-full flex flex-col max-h-[500px]">
-        <div className="flex-1 overflow-auto p-4">
-          <div className="max-w-2xl mx-auto">
-            {currentTask.result.song_title && (
-              <h2 className="text-xl font-bold text-center mb-2 text-foreground">
-                {currentTask.result.song_title}
-              </h2>
-            )}
-            {currentTask.result.style_tags && (
-              <div className="flex justify-center gap-2 mb-4">
-                {(Array.isArray(currentTask.result.style_tags)
-                  ? currentTask.result.style_tags
-                  : currentTask.result.style_tags.split(',').map(s => s.trim())
-                ).map((tag, i) => (
-                  <span
-                    key={i}
-                    className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
+      <div className="h-full flex flex-col">
+        <div className="flex-1 overflow-hidden p-4 flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-2xl mx-auto">
+              {currentTask.result.song_title && (
+                <h2 className="text-xl font-bold text-center mb-2 text-foreground">
+                  {currentTask.result.song_title}
+                </h2>
+              )}
+              {currentTask.result.style_tags && (
+                <div className="flex justify-center gap-2 mb-4">
+                  {(Array.isArray(currentTask.result.style_tags)
+                    ? currentTask.result.style_tags
+                    : currentTask.result.style_tags.split(',').map(s => s.trim())
+                  ).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="relative bg-muted/30 rounded-xl p-4 group">
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => currentTask.result && onEdit(currentTask.result)}
+                    className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    title="编辑"
                   >
-                    {tag}
-                  </span>
-                ))}
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
+                    title="复制"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => currentTask.result && onExport(currentTask.result)}
+                    className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
+                    title="导出"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground pt-2">
+                  {currentTask.result.lyrics}
+                </pre>
               </div>
-            )}
-            <div className="relative bg-muted/30 rounded-xl p-4 group">
-              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => currentTask.result && onEdit(currentTask.result)}
-                  className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  title="编辑"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleCopy}
-                  className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
-                  title="复制"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => currentTask.result && onExport(currentTask.result)}
-                  className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
-                  title="导出"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground pt-2 max-h-[400px] overflow-auto">
-                {currentTask.result.lyrics}
-              </pre>
             </div>
           </div>
         </div>
