@@ -3,6 +3,7 @@ import { CapacityRecord, CreateCapacityRecord } from '../database/types'
 import type { DatabaseService } from '../database/service-async.js'
 import { SimpleCache } from '../lib/cache.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { RATE_LIMITS_BY_SERVICE } from '../config/rate-limits.js'
 
 const BALANCE_CACHE_TTL_MS = 30000
 
@@ -20,15 +21,6 @@ export interface ServiceCapacity {
   totalQuota: number
   resetAt: string | null
   hasCapacity: boolean
-}
-
-const RATE_LIMITS: Record<string, { rpm: number }> = {
-  text: { rpm: 500 },
-  voice_sync: { rpm: 60 },
-  voice_async: { rpm: 60 },
-  image: { rpm: 10 },
-  music: { rpm: 10 },
-  video: { rpm: 5 },
 }
 
 const MIN_BALANCE_THRESHOLD = 1.0
@@ -106,7 +98,7 @@ export class CapacityChecker {
   async getRemainingCapacity(serviceType: string): Promise<number> {
     const capacity = await this.fetchCapacityRecord(serviceType)
     if (!capacity) {
-      const rateLimit = RATE_LIMITS[serviceType]
+      const rateLimit = RATE_LIMITS_BY_SERVICE[serviceType]
       return rateLimit?.rpm ?? 100
     }
     return capacity.remaining_quota
@@ -121,7 +113,7 @@ export class CapacityChecker {
     const now = new Date()
     const resetAt = toLocalISODateString(new Date(now.getTime() + 60000))
 
-    for (const [serviceType, config] of Object.entries(RATE_LIMITS)) {
+    for (const [serviceType, config] of Object.entries(RATE_LIMITS_BY_SERVICE)) {
       await this.saveCapacityRecord(serviceType, config.rpm, config.rpm, resetAt)
     }
   }
@@ -139,7 +131,7 @@ export class CapacityChecker {
   async getSafeExecutionLimit(serviceType: string): Promise<number> {
     const balance = await this.checkBalance()
     const remainingCapacity = await this.getRemainingCapacity(serviceType)
-    const rateLimit = RATE_LIMITS[serviceType]
+    const rateLimit = RATE_LIMITS_BY_SERVICE[serviceType]
 
     const safeLimit = Math.min(remainingCapacity, rateLimit?.rpm ?? 100)
     const balanceBasedLimit = Math.floor(balance.totalBalance / 0.01)

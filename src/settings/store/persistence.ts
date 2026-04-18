@@ -90,7 +90,7 @@ export const HYBRID_SETTINGS_KEYS = [
   'privacy.auditLogRetention',
 ]
 
-// Fields that should be encrypted on backend
+// Encrypted backend fields (nested paths matching settings object structure)
 export const ENCRYPTED_FIELDS = [
   'api.minimaxKey',
   'notification.webhookSecret',

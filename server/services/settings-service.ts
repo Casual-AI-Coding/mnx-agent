@@ -129,7 +129,7 @@ const DEFAULT_SETTINGS: Record<SettingsCategory, Record<string, unknown>> = {
   },
 }
 
-// Fields that should be encrypted
+// Encrypted database fields (flat names matching columns)
 const ENCRYPTED_FIELDS = ['minimaxKey', 'webhookSecret']
 
 export class SettingsService {

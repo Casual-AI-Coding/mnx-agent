@@ -3,69 +3,16 @@ import { getDatabaseService } from '../service-registration.js'
 import type { AuditAction } from '../database/types'
 import { getLogger } from '../lib/logger'
 import { getCurrentTraceId } from '../services/audit-context.service.js'
-
-const SENSITIVE_FIELDS = ['password', 'token', 'apiKey', 'api_key', 'secret', 'authorization', 'cookie']
-
-const MAX_RESPONSE_BODY_LENGTH = 4096
-
-const EXACT_SKIP_PATHS = [
-  '/api/health',
-  '/api/text/chat/stream',
-  '/api/capacity/refresh',
-  '/api/auth/refresh',
-  '/api/settings/preferences',
-  '/api/settings/display',
-  '/api/settings/theme',
-]
-
-const REGEX_SKIP_PATHS = [
-  /^\/api\/media\/[^/]+\/favorite$/,
-  /^\/api\/cron\/jobs\/[^/]+\/tags$/,
-  /^\/api\/cron\/jobs\/[^/]+\/tags\/[^/]+$/,
-]
-
-const RESOURCE_TYPE_MAP: Record<string, string> = {
-  '/api/cron/jobs': 'job',
-  '/api/cron/queue': 'task',
-  '/api/cron/webhooks': 'webhook',
-  '/api/cron/templates': 'job_template',
-  '/api/cron/logs': 'execution_log',
-  '/api/media': 'media',
-  '/api/users': 'user',
-  '/api/workflows': 'workflow',
-  '/api/templates': 'workflow_template',
-  '/api/settings': 'settings',
-  '/api/system-config': 'system_config',
-  '/api/invitation-codes': 'invitation_code',
-  '/api/audit': 'audit_log',
-  '/api/external-api-logs': 'external_api_log',
-  '/api/auth': 'auth',
-  '/api/text': 'text_generation',
-  '/api/voice': 'voice',
-  '/api/image': 'image_generation',
-  '/api/music': 'music_generation',
-  '/api/video': 'video_generation',
-  '/api/video-agent': 'video_agent',
-  '/api/files': 'file',
-  '/api/stats': 'stats',
-  '/api/capacity': 'capacity',
-  '/api/usage': 'usage',
-  '/api/export': 'export',
-  '/api/admin/service-nodes': 'service_node',
-  '/api/admin/workflows': 'admin_workflow',
-  '/api/admin/service-permissions': 'service_permission',
-}
-
-const ACTION_VERBS = [
-  'toggle', 'run', 'test', 'retry', 'upload', 'download',
-  'delete', 'clone', 'favorite', 'refresh', 'validate',
-  'generate', 'preprocess', 'stream', 'token', 'stats',
-  'dry-run', 'batch', 'sync', 'async', 'status', 'health',
-  'reset-password', 'change-password', 'login', 'logout', 'register',
-]
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const NUMERIC_PATTERN = /^\d+$/
+import {
+  SENSITIVE_FIELDS,
+  MAX_RESPONSE_BODY_LENGTH,
+  EXACT_SKIP_PATHS,
+  REGEX_SKIP_PATHS,
+  RESOURCE_TYPE_MAP,
+  ACTION_VERBS,
+  UUID_PATTERN,
+  NUMERIC_PATTERN,
+} from '../config/audit.js'
 
 function getClientIp(req: Request): string | null {
   const forwardedFor = req.get('X-Forwarded-For')
@@ -147,7 +94,7 @@ function extractResourceType(path: string): string {
 }
 
 function shouldSkipAudit(path: string): boolean {
-  if (EXACT_SKIP_PATHS.includes(path)) return true
+  if ((EXACT_SKIP_PATHS as readonly string[]).includes(path)) return true
   if (REGEX_SKIP_PATHS.some(regex => regex.test(path))) return true
   return false
 }

@@ -9,24 +9,9 @@ import { getAuditContext, getCurrentUserId, getCurrentTraceId } from './audit-co
 import { getDatabase } from '../database/service-async.js'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
 import { getLogger } from '../lib/logger.js'
+import { SENSITIVE_FIELDS, MAX_RESPONSE_BODY_LENGTH } from '../config/audit.js'
 
 const logger = getLogger()
-const MAX_RESPONSE_BODY_SIZE = 4096 // 4KB
-
-/**
- * 敏感字段列表（用于脱敏）
- */
-const SENSITIVE_FIELDS = [
-  'password',
-  'token',
-  'apiKey',
-  'api_key',
-  'secret',
-  'authorization',
-  'cookie',
-  'access_token',
-  'refresh_token',
-]
 
 /**
  * 截断响应体
@@ -90,7 +75,7 @@ export function withExternalApiAudit<T>(
         api_endpoint: apiEndpoint,
         operation,
         request_params: sanitizedParams,
-        response_body: truncateResponseBody(result, MAX_RESPONSE_BODY_SIZE),
+        response_body: truncateResponseBody(result, MAX_RESPONSE_BODY_LENGTH),
         status: 'success' as ExternalApiStatus,
         duration_ms: durationMs,
         user_id: userId,

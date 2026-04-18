@@ -1,26 +1,11 @@
 import type { DatabaseService } from '../database/service-async.js'
 import { MiniMaxClient } from '../lib/minimax'
-import { TASK_TIMEOUTS, POLLING_CONFIG as SHARED_POLLING_CONFIG } from '../config/timeouts.js'
+import { TASK_TIMEOUTS, POLLING_CONFIG } from '../config/timeouts.js'
+import { TASK_TYPE_MAP } from '../config/limits.js'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 
 export type { DatabaseService }
 export type { TaskResult }
-
-const TASK_TYPE_MAP: Record<string, string> = {
-  text: 'chatCompletion',
-  voice_sync: 'textToAudioSync',
-  voice_async: 'textToAudioAsync',
-  image: 'imageGeneration',
-  music: 'musicGeneration',
-  video: 'videoGeneration',
-}
-
-const POLLING_CONFIG = {
-  maxDurationMs: SHARED_POLLING_CONFIG.MAX_DURATION_MS,
-  initialIntervalMs: SHARED_POLLING_CONFIG.INITIAL_INTERVAL_MS,
-  maxIntervalMs: SHARED_POLLING_CONFIG.MAX_INTERVAL_MS,
-  backoffMultiplier: SHARED_POLLING_CONFIG.BACKOFF_MULTIPLIER,
-}
 
 const DEFAULT_TIMEOUT = TASK_TIMEOUTS.SYNC_TASK_MS
 const ASYNC_TIMEOUT = TASK_TIMEOUTS.ASYNC_TASK_MS
@@ -125,8 +110,8 @@ export class TaskExecutor implements ITaskExecutor {
     }
 
     const startTime = Date.now()
-    const deadline = startTime + POLLING_CONFIG.maxDurationMs
-    let currentInterval = POLLING_CONFIG.initialIntervalMs
+const deadline = startTime + POLLING_CONFIG.MAX_DURATION_MS
+  let currentInterval = POLLING_CONFIG.INITIAL_INTERVAL_MS
 
     while (Date.now() < deadline) {
       // Apply exponential backoff with jitter
@@ -135,8 +120,8 @@ export class TaskExecutor implements ITaskExecutor {
 
       // Exponentially increase interval for next iteration
       currentInterval = Math.min(
-        currentInterval * POLLING_CONFIG.backoffMultiplier,
-        POLLING_CONFIG.maxIntervalMs
+        currentInterval * POLLING_CONFIG.BACKOFF_MULTIPLIER,
+        POLLING_CONFIG.MAX_INTERVAL_MS
       )
 
       const statusResult = await checkStatus(taskId)
@@ -157,7 +142,7 @@ export class TaskExecutor implements ITaskExecutor {
       }
     }
 
-    throw new Error(`${taskType} task ${taskId} timed out after ${POLLING_CONFIG.maxDurationMs / 1000}s`)
+    throw new Error(`${taskType} task ${taskId} timed out after ${POLLING_CONFIG.MAX_DURATION_MS / 1000}s`)
   }
 
   private delay(ms: number): Promise<void> {
