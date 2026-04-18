@@ -4,7 +4,7 @@
 
 **Goal:** 实现歌词生成前端页面，包括 API client、类型定义、生成页面和结果卡片组件。
 
-**Architecture:** 参考 MusicGeneration 页面结构，使用 useFormPersistence 管理表单状态，RadioGroup 切换生成模式，LyricsTaskCard 显示结果。
+**Architecture:** 参考 MusicGeneration 页面结构，使用 useFormPersistence 管理表单状态，Select 切换生成模式，LyricsTaskCard 显示结果。
 
 **Tech Stack:** React 18, TypeScript, Tailwind CSS, Zustand, i18next, framer-motion
 
@@ -557,12 +557,12 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/RadioGroup'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
 import { cn } from '@/lib/utils'
 import { generateLyrics } from '@/lib/api/lyrics'
 import { toastSuccess, toastError } from '@/lib/toast'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
+import { useFormPersistence } from '@/hooks'
 import { LyricsTaskCarousel } from '@/components/lyrics/LyricsTaskCarousel'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 
@@ -598,7 +598,7 @@ export default function LyricsGeneration() {
   const { t } = useTranslation()
   
   const [formData, setFormData] = useFormPersistence<LyricsFormData>({
-    storageKey: DEBUG_FORM_KEYS.LYRICS_GENERATION,
+    storageKey: 'lyrics-generation',
     defaultValue: DEFAULT_FORM,
   })
 
@@ -731,26 +731,28 @@ export default function LyricsGeneration() {
               <CardTitle className="text-sm">生成模式</CardTitle>
             </CardHeader>
             <CardContent>
-              <RadioGroup
+              <Select
                 value={mode}
                 onValueChange={(value: LyricsMode) => updateForm('mode', value)}
-                className="flex gap-4"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="write_full_song" id="mode-write" />
-                  <Label htmlFor="mode-write" className="flex items-center gap-1">
-                    <Wand2 className="w-3 h-3" />
-                    {t('lyrics.modeWrite')}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="edit" id="mode-edit" />
-                  <Label htmlFor="mode-edit" className="flex items-center gap-1">
-                    <Edit3 className="w-3 h-3" />
-                    {t('lyrics.modeEdit')}
-                  </Label>
-                </div>
-              </RadioGroup>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择生成模式" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="write_full_song">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="w-3 h-3" />
+                      {t('lyrics.modeWrite')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="edit">
+                    <div className="flex items-center gap-2">
+                      <Edit3 className="w-3 h-3" />
+                      {t('lyrics.modeEdit')}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
