@@ -338,7 +338,7 @@ export default function LyricsGeneration() {
                       value={lyrics}
                       onChange={(e) => updateForm('lyrics', e.target.value)}
                       placeholder={t('lyrics.lyricsPlaceholder')}
-                      rows={8}
+                      rows={12}
                       className="resize-none"
                     />
                     <p className="text-xs text-muted-foreground text-right">
