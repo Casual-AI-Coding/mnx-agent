@@ -137,6 +137,7 @@ export default function ExternalApiLogs() {
 **时间**: ${new Date(log.created_at).toLocaleString('zh-CN')}
 ${log.error_message ? `\n**错误信息**:\n\`\`\`\n${log.error_message}\n\`\`\`` : ''}
 ${log.request_params ? `\n**请求参数**:\n\`\`\`json\n${JSON.stringify(log.request_params, null, 2)}\n\`\`\`` : ''}
+${log.request_body ? `\n**请求体**:\n\`\`\`\n${log.request_body}\n\`\`\`` : ''}
 ${log.response_body ? `\n**响应体**:\n\`\`\`\n${log.response_body}\n\`\`\`` : ''}`
 
     try {
@@ -524,6 +525,20 @@ ${log.response_body ? `\n**响应体**:\n\`\`\`\n${log.response_body}\n\`\`\`` :
                 <label className="text-muted-foreground/50">{t('externalApiLogs.requestParams', '请求参数')}</label>
                 <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
                   {JSON.stringify(selectedLog.request_params, null, 2)}
+                </pre>
+              </div>
+            )}
+            {selectedLog.request_body && (
+              <div>
+                <label className="text-muted-foreground/50">{t('externalApiLogs.requestBody', '请求体')}</label>
+                <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all max-h-64">
+                  {(() => {
+                    try {
+                      return JSON.stringify(JSON.parse(selectedLog.request_body), null, 2)
+                    } catch {
+                      return selectedLog.request_body
+                    }
+                  })()}
                 </pre>
               </div>
             )}
