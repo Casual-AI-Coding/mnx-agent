@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileText, Loader2, Wand2, Edit3 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { FileText, Loader2, Wand2, Edit3, Settings2, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -14,6 +15,7 @@ import { generateLyrics } from '@/lib/api/lyrics'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
 import { LyricsTaskCarousel } from '@/components/lyrics/LyricsTaskCarousel'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 
 type LyricsFormData = {
@@ -156,115 +158,182 @@ export default function LyricsGeneration() {
     }
   }
 
-  // Edit this lyrics - switch to edit mode with lyrics filled
   const handleEdit = (result: LyricsGenerationResponse) => {
     updateForm('mode', 'edit')
     updateForm('lyrics', result.lyrics)
     updateForm('title', result.song_title)
-    updateForm('prompt', '') // clear prompt for edit mode
+    updateForm('prompt', '')
   }
 
+  const clearAll = () => {
+    setTasks([])
+    setCurrentIndex(0)
+    setFormData(DEFAULT_FORM)
+    setIsGenerating(false)
+  }
+
+  const generateApiCurl = useCallback(() => {
+    const baseUrl = 'https://api.minimaxi.com'
+    const endpoint = '/v1/lyrics_generation'
+    
+    const body: Record<string, unknown> = {
+      model: 'lyrics-0',
+      mode,
+    }
+    
+    if (mode === 'write_full_song') {
+      body.prompt = prompt.trim()
+    } else {
+      body.lyrics = lyrics.trim()
+    }
+    
+    if (title.trim()) {
+      body.title = title.trim()
+    }
+
+    return `curl --request POST \\
+  --url '${baseUrl}${endpoint}' \\
+  --header 'Authorization: Bearer YOUR_API_KEY' \\
+  --header 'Content-Type: application/json' \\
+  --data '${JSON.stringify(body, null, 2)}'`
+  }, [mode, prompt, lyrics, title])
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader
         title={t('lyrics.title')}
         description="AI 辅助歌词创作与优化"
         icon={<FileText className="w-5 h-5" />}
+        gradient="violet-purple"
+        actions={
+          <WorkbenchActions
+            helpTitle={t('lyrics.creationTipsTitle') || '歌词创作提示'}
+            helpTips={(
+              <ul className="text-xs text-muted-foreground space-y-2">
+                <li className="whitespace-normal">• 写整首歌模式：提供创作主题和风格描述</li>
+                <li className="whitespace-normal">• 编辑模式：输入已有歌词进行优化和修改</li>
+                <li className="whitespace-normal">• 提示词越具体，生成结果越符合预期</li>
+                <li className="whitespace-normal">• 支持生成后的歌词导出为文本文件</li>
+              </ul>
+            )}
+            generateCurl={generateApiCurl}
+            onClear={clearAll}
+            clearLabel={t('common.clear')}
+          />
+        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4">
         {/* Left: Form */}
         <div className="space-y-4">
           {/* Mode selection */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">生成模式</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={mode}
-                onValueChange={(value) => updateForm('mode', value as LyricsMode)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择生成模式" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="write_full_song">
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="w-3 h-3" />
-                      {t('lyrics.modeWrite')}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="edit">
-                    <div className="flex items-center gap-2">
-                      <Edit3 className="w-3 h-3" />
-                      {t('lyrics.modeEdit')}
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Settings2 className="w-5 h-5" />
+                <span className="text-base font-semibold">生成模式</span>
+              </div>
+              <div className="p-4">
+                <Select
+                  value={mode}
+                  onValueChange={(value) => updateForm('mode', value as LyricsMode)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="选择生成模式" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="write_full_song">
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="w-3 h-3" />
+                        {t('lyrics.modeWrite')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="edit">
+                      <div className="flex items-center gap-2">
+                        <Edit3 className="w-3 h-3" />
+                        {t('lyrics.modeEdit')}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </motion.div>
 
           {/* Parameters */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">参数配置</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Title (optional for both modes) */}
-              <div className="space-y-2">
-                <Label>{t('lyrics.titleInput')}</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => updateForm('title', e.target.value)}
-                  placeholder="歌曲标题（可选）"
-                  maxLength={100}
-                />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <Palette className="w-5 h-5" />
+                <span className="text-base font-semibold">参数配置</span>
               </div>
-
-              {/* Prompt (write_full_song mode) */}
-              {mode === 'write_full_song' && (
+              <div className="p-4 space-y-4">
+                {/* Title (optional for both modes) */}
                 <div className="space-y-2">
-                  <Label>{t('lyrics.prompt')}</Label>
-                  <Textarea
-                    value={prompt}
-                    onChange={(e) => updateForm('prompt', e.target.value)}
-                    placeholder={t('lyrics.promptPlaceholder')}
-                    maxLength={2000}
-                    rows={4}
-                    className="resize-none"
+                  <Label>{t('lyrics.titleInput')}</Label>
+                  <Input
+                    value={title}
+                    onChange={(e) => updateForm('title', e.target.value)}
+                    placeholder="歌曲标题（可选）"
+                    maxLength={100}
                   />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {prompt.length}/2000 {t('common.characters')}
-                  </p>
                 </div>
-              )}
 
-              {/* Lyrics input (edit mode) */}
-              {mode === 'edit' && (
-                <div className="space-y-2">
-                  <Label>{t('lyrics.lyricsInput')}</Label>
-                  <Textarea
-                    value={lyrics}
-                    onChange={(e) => updateForm('lyrics', e.target.value)}
-                    placeholder={t('lyrics.lyricsPlaceholder')}
-                    rows={8}
-                    className="resize-none"
-                  />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {lyrics.length} {t('common.characters')}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {/* Prompt (write_full_song mode) */}
+                {mode === 'write_full_song' && (
+                  <div className="space-y-2">
+                    <Label>{t('lyrics.prompt')}</Label>
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => updateForm('prompt', e.target.value)}
+                      placeholder={t('lyrics.promptPlaceholder')}
+                      maxLength={2000}
+                      rows={4}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {prompt.length}/2000 {t('common.characters')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Lyrics input (edit mode) */}
+                {mode === 'edit' && (
+                  <div className="space-y-2">
+                    <Label>{t('lyrics.lyricsInput')}</Label>
+                    <Textarea
+                      value={lyrics}
+                      onChange={(e) => updateForm('lyrics', e.target.value)}
+                      placeholder={t('lyrics.lyricsPlaceholder')}
+                      rows={8}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {lyrics.length} {t('common.characters')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
 
           {/* Generate button */}
           <Button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="w-full"
+            className="w-full shadow-lg shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30"
             size="lg"
           >
             {isGenerating ? (
@@ -274,7 +343,7 @@ export default function LyricsGeneration() {
               </>
             ) : (
               <>
-                <FileText className="w-4 h-4 mr-2" />
+                <Wand2 className="w-4 h-4 mr-2" />
                 {t('lyrics.generate')}
               </>
             )}
@@ -282,26 +351,35 @@ export default function LyricsGeneration() {
         </div>
 
         {/* Right: Results */}
-        <div>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">{t('lyrics.result')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LyricsTaskCarousel
-                tasks={tasks}
-                currentIndex={currentIndex}
-                onIndexChange={setCurrentIndex}
-                onRetry={handleRetry}
-                onEdit={handleEdit}
-                onExport={exportLyricsToTxt}
-              />
-            </CardContent>
-          </Card>
+        <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
+            className="relative group z-20"
+          >
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-visible">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <FileText className="w-5 h-5" />
+                <span className="text-base font-semibold">{t('lyrics.result')}</span>
+              </div>
+              <div className="p-4">
+                <LyricsTaskCarousel
+                  tasks={tasks}
+                  currentIndex={currentIndex}
+                  onIndexChange={setCurrentIndex}
+                  onRetry={handleRetry}
+                  onEdit={handleEdit}
+                  onExport={exportLyricsToTxt}
+                />
+              </div>
+            </div>
+          </motion.div>
 
           {/* History note */}
           {tasks.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               {t('lyrics.historyHint')}
             </p>
           )}
