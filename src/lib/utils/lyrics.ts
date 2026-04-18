@@ -3,17 +3,30 @@ import type { LyricsSection } from '@/types/lyrics'
 const SECTION_PATTERN = /\[(Verse|Chorus|Bridge|Outro|Hook|Intro)(?:\s+(\d+))?\]/gi
 
 /**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+/**
  * Parse lyrics text into structured sections
  * Example: "[Verse 1]\nHello world\n[Chorus]\nSing it loud"
  */
 export function parseLyricsSections(lyrics: string): LyricsSection[] {
   const sections: LyricsSection[] = []
 
-  // Reset regex
-  SECTION_PATTERN.lastIndex = 0
+  // Use matchAll for clean iteration without manual lastIndex manipulation
+  const matches = lyrics.matchAll(SECTION_PATTERN)
+  const matchArray = Array.from(matches)
 
-  let match: RegExpExecArray | null
-  while ((match = SECTION_PATTERN.exec(lyrics)) !== null) {
+  for (let i = 0; i < matchArray.length; i++) {
+    const match = matchArray[i]
     const type = match[1].toLowerCase() as LyricsSection['type']
     const number = match[2] ? parseInt(match[2], 10) : undefined
     const startIndex = match.index
@@ -23,11 +36,8 @@ export function parseLyricsSections(lyrics: string): LyricsSection[] {
     let contentEnd = lyrics.length
 
     // Find next tag position
-    const nextMatch = SECTION_PATTERN.exec(lyrics)
-    if (nextMatch) {
-      contentEnd = nextMatch.index
-      // Reset regex position for next iteration
-      SECTION_PATTERN.lastIndex = match.index + match[0].length
+    if (i + 1 < matchArray.length) {
+      contentEnd = matchArray[i + 1].index
     }
 
     const content = lyrics.slice(contentStart, contentEnd).trim()
@@ -74,13 +84,13 @@ export function extractLyricsSnippet(lyrics: string, maxLines: number = 12): str
 
 /**
  * Highlight section tags in lyrics text
- * Returns HTML-ready string with highlighted tags
+ * Returns HTML-ready string with highlighted tags (XSS-safe)
  */
 export function highlightSectionTags(lyrics: string): string {
-  return lyrics.replace(
-    SECTION_PATTERN,
-    '<span class="lyrics-section-tag">$&</span>'
-  )
+  // Escape HTML entities first to prevent XSS
+  const escaped = escapeHtml(lyrics)
+  // Then wrap section tags with styled spans
+  return escaped.replace(SECTION_PATTERN, '<span class="lyrics-section-tag">$&</span>')
 }
 
 /**

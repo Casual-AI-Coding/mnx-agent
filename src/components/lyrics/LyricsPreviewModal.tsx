@@ -92,11 +92,16 @@ export function LyricsPreviewModal({
     }
   }, [open])
 
-  const titleWithTags = (
-    <div className="flex items-center gap-2">
-      <span className="truncate">{title}</span>
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={title}
+      size="lg"
+      className="h-[80vh] flex flex-col"
+    >
       {styleTags.length > 0 && (
-        <div className="flex gap-1 ml-2">
+        <div className="flex gap-1 mb-3">
           {styleTags.map((tag, i) => (
             <span
               key={i}
@@ -107,17 +112,6 @@ export function LyricsPreviewModal({
           ))}
         </div>
       )}
-    </div>
-  )
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={titleWithTags as unknown as string}
-      size="lg"
-      className="h-[80vh] flex flex-col"
-    >
       <div className="flex gap-4 flex-1 overflow-hidden">
         <div className="w-32 border-r border-border pr-4 overflow-y-auto">
           <div className="space-y-1">

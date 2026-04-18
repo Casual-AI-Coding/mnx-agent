@@ -1,9 +1,10 @@
 import { apiClient } from './client'
+import type { MediaType, MediaSource } from '@/types/media'
+
+// Re-export types for backward compatibility
+export type { MediaType, MediaSource }
 
 const client = apiClient.client_
-
-export type MediaType = 'audio' | 'image' | 'video' | 'music' | 'lyrics'
-export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation' | 'lyrics_generation'
 
 export interface MediaRecord {
   id: string
