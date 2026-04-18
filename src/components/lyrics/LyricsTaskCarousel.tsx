@@ -96,12 +96,34 @@ export function LyricsTaskCarousel({
   if (currentTask?.status === 'completed' && currentTask.result) {
     const handleCopy = async () => {
       if (!currentTask.result?.lyrics) return
+      const text = currentTask.result.lyrics
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text)
+          toastSuccess('歌词已复制到剪贴板')
+          return
+        } catch (err) {
+          console.error('Clipboard API failed:', err)
+        }
+      }
+      
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      textarea.style.top = '0'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
       try {
-        await navigator.clipboard.writeText(currentTask.result.lyrics)
+        document.execCommand('copy')
         toastSuccess('歌词已复制到剪贴板')
       } catch {
         toastError('复制失败，请手动复制')
       }
+      document.body.removeChild(textarea)
     }
 
     return (
