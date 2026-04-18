@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios'
 import { retryWithBackoff } from './retry.js'
 import { toLocalISODateString } from './date-utils.js'
 import { withExternalApiAudit, withExternalApiLog } from '../services/external-api-audit.service.js'
+import { getLogger } from './logger.js'
 
 const API_HOSTS = {
   domestic: 'https://api.minimaxi.com',
@@ -233,10 +234,7 @@ export class MiniMaxClient {
       'lyrics_generation',
       body,
       async () => {
-        console.log('[MiniMax] Lyrics Generation Request:', {
-          body,
-          timestamp: toLocalISODateString()
-        })
+        getLogger().info({ body, timestamp: toLocalISODateString() }, '[MiniMax] Lyrics Generation Request')
         
         return retryWithBackoff(async () => {
           try {
