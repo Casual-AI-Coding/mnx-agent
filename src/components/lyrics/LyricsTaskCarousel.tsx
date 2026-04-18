@@ -1,8 +1,9 @@
 // src/components/lyrics/LyricsTaskCarousel.tsx
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle, X, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle, X, Loader2, Edit3, Download, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toastSuccess } from '@/lib/toast'
 import type { LyricsTask, LyricsGenerationResponse } from '@/types/lyrics'
 
 interface LyricsTaskCarouselProps {
@@ -46,7 +47,7 @@ export function LyricsTaskCarousel({
 
   const currentTask = tasks[currentIndex]
 
-  // Generating state - full screen loading like ImageGeneration
+  // Generating state - full screen loading
   if (currentTask?.status === 'generating') {
     return (
       <div className="flex flex-col items-center justify-center h-full py-20">
@@ -60,53 +61,6 @@ export function LyricsTaskCarousel({
           </div>
         </div>
         <p className="mt-8 text-lg font-medium text-foreground">正在创作歌词...</p>
-        <div className="mt-4 flex items-center gap-4">
-          <button
-            onClick={() => onIndexChange(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-            className={cn(
-              "p-2 rounded-full transition-colors bg-muted/50",
-              currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-            )}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="flex items-center gap-1.5">
-            {tasks.map((task, idx) => (
-              <button
-                key={task.id}
-                onClick={() => onIndexChange(idx)}
-                className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all",
-                  idx === currentIndex && task.status === 'generating' && "ring-[3px] ring-purple-500 bg-purple-500/20 text-purple-500 font-bold",
-                  idx === currentIndex && task.status === 'completed' && "ring-[3px] ring-green-500 bg-green-500/20 text-green-600 font-bold",
-                  idx === currentIndex && task.status === 'failed' && "ring-[3px] ring-red-500 bg-red-500/20 text-red-600 font-bold",
-                  idx !== currentIndex && task.status === 'generating' && "bg-purple-500/20 text-purple-500 animate-pulse font-medium",
-                  idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 text-green-600 font-medium",
-                  idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 text-red-600 font-medium"
-                )}
-              >
-                {task.status === 'generating' ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : task.status === 'failed' ? (
-                  <X className="w-3 h-3" />
-                ) : (
-                  <CheckCircle className="w-3 h-3" />
-                )}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => onIndexChange(Math.min(tasks.length - 1, currentIndex + 1))}
-            disabled={currentIndex === tasks.length - 1}
-            className={cn(
-              "p-2 rounded-full transition-colors bg-muted/50",
-              currentIndex === tasks.length - 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-            )}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
         <p className="text-sm text-muted-foreground mt-2">
           任务 {currentIndex + 1} / {tasks.length}
         </p>
@@ -134,121 +88,24 @@ export function LyricsTaskCarousel({
         >
           重试
         </button>
-        <div className="mt-6 flex items-center gap-4">
-          <button
-            onClick={() => onIndexChange(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-            className={cn(
-              "p-2 rounded-full transition-colors bg-muted/50",
-              currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-            )}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="flex items-center gap-1.5">
-            {tasks.map((task, idx) => (
-              <button
-                key={task.id}
-                onClick={() => onIndexChange(idx)}
-                className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all",
-                  idx === currentIndex && task.status === 'failed' && "ring-[3px] ring-red-500 bg-red-500/20 text-red-600 font-bold",
-                  idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 text-green-600 font-medium",
-                  idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 text-red-600 font-medium"
-                )}
-              >
-                {task.status === 'failed' ? (
-                  <X className="w-3 h-3" />
-                ) : task.status === 'completed' ? (
-                  <CheckCircle className="w-3 h-3" />
-                ) : (
-                  idx + 1
-                )}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => onIndexChange(Math.min(tasks.length - 1, currentIndex + 1))}
-            disabled={currentIndex === tasks.length - 1}
-            className={cn(
-              "p-2 rounded-full transition-colors bg-muted/50",
-              currentIndex === tasks.length - 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-            )}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
       </div>
     )
   }
 
   // Completed state - full screen lyrics display
   if (currentTask?.status === 'completed' && currentTask.result) {
+    const handleCopy = async () => {
+      if (!currentTask.result?.lyrics) return
+      try {
+        await navigator.clipboard.writeText(currentTask.result.lyrics)
+        toastSuccess('歌词已复制到剪贴板')
+      } catch {
+        toastSuccess('复制失败')
+      }
+    }
+
     return (
       <div className="h-full flex flex-col">
-        {/* Header with navigation and actions */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => onIndexChange(Math.max(0, currentIndex - 1))}
-              disabled={currentIndex === 0}
-              className={cn(
-                "p-1 rounded-md transition-colors",
-                currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-              )}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-1.5">
-              {tasks.map((task, idx) => (
-                <button
-                  key={task.id}
-                  onClick={() => onIndexChange(idx)}
-                  className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all",
-                    idx === currentIndex && task.status === 'completed' && "ring-[3px] ring-green-500 bg-green-500/20 text-green-600 font-bold",
-                    idx === currentIndex && task.status === 'failed' && "ring-[3px] ring-red-500 bg-red-500/20 text-red-600 font-bold",
-                    idx !== currentIndex && task.status === 'completed' && "bg-green-500/20 text-green-600 font-medium",
-                    idx !== currentIndex && task.status === 'failed' && "bg-red-500/20 text-red-600 font-medium"
-                  )}
-                >
-                  {task.status === 'completed' ? (
-                    <CheckCircle className="w-3 h-3" />
-                  ) : task.status === 'failed' ? (
-                    <X className="w-3 h-3" />
-                  ) : (
-                    idx + 1
-                  )}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => onIndexChange(Math.min(tasks.length - 1, currentIndex + 1))}
-              disabled={currentIndex === tasks.length - 1}
-              className={cn(
-                "p-1 rounded-md transition-colors",
-                currentIndex === tasks.length - 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted"
-              )}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => currentTask.result && onEdit(currentTask.result)}
-              className="px-3 py-1.5 text-sm font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-            >
-              编辑
-            </button>
-            <button
-              onClick={() => currentTask.result && onExport(currentTask.result)}
-              className="px-3 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-            >
-              导出
-            </button>
-          </div>
-        </div>
-
         {/* Lyrics content */}
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-2xl mx-auto">
@@ -272,8 +129,33 @@ export function LyricsTaskCarousel({
                 ))}
               </div>
             )}
-            <div className="bg-muted/30 rounded-xl p-6">
-              <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed text-foreground">
+            {/* Lyrics box with action buttons in top-right corner */}
+            <div className="relative bg-muted/30 rounded-xl p-6 group">
+              {/* Action buttons - top right */}
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => currentTask.result && onEdit(currentTask.result)}
+                  className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  title="编辑"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
+                  title="复制"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => currentTask.result && onExport(currentTask.result)}
+                  className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-colors"
+                  title="导出"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
+              <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed text-foreground pt-2">
                 {currentTask.result.lyrics}
               </pre>
             </div>
