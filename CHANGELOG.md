@@ -2,6 +2,87 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-04-18
+
+### Added
+
+- **外部API审计日志系统 (R-004)** - 完整的外部API调用审计功能
+  - `server/database/migrations/027_audit_enhancement.ts` - 新增 `external_api_logs` 表
+  - `server/database/migrations/028_external_api_request_body.ts` - 新增 `request_body` 字段
+  - `server/routes/external-api-logs.ts` (+96) - 新增 `/api/external-api-logs` 路由
+  - `server/services/external-api-audit.service.ts` (+172) - 外部API审计服务
+  - `server/services/audit-context.service.ts` (+83) - 审计上下文服务
+  - `server/repositories/external-api-log.repository.ts` (+226) - 外部API日志数据访问
+  - `server/config/audit.ts` (+125) - 审计配置集中管理
+  - `src/pages/ExternalApiLogs.tsx` (+615) - 外部API日志页面
+  - `src/lib/api/external-api-logs.ts` (+115) - 前端API客户端
+  - `packages/shared-types/entities/external-api-log.ts` (+73) - 类型定义
+  - 支持查询、分页、筛选外部API调用记录
+  - 记录请求体、响应、状态码、耗时等信息
+
+- **Dashboard 启用** - 主仪表板页面功能启用
+  - `src/pages/Dashboard.tsx` - 启用 Dashboard 页面路由
+  - `src/App.tsx` (+11) - 导航改进，Dashboard 可访问
+
+- **导航改进** - Sidebar 和 Header UI 优化
+  - `src/components/layout/Sidebar.tsx` (+18) - 图标修复和布局改进
+  - `src/components/layout/Header.tsx` (+6) - 标题调整
+  - 启用 Dashboard 导航入口
+
+### Changed
+
+- **配置集中化** - 统一硬编码配置消除重复定义
+  - `server/config/audit.ts` - 审计配置集中管理
+  - `server/lib/minimax.ts` (+513) - 使用集中配置，重构API客户端
+  - `server/services/capacity-checker.ts` (+16) - 配置引用统一
+  - `server/services/settings-service.ts` (+2) - 配置引用统一
+  - 消除多处重复的硬编码常量
+
+### Fixed
+
+- **认证审计修复** - 登录/注册审计日志正确记录
+  - `server/routes/auth.ts` (+4) - 登录/注册成功后设置 req.user 用于审计日志捕获
+  - `server/routes/auth.ts` - auth路由添加审计中间件记录登录日志
+  - `src/stores/auth.ts` (+1) - 登录成功后设置 isHydrated=true
+  - 修复登录审计日志 user_id 为空问题
+
+- **外部API审计修复** - 多项审计逻辑修正
+  - `server/middleware/audit-middleware.ts` (+82) - 修正 skip paths 匹配路径
+  - `server/middleware/audit-middleware.ts` - 修复 IP 获取逻辑 (X-Forwarded-For)
+  - `server/middleware/audit-middleware.ts` - 修复 resource_type 解析
+  - `server/services/task-executor.ts` (+29) - 端口清理失败修复
+  - `server/services/external-api-audit.service.ts` - user_id 为空修复
+  - `server/routes/external-api-logs.ts` - 添加认证中间件
+  - `server/repositories/user-repository.ts` (+28) - rowToAuditLog usernameMap 修复
+
+### Documentation
+
+- **R-004 审计日志增强计划** - 完整设计文档
+  - `docs/plans/2026-04-18-audit-log-enhancement.md` (+582) - 审计增强实现计划
+  
+- **Roadmap 更新** - 版本进度更新
+  - `docs/roadmap/v2-roadmap.md` (+7) - R-008 完成，当前版本更新
+  - `docs/roadmap/requirement-pools.md` (+18) - 需求池状态更新
+
+### Performance
+
+**Code Quality Metrics**
+- **37 files changed** (+2,850 insertions, -313 deletions)
+- **新增服务层文件**: 4 个 (external-api-audit, audit-context, audit config, external-api-log repository)
+- **新增数据库迁移**: 2 个 (audit_enhancement, external_api_request_body)
+- **新增前端页面**: 1 个 (ExternalApiLogs)
+- **新增前端API模块**: 1 个 (external-api-logs)
+- **新增类型定义**: 1 个 (external-api-log entity)
+- **新增验证Schema**: 1 个 (external-api-logs-schemas)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变（新增 `/api/external-api-logs`)
+- ✅ 审计日志增强为增量功能，不影响现有系统
+- ✅ 数据库迁移向后兼容
+- ✅ Dashboard 启用为前端路由变化，无破坏性变更
+- ✅ 配置集中化为内部重构，不影响 API 契约
+
 ## [2.0.2] - 2026-04-18
 
 ### Fixed
