@@ -7,6 +7,7 @@ interface ApiProxyConfig {
   clientMethod: string
   buildRequestBody: (req: Request) => unknown
   extractClient?: (req: Request) => unknown
+  extractData?: (result: unknown) => unknown
 }
 
 /**
@@ -41,7 +42,8 @@ export function createApiProxyRouter(config: ApiProxyConfig): Router {
       }
 
       const result = await method.call(client, requestBody)
-      successResponse(res, result.data)
+      const data = config.extractData ? config.extractData(result) : (result as any)?.data
+      successResponse(res, data)
     })
   )
 

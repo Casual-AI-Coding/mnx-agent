@@ -23,7 +23,8 @@ router.use('/generate', validate(lyricsGenerateSchema), createApiProxyRouter({
     
     return body
   },
-  extractClient: getClientFromRequest
+  extractClient: getClientFromRequest,
+  extractData: (result) => result
 }))
 
 export default router
