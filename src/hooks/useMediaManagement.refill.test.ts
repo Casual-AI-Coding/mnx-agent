@@ -11,6 +11,14 @@ class IntersectionObserverMock {
 }
 global.IntersectionObserver = IntersectionObserverMock as any
 
+// Mock auth store for hydration
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = { user: { id: 'test-user' }, isHydrated: true }
+    return selector(state)
+  }),
+}))
+
 // Mock the API module
 vi.mock('@/lib/api/media', () => ({
   listMedia: vi.fn(),
@@ -66,14 +74,14 @@ describe('useMediaManagement - Smart Refill', () => {
 
     const { result } = renderHook(() => useMediaManagement())
     
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
     
     act(() => {
       result.current.handlePageChange(2)
     })
     
-    await waitFor(() => expect(result.current.pagination.page).toBe(2))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.pagination.page).toBe(2), { timeout: 1000 })
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
     
     const initialCallCount = vi.mocked(mediaApi.listMedia).mock.calls.length
     
@@ -81,49 +89,41 @@ describe('useMediaManagement - Smart Refill', () => {
       result.current.handleDelete(mockRecordsPage2[0])
     })
     
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
     
     const finalCallCount = vi.mocked(mediaApi.listMedia).mock.calls.length
     expect(finalCallCount).toBeGreaterThan(initialCallCount)
   })
 
   it('should not refill when items remain on page', async () => {
-    // Setup: Page 1 with 2 items
     const mockRecords = [
       { id: '1', filename: 'test1.png' },
       { id: '2', filename: 'test2.png' },
     ]
     
-    const listMediaSpy = vi.fn()
     vi.mocked(mediaApi.listMedia)
-      .mockImplementation(() => {
-        listMediaSpy()
-        return Promise.resolve({
-          success: true,
-          data: {
-            records: mockRecords,
-            pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
-          },
-        })
+      .mockResolvedValue({
+        success: true,
+        data: {
+          records: mockRecords,
+          pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+        },
       })
     vi.mocked(mediaApi.deleteMedia).mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useMediaManagement())
     
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsAfterInitialLoad = listMediaSpy.mock.calls.length
-    
-    // Delete one item (one remains)
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
+    const callsAfterInitialLoad = vi.mocked(mediaApi.listMedia).mock.calls.length
+
     await act(async () => {
       result.current.handleDelete(mockRecords[0])
     })
 
-    const callsAfterDelete = listMediaSpy.mock.calls.length
-    console.log('Calls after initial load:', callsAfterInitialLoad)
-    console.log('Calls after delete:', callsAfterDelete)
-    
-    // Should only call listMedia once (initial load)
-    expect(listMediaSpy.mock.calls.length).toBe(1)
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
+
+    // Should only call listMedia for initial load + one refresh after delete
+    expect(vi.mocked(mediaApi.listMedia).mock.calls.length).toBe(callsAfterInitialLoad + 1)
   })
 
   it('should update to empty state when page 1 becomes empty', async () => {
@@ -148,14 +148,15 @@ describe('useMediaManagement - Smart Refill', () => {
 
     const { result } = renderHook(() => useMediaManagement())
     
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
     
     await act(async () => {
       result.current.handleDelete(mockRecords[0])
     })
 
-    // Records should be empty, no refill needed on page 1
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 1000 })
+
     expect(result.current.records).toHaveLength(0)
-    expect(mediaApi.listMedia).toHaveBeenCalledTimes(1)
+    expect(mediaApi.listMedia).toHaveBeenCalledTimes(2)
   })
 })

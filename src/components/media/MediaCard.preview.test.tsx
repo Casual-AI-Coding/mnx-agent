@@ -30,6 +30,11 @@ vi.mock('lucide-react', () => ({
   FileVideo: () => <span data-testid="file-video-icon">FileVideo</span>,
   Music: () => <span data-testid="music-icon">Music</span>,
   Video: () => <span data-testid="video-icon">Video</span>,
+  FileText: vi.fn(() => <div data-icon="FileText" />),
+  Pencil: vi.fn(() => <div data-icon="Pencil" />),
+  Star: vi.fn(() => <div data-icon="Star" />),
+  Globe: vi.fn(() => <div data-icon="Globe" />),
+  Lock: vi.fn(() => <div data-icon="Lock" />),
 }))
 
 // Mock UI components

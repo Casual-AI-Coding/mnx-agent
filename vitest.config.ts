@@ -24,7 +24,7 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist', '.next'],
     fileParallelism: false,
-    isolate: false,
+    isolate: true,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json'],

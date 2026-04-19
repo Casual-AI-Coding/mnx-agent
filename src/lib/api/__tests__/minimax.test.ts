@@ -6,6 +6,7 @@ import { generateMusic } from '../music'
 import { createVideo, getVideoStatus } from '../video'
 import { listFiles, uploadFile, deleteFile, retrieveFile } from '../file'
 import { getBaseUrl, getHeaders, getApiMode } from '../config'
+import { apiClient } from '../client'
 
 vi.mock('../config', () => ({
   getBaseUrl: vi.fn(() => 'https://api.minimaxi.com'),
@@ -14,6 +15,18 @@ vi.mock('../config', () => ({
     'Authorization': 'Bearer test-key',
   })),
   getApiMode: vi.fn(() => 'direct'),
+}))
+
+// Mock apiClient.client_ (axios instance) for music.ts and other modules using axios
+vi.mock('../client', () => ({
+  apiClient: {
+    client_: {
+      post: vi.fn(),
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  },
 }))
 
 const mockFetch = vi.fn()
@@ -497,10 +510,7 @@ describe('Music API Module', () => {
         },
       }
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
+      vi.mocked(apiClient.client_.post).mockResolvedValueOnce({ data: mockResponse })
 
       const result = await generateMusic({
         model: 'music-2.5',
@@ -511,25 +521,18 @@ describe('Music API Module', () => {
     })
 
     it('should add output_format url to request', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ trace_id: 'test', data: { audio: '', duration: 0 } }),
-      })
+      vi.mocked(apiClient.client_.post).mockResolvedValueOnce({ data: { trace_id: 'test', data: { audio: '', duration: 0 } } })
 
       await generateMusic({
         model: 'music-2.5',
         lyrics: 'Test music',
       })
 
-      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-      expect(body.output_format).toBe('url')
+      expect(apiClient.client_.post).toHaveBeenCalledWith('/music/generate', expect.objectContaining({ output_format: 'url' }), expect.any(Object))
     })
 
     it('should throw error on music generation failure', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ base_resp: { status_msg: 'Lyrics too long' } }),
-      })
+      vi.mocked(apiClient.client_.post).mockRejectedValueOnce(new Error('Lyrics too long'))
 
       await expect(generateMusic({
         model: 'music-2.5',

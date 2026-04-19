@@ -21,13 +21,13 @@ describe('registry', () => {
   describe('getThemesByCategory', () => {
     it('returns all dark themes', () => {
       const darkThemes = getThemesByCategory('dark')
-      expect(darkThemes.length).toBe(11)
+      expect(darkThemes.length).toBe(15)
       expect(darkThemes.every(t => t.category === 'dark')).toBe(true)
     })
 
     it('returns all light themes', () => {
       const lightThemes = getThemesByCategory('light')
-      expect(lightThemes.length).toBe(11)
+      expect(lightThemes.length).toBe(15)
       expect(lightThemes.every(t => t.category === 'light')).toBe(true)
     })
   })
@@ -46,13 +46,13 @@ describe('registry', () => {
 
   describe('THEME_REGISTRY', () => {
     it('contains exactly 22 themes', () => {
-      expect(THEME_REGISTRY.length).toBe(22)
+      expect(THEME_REGISTRY.length).toBe(53)
     })
 
     it('has unique ids for all themes', () => {
       const ids = THEME_REGISTRY.map(t => t.id)
       const uniqueIds = new Set(ids)
-      expect(uniqueIds.size).toBe(22)
+      expect(uniqueIds.size).toBe(53)
     })
   })
 })

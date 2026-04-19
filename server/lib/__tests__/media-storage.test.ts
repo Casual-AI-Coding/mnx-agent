@@ -13,7 +13,30 @@ import type { MediaType } from '../../database/types'
 
 const TEST_MEDIA_ROOT = 'test-media-storage'
 
-vi.mock('axios')
+vi.mock('axios', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    create: vi.fn(() => ({
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      interceptors: {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+      },
+    })),
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+    isAxiosError: vi.fn(),
+  },
+  isAxiosError: vi.fn(),
+}))
 
 describe('media-storage', () => {
   beforeEach(async () => {
@@ -324,7 +347,7 @@ it('should handle multiple delete calls on same file', async () => {
 
   describe('saveFromUrl', () => {
     it('should throw on network error', async () => {
-      ;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network failure'))
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network failure'))
 
       await expect(saveFromUrl('http://invalid.url/file.wav', 'test.wav', 'audio', TEST_MEDIA_ROOT))
         .rejects.toThrow('Network failure')
@@ -333,7 +356,7 @@ it('should handle multiple delete calls on same file', async () => {
     it('should throw on HTTP 404', async () => {
       const error = new Error('Request failed with status code 404')
       ;(error as any).response = { status: 404 }
-      ;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error)
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error)
 
       await expect(saveFromUrl('http://example.com/notfound.wav', 'test.wav', 'audio', TEST_MEDIA_ROOT))
         .rejects.toThrow()
@@ -341,7 +364,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should save file on successful download', async () => {
       const mockData = Buffer.from('downloaded content')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       const result = await saveFromUrl('http://example.com/file.wav', 'test.wav', 'audio', TEST_MEDIA_ROOT)
 
@@ -351,7 +374,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should download with arraybuffer response type', async () => {
       const mockData = Buffer.from('arraybuffer content')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       await saveFromUrl('http://example.com/file.mp3', 'music.mp3', 'music', TEST_MEDIA_ROOT)
 
@@ -360,7 +383,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should handle image download', async () => {
       const mockImageData = Buffer.from('image binary data')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockImageData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockImageData })
 
       const result = await saveFromUrl('http://example.com/image.png', 'image.png', 'image', TEST_MEDIA_ROOT)
 
@@ -370,7 +393,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should handle video download', async () => {
       const mockVideoData = Buffer.from('video binary data')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockVideoData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockVideoData })
 
       const result = await saveFromUrl('http://example.com/video.mp4', 'video.mp4', 'video', TEST_MEDIA_ROOT)
 
@@ -380,7 +403,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should use default extension when URL filename has none', async () => {
       const mockData = Buffer.from('downloaded')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       const result = await saveFromUrl('http://example.com/file', 'noextension', 'music', TEST_MEDIA_ROOT)
 
@@ -392,7 +415,7 @@ it('should handle multiple delete calls on same file', async () => {
       await fs.mkdir(customRoot, { recursive: true })
       
       const mockData = Buffer.from('custom root download')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       const result = await saveFromUrl('http://example.com/file.wav', 'test.wav', 'audio', customRoot)
 
@@ -407,7 +430,7 @@ it('should handle multiple delete calls on same file', async () => {
       await fs.mkdir(defaultRoot, { recursive: true })
       
       const mockData = Buffer.from('default root download')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       const result = await saveFromUrl('http://example.com/file.wav', 'test.wav', 'audio', defaultRoot)
 
@@ -418,7 +441,7 @@ it('should handle multiple delete calls on same file', async () => {
 
     it('should handle empty response data', async () => {
       const mockData = Buffer.from('')
-      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockData })
 
       const result = await saveFromUrl('http://example.com/empty.wav', 'empty.wav', 'audio', TEST_MEDIA_ROOT)
 
@@ -428,7 +451,7 @@ it('should handle multiple delete calls on same file', async () => {
     it('should throw on HTTP 500', async () => {
       const error = new Error('Request failed with status code 500')
       ;(error as any).response = { status: 500 }
-      ;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error)
+      ;;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error)
 
       await expect(saveFromUrl('http://example.com/error.wav', 'test.wav', 'audio', TEST_MEDIA_ROOT))
         .rejects.toThrow()

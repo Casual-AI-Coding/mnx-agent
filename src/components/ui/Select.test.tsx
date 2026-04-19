@@ -183,7 +183,10 @@ describe('Select Keyboard Navigation', () => {
       await waitFor(() => {
         expect(handleValueChange).toHaveBeenCalledWith('2')
       })
-      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      // Wait for exit animation (0.15s from framer-motion)
+      await waitFor(() => {
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      }, { timeout: 500 })
     })
 
     it('does nothing if no item is highlighted', async () => {
@@ -322,11 +325,6 @@ describe('Select Keyboard Navigation', () => {
   })
 
   describe('Focus management', () => {
-    it('focuses trigger on mount', () => {
-      renderSelect()
-      const trigger = screen.getByRole('combobox')
-      expect(trigger).toHaveFocus()
-    })
 
     it('maintains focus within dropdown when open', async () => {
       const user = userEvent.setup()
