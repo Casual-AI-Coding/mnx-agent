@@ -34,7 +34,7 @@ describe('MediaRecord Database Service', () => {
 
   beforeEach(async () => {
     const conn = getConnection()
-    await conn.execute('TRUNCATE TABLE media_records CASCADE')
+    await conn.execute('DELETE FROM media_records WHERE owner_id IN ($1, $2) OR owner_id IS NULL', [testOwnerId1, testOwnerId2])
   })
 
   afterAll(async () => {
