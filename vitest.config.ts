@@ -23,10 +23,10 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist', '.next'],
-    singleThread: true,
     fileParallelism: false,
+    isolate: false,
     coverage: {
-      provider: 'istanbul',
+      provider: 'v8',
       reporter: ['text-summary', 'json'],
       reportsDirectory: './coverage',
       include: [
@@ -40,6 +40,11 @@ export default defineConfig({
         '**/*.test.tsx',
         '**/*.spec.ts',
       ],
+      thresholds: {
+        lines: 80,
+        branches: 70,
+        functions: 80,
+      },
     },
   },
 })
