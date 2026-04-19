@@ -23,8 +23,8 @@ export default defineConfig({
     setupFiles: ['./server/__tests__/setup.ts'],
     include: ['server/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist'],
-    fileParallelism: false,
-    maxWorkers: 1,
+    fileParallelism: true,
+    maxWorkers: 4,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
