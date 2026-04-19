@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { useCronJobsStore } from '../cronJobs'
 
 vi.mock('@/lib/api/cron', () => ({
@@ -304,6 +304,18 @@ describe('useCronJobsStore', () => {
 
       await expect(result.current.runJobManually('job-1')).rejects.toThrow()
       expect(result.current.error).toBe('Cannot run disabled job')
+    })
+  })
+
+  describe('WebSocket subscription', () => {
+    it('should call subscribeToWebSocket without error', () => {
+      const { result } = renderHook(() => useCronJobsStore())
+      expect(() => result.current.subscribeToWebSocket()).not.toThrow()
+    })
+
+    it('should call unsubscribeFromWebSocket without error when not subscribed', () => {
+      const { result } = renderHook(() => useCronJobsStore())
+      expect(() => result.current.unsubscribeFromWebSocket()).not.toThrow()
     })
   })
 })
