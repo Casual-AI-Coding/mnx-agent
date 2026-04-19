@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.5] - 2026-04-20
+
+### Added
+
+- **测试覆盖率基础设施** - 配置 Vitest Istanbul 覆盖率提供商
+  - `vitest.config.ts` (+28) - 添vitest 4.x 覆盖率配置
+  - `@vitest/coverage-istanbul` (+0) - 新增覆盖率提供者
+  - 支持多提供者配置（istanbul/v8）
+
+- **综合后端服务单元测试** - 覆盖核心业务逻辑
+  - `server/services/__tests__/execution-state-manager.test.ts` (+768) - 执行状态管理器测试
+  - `server/services/__tests__/misfire-handler.test.ts` (+485) - misfire 处理器测试
+  - `server/services/__tests__/service-node-registry.test.ts` (+530) - 服务节点注册测试
+  - `server/services/__tests__/settings-service.test.ts` (+205) - 设置服务测试
+  - `server/services/workflow/__tests__/exclusion-utils.test.ts` (+217) - 互斥工具测试
+  - `server/services/workflow/__tests__/parser.test.ts` (+175) - 工作流解析器测试
+  - `server/services/workflow/__tests__/topological-sort.test.ts` (+216) - 拓扑排序测试
+
+- **综合前端 Store 单元测试** - 覆盖状态管理
+  - `src/settings/store/__tests__/index.test.ts` (+541) - 设置 Store 测试
+  - `src/stores/__tests__/audio.test.ts` (+225) - 音频 Store 测试
+  - `src/stores/__tests__/auth.test.ts` (+211) - 认证 Store 测试
+  - `src/stores/__tests__/executionLogs.test.ts` (+247) - 执行日志 Store 测试
+  - `src/stores/__tests__/history.test.ts` (+217) - 历史 Store 测试
+  - `src/stores/__tests__/prompts.test.ts` (+133) - 提示词 Store 测试
+  - `src/stores/__tests__/taskQueue.test.ts` (+296) - 任务队列 Store 测试
+  - `src/stores/__tests__/templates.test.ts` (+514) - 模板 Store 测试
+  - `src/stores/__tests__/usage.test.ts` (+292) - 用量 Store 测试
+  - `src/stores/__tests__/webhooks.test.ts` (+601) - Webhook Store 测试
+  - `src/stores/__tests__/workflowTemplates.test.ts` (+178) - 工作流模板 Store 测试
+
+### Fixed
+
+- **测试 mock 修复** - 修正 apiClient mock 配置
+  - `fix(test): correct mock setup for apiClient in failing tests`
+
+- **37 个测试失败修复** - 跨 7 个测试文件的修复
+  - `fix(test): resolve 37 test failures across 7 test files`
+
+### Changed
+
+- **npm scripts 更新** - CLI 名称更新
+  - `package.json` - `mnx-dev` → `mnx-agent`
+
+- **Vitest 配置更新** - 4.x 版本兼容
+  - `vitest.config.ts` - 覆盖率阈值和提供者配置
+
+### Performance
+
+**Code Quality Metrics**
+- **31 files changed** (+6373 insertions, -300 deletions)
+- **新增测试文件**: 18 个
+- **测试覆盖率提升**: 核心服务和工作流引擎覆盖
+- **前端 Store 覆盖**: 12 个 store 测试
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 测试基础设施为开发质量改进，不影响功能
+- ✅ CLI 名称变更为 `mnx-agent`（已在 v2.0.0 引入）
+
 ## [2.1.4] - 2026-04-19
 
 ### Added
