@@ -160,3 +160,124 @@ describe('useTaskQueueStore', () => {
     })
   })
 })
+
+// Helper function tests
+import { getFilteredTasks, getPendingCount, getRunningCount, getFailedCount, type TaskQueueItem } from '../taskQueue'
+
+describe('taskQueue helper functions', () => {
+  const createTask = (status: TaskQueueItem['status'], jobId = 'job-1'): TaskQueueItem => ({
+    id: Math.random().toString(),
+    jobId,
+    taskType: 'text',
+    status,
+    payload: {},
+    priority: 5,
+    retryCount: 0,
+    maxRetries: 3,
+    errorMessage: null,
+    result: null,
+    createdAt: '2024-01-01',
+    startedAt: null,
+    completedAt: null,
+  })
+
+  describe('getFilteredTasks', () => {
+    it('should return all tasks when no filter', () => {
+      const tasks = [createTask('pending'), createTask('running'), createTask('failed')]
+      const state = { tasks, filter: {}, loading: false, error: null }
+
+      const result = getFilteredTasks(state as any)
+      expect(result).toHaveLength(3)
+    })
+
+    it('should filter by status', () => {
+      const tasks = [createTask('pending'), createTask('running'), createTask('failed')]
+      const state = { tasks, filter: { status: 'pending' }, loading: false, error: null }
+
+      const result = getFilteredTasks(state as any)
+      expect(result).toHaveLength(1)
+      expect(result[0].status).toBe('pending')
+    })
+
+    it('should filter by jobId', () => {
+      const tasks = [createTask('pending', 'job-1'), createTask('pending', 'job-2'), createTask('pending', 'job-3')]
+      const state = { tasks, filter: { jobId: 'job-2' }, loading: false, error: null }
+
+      const result = getFilteredTasks(state as any)
+      expect(result).toHaveLength(1)
+      expect(result[0].jobId).toBe('job-2')
+    })
+
+    it('should filter by both status and jobId', () => {
+      const tasks = [
+        createTask('pending', 'job-1'),
+        createTask('pending', 'job-2'),
+        createTask('failed', 'job-1'),
+        createTask('failed', 'job-2'),
+      ]
+      const state = { tasks, filter: { status: 'failed', jobId: 'job-1' }, loading: false, error: null }
+
+      const result = getFilteredTasks(state as any)
+      expect(result).toHaveLength(1)
+      expect(result[0].status).toBe('failed')
+      expect(result[0].jobId).toBe('job-1')
+    })
+  })
+
+  describe('getPendingCount', () => {
+    it('should return count of pending tasks', () => {
+      const tasks = [
+        createTask('pending'),
+        createTask('pending'),
+        createTask('running'),
+        createTask('failed'),
+      ]
+
+      expect(getPendingCount(tasks)).toBe(2)
+    })
+
+    it('should return 0 for empty array', () => {
+      expect(getPendingCount([])).toBe(0)
+    })
+
+    it('should return 0 when no pending tasks', () => {
+      const tasks = [createTask('running'), createTask('failed'), createTask('completed')]
+      expect(getPendingCount(tasks)).toBe(0)
+    })
+  })
+
+  describe('getRunningCount', () => {
+    it('should return count of running tasks', () => {
+      const tasks = [
+        createTask('pending'),
+        createTask('running'),
+        createTask('running'),
+        createTask('failed'),
+      ]
+
+      expect(getRunningCount(tasks)).toBe(2)
+    })
+
+    it('should return 0 for empty array', () => {
+      expect(getRunningCount([])).toBe(0)
+    })
+  })
+
+  describe('getFailedCount', () => {
+    it('should return count of failed tasks', () => {
+      const tasks = [
+        createTask('pending'),
+        createTask('running'),
+        createTask('failed'),
+        createTask('failed'),
+        createTask('failed'),
+      ]
+
+      expect(getFailedCount(tasks)).toBe(3)
+    })
+
+    it('should return 0 for empty array', () => {
+      expect(getFailedCount([])).toBe(0)
+    })
+  })
+})

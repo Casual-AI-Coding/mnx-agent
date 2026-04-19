@@ -1,5 +1,6 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { useExecutionLogsStore } from '../executionLogs'
+import { useExecutionLogsStore, getRecentLogs, getFailedLogs } from '../executionLogs'
+import type { ExecutionLog } from '../types/cron'
 
 vi.mock('@/lib/api/cron', () => ({
   getLogs: vi.fn(),
@@ -167,4 +168,84 @@ describe('useExecutionLogsStore', () => {
 
   // WebSocket subscription tests skipped - requires complex mock setup
   // The store's WebSocket integration is tested via integration tests
+})
+
+describe('executionLogs helper functions', () => {
+  describe('getRecentLogs', () => {
+    it('should return limited number of recent logs', () => {
+      const logs: ExecutionLog[] = [
+        { id: '1', jobId: 'job-1', status: 'success', startedAt: '2024-01-01' },
+        { id: '2', jobId: 'job-1', status: 'success', startedAt: '2024-01-02' },
+        { id: '3', jobId: 'job-1', status: 'success', startedAt: '2024-01-03' },
+        { id: '4', jobId: 'job-1', status: 'success', startedAt: '2024-01-04' },
+        { id: '5', jobId: 'job-1', status: 'success', startedAt: '2024-01-05' },
+      ]
+
+      const result = getRecentLogs(logs, 3)
+
+      expect(result).toHaveLength(3)
+      expect(result[0].id).toBe('1')
+      expect(result[2].id).toBe('3')
+    })
+
+    it('should use default limit of 10', () => {
+      const logs: ExecutionLog[] = Array.from({ length: 15 }, (_, i) => ({
+        id: String(i),
+        jobId: 'job-1',
+        status: 'success' as const,
+        startedAt: '2024-01-01',
+      }))
+
+      const result = getRecentLogs(logs)
+
+      expect(result).toHaveLength(10)
+    })
+
+    it('should return all logs if fewer than limit', () => {
+      const logs: ExecutionLog[] = [
+        { id: '1', jobId: 'job-1', status: 'success', startedAt: '2024-01-01' },
+        { id: '2', jobId: 'job-1', status: 'success', startedAt: '2024-01-02' },
+      ]
+
+      const result = getRecentLogs(logs, 10)
+
+      expect(result).toHaveLength(2)
+    })
+
+    it('should return empty array when no logs', () => {
+      const result = getRecentLogs([])
+      expect(result).toHaveLength(0)
+    })
+  })
+
+  describe('getFailedLogs', () => {
+    it('should return only failed logs', () => {
+      const logs: ExecutionLog[] = [
+        { id: '1', jobId: 'job-1', status: 'success', startedAt: '2024-01-01' },
+        { id: '2', jobId: 'job-1', status: 'failed', startedAt: '2024-01-02' },
+        { id: '3', jobId: 'job-1', status: 'success', startedAt: '2024-01-03' },
+        { id: '4', jobId: 'job-1', status: 'failed', startedAt: '2024-01-04' },
+      ]
+
+      const result = getFailedLogs(logs)
+
+      expect(result).toHaveLength(2)
+      expect(result.every((log) => log.status === 'failed')).toBe(true)
+    })
+
+    it('should return empty array when no failed logs', () => {
+      const logs: ExecutionLog[] = [
+        { id: '1', jobId: 'job-1', status: 'success', startedAt: '2024-01-01' },
+        { id: '2', jobId: 'job-1', status: 'success', startedAt: '2024-01-02' },
+      ]
+
+      const result = getFailedLogs(logs)
+      expect(result).toHaveLength(0)
+    })
+
+    it('should return empty array when no logs', () => {
+      const result = getFailedLogs([])
+      expect(result).toHaveLength(0)
+    })
+  })
 })
