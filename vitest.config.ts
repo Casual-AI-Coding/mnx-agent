@@ -25,5 +25,11 @@ export default defineConfig({
     exclude: ['node_modules', 'dist', '.next'],
     singleThread: true,
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**', 'server/**'],
+      exclude: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],
+    },
   },
 })
