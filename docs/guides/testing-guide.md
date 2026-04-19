@@ -79,27 +79,52 @@ npm run dev:full
 
 ```bash
 npm test
-# or
-vitest run
 ```
 
-### Specific Test File
+### Frontend Tests (Parallel)
 
 ```bash
-vitest run server/__tests__/database-service.test.ts
+npm test
+# Frontend tests run in parallel (fileParallelism: true, maxWorkers: 8)
 ```
 
-### Watch Mode
+### Backend Tests (Sequential)
 
 ```bash
-vitest
+npm run test:server
+# Backend tests run sequentially to avoid database state conflicts
 ```
 
 ### With Coverage
 
 ```bash
-vitest run --coverage
+npm run test:coverage
+# Runs both frontend and backend tests with coverage
 ```
+
+### Specific Test File
+
+```bash
+npx vitest run server/__tests__/database-service.test.ts
+# or
+vitest run src/components/__tests__/Button.test.tsx
+```
+
+### Watch Mode
+
+```bash
+npm run test:watch
+```
+
+### Test Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `npm test` | Run all tests (frontend + backend) |
+| `npm run test:server` | Run backend tests only |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run all tests with coverage report |
+| `vitest run <path>` | Run specific test file |
 
 ## Test Structure
 
@@ -297,12 +322,31 @@ beforeAll(async () => {
 
 ## Best Practices
 
-1. **Isolation**: Each test should clean up its data
-2. **Transactions**: Use transactions for tests that modify data
-3. **Mocks**: Use mocks for external services (MiniMax API)
-4. **Fixtures**: Create reusable test fixtures in `__fixtures__/` directories
-5. **Naming**: Use descriptive test names: `should [expected behavior] when [condition]`
-6. **Test Database**: ALWAYS use separate test database - never production
+1. **Test Isolation**: Backend tests run sequentially (`fileParallelism: false`) to avoid database state conflicts. Frontend tests run in parallel since they are stateless.
+
+2. **Transactions for Future Isolation**: The `withTransaction()` helper is available for when we enable parallel backend tests:
+
+   ```typescript
+   import { withTransaction } from '../__tests__/test-helpers.js'
+
+   it('should create media record', async () => {
+     await withTransaction(async (tx) => {
+       await tx.execute('INSERT INTO media_records ...')
+       const result = await tx.query('SELECT * FROM media_records')
+       expect(result.length).toBe(1)
+     })
+   })
+   ```
+
+3. **Cleanup**: If not using `withTransaction`, each test should clean up its data in `afterEach`
+
+4. **Mocks**: Use mocks for external services (MiniMax API)
+
+5. **Fixtures**: Create reusable test fixtures in `__fixtures__/` directories
+
+6. **Naming**: Use descriptive test names: `should [expected behavior] when [condition]`
+
+7. **Test Database**: ALWAYS use separate test database - never production
 
 ## Additional Resources
 

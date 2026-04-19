@@ -24,10 +24,10 @@ export default defineConfig({
     include: ['server/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist'],
     fileParallelism: false,
+    maxWorkers: 1,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      reportOnAllFiles: false,
       include: [
         'server/services/workflow/**/*.ts',
         'server/services/cron-scheduler.ts',

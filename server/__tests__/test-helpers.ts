@@ -37,4 +37,9 @@ export async function globalTeardown() {
   isInitialized = false
 }
 
+export async function withTransaction<T>(fn: (tx: import('../database/connection.js').DatabaseConnection) => Promise<T>): Promise<T> {
+  const conn = getConnection()
+  return conn.transaction(fn)
+}
+
 export { getConnection }

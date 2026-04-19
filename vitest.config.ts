@@ -21,9 +21,10 @@ export default defineConfig({
       './src/__tests__/setup.ts',
     ],
     globals: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.{test,spec}.ts'],
-    exclude: ['node_modules', 'dist', '.next'],
-    fileParallelism: false,
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', '.next', 'server/**'],
+    fileParallelism: true,
+    maxWorkers: 8,
     isolate: true,
     coverage: {
       provider: 'v8',
