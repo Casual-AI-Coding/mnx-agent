@@ -8,9 +8,14 @@ vi.mock('@/settings/store', () => ({
   },
 }))
 
-// Mock fetch globally
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+// Mock apiClient instead of global.fetch
+vi.mock('@/lib/api/client', () => ({
+  apiClient: {
+    get: vi.fn(),
+  },
+}))
+
+import { apiClient } from '@/lib/api/client'
 
 describe('useCapacityStore', () => {
   beforeEach(() => {
@@ -37,6 +42,7 @@ describe('useCapacityStore', () => {
   describe('fetchCapacity', () => {
     it('should fetch capacity from API', async () => {
       const mockCapacityData = {
+        success: true,
         data: {
           records: [
             {
@@ -66,17 +72,12 @@ describe('useCapacityStore', () => {
         },
       }
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockCapacityData),
-      })
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockCapacityData)
 
       const { result } = renderHook(() => useCapacityStore())
       await result.current.fetchCapacity()
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/capacity', expect.objectContaining({
-        method: 'GET',
-      }))
+      expect(apiClient.get).toHaveBeenCalledWith('/capacity')
       expect(result.current.records).toHaveLength(1)
       expect(result.current.records[0].serviceType).toBe('text')
       expect(result.current.records[0].remainingQuota).toBe(100)
@@ -87,7 +88,7 @@ describe('useCapacityStore', () => {
 
     it('should set loading state during fetch', async () => {
       let resolvePromise: (value: unknown) => void
-      mockFetch.mockImplementation(
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockImplementation(
         () => new Promise((resolve) => { resolvePromise = resolve })
       )
 
@@ -96,28 +97,27 @@ describe('useCapacityStore', () => {
 
       await waitFor(() => expect(result.current.loading).toBe(true))
 
-      resolvePromise!({ ok: true, json: () => Promise.resolve({ data: { records: [] } }) })
+      resolvePromise!({ success: true, data: { records: [] } })
       await promise
 
       await waitFor(() => expect(result.current.loading).toBe(false))
     })
 
     it('should handle API errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-      })
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Network error')
+      )
 
       const { result } = renderHook(() => useCapacityStore())
 
-      await expect(result.current.fetchCapacity()).rejects.toThrow()
+      await expect(result.current.fetchCapacity()).rejects.toThrow('Network error')
       expect(result.current.loading).toBe(false)
     })
 
     it('should handle empty data response', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { records: [] } }),
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { records: [] },
       })
 
       const { result } = renderHook(() => useCapacityStore())
@@ -135,36 +135,36 @@ describe('useCapacityStore', () => {
       const { result } = renderHook(() => useCapacityStore())
       await result.current.refreshCapacity()
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(apiClient.get).not.toHaveBeenCalled()
     })
 
     it('should force refresh when force=true', async () => {
       useCapacityStore.setState({ lastRefresh: Date.now() })
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { records: [] } }),
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { records: [] },
       })
 
       const { result } = renderHook(() => useCapacityStore())
       await result.current.refreshCapacity(true)
 
-      expect(mockFetch).toHaveBeenCalled()
+      expect(apiClient.get).toHaveBeenCalled()
     })
 
     it('should refresh if interval passed', async () => {
       // Set lastRefresh to 2 minutes ago (beyond 60s interval)
       useCapacityStore.setState({ lastRefresh: Date.now() - 120000 })
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { records: [] } }),
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { records: [] },
       })
 
       const { result } = renderHook(() => useCapacityStore())
       await result.current.refreshCapacity()
 
-      expect(mockFetch).toHaveBeenCalled()
+      expect(apiClient.get).toHaveBeenCalled()
     })
   })
 })

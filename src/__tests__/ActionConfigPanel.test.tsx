@@ -1,6 +1,5 @@
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ActionConfigPanel } from '@/components/workflow/config-panels/ActionConfigPanel'
 
 const mockAvailableActions = {
@@ -13,18 +12,20 @@ const mockAvailableActions = {
   ],
 }
 
+vi.mock('@/lib/api/workflow-actions', () => ({
+  fetchAvailableActions: vi.fn(() => Promise.resolve(mockAvailableActions)),
+  clearActionsCache: vi.fn(),
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ isHydrated: true }),
+}))
+
 describe('ActionConfigPanel', () => {
   const mockOnChange = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-      json: () => Promise.resolve({ success: true, data: mockAvailableActions }),
-    })))
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
   })
 
   it('renders loading state initially', () => {
