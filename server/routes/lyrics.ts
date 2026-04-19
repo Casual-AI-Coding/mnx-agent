@@ -1,8 +1,9 @@
 import { Router, Request } from 'express'
-import { createApiProxyRouter } from '../utils/api-proxy-router'
-import { getClientFromRequest } from '../lib/minimax-client-factory'
+import { createApiProxyRouter } from '../utils/api-proxy-router.js'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { validate } from '../middleware/validate.js'
-import { lyricsGenerateSchema, type LyricsGenerateInput } from '@mnx/shared-types/entities/lyrics'
+import { lyricsGenerateSchema } from '@mnx/shared-types/entities/lyrics'
+import type { LyricsGenerateInput } from '@mnx/shared-types/entities/lyrics'
 
 const router = Router()
 

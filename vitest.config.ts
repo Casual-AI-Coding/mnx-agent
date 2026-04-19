@@ -26,10 +26,19 @@ export default defineConfig({
     singleThread: true,
     fileParallelism: false,
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/**', 'server/**'],
-      exclude: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],
+      provider: 'istanbul',
+      reporter: ['text', 'text-summary', 'json', 'html'],
+      include: ['src/**/*.ts', 'src/**/*.tsx', 'server/**/*.ts'],
+      exclude: [
+        '**/__tests__/**',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/*.spec.ts',
+        'server/routes/**',
+        '**/*.json',
+        '**/*.css',
+        '**/*.svg',
+      ],
     },
   },
 })
