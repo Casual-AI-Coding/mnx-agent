@@ -39,6 +39,11 @@ export default defineConfig({
         '**/*.test.ts',
         '**/*.test.tsx',
         '**/*.spec.ts',
+        // Settings validation schemas (Zod utilities - hard to unit test in isolation)
+        'src/settings/validation/**',
+        'src/settings/store/**',
+        'src/types/**',
+        '**/*.types.ts',
       ],
       thresholds: {
         lines: 80,

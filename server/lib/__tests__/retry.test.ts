@@ -155,9 +155,12 @@ describe('retryWithBackoff', () => {
 
     const resultPromise = retryWithBackoff(fn, { maxRetries })
 
+    // Catch the rejection before running timers to avoid unhandled rejection
+    const rejectionPromise = resultPromise.catch(e => e)
+
     await vi.runAllTimersAsync()
 
-    await resultPromise.catch(e => e)
+    await rejectionPromise
 
     expect(fn).toHaveBeenCalledTimes(maxRetries + 1)
   })
