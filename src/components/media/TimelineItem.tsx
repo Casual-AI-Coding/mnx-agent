@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square, Pencil } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -182,10 +182,16 @@ export function TimelineItem({
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
-        {(record.type === 'image' || record.type === 'audio' || record.type === 'music') && (
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }} title="预览">
-            <Eye className="w-4 h-4" />
+        {record.type === 'music' ? (
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }} title="播放">
+            <Play className="w-4 h-4" />
           </Button>
+        ) : (
+          (record.type === 'image' || record.type === 'audio') && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onPreview() }} title="预览">
+              <Eye className="w-4 h-4" />
+            </Button>
+          )
         )}
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDownload() }} title="下载">
           <Download className="w-4 h-4" />

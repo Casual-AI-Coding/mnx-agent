@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -89,6 +89,22 @@ export function MediaCard({
         </div>
       )}
 
+      {record.type === 'music' && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${
+            showActions ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPreview()
+          }}
+        >
+          <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors cursor-pointer">
+            <Play className="w-8 h-8 text-white fill-white" />
+          </div>
+        </div>
+      )}
+
 <div
         className={`absolute top-2 left-2 right-10 z-10 flex items-center justify-between transition-opacity duration-200 ${
           showActions || isSelected ? 'opacity-100' : 'opacity-0'
@@ -122,7 +138,7 @@ export function MediaCard({
           >
             <Pencil className="w-3.5 h-3.5" />
           </Button>
-          {(record.type === 'image' || record.type === 'audio' || record.type === 'music' || record.type === 'lyrics') && (
+          {(record.type === 'image' || record.type === 'audio' || record.type === 'lyrics') && (
             <Button
               variant="secondary"
               size="sm"
