@@ -190,7 +190,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     await conn.execute('DELETE FROM execution_log_details')
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue')
-    await conn.execute('DELETE FROM cron_jobs')
+    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1', [fileMarker])
     await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [fileMarker])
   })
 
@@ -508,7 +508,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     await conn.execute('DELETE FROM execution_log_details')
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue')
-    await conn.execute('DELETE FROM cron_jobs')
+    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1', [fileMarker])
     await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [fileMarker])
   })
 

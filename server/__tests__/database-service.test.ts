@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from './test-helpers.js'
 import { DatabaseService } from '../database/service-async.js'
 import { TaskStatus, TriggerType, ExecutionStatus } from '../database/types.js'
 import type {
@@ -11,27 +11,29 @@ import type {
 
 describe('DatabaseService', () => {
   let db: DatabaseService
+  let fileMarker: string
 
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
     await db.init()
+    fileMarker = getTestFileMarker()
   })
 
   beforeEach(async () => {
     const conn = getConnection()
     await conn.execute('DELETE FROM execution_log_details')
     await conn.execute('DELETE FROM execution_logs')
-    await conn.execute('DELETE FROM task_queue')
-    await conn.execute('DELETE FROM dead_letter_queue')
+    await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
+    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM webhook_deliveries')
     await conn.execute('DELETE FROM webhook_configs')
     await conn.execute('DELETE FROM job_dependencies')
     await conn.execute('DELETE FROM job_tags')
-    await conn.execute('DELETE FROM cron_jobs')
+    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM capacity_tracking')
     await conn.execute('DELETE FROM prompt_templates')
-    await conn.execute('DELETE FROM workflow_templates')
+    await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM audit_logs')
     await conn.execute('DELETE FROM service_node_permissions')
   })

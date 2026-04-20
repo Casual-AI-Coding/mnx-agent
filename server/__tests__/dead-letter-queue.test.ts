@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { DatabaseService } from '../database/service-async.js'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from './test-helpers.js'
 import type {
   DeadLetterQueueItem,
   CreateDeadLetterQueueItem,
@@ -12,10 +12,12 @@ describe('Dead Letter Queue CRUD Operations', () => {
   let db: DatabaseService
   let testUser1Id: string
   let testUser2Id: string
+  let fileMarker: string
 
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
+    fileMarker = getTestFileMarker()
   })
 
   beforeEach(async () => {
@@ -43,7 +45,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
   afterEach(async () => {
     const conn = getConnection()
     await conn.execute('DELETE FROM task_queue WHERE owner_id IN ($1, $2)', [testUser1Id, testUser2Id])
-    await conn.execute('DELETE FROM dead_letter_queue')
+    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3 OR owner_id IS NULL', [fileMarker, testUser1Id, testUser2Id])
     await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testUser1Id, testUser2Id])
   })
 

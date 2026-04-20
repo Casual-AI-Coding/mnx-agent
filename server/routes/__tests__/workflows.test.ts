@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../__tests__/test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
 import workflowsRouter from '../workflows.js'
 
-const mockUser = {
-  userId: 'test-user-001',
-  role: 'super',
-}
+let fileMarker: string
 
 const mockAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  req.user = mockUser
+  req.user = {
+    userId: fileMarker,
+    username: `workflow-api-test-${fileMarker.slice(0, 8)}`,
+    role: 'user',
+  }
   next()
 }
 
@@ -19,6 +20,7 @@ describe('Workflows API Routes', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
+    fileMarker = getTestFileMarker()
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
@@ -26,8 +28,15 @@ describe('Workflows API Routes', () => {
   })
 
   beforeEach(async () => {
-    const db = getConnection()
-    await db.execute('DELETE FROM workflow_templates')
+    const conn = getConnection()
+    // Create user for this test file (needed for FK constraint)
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [fileMarker, `workflow-api-test-${fileMarker.slice(0, 8)}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
+    )
+    await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1', [fileMarker])
   })
 
   afterAll(async () => {
