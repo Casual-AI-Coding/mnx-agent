@@ -1,6 +1,8 @@
 import type { LyricsSection } from '@/types/lyrics'
 
-const SECTION_PATTERN = /\[(Verse|Chorus|Bridge|Outro|Hook|Intro)(?:\s+(\d+))?\]/gi
+// Match any [xxxx] or [xxxx N] pattern for lyrics structure tags
+// Examples: [Intro], [Verse 1], [Pre-Chorus], [Outro], [Hook 2], [CustomTag]
+const SECTION_PATTERN = /\[([^\]]+)(?:\s+(\d+))?\]/gi
 
 /**
  * Escape HTML special characters to prevent XSS
@@ -14,6 +16,8 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;')
 }
 
+const VALID_SECTION_TYPES = ['verse', 'chorus', 'bridge', 'outro', 'hook', 'intro']
+
 /**
  * Parse lyrics text into structured sections
  * Example: "[Verse 1]\nHello world\n[Chorus]\nSing it loud"
@@ -21,15 +25,17 @@ function escapeHtml(text: string): string {
 export function parseLyricsSections(lyrics: string): LyricsSection[] {
   const sections: LyricsSection[] = []
 
-  // Use matchAll for clean iteration without manual lastIndex manipulation
   const matches = lyrics.matchAll(SECTION_PATTERN)
   const matchArray = Array.from(matches)
 
   for (let i = 0; i < matchArray.length; i++) {
     const match = matchArray[i]
-    const type = match[1].toLowerCase() as LyricsSection['type']
+    const tagName = match[1].trim()
+    const typeLower = tagName.toLowerCase()
     const number = match[2] ? parseInt(match[2], 10) : undefined
     const startIndex = match.index
+
+    const type = (VALID_SECTION_TYPES.includes(typeLower) ? typeLower : 'custom') as LyricsSection['type']
 
     // Get content between this tag and next tag (or end)
     const contentStart = startIndex + match[0].length
@@ -48,6 +54,7 @@ export function parseLyricsSections(lyrics: string): LyricsSection[] {
         number,
         content,
         startIndex,
+        ...(type === 'custom' && { rawTag: tagName }),
       })
     }
   }
@@ -106,6 +113,6 @@ export function getSectionDisplayName(section: LyricsSection): string {
     intro: 'Intro',
   }
   
-  const baseName = typeNames[section.type] || section.type
+  const baseName = typeNames[section.type] || section.rawTag || section.type
   return section.number ? `${baseName} ${section.number}` : baseName
 }

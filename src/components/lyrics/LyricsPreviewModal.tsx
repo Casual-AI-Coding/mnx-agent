@@ -1,12 +1,13 @@
 // src/components/lyrics/LyricsPreviewModal.tsx
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Download, Edit3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
-import { parseLyricsSections, highlightSectionTags, getSectionDisplayName } from '@/lib/utils/lyrics'
+import { parseLyricsSections, getSectionDisplayName } from '@/lib/utils/lyrics'
+import type { LyricsSection } from '@/types/lyrics'
 import { formatDate } from '@/lib/utils/media'
 import { toastSuccess } from '@/lib/toast'
 
@@ -17,14 +18,65 @@ interface LyricsPreviewModalProps {
   onEdit?: (record: MediaRecord) => void
 }
 
+// Segment types for rendering lyrics with active highlighting
+type LyricsSegment =
+  | { type: 'text'; content: string }
+  | { type: 'section'; section: LyricsSection; index: number; content: string }
+
+/**
+ * Split lyrics text into segments for React rendering with section awareness
+ */
+function parseLyricsSegments(lyrics: string, sections: LyricsSection[]): LyricsSegment[] {
+  if (sections.length === 0) {
+    return [{ type: 'text', content: lyrics }]
+  }
+
+  const segments: LyricsSegment[] = []
+  let lastIndex = 0
+
+  sections.forEach((section, idx) => {
+    // Text before this section
+    if (section.startIndex > lastIndex) {
+      const text = lyrics.slice(lastIndex, section.startIndex)
+      if (text) {
+        segments.push({ type: 'text', content: text })
+      }
+    }
+
+    // Get section content (from tag end to next tag or end)
+    const contentStart = section.startIndex + (`[${section.rawTag || section.type}${section.number ? ' ' + section.number : ''}]`).length
+    let contentEnd = lyrics.length
+    if (idx + 1 < sections.length) {
+      contentEnd = sections[idx + 1].startIndex
+    }
+    const content = lyrics.slice(contentStart, contentEnd)
+
+    segments.push({
+      type: 'section',
+      section,
+      index: idx,
+      content: content.trim(),
+    })
+
+    lastIndex = contentEnd
+  })
+
+  // Remaining text after last section
+  if (lastIndex < lyrics.length) {
+    segments.push({ type: 'text', content: lyrics.slice(lastIndex) })
+  }
+
+  return segments
+}
+
 export function LyricsPreviewModal({
   record,
   open,
   onClose,
   onEdit,
 }: LyricsPreviewModalProps) {
-  const [activeSection, setActiveSection] = useState<string>('all')
-  const lyricsRef = useRef<HTMLDivElement>(null)
+  const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
+  const lyricsContainerRef = useRef<HTMLDivElement>(null)
 
   // Get lyrics from metadata
   const metadata = record.metadata as {
@@ -44,39 +96,34 @@ export function LyricsPreviewModal({
   const generatedAt = metadata?.generated_at || record.created_at
 
   const sections = parseLyricsSections(lyrics)
-  const highlightedLyrics = highlightSectionTags(lyrics)
+  const segments = parseLyricsSegments(lyrics, sections)
 
-  // Scroll to section
-  const scrollToSection = (sectionKey: string) => {
-    if (sectionKey === 'all') {
-      lyricsRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  // Scroll to section using querySelector with data attribute
+  const scrollToSection = useCallback((sectionIndex: number | null) => {
+    const container = lyricsContainerRef.current
+    if (!container) return
+
+    if (sectionIndex === null) {
+      container.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
-    const targetSection = sections.find(s => 
-      getSectionDisplayName(s) === sectionKey
-    )
-
-    if (targetSection && lyricsRef.current) {
-      const totalChars = lyrics.length
-      const scrollRatio = targetSection.startIndex / totalChars
-      const scrollHeight = lyricsRef.current.scrollHeight
-      lyricsRef.current.scrollTo({
-        top: scrollHeight * scrollRatio,
-        behavior: 'smooth'
-      })
+    // Find the section wrapper element by data attribute
+    const targetEl = container.querySelector(`[data-section-index="${sectionIndex}"]`)
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }
+  }, [])
 
-  const handleSectionClick = (sectionKey: string) => {
-    setActiveSection(sectionKey)
-    scrollToSection(sectionKey)
+  const handleSectionClick = (sectionIndex: number | null) => {
+    setActiveSectionIndex(sectionIndex)
+    scrollToSection(sectionIndex)
   }
 
   const handleExport = () => {
     const content = lyrics
     const filename = `${title}.txt`
-    
+
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -84,13 +131,13 @@ export function LyricsPreviewModal({
     a.download = filename
     a.click()
     URL.revokeObjectURL(url)
-    
+
     toastSuccess('歌词已导出')
   }
 
   useEffect(() => {
     if (open) {
-      setActiveSection('all')
+      setActiveSectionIndex(null)
     }
   }, [open])
 
@@ -115,14 +162,15 @@ export function LyricsPreviewModal({
         </div>
       )}
       <div className="flex gap-4 flex-1 overflow-hidden">
-        <div className="w-32 border-r border-border pr-4 overflow-y-auto">
+        {/* Left sidebar - section list */}
+        <div className="w-36 border-r border-border pr-4 overflow-y-auto">
           <div className="space-y-1">
             <button
-              onClick={() => handleSectionClick('all')}
+              onClick={() => handleSectionClick(null)}
               className={cn(
-                'w-full text-left px-2 py-1.5 rounded text-sm transition-colors',
-                activeSection === 'all'
-                  ? 'bg-primary/10 text-primary'
+                'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-200',
+                activeSectionIndex === null
+                  ? 'bg-primary/15 text-primary font-medium shadow-[0_0_12px_rgba(147,51,234,0.3)]'
                   : 'hover:bg-muted/50 text-muted-foreground'
               )}
             >
@@ -131,14 +179,16 @@ export function LyricsPreviewModal({
 
             {sections.map((section, i) => {
               const displayName = getSectionDisplayName(section)
+              const isActive = activeSectionIndex === i
+
               return (
                 <button
-                  key={`${section.type}-${section.number || i}`}
-                  onClick={() => handleSectionClick(displayName)}
+                  key={i} // Use index for uniqueness with duplicate types
+                  onClick={() => handleSectionClick(i)}
                   className={cn(
-                    'w-full text-left px-2 py-1.5 rounded text-sm transition-colors',
-                    activeSection === displayName
-                      ? 'bg-primary/10 text-primary'
+                    'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-200',
+                    isActive
+                      ? 'bg-primary/15 text-primary font-medium shadow-[0_0_12px_rgba(147,51,234,0.3)]'
                       : 'hover:bg-muted/50 text-muted-foreground'
                   )}
                 >
@@ -149,15 +199,53 @@ export function LyricsPreviewModal({
           </div>
         </div>
 
+        {/* Right content - lyrics display */}
         <div className="flex-1 overflow-hidden">
           <div
-            ref={lyricsRef}
+            ref={lyricsContainerRef}
             className="h-full overflow-y-auto pr-2"
           >
-            <pre
-              className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: highlightedLyrics }}
-            />
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+              {segments.map((segment, segIdx) => {
+                if (segment.type === 'text') {
+                  return <span key={segIdx} className="text-foreground/80">{segment.content}</span>
+                }
+
+                const { section, index, content } = segment
+                const isActive = activeSectionIndex === index
+                const tagText = `[${section.rawTag || section.type}${section.number ? ' ' + section.number : ''}]`
+
+                return (
+                  <span key={segIdx} data-section-index={index}>
+                    {/* Section tag with glow effect when active */}
+                    <span
+                      className={cn(
+                        'transition-all duration-300',
+                        isActive && 'text-primary font-semibold shadow-[0_0_8px_rgba(147,51,234,0.5)]'
+                      )}
+                    >
+                      {tagText}
+                    </span>
+                    {/* Section content with glass/glow effect when active */}
+                    <span
+                      className={cn(
+                        'relative block my-1 transition-all duration-500',
+                        isActive && [
+                          'mx-[-8px] px-3 py-2 rounded-lg',
+                          'bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5',
+                          'backdrop-blur-sm',
+                          'border border-primary/20',
+                          'shadow-[0_0_20px_rgba(147,51,234,0.15),inset_0_0_20px_rgba(147,51,234,0.05)]',
+                          'ring-1 ring-primary/10',
+                        ].join(' ')
+                      )}
+                    >
+                      {content}
+                    </span>
+                  </span>
+                )
+              })}
+            </pre>
           </div>
         </div>
       </div>

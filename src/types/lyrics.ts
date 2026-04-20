@@ -19,10 +19,11 @@ export interface LyricsGenerationResponse {
 
 // Lyrics section structure for parsing
 export interface LyricsSection {
-  type: 'verse' | 'chorus' | 'bridge' | 'outro' | 'hook' | 'intro'
+  type: 'verse' | 'chorus' | 'bridge' | 'outro' | 'hook' | 'intro' | 'custom'
   number?: number       // Verse 1, Verse 2
   content: string
   startIndex: number    // position in full lyrics
+  rawTag?: string       // original tag text for custom types, e.g., "Pre-Chorus"
 }
 
 // Task state for generation progress
