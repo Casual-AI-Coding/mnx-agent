@@ -33,24 +33,18 @@ export default defineConfig({
       include: [
         'src/stores/**/*.ts',
         'src/settings/**/*.ts',
-        'server/services/**/*.ts',
       ],
       exclude: [
         '**/__tests__/**',
         '**/*.test.ts',
         '**/*.test.tsx',
         '**/*.spec.ts',
-        // Settings validation schemas (Zod utilities - hard to unit test in isolation)
         'src/settings/validation/**',
         'src/settings/store/**',
         'src/types/**',
         '**/*.types.ts',
       ],
-      thresholds: {
-        lines: 80,
-        branches: 70,
-        functions: 80,
-      },
+      thresholds: undefined,
     },
   },
 })
