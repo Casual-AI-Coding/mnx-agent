@@ -158,11 +158,16 @@ export default function MusicGeneration() {
       } else {
         filename = `music_${Date.now()}.mp3`
       }
+      const metadata = {
+        source_url: audioUrl,
+        saved_at: new Date().toISOString(),
+      }
       const result = await uploadMediaFromUrl(
         audioUrl,
         filename,
         'music',
-        'music_generation'
+        'music_generation',
+        metadata
       )
       if (result.success && result.data) {
         return result.data

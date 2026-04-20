@@ -152,7 +152,8 @@ export default function VideoGeneration() {
         videoUrl,
         `video_${Date.now()}.mp4`,
         'video',
-        'video_generation'
+        'video_generation',
+        { source_url: videoUrl, saved_at: new Date().toISOString() }
       )
     } catch (error) {
       console.error('Failed to save video:', error)

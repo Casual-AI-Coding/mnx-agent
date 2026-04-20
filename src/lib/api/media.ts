@@ -182,13 +182,15 @@ export async function uploadMediaFromUrl(
   url: string,
   filename: string,
   type: MediaType,
-  source?: MediaSource
+  source?: MediaSource,
+  metadata?: Record<string, unknown>
 ): Promise<{ success: boolean; data: MediaRecord }> {
   const response = await client.post('/media/upload-from-url', {
     url,
     filename,
     type,
     source,
+    metadata,
   })
   return response.data
 }

@@ -254,7 +254,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
 
 router.post('/upload-from-url', asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { url, filename, type, source } = req.body
+  const { url, filename, type, source, metadata } = req.body
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
   if (!url || !type) {
@@ -280,6 +280,7 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     mime_type: response.headers['content-type'],
     size_bytes,
     source: source as any,
+    metadata: metadata || null,
   }, ownerId)
 
   createdResponse(res, record)

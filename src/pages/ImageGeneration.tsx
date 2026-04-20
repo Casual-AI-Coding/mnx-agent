@@ -250,7 +250,8 @@ export default function ImageGeneration() {
         imageUrl,
         filename,
         'image',
-        'image_generation'
+        'image_generation',
+        { source_url: imageUrl, saved_at: new Date().toISOString() }
       )
     } catch (error) {
       console.error('Failed to save image:', error)
