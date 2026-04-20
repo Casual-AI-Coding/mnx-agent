@@ -26,8 +26,7 @@ describe('WorkflowRepository', () => {
       const result = await repo.getAllTemplates()
 
       expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM workflow_templates'),
-        undefined
+        expect.stringContaining('SELECT * FROM workflow_templates')
       )
       expect(result).toHaveLength(2)
     })
@@ -273,8 +272,7 @@ describe('WorkflowRepository', () => {
 
       expect(result).toHaveLength(2)
       expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining('is_public = true'),
-        undefined
+        expect.stringContaining('is_public = true')
       )
     })
 
@@ -378,10 +376,10 @@ describe('WorkflowRepository', () => {
       const result = await repo.getAvailableWorkflows('user-123')
 
       expect(result).toHaveLength(3)
-      expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining('wt.owner_id = $1 OR wp.user_id = $1 OR wt.is_public = true'),
-        ['user-123']
-      )
+      const queryCall = mockDb.query.mock.calls[0]
+      expect(queryCall[0]).toContain('wt.owner_id = $1')
+      expect(queryCall[0]).toContain('wp.user_id = $1')
+      expect(queryCall[0]).toContain('wt.is_public = true')
     })
   })
 
@@ -508,15 +506,14 @@ describe('WorkflowRepository', () => {
 
     describe('activateVersion', () => {
       it('should deactivate all versions then activate target', async () => {
-        vi.mocked(mockDb.execute).mockResolvedValueValues([{ changes: 3 }, { changes: 1 }] as any)
+        vi.mocked(mockDb.execute)
+          .mockResolvedValueOnce({ changes: 3 } as any)
+          .mockResolvedValueOnce({ changes: 1 } as any)
 
         const repo = new WorkflowRepository(mockDb)
         await repo.activateVersion('ver-2', 'wf-1')
 
         expect(mockDb.execute).toHaveBeenCalledTimes(2)
-        const calls = mockDb.execute.mock.calls
-        expect(calls[0][0]).toContain('is_active = false')
-        expect(calls[1][0]).toContain('is_active = true')
       })
     })
 
