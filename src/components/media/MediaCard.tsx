@@ -90,17 +90,15 @@ export function MediaCard({
       )}
 
       {record.type === 'music' && (
-        <div
-          className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${
-            showActions ? 'opacity-100' : 'opacity-0'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation()
-            onPreview()
-          }}
-        >
-          <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors cursor-pointer">
-            <Play className="w-8 h-8 text-white fill-white" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/80 to-primary/60 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto z-20"
+            onClick={(e) => {
+              e.stopPropagation()
+              onPreview()
+            }}
+          >
+            <Play className="w-8 h-8 text-white fill-white ml-1" />
           </div>
         </div>
       )}
@@ -279,7 +277,7 @@ export function MediaCard({
                       {styleTags.slice(0, 3).map((tag, i) => (
                         <span
                           key={i}
-                          className="text-xs px-1 py-0.5 rounded bg-primary/20 text-primary/80"
+                          className="text-xs px-1.5 py-0.5 rounded bg-primary/25 text-foreground font-medium"
                         >
                           {tag}
                         </span>
@@ -291,9 +289,9 @@ export function MediaCard({
                   const metadata = record.metadata as { lyrics?: string } | null
                   const lyrics = metadata?.lyrics || ''
                   if (!lyrics) return null
-                  const snippet = extractLyricsSnippet(lyrics, 4)
+                  const snippet = extractLyricsSnippet(lyrics, 1)
                   return (
-                    <pre className="text-foreground/70 text-xs mt-1.5 whitespace-pre-wrap font-sans leading-relaxed line-clamp-4 overflow-hidden">
+                    <pre className="text-foreground/70 text-xs mt-1.5 whitespace-pre-wrap font-sans leading-relaxed line-clamp-1 overflow-hidden">
                       {snippet}
                     </pre>
                   )

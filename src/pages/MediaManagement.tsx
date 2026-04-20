@@ -13,6 +13,7 @@ import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/Ba
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { LyricsPreviewModal } from '@/components/lyrics'
+import { AudioPlayer } from '@/components/media/AudioPlayer'
 import { MEDIA_TABS } from '@/lib/constants/media'
 import { formatDateHeader, getDateKey } from '@/lib/utils/media'
 import { useAuthStore } from '@/stores/auth'
@@ -77,6 +78,8 @@ export default function MediaManagement() {
     togglePublicFilter,
     lyricsPreviewRecord,
     setLyricsPreviewRecord,
+    audioPreviewRecord,
+    setAudioPreviewRecord,
   } = useMediaManagement()
 
   return (
@@ -476,6 +479,14 @@ export default function MediaManagement() {
           record={lyricsPreviewRecord}
           open={true}
           onClose={() => setLyricsPreviewRecord(null)}
+        />
+      )}
+
+      {audioPreviewRecord && signedUrls[audioPreviewRecord.id] && (
+        <AudioPlayer
+          record={audioPreviewRecord}
+          signedUrl={signedUrls[audioPreviewRecord.id]}
+          onClose={() => setAudioPreviewRecord(null)}
         />
       )}
     </div>

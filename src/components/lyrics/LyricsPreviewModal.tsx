@@ -265,9 +265,7 @@ export function LyricsPreviewModal({
                           'mx-[-8px] px-3 py-2 rounded-lg',
                           'bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5',
                           'backdrop-blur-sm',
-                          'border border-primary/20',
-                          'shadow-[0_0_20px_rgba(147,51,234,0.15),inset_0_0_20px_rgba(147,51,234,0.05)]',
-                          'ring-1 ring-primary/10',
+                          'shadow-[0_0_20px_rgba(147,51,234,0.2),inset_0_0_15px_rgba(147,51,234,0.08)]',
                         ].join(' ')
                       )}
                     >
