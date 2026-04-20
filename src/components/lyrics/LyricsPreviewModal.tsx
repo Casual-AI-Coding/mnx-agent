@@ -103,7 +103,7 @@ export function LyricsPreviewModal({
   const sections = parseLyricsSections(lyrics)
   const segments = parseLyricsSegments(lyrics, sections)
 
-  // Scroll to section using querySelector with data attribute
+  // Scroll to section using manual calculation for precise positioning
   const scrollToSection = useCallback((sectionIndex: number | null) => {
     const container = lyricsContainerRef.current
     if (!container) return
@@ -116,7 +116,10 @@ export function LyricsPreviewModal({
     // Find the section wrapper element by data attribute
     const targetEl = container.querySelector(`[data-section-index="${sectionIndex}"]`)
     if (targetEl) {
-      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const containerRect = container.getBoundingClientRect()
+      const targetRect = targetEl.getBoundingClientRect()
+      const offsetTop = targetRect.top - containerRect.top + container.scrollTop - 16
+      container.scrollTo({ top: offsetTop, behavior: 'smooth' })
     }
   }, [])
 
@@ -199,9 +202,9 @@ export function LyricsPreviewModal({
             <button
               onClick={() => handleSectionClick(null)}
               className={cn(
-                'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-200',
+                'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-300',
                 activeSectionIndex === null
-                  ? 'bg-primary/15 text-primary font-medium shadow-[0_0_12px_rgba(147,51,234,0.3)]'
+                  ? 'bg-primary/20 text-primary font-medium shadow-sm'
                   : 'hover:bg-muted/50 text-muted-foreground'
               )}
             >
@@ -214,12 +217,12 @@ export function LyricsPreviewModal({
 
               return (
                 <button
-                  key={i} // Use index for uniqueness with duplicate types
+                  key={i}
                   onClick={() => handleSectionClick(i)}
                   className={cn(
-                    'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-200',
+                    'w-full text-left px-2 py-1.5 rounded text-sm transition-all duration-300',
                     isActive
-                      ? 'bg-primary/15 text-primary font-medium shadow-[0_0_12px_rgba(147,51,234,0.3)]'
+                      ? 'bg-primary/20 text-primary font-medium shadow-sm'
                       : 'hover:bg-muted/50 text-muted-foreground'
                   )}
                 >
@@ -248,25 +251,20 @@ export function LyricsPreviewModal({
 
                 return (
                   <span key={segIdx} data-section-index={index}>
-                    {/* Section tag with glow effect when active */}
+                    {/* Section tag with highlight when active */}
                     <span
                       className={cn(
-                        'transition-all duration-300',
-                        isActive && 'text-primary font-semibold shadow-[0_0_8px_rgba(147,51,234,0.5)]'
+                        'transition-all duration-500',
+                        isActive && 'text-primary font-semibold'
                       )}
                     >
                       {tagText}
                     </span>
-                    {/* Section content with glass/glow effect when active */}
+                    {/* Section content with subtle highlight when active */}
                     <span
                       className={cn(
-                        'relative block my-1 transition-all duration-500',
-                        isActive && [
-                          'mx-[-8px] px-3 py-2 rounded-lg',
-                          'bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5',
-                          'backdrop-blur-sm',
-                          'shadow-[0_0_20px_rgba(147,51,234,0.2),inset_0_0_15px_rgba(147,51,234,0.08)]',
-                        ].join(' ')
+                        'relative block my-1 transition-all duration-700',
+                        isActive && 'bg-primary/5 px-2 py-1 rounded'
                       )}
                     >
                       {content}

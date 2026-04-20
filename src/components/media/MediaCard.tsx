@@ -128,7 +128,7 @@ export function MediaCard({
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0 active:scale-90 transition-transform duration-100"
             onClick={(e) => {
               e.stopPropagation()
               setIsEditing(true)
@@ -140,7 +140,7 @@ export function MediaCard({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+              className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0 active:scale-90 transition-transform duration-100"
               onClick={(e) => {
                 e.stopPropagation()
                 onPreview()
@@ -152,7 +152,7 @@ export function MediaCard({
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-foreground border-0 active:scale-90 transition-transform duration-100"
             onClick={(e) => {
               e.stopPropagation()
               onDownload()
@@ -163,7 +163,7 @@ export function MediaCard({
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-error hover:text-error/80 border-0"
+            className="h-7 px-2 bg-card/50 hover:bg-card/70 text-error hover:text-error/80 border-0 active:scale-90 transition-transform duration-100"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()
@@ -181,9 +181,9 @@ export function MediaCard({
       >
         <div
           className={cn(
-            'w-6 h-6 flex items-center justify-center',
+            'w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150 active:scale-90',
             (record.owner_id === currentUserId || (!record.owner_id && userRole === 'super')) && onTogglePublic
-              ? 'cursor-pointer'
+              ? 'cursor-pointer hover:bg-muted/50'
               : 'cursor-default'
           )}
           onClick={(e) => {
@@ -212,21 +212,21 @@ export function MediaCard({
           className={`absolute top-2 right-2 z-20 transition-opacity duration-200 ${
             record.is_favorite ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
           }`}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite(record.id)
-          }}
         >
           <div
             className={cn(
-              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer',
+              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90',
               record.is_favorite
-                ? 'bg-yellow-500 text-white'
+                ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/30'
                 : 'bg-card/50 text-foreground/70 hover:text-yellow-500 hover:bg-card/70'
             )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleFavorite(record.id)
+            }}
             title={record.is_favorite ? '取消收藏' : '收藏'}
           >
-            <Star className={cn('w-4 h-4', record.is_favorite && 'fill-current')} />
+            <Star className={cn('w-4 h-4 transition-transform duration-150', record.is_favorite && 'fill-current')} />
           </div>
         </div>
       )}
