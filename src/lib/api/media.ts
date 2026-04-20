@@ -224,13 +224,14 @@ export async function batchTogglePublic(ids: string[], isPublic: boolean): Promi
 }
 
 export interface RecoverableMediaRecord {
-  id: string
-  filename: string
-  original_name: string | null
+  log_id: number
+  operation: string
   type: string
-  source: string | null
-  metadata: Record<string, unknown> | null
+  source: string
+  resource_url: string
+  image_index?: number
   created_at: string
+  metadata: Record<string, unknown>
 }
 
 export async function getRecoverableMedia(): Promise<{
@@ -241,10 +242,10 @@ export async function getRecoverableMedia(): Promise<{
   return response.data
 }
 
-export async function recoverMedia(id: string): Promise<{
+export async function recoverMedia(logId: number, resourceUrl?: string): Promise<{
   success: boolean
-  data: { message: string; record: MediaRecord; savedFilepath?: string }
+  data: { message: string; record: MediaRecord }
 }> {
-  const response = await client.post(`/media/${id}/recover`)
+  const response = await client.post(`/media/recover/${logId}`, { resource_url: resourceUrl })
   return response.data
 }

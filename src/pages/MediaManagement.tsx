@@ -46,16 +46,14 @@ export default function MediaManagement() {
     }
   }
 
-  const handleRecover = async (id: string) => {
-    setRecoveringId(id)
+  const handleRecover = async (logId: number, resourceUrl: string) => {
+    setRecoveringId(String(logId))
     try {
-      const response = await recoverMedia(id)
+      const response = await recoverMedia(logId, resourceUrl)
       if (response.success) {
         toastSuccess('文件恢复成功')
-        setRecoverableRecords(prev => prev.filter(r => r.id !== id))
-        if (response.data.record) {
-          fetchMedia(false)
-        }
+        setRecoverableRecords(prev => prev.filter(r => r.resource_url !== resourceUrl))
+        fetchMedia(false)
       }
     } catch (error) {
       toastError('恢复失败')
@@ -506,18 +504,18 @@ export default function MediaManagement() {
         {recoverableRecords.length > 0 && (
           <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
             {recoverableRecords.map((record) => (
-              <div key={record.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+              <div key={record.resource_url} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{record.original_name || record.filename}</p>
-                  <p className="text-xs text-muted-foreground">{record.type} · {record.source}</p>
+                  <p className="text-sm font-medium truncate">{record.operation}{record.image_index !== undefined ? ` #${record.image_index + 1}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{record.type} · {record.source} · {new Date(record.created_at).toLocaleString()}</p>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleRecover(record.id)}
-                  disabled={recoveringId === record.id}
+                  onClick={() => handleRecover(record.log_id, record.resource_url)}
+                  disabled={recoveringId === record.resource_url}
                 >
-                  {recoveringId === record.id ? (
+                  {recoveringId === record.resource_url ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     '恢复'

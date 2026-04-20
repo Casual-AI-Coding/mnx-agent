@@ -48,18 +48,18 @@ export async function deleteMediaFile(filepath: string): Promise<void> {
   }
 }
 
-export async function readMediaFile(filepath: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): Promise<Buffer> {
-  let fullPath: string
-  
+export function resolveMediaPath(filepath: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): string {
   if (filepath.startsWith(mediaRoot)) {
-    fullPath = filepath
-  } else if (filepath.startsWith('data/media') || filepath.startsWith('./data/media')) {
-    fullPath = filepath.startsWith('./') ? filepath : './' + filepath
-  } else {
-    fullPath = join(mediaRoot, filepath)
+    return filepath
   }
-  
-  return fs.readFile(fullPath)
+  if (filepath.startsWith('data/media') || filepath.startsWith('./data/media')) {
+    return filepath.startsWith('./') ? filepath : './' + filepath
+  }
+  return join(mediaRoot, filepath)
+}
+
+export async function readMediaFile(filepath: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): Promise<Buffer> {
+  return fs.readFile(resolveMediaPath(filepath, mediaRoot))
 }
 
 export function getMediaFilePath(filename: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): string {

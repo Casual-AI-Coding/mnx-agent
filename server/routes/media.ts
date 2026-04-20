@@ -12,7 +12,9 @@ import {
   batchDeleteSchema,
   batchDownloadSchema,
 } from '../validation/media-schemas'
-import { saveMediaFile, readMediaFile, deleteMediaFile } from '../lib/media-storage'
+import { saveMediaFile, readMediaFile, deleteMediaFile, saveFromUrl } from '../lib/media-storage'
+import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
+import { getConnection } from '../database/connection.js'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token.js'
 import multer from 'multer'
 import axios from 'axios'
@@ -24,10 +26,6 @@ import {
   withEntityNotFound,
 } from '../utils/index.js'
 import { access } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
-
-const DEFAULT_MEDIA_ROOT = process.env.MEDIA_ROOT || './data/media'
 
 const router = Router()
 
@@ -64,41 +62,100 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 }))
 
 router.get('/recoverable', asyncHandler(async (req, res) => {
-  const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const result = await db.getAll({
+  const OPERATION_MEDIA_MAP: Record<string, { type: string; source: string; extractUrls: (responseData: any) => string[] }> = {
+    image_generation: {
+      type: 'image',
+      source: 'image_generation',
+      extractUrls: (responseData) => responseData?.image_urls ?? [],
+    },
+    music_generation: {
+      type: 'music',
+      source: 'music_generation',
+      extractUrls: (responseData) => responseData?.data?.audio ? [responseData.data.audio] : [],
+    },
+    text_to_audio_sync: {
+      type: 'audio',
+      source: 'voice_sync',
+      extractUrls: (responseData) => responseData?.data?.audio_url ? [responseData.data.audio_url] : [],
+    },
+  }
+
+  const MEDIA_OPERATIONS = Object.keys(OPERATION_MEDIA_MAP)
+  const conn = getConnection()
+  const logRepo = new ExternalApiLogRepository(conn)
+
+  const { logs } = await logRepo.queryLogs({
+    status: 'success',
+    user_id: ownerId ?? undefined,
+    page: 1,
     limit: 1000,
-    offset: 0,
-    visibilityOwnerId: ownerId,
+    sort_by: 'created_at',
+    sort_order: 'desc',
   })
 
+  const mediaLogs = logs.filter(log => MEDIA_OPERATIONS.includes(log.operation))
+
+  type LogWithUrls = { log: any; resourceUrls: string[]; opConfig: typeof OPERATION_MEDIA_MAP[string] }
+  const logsWithUrls: LogWithUrls[] = []
+  for (const log of mediaLogs) {
+    if (!log.response_body) continue
+    try {
+      const responseData = JSON.parse(log.response_body)
+      const opConfig = OPERATION_MEDIA_MAP[log.operation]
+      const resourceUrls = opConfig.extractUrls(responseData)
+      if (resourceUrls.length > 0) {
+        logsWithUrls.push({ log, resourceUrls, opConfig })
+      }
+    } catch {
+    }
+  }
+
+  const mediaService = getMediaService()
+  const existingMedia = await mediaService.getAll({ limit: 10000, offset: 0, visibilityOwnerId: ownerId, includeDeleted: true })
+  const existingSourceUrls = new Set<string>()
+  for (const record of existingMedia.records) {
+    if (record.metadata && typeof record.metadata === 'object') {
+      const meta = record.metadata as Record<string, unknown>
+      const sourceUrl = meta?.source_url
+      if (typeof sourceUrl === 'string') existingSourceUrls.add(sourceUrl)
+      const logId = meta?.external_api_log_id
+      if (typeof logId === 'number') existingSourceUrls.add(`__log_${logId}`)
+    }
+  }
+
   const recoverable: Array<{
-    id: string
-    filename: string
-    original_name: string | null
+    log_id: number
+    operation: string
     type: string
-    source: string | null
-    metadata: Record<string, unknown> | null
+    source: string
+    resource_url: string
+    image_index?: number
     created_at: string
+    metadata: Record<string, unknown>
   }> = []
 
-  for (const record of result.records) {
-    if (!record.metadata || typeof record.metadata !== 'object') continue
-    const metadata = record.metadata as Record<string, unknown>
-    const sourceUrl = metadata?.source_url
-    if (!sourceUrl || typeof sourceUrl !== 'string') continue
+  for (const { log, resourceUrls, opConfig } of logsWithUrls) {
+    for (let i = 0; i < resourceUrls.length; i++) {
+      const url = resourceUrls[i]
+      if (existingSourceUrls.has(url)) continue
+      if (existingSourceUrls.has(`__log_${log.id}`)) continue
 
-    const fullPath = join(DEFAULT_MEDIA_ROOT, record.filepath)
-    if (!existsSync(fullPath)) {
       recoverable.push({
-        id: record.id,
-        filename: record.filename,
-        original_name: record.original_name,
-        type: record.type,
-        source: record.source,
-        metadata: record.metadata,
-        created_at: record.created_at,
+        log_id: log.id,
+        operation: log.operation,
+        type: opConfig.type,
+        source: opConfig.source,
+        resource_url: url,
+        image_index: opConfig.type === 'image' ? i : undefined,
+        created_at: log.created_at,
+        metadata: {
+          source_url: url,
+          external_api_log_id: log.id,
+          operation: log.operation,
+          service_provider: log.service_provider,
+        },
       })
     }
   }
@@ -120,52 +177,93 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
   successResponse(res, record)
 }))
 
-router.post('/:id/recover', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getMediaService()
-  const ownerId = buildOwnerFilter(req).params[0]
-
-  const record = await db.getById(req.params.id, ownerId)
-  if (!record) {
-    errorResponse(res, 'Media record not found', 404)
+router.post('/recover/:logId', asyncHandler(async (req, res) => {
+  const logId = parseInt(req.params.logId, 10)
+  if (isNaN(logId)) {
+    errorResponse(res, 'Invalid log ID', 400)
     return
   }
 
-  if (!record.metadata || typeof record.metadata !== 'object') {
-    errorResponse(res, 'No source_url in metadata', 400)
+  const conn = getConnection()
+  const logRepo = new ExternalApiLogRepository(conn)
+  const log = await logRepo.getById(String(logId))
+  if (!log) {
+    errorResponse(res, 'External API log not found', 404)
     return
   }
 
-  const metadata = record.metadata as Record<string, unknown>
-  const sourceUrl = metadata?.source_url
-  if (!sourceUrl || typeof sourceUrl !== 'string') {
-    errorResponse(res, 'No source_url in metadata', 400)
+  if (log.status !== 'success' || !log.response_body) {
+    errorResponse(res, 'Log is not a successful API call with response data', 400)
     return
   }
 
-  const fullPath = join(DEFAULT_MEDIA_ROOT, record.filepath)
-  if (existsSync(fullPath)) {
-    successResponse(res, { message: 'File already exists', record })
+  const OPERATION_MEDIA_MAP: Record<string, { type: string; source: string; ext: string; extractUrls: (responseData: any) => string[] }> = {
+    image_generation: { type: 'image', source: 'image_generation', ext: '.png', extractUrls: (rd) => rd?.image_urls ?? [] },
+    music_generation: { type: 'music', source: 'music_generation', ext: '.mp3', extractUrls: (rd) => rd?.data?.audio ? [rd.data.audio] : [] },
+    text_to_audio_sync: { type: 'audio', source: 'voice_sync', ext: '.wav', extractUrls: (rd) => rd?.data?.audio_url ? [rd.data.audio_url] : [] },
+  }
+
+  const opConfig = OPERATION_MEDIA_MAP[log.operation]
+  if (!opConfig) {
+    errorResponse(res, `Unsupported operation for recovery: ${log.operation}`, 400)
+    return
+  }
+
+  let allUrls: string[] = []
+  let extraMetadata: Record<string, unknown> = {}
+  try {
+    const responseData = JSON.parse(log.response_body)
+    allUrls = opConfig.extractUrls(responseData)
+    if (opConfig.type === 'music') {
+      extraMetadata = {
+        song_title: responseData?.data?.song_title,
+        lyrics: responseData?.data?.lyrics,
+      }
+    }
+  } catch {
+    errorResponse(res, 'Failed to parse response body', 400)
+    return
+  }
+
+  if (allUrls.length === 0) {
+    errorResponse(res, 'No resource URL found in response', 400)
+    return
+  }
+
+  const targetUrl = (req.body?.resource_url as string) || allUrls[0]
+  if (!allUrls.includes(targetUrl)) {
+    errorResponse(res, 'Specified resource_url not found in log response', 400)
     return
   }
 
   try {
-    const response = await axios.get(sourceUrl, { responseType: 'arraybuffer' })
-    const buffer = Buffer.from(response.data)
+    const originalName = `${log.operation}_${logId}${opConfig.ext}`
+    const { filepath, filename, size_bytes } = await saveFromUrl(targetUrl, originalName, opConfig.type as any)
 
-    const { filepath: savedFilepath } = await saveMediaFile(
-      buffer,
-      record.filename,
-      record.type as any
-    )
+    const mediaService = getMediaService()
+    const ownerId = buildOwnerFilter(req).params[0]
+    const record = await mediaService.create({
+      filename,
+      original_name: originalName,
+      filepath,
+      type: opConfig.type as any,
+      mime_type: undefined,
+      size_bytes,
+      source: opConfig.source as any,
+      metadata: {
+        ...extraMetadata,
+        source_url: targetUrl,
+        external_api_log_id: log.id,
+        operation: log.operation,
+        service_provider: log.service_provider,
+        restored_from_log: true,
+      },
+    }, ownerId)
 
-    successResponse(res, {
-      message: 'File recovered successfully',
-      record,
-      savedFilepath,
-    })
+    successResponse(res, { message: 'Media recovered successfully', record })
   } catch (error) {
-    logger.error({ error, recordId: record.id, sourceUrl }, 'Failed to recover file from source_url')
-    errorResponse(res, `Failed to download from source_url: ${(error as Error).message}`, 500)
+    logger.error({ error, logId, targetUrl }, 'Failed to recover media from external API log')
+    errorResponse(res, `Recovery failed: ${(error as Error).message}`, 500)
   }
 }))
 
