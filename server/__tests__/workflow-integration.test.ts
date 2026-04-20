@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { getDatabase } from '../database/service-async'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from './test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from './test-helpers.js'
 import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
 import { WorkflowEngine } from '../services/workflow/index'
 import { CronScheduler } from '../services/cron-scheduler'
@@ -170,12 +170,14 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
   let db: Awaited<ReturnType<typeof getDatabase>>
   let registry: ReturnType<typeof getServiceNodeRegistry>
   let engine: WorkflowEngine
+  let fileMarker: string
 
   const testWorkflows: WorkflowTemplate[] = []
   const testJobIds: string[] = []
 
   beforeAll(async () => {
     await setupTestDatabase()
+    fileMarker = getTestFileMarker()
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerServices(db)
@@ -189,7 +191,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue')
     await conn.execute('DELETE FROM cron_jobs')
-    await conn.execute('DELETE FROM media_records')
+    await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [fileMarker])
   })
 
   afterAll(async () => {
@@ -487,9 +489,11 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
   let registry: ReturnType<typeof getServiceNodeRegistry>
   let engine: WorkflowEngine
   let scheduler: CronScheduler
+  let fileMarker: string
 
   beforeAll(async () => {
     await setupTestDatabase()
+    fileMarker = getTestFileMarker()
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerMockServices(db)
@@ -505,7 +509,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue')
     await conn.execute('DELETE FROM cron_jobs')
-    await conn.execute('DELETE FROM media_records')
+    await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [fileMarker])
   })
 
   afterAll(async () => {

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../__tests__/test-helpers.js'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker, resetTestFileMarker } from '../../__tests__/test-helpers.js'
 import { DatabaseService } from '../service-async.js'
 import type { CreateMediaRecord, MediaType, MediaSource } from '../types.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -8,25 +8,41 @@ describe('MediaRecord Database Service', () => {
   let db: DatabaseService
   let testOwnerId1: string
   let testOwnerId2: string
+  let fileMarker: string
+
+  const createdRecordIds = new Set<string>()
+
+  async function createAndTrack(data: CreateMediaRecord, ownerId?: string) {
+    const effectiveOwnerId = ownerId ?? fileMarker
+    const record = await db.createMediaRecord(data, effectiveOwnerId)
+    createdRecordIds.add(record.id)
+    return record
+  }
 
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
-    
-    // Create test users for owner_id tests
+    fileMarker = getTestFileMarker()
+
     const conn = getConnection()
     testOwnerId1 = uuidv4()
     testOwnerId2 = uuidv4()
-    
+
     await conn.execute(
-      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [fileMarker, `media-db-test-${fileMarker.slice(0,8)}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
+    )
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO NOTHING`,
       [testOwnerId1, `media-test-user-1-${Date.now()}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
     )
     await conn.execute(
-      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO NOTHING`,
       [testOwnerId2, `media-test-user-2-${Date.now()}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
     )
@@ -34,10 +50,34 @@ describe('MediaRecord Database Service', () => {
 
   beforeEach(async () => {
     const conn = getConnection()
-    await conn.execute('DELETE FROM media_records WHERE owner_id IN ($1, $2) OR owner_id IS NULL', [testOwnerId1, testOwnerId2])
+    await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+    createdRecordIds.clear()
+  })
+
+  afterEach(async () => {
+    if (createdRecordIds.size > 0) {
+      const conn = getConnection()
+      const ids = Array.from(createdRecordIds)
+      for (let i = 0; i < ids.length; i += 100) {
+        const batch = ids.slice(i, i + 100)
+        await conn.execute(`DELETE FROM media_records WHERE id = ANY($1)`, [batch])
+      }
+      createdRecordIds.clear()
+    }
   })
 
   afterAll(async () => {
+    // Final cleanup - delete any remaining tracked records
+    if (createdRecordIds.size > 0) {
+      const conn = getConnection()
+      const ids = Array.from(createdRecordIds)
+      for (let i = 0; i < ids.length; i += 100) {
+        const batch = ids.slice(i, i + 100)
+        await conn.execute(`DELETE FROM media_records WHERE id = ANY($1)`, [batch])
+      }
+      createdRecordIds.clear()
+    }
+    // Also clean up any orphaned records with our test owner_ids
     const conn = getConnection()
     await conn.execute('DELETE FROM media_records WHERE owner_id IN ($1, $2)', [testOwnerId1, testOwnerId2])
     await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testOwnerId1, testOwnerId2])
@@ -52,7 +92,7 @@ describe('MediaRecord Database Service', () => {
         type: 'audio' as MediaType,
         size_bytes: 1024000,
       }
-      const record = await db.createMediaRecord(recordData)
+      const record = await createAndTrack(recordData)
 
       expect(record.id).toBeDefined()
       expect(record.filename).toBe('test_audio.mp3')
@@ -76,7 +116,7 @@ describe('MediaRecord Database Service', () => {
         task_id: 'task-123',
         metadata: { prompt: 'A beautiful sunset', model: 'image-01' },
       }
-      const record = await db.createMediaRecord(recordData)
+      const record = await createAndTrack(recordData)
 
       expect(record.filename).toBe('test_image.png')
       expect(record.original_name).toBe('sunset.png')
@@ -97,7 +137,7 @@ describe('MediaRecord Database Service', () => {
         size_bytes: 10485760,
         source: 'video_generation' as MediaSource,
       }
-      const record = await db.createMediaRecord(recordData)
+      const record = await createAndTrack(recordData)
 
       expect(record.type).toBe('video')
       expect(record.source).toBe('video_generation')
@@ -111,7 +151,7 @@ describe('MediaRecord Database Service', () => {
         size_bytes: 3072000,
         source: 'music_generation' as MediaSource,
       }
-      const record = await db.createMediaRecord(recordData)
+      const record = await createAndTrack(recordData)
 
       expect(record.type).toBe('music')
       expect(record.source).toBe('music_generation')
@@ -124,7 +164,7 @@ describe('MediaRecord Database Service', () => {
         type: 'audio' as MediaType,
         size_bytes: 1024,
       }
-      const record = await db.createMediaRecord(recordData, testOwnerId1)
+      const record = await createAndTrack(recordData, testOwnerId1)
 
       expect(record.id).toBeDefined()
       const retrieved = await db.getMediaRecordById(record.id, testOwnerId1)
@@ -134,7 +174,7 @@ describe('MediaRecord Database Service', () => {
 
   describe('Read MediaRecords', () => {
     it('should get media record by id', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'find_me.png',
         filepath: '/data/media/find_me.png',
         type: 'image' as MediaType,
@@ -152,7 +192,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should get media record by id with owner_id', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'owned.png',
         filepath: '/data/media/owned.png',
         type: 'image' as MediaType,
@@ -165,7 +205,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should return null when getting with wrong owner_id', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'secret.png',
         filepath: '/data/media/secret.png',
         type: 'image' as MediaType,
@@ -180,35 +220,35 @@ describe('MediaRecord Database Service', () => {
   describe('List MediaRecords', () => {
     beforeEach(async () => {
       // Create test records
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'audio1.mp3',
         filepath: '/data/media/audio1.mp3',
         type: 'audio',
         size_bytes: 1024,
         source: 'voice_sync',
       })
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'audio2.mp3',
         filepath: '/data/media/audio2.mp3',
         type: 'audio',
         size_bytes: 2048,
         source: 'voice_async',
       })
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'image1.png',
         filepath: '/data/media/image1.png',
         type: 'image',
         size_bytes: 4096,
         source: 'image_generation',
       })
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'video1.mp4',
         filepath: '/data/media/video1.mp4',
         type: 'video',
         size_bytes: 8192,
         source: 'video_generation',
       })
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'music1.mp3',
         filepath: '/data/media/music1.mp3',
         type: 'music',
@@ -218,13 +258,13 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should get all media records without filters', async () => {
-      const result = await db.getMediaRecords({ limit: 10, offset: 0 })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: fileMarker })
       expect(result.records.length).toBe(5)
       expect(result.total).toBe(5)
     })
 
     it('should filter by type', async () => {
-      const result = await db.getMediaRecords({ type: 'audio', limit: 10, offset: 0 })
+      const result = await db.getMediaRecords({ type: 'audio', limit: 10, offset: 0, visibilityOwnerId: fileMarker })
       expect(result.records.length).toBe(2)
       expect(result.total).toBe(2)
       result.records.forEach(record => {
@@ -233,7 +273,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should filter by source', async () => {
-      const result = await db.getMediaRecords({ source: 'image_generation', limit: 10, offset: 0 })
+      const result = await db.getMediaRecords({ source: 'image_generation', limit: 10, offset: 0, visibilityOwnerId: fileMarker })
       expect(result.records.length).toBe(1)
       expect(result.total).toBe(1)
       expect(result.records[0].source).toBe('image_generation')
@@ -244,28 +284,29 @@ describe('MediaRecord Database Service', () => {
         type: 'audio',
         source: 'voice_sync',
         limit: 10,
-        offset: 0
+        offset: 0,
+        visibilityOwnerId: fileMarker
       })
       expect(result.records.length).toBe(1)
       expect(result.records[0].filename).toBe('audio1.mp3')
     })
 
     it('should paginate results', async () => {
-      const page1 = await db.getMediaRecords({ limit: 2, offset: 0 })
+      const page1 = await db.getMediaRecords({ limit: 2, offset: 0, visibilityOwnerId: fileMarker })
       expect(page1.records.length).toBe(2)
       expect(page1.total).toBe(5)
 
-      const page2 = await db.getMediaRecords({ limit: 2, offset: 2 })
+      const page2 = await db.getMediaRecords({ limit: 2, offset: 2, visibilityOwnerId: fileMarker })
       expect(page2.records.length).toBe(2)
       expect(page2.total).toBe(5)
 
-      const page3 = await db.getMediaRecords({ limit: 2, offset: 4 })
+      const page3 = await db.getMediaRecords({ limit: 2, offset: 4, visibilityOwnerId: fileMarker })
       expect(page3.records.length).toBe(1)
       expect(page3.total).toBe(5)
     })
 
     it('should exclude deleted records by default', async () => {
-      const record = await db.createMediaRecord({
+      const record = await createAndTrack({
         filename: 'to_delete.png',
         filepath: '/data/media/to_delete.png',
         type: 'image',
@@ -273,13 +314,13 @@ describe('MediaRecord Database Service', () => {
       })
       await db.softDeleteMediaRecord(record.id)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0 })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: fileMarker })
       const filenames = result.records.map(r => r.filename)
       expect(filenames).not.toContain('to_delete.png')
     })
 
     it('should include deleted records when includeDeleted is true', async () => {
-      const record = await db.createMediaRecord({
+      const record = await createAndTrack({
         filename: 'deleted_file.png',
         filepath: '/data/media/deleted_file.png',
         type: 'image',
@@ -287,7 +328,7 @@ describe('MediaRecord Database Service', () => {
       })
       await db.softDeleteMediaRecord(record.id)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, includeDeleted: true })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, includeDeleted: true, visibilityOwnerId: fileMarker })
       const deleted = result.records.find(r => r.filename === 'deleted_file.png')
       expect(deleted).toBeDefined()
       expect(deleted!.is_deleted).toBe(true)
@@ -295,13 +336,13 @@ describe('MediaRecord Database Service', () => {
 
     it('should filter by owner_id', async () => {
       const ownerId = testOwnerId1
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'owner_file.mp3',
         filepath: '/data/media/owner_file.mp3',
         type: 'audio',
         size_bytes: 1024,
       }, ownerId)
-      await db.createMediaRecord({
+      await createAndTrack({
         filename: 'other_file.mp3',
         filepath: '/data/media/other_file.mp3',
         type: 'audio',
@@ -316,7 +357,7 @@ describe('MediaRecord Database Service', () => {
 
   describe('Update MediaRecord', () => {
     it('should update original_name', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'original.png',
         filepath: '/data/media/original.png',
         type: 'image',
@@ -329,7 +370,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should update metadata', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'meta_test.png',
         filepath: '/data/media/meta_test.png',
         type: 'image',
@@ -351,7 +392,7 @@ describe('MediaRecord Database Service', () => {
 
     it('should update with owner_id', async () => {
       const ownerId = testOwnerId1
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'update_me.png',
         filepath: '/data/media/update_me.png',
         type: 'image',
@@ -365,7 +406,7 @@ describe('MediaRecord Database Service', () => {
 
     it('should return null when updating with wrong owner_id', async () => {
       const ownerId = testOwnerId1
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'owned_update.png',
         filepath: '/data/media/owned_update.png',
         type: 'image',
@@ -380,7 +421,7 @@ describe('MediaRecord Database Service', () => {
   describe('Delete MediaRecord', () => {
     describe('Soft Delete', () => {
       it('should soft delete a media record', async () => {
-        const created = await db.createMediaRecord({
+        const created = await createAndTrack({
           filename: 'soft_delete_me.png',
           filepath: '/data/media/soft_delete_me.png',
           type: 'image',
@@ -403,7 +444,7 @@ describe('MediaRecord Database Service', () => {
 
       it('should soft delete with owner_id', async () => {
         const ownerId = testOwnerId1
-        const created = await db.createMediaRecord({
+        const created = await createAndTrack({
           filename: 'owner_delete.png',
           filepath: '/data/media/owner_delete.png',
           type: 'image',
@@ -419,7 +460,7 @@ describe('MediaRecord Database Service', () => {
 
       it('should return false when soft deleting with wrong owner_id', async () => {
         const ownerId = testOwnerId1
-        const created = await db.createMediaRecord({
+        const created = await createAndTrack({
           filename: 'protected.png',
           filepath: '/data/media/protected.png',
           type: 'image',
@@ -433,7 +474,7 @@ describe('MediaRecord Database Service', () => {
 
     describe('Hard Delete', () => {
       it('should hard delete a media record', async () => {
-        const created = await db.createMediaRecord({
+        const created = await createAndTrack({
           filename: 'hard_delete_me.png',
           filepath: '/data/media/hard_delete_me.png',
           type: 'image',
@@ -454,7 +495,7 @@ describe('MediaRecord Database Service', () => {
 
       it('should hard delete with owner_id', async () => {
         const ownerId = testOwnerId1
-        const created = await db.createMediaRecord({
+        const created = await createAndTrack({
           filename: 'hard_owner.png',
           filepath: '/data/media/hard_owner.png',
           type: 'image',
@@ -471,19 +512,19 @@ describe('MediaRecord Database Service', () => {
 
     describe('Batch Soft Delete', () => {
       it('should soft delete multiple records', async () => {
-        const record1 = await db.createMediaRecord({
+        const record1 = await createAndTrack({
           filename: 'batch1.png',
           filepath: '/data/media/batch1.png',
           type: 'image',
           size_bytes: 1024,
         })
-        const record2 = await db.createMediaRecord({
+        const record2 = await createAndTrack({
           filename: 'batch2.png',
           filepath: '/data/media/batch2.png',
           type: 'image',
           size_bytes: 2048,
         })
-        const record3 = await db.createMediaRecord({
+        const record3 = await createAndTrack({
           filename: 'batch3.png',
           filepath: '/data/media/batch3.png',
           type: 'image',
@@ -503,7 +544,7 @@ describe('MediaRecord Database Service', () => {
       })
 
       it('should handle partial failures in batch delete', async () => {
-        const record1 = await db.createMediaRecord({
+        const record1 = await createAndTrack({
           filename: 'partial1.png',
           filepath: '/data/media/partial1.png',
           type: 'image',
@@ -519,13 +560,13 @@ describe('MediaRecord Database Service', () => {
 
   describe('Get MediaRecords By IDs', () => {
     it('should get multiple records by ids', async () => {
-      const record1 = await db.createMediaRecord({
+      const record1 = await createAndTrack({
         filename: 'multi1.png',
         filepath: '/data/media/multi1.png',
         type: 'image',
         size_bytes: 1024,
       })
-      const record2 = await db.createMediaRecord({
+      const record2 = await createAndTrack({
         filename: 'multi2.png',
         filepath: '/data/media/multi2.png',
         type: 'image',
@@ -545,13 +586,13 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should exclude soft-deleted records', async () => {
-      const record1 = await db.createMediaRecord({
+      const record1 = await createAndTrack({
         filename: 'active.png',
         filepath: '/data/media/active.png',
         type: 'image',
         size_bytes: 1024,
       })
-      const record2 = await db.createMediaRecord({
+      const record2 = await createAndTrack({
         filename: 'inactive.png',
         filepath: '/data/media/inactive.png',
         type: 'image',
@@ -567,7 +608,7 @@ describe('MediaRecord Database Service', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty filename', async () => {
-      const record = await db.createMediaRecord({
+      const record = await createAndTrack({
         filename: '',
         filepath: '/data/media/empty.png',
         type: 'image',
@@ -577,7 +618,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should handle zero size_bytes', async () => {
-      const record = await db.createMediaRecord({
+      const record = await createAndTrack({
         filename: 'zero_size.png',
         filepath: '/data/media/zero_size.png',
         type: 'image',
@@ -589,7 +630,7 @@ describe('MediaRecord Database Service', () => {
     it('should handle all media types', async () => {
       const types: MediaType[] = ['audio', 'image', 'video', 'music']
       for (const type of types) {
-        const record = await db.createMediaRecord({
+        const record = await createAndTrack({
           filename: `${type}_test.mp3`,
           filepath: `/data/media/${type}_test.mp3`,
           type,
@@ -602,7 +643,7 @@ describe('MediaRecord Database Service', () => {
     it('should handle all media sources', async () => {
       const sources: MediaSource[] = ['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation']
       for (const source of sources) {
-        const record = await db.createMediaRecord({
+        const record = await createAndTrack({
           filename: `${source}_test.mp3`,
           filepath: `/data/media/${source}_test.mp3`,
           type: 'audio',
@@ -620,7 +661,7 @@ describe('MediaRecord Database Service', () => {
         boolean: true,
         null: null,
       }
-      const record = await db.createMediaRecord({
+      const record = await createAndTrack({
         filename: 'complex.png',
         filepath: '/data/media/complex.png',
         type: 'image',
@@ -639,7 +680,7 @@ describe('MediaRecord Database Service', () => {
     it('should correctly count total records with pagination', async () => {
       // Create 7 records
       for (let i = 0; i < 7; i++) {
-        await db.createMediaRecord({
+        await createAndTrack({
           filename: `count_test_${i}.png`,
           filepath: `/data/media/count_test_${i}.png`,
           type: 'image',
@@ -648,15 +689,15 @@ describe('MediaRecord Database Service', () => {
       }
 
       // Test various page sizes
-      const page1 = await db.getMediaRecords({ limit: 3, offset: 0 })
+      const page1 = await db.getMediaRecords({ limit: 3, offset: 0, visibilityOwnerId: fileMarker })
       expect(page1.total).toBe(7)
       expect(page1.records.length).toBe(3)
 
-      const page2 = await db.getMediaRecords({ limit: 3, offset: 3 })
+      const page2 = await db.getMediaRecords({ limit: 3, offset: 3, visibilityOwnerId: fileMarker })
       expect(page2.total).toBe(7)
       expect(page2.records.length).toBe(3)
 
-      const page3 = await db.getMediaRecords({ limit: 3, offset: 6 })
+      const page3 = await db.getMediaRecords({ limit: 3, offset: 6, visibilityOwnerId: fileMarker })
       expect(page3.total).toBe(7)
       expect(page3.records.length).toBe(1)
     })
@@ -674,7 +715,7 @@ describe('MediaRecord Database Service', () => {
         metadata: { originalPrompt: 'test prompt' },
       }
 
-      const created = await db.createMediaRecord(original)
+      const created = await createAndTrack(original)
       const retrieved = await db.getMediaRecordById(created.id)
 
       expect(retrieved!.filename).toBe(original.filename)
@@ -708,7 +749,7 @@ describe('MediaRecord Database Service', () => {
     })
 
     it('should default is_public to false', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'public_test.png',
         filepath: '/data/media/public_test.png',
         type: 'image',
@@ -730,7 +771,7 @@ describe('MediaRecord Database Service', () => {
 
 describe('togglePublic', () => {
     it('should toggle is_public from false to true', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'toggle_test.png',
         filepath: '/data/media/toggle_test.png',
         type: 'image',
@@ -744,7 +785,7 @@ describe('togglePublic', () => {
     })
 
     it('should toggle is_public from true to false', async () => {
-      const created = await db.createMediaRecord({
+      const created = await createAndTrack({
         filename: 'toggle_test2.png',
         filepath: '/data/media/toggle_test2.png',
         type: 'image',
@@ -768,14 +809,15 @@ describe('togglePublic', () => {
   describe('list visibility', () => {
     beforeEach(async () => {
       const conn = getConnection()
-      await conn.execute('TRUNCATE TABLE media_records CASCADE')
+      await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+      createdRecordIds.clear()
     })
 
     it('user sees own private + all public records', async () => {
       const user1 = testOwnerId1
       const user2 = testOwnerId2
 
-      const ownPrivate = await db.createMediaRecord({
+      const ownPrivate = await createAndTrack({
         filename: 'user1_private.png',
         filepath: '/data/media/user1_private.png',
         type: 'image',
@@ -783,7 +825,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(ownPrivate.id, false)
 
-      const ownPublic = await db.createMediaRecord({
+      const ownPublic = await createAndTrack({
         filename: 'user1_public.png',
         filepath: '/data/media/user1_public.png',
         type: 'image',
@@ -791,7 +833,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(ownPublic.id, true)
 
-      const otherPrivate = await db.createMediaRecord({
+      const otherPrivate = await createAndTrack({
         filename: 'user2_private.png',
         filepath: '/data/media/user2_private.png',
         type: 'image',
@@ -799,7 +841,7 @@ describe('togglePublic', () => {
       }, user2)
       await db.togglePublicMediaRecord(otherPrivate.id, false)
 
-      const otherPublic = await db.createMediaRecord({
+      const otherPublic = await createAndTrack({
         filename: 'user2_public.png',
         filepath: '/data/media/user2_public.png',
         type: 'image',
@@ -821,7 +863,7 @@ describe('togglePublic', () => {
       const user1 = testOwnerId1
       const user2 = testOwnerId2
 
-      const ownPrivate = await db.createMediaRecord({
+      const ownPrivate = await createAndTrack({
         filename: 'admin_private1.png',
         filepath: '/data/media/admin_private1.png',
         type: 'image',
@@ -829,7 +871,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(ownPrivate.id, false)
 
-      const otherPrivate = await db.createMediaRecord({
+      const otherPrivate = await createAndTrack({
         filename: 'admin_private2.png',
         filepath: '/data/media/admin_private2.png',
         type: 'image',
@@ -847,7 +889,7 @@ describe('togglePublic', () => {
     it('isPublic=true filter returns only public records', async () => {
       const user1 = testOwnerId1
 
-      const privateRecord = await db.createMediaRecord({
+      const privateRecord = await createAndTrack({
         filename: 'filter_private.png',
         filepath: '/data/media/filter_private.png',
         type: 'image',
@@ -855,7 +897,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(privateRecord.id, false)
 
-      const publicRecord1 = await db.createMediaRecord({
+      const publicRecord1 = await createAndTrack({
         filename: 'filter_public1.png',
         filepath: '/data/media/filter_public1.png',
         type: 'image',
@@ -863,7 +905,7 @@ describe('togglePublic', () => {
       }, user1)
       await db.togglePublicMediaRecord(publicRecord1.id, true)
 
-      const publicRecord2 = await db.createMediaRecord({
+      const publicRecord2 = await createAndTrack({
         filename: 'filter_public2.png',
         filepath: '/data/media/filter_public2.png',
         type: 'image',

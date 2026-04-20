@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:server": "vitest run --config vitest.server.config.ts",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --config vitest.config.ts --coverage && vitest run --config vitest.server.config.ts --coverage",
+    "test:coverage": "npm run test:coverage:client && npm run test:coverage:server",
     "test:coverage:client": "vitest run --config vitest.config.ts --coverage",
     "test:coverage:server": "vitest run --config vitest.server.config.ts --coverage"
   },

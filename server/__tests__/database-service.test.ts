@@ -30,7 +30,6 @@ describe('DatabaseService', () => {
     await conn.execute('DELETE FROM job_tags')
     await conn.execute('DELETE FROM cron_jobs')
     await conn.execute('DELETE FROM capacity_tracking')
-    await conn.execute('DELETE FROM media_records')
     await conn.execute('DELETE FROM prompt_templates')
     await conn.execute('DELETE FROM workflow_templates')
     await conn.execute('DELETE FROM audit_logs')

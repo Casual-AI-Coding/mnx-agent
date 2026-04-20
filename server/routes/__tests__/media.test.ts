@@ -1,36 +1,71 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import { setupTestDatabase, teardownTestDatabase, getConnection } from '../../__tests__/test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
 import mediaRouter from '../media.js'
-
-const mockUser = {
-  userId: 'test-user-001',
-  role: 'super' as const,
-}
-
-const mockAuthMiddleware = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
-  req.user = mockUser
-  next()
-}
 
 describe('Media API Routes', () => {
   let app: express.Application
+  let fileMarker: string
+
+  const mockAuthMiddleware = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    req.user = {
+      userId: fileMarker,
+      username: 'media-api-test',
+      role: 'user' as const,
+    }
+    next()
+  }
+
+  const createdRecordIds = new Set<string>()
+
+  async function createMedia(data: Record<string, unknown>) {
+    const res = await request(app).post('/api/media').send(data)
+    if (res.body.data?.id) {
+      createdRecordIds.add(res.body.data.id)
+    }
+    return res
+  }
 
   beforeAll(async () => {
     await setupTestDatabase()
+    fileMarker = getTestFileMarker()
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
     app.use('/api/media', mediaRouter)
+
+    const conn = getConnection()
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [fileMarker, `media-api-test-${fileMarker.slice(0,8)}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
+    )
   })
 
   beforeEach(async () => {
-    const db = getConnection()
-    await db.execute('DELETE FROM media_records')
+    const conn = getConnection()
+    await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+    createdRecordIds.clear()
+  })
+
+  afterEach(async () => {
+    if (createdRecordIds.size > 0) {
+      const conn = getConnection()
+      const ids = Array.from(createdRecordIds)
+      for (let i = 0; i < ids.length; i += 100) {
+        const batch = ids.slice(i, i + 100)
+        await conn.execute(`DELETE FROM media_records WHERE id = ANY($1)`, [batch])
+      }
+      createdRecordIds.clear()
+    }
   })
 
   afterAll(async () => {
+    const conn = getConnection()
+    await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+    await conn.execute(`DELETE FROM users WHERE id = $1`, [fileMarker])
     await teardownTestDatabase()
   })
 
@@ -45,13 +80,13 @@ describe('Media API Routes', () => {
     })
 
     it('should return paginated list', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'test1.wav',
         filepath: '/test1.wav',
         type: 'audio',
         size_bytes: 100,
       })
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'test2.png',
         filepath: '/test2.png',
         type: 'image',
@@ -65,13 +100,13 @@ describe('Media API Routes', () => {
     })
 
     it('should filter by type', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'audio.mp3',
         filepath: '/audio.mp3',
         type: 'audio',
         size_bytes: 100,
       })
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'image.png',
         filepath: '/image.png',
         type: 'image',
@@ -85,14 +120,14 @@ describe('Media API Routes', () => {
     })
 
     it('should filter by source', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'generated.mp3',
         filepath: '/generated.mp3',
         type: 'audio',
         size_bytes: 100,
         source: 'voice_sync',
       })
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'uploaded.mp3',
         filepath: '/uploaded.mp3',
         type: 'audio',
@@ -108,7 +143,7 @@ describe('Media API Routes', () => {
 
     it('should paginate results', async () => {
       for (let i = 0; i < 5; i++) {
-        await request(app).post('/api/media').send({
+        await createMedia({
           filename: `file${i}.mp3`,
           filepath: `/file${i}.mp3`,
           type: 'audio',
@@ -124,7 +159,7 @@ describe('Media API Routes', () => {
     })
 
     it('should include deleted records when includeDeleted is true', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'to_delete.png',
         filepath: '/to_delete.png',
         type: 'image',
@@ -144,7 +179,7 @@ describe('Media API Routes', () => {
 
   describe('GET /api/media/:id', () => {
     it('should return a media record by id', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'test.mp3',
         filepath: '/test.mp3',
         type: 'audio',
@@ -166,7 +201,7 @@ describe('Media API Routes', () => {
     })
 
     it('should return 404 for soft-deleted record', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'delete_test.png',
         filepath: '/data/media/delete_test.png',
         type: 'image',
@@ -182,7 +217,7 @@ describe('Media API Routes', () => {
 
   describe('POST /api/media', () => {
     it('should create a media record', async () => {
-      const res = await request(app).post('/api/media').send({
+      const res = await createMedia({
         filename: 'new.mp3',
         filepath: '/new.mp3',
         type: 'audio',
@@ -196,7 +231,7 @@ describe('Media API Routes', () => {
     })
 
     it('should create with all fields', async () => {
-      const res = await request(app).post('/api/media').send({
+      const res = await createMedia({
         filename: 'full.mp3',
         original_name: 'original.mp3',
         filepath: '/full.mp3',
@@ -213,7 +248,7 @@ describe('Media API Routes', () => {
     })
 
     it('should reject missing required fields', async () => {
-      const res = await request(app).post('/api/media').send({
+      const res = await createMedia({
         filename: 'incomplete.mp3',
       })
 
@@ -221,7 +256,7 @@ describe('Media API Routes', () => {
     })
 
     it('should reject invalid type', async () => {
-      const res = await request(app).post('/api/media').send({
+      const res = await createMedia({
         filename: 'invalid.mp3',
         filepath: '/invalid.mp3',
         type: 'invalid_type',
@@ -234,7 +269,7 @@ describe('Media API Routes', () => {
 
   describe('PUT /api/media/:id', () => {
     it('should update original_name', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'update_me.mp3',
         filepath: '/update_me.mp3',
         type: 'audio',
@@ -250,7 +285,7 @@ describe('Media API Routes', () => {
     })
 
     it('should update metadata', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'meta.mp3',
         filepath: '/meta.mp3',
         type: 'audio',
@@ -266,7 +301,7 @@ describe('Media API Routes', () => {
     })
 
     it('should update both original_name and metadata', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'both.mp3',
         filepath: '/both.mp3',
         type: 'audio',
@@ -294,7 +329,7 @@ describe('Media API Routes', () => {
 
   describe('DELETE /api/media/:id', () => {
     it('should soft delete a media record', async () => {
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'delete_test.png',
         filepath: '/data/media/delete_test.png',
         type: 'image',
@@ -318,13 +353,13 @@ describe('Media API Routes', () => {
 
   describe('DELETE /api/media/batch', () => {
     it('should soft delete multiple records', async () => {
-      const res1 = await request(app).post('/api/media').send({
+      const res1 = await createMedia({
         filename: 'batch1.mp3',
         filepath: '/data/media/batch1.mp3',
         type: 'audio',
         size_bytes: 1024,
       })
-      const res2 = await request(app).post('/api/media').send({
+      const res2 = await createMedia({
         filename: 'batch2.mp3',
         filepath: '/data/media/batch2.mp3',
         type: 'audio',
@@ -350,7 +385,7 @@ describe('Media API Routes', () => {
 
   describe('Pagination edge cases', () => {
     it('should handle page 1 with limit 1', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'single.mp3',
         filepath: '/single.mp3',
         type: 'audio',
@@ -366,7 +401,7 @@ describe('Media API Routes', () => {
 
     it('should calculate totalPages correctly', async () => {
       for (let i = 0; i < 7; i++) {
-        await request(app).post('/api/media').send({
+        await createMedia({
           filename: `page${i}.mp3`,
           filepath: `/page${i}.mp3`,
           type: 'audio',
@@ -385,7 +420,7 @@ describe('Media API Routes', () => {
     it('should filter by all media types', async () => {
       const types = ['audio', 'image', 'video', 'music']
       for (const type of types) {
-        await request(app).post('/api/media').send({
+        await createMedia({
           filename: `${type}.test`,
           filepath: `/${type}.test`,
           type,
@@ -401,7 +436,7 @@ describe('Media API Routes', () => {
     })
 
     it('should return empty for non-matching type', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'audio.mp3',
         filepath: '/audio.mp3',
         type: 'audio',
@@ -418,7 +453,7 @@ describe('Media API Routes', () => {
     it('should filter by all media sources', async () => {
       const sources = ['voice_sync', 'voice_async', 'image_generation', 'video_generation', 'music_generation']
       for (const source of sources) {
-        await request(app).post('/api/media').send({
+        await createMedia({
           filename: `${source}.test`,
           filepath: `/${source}.test`,
           type: 'audio',
@@ -437,21 +472,21 @@ describe('Media API Routes', () => {
 
   describe('Combined filtering', () => {
     it('should filter by type and source combined', async () => {
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'audio_sync.mp3',
         filepath: '/audio_sync.mp3',
         type: 'audio',
         size_bytes: 100,
         source: 'voice_sync',
       })
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'audio_async.mp3',
         filepath: '/audio_async.mp3',
         type: 'audio',
         size_bytes: 200,
         source: 'voice_async',
       })
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'image.png',
         filepath: '/image.png',
         type: 'image',
@@ -467,7 +502,7 @@ describe('Media API Routes', () => {
 
     it('should filter by type, source, and pagination', async () => {
       for (let i = 0; i < 5; i++) {
-        await request(app).post('/api/media').send({
+        await createMedia({
           filename: `audio${i}.mp3`,
           filepath: `/audio${i}.mp3`,
           type: 'audio',
@@ -475,7 +510,7 @@ describe('Media API Routes', () => {
           source: 'voice_sync',
         })
       }
-      await request(app).post('/api/media').send({
+      await createMedia({
         filename: 'video.mp4',
         filepath: '/video.mp4',
         type: 'video',
@@ -503,7 +538,7 @@ describe('Media API Routes', () => {
         metadata: { prompt: 'test prompt', model: 'test-model' },
       }
 
-      const createRes = await request(app).post('/api/media').send(data)
+      const createRes = await createMedia(data)
       const getRes = await request(app).get(`/api/media/${createRes.body.data.id}`)
 
       const record = getRes.body.data
@@ -523,7 +558,7 @@ describe('Media API Routes', () => {
         boolean: true,
       }
 
-      const createRes = await request(app).post('/api/media').send({
+      const createRes = await createMedia({
         filename: 'metadata.mp3',
         filepath: '/metadata.mp3',
         type: 'audio',

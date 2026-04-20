@@ -2,6 +2,21 @@ import { createConnection, getConnection, closeConnection, resetConnection } fro
 import { DatabaseService } from '../database/service-async.js'
 import { registerServices } from '../service-registration.js'
 import { resetContainer } from '../container.js'
+import { v4 as uuidv4 } from 'uuid'
+
+const testMarkerCache = new Map<string, string>()
+
+export function getTestFileMarker(): string {
+  const file = import.meta.url
+  if (!testMarkerCache.has(file)) {
+    testMarkerCache.set(file, uuidv4())
+  }
+  return testMarkerCache.get(file)!
+}
+
+export function resetTestFileMarker(): void {
+  testMarkerCache.clear()
+}
 
 export function getTestDbConfig() {
   return {
