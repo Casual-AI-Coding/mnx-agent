@@ -1,16 +1,18 @@
-import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive, Star, StarOff, Lock, Globe, Users } from 'lucide-react'
+import { Search, AlertCircle, ChevronLeft, ChevronRight, X, RefreshCw, Loader2, LayoutGrid, Calendar, List, HardDrive, Star, StarOff, Lock, Globe, Users, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
+import { useState } from 'react'
 import { useMediaManagement } from '@/hooks/useMediaManagement'
 import { AnimatedMediaGrid } from '@/components/media/AnimatedMediaGrid'
 import { TimelineItem } from '@/components/media/TimelineItem'
 import { MediaTableView } from '@/components/media/MediaTableView'
 import { BatchOperationsToolbar, BatchDeleteDialog } from '@/components/media/BatchOperationsToolbar'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { Dialog } from '@/components/ui/Dialog'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { LyricsPreviewModal } from '@/components/lyrics'
 
@@ -18,9 +20,49 @@ import { MEDIA_TABS } from '@/lib/constants/media'
 import { formatDateHeader, getDateKey } from '@/lib/utils/media'
 import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
+import { getRecoverableMedia, recoverMedia, type RecoverableMediaRecord } from '@/lib/api/media'
+import { toastSuccess, toastError } from '@/lib/toast'
 
 export default function MediaManagement() {
   const currentUser = useAuthStore((state) => state.user)
+
+  const [recoverDialogOpen, setRecoverDialogOpen] = useState(false)
+  const [recoverableRecords, setRecoverableRecords] = useState<RecoverableMediaRecord[]>([])
+  const [isLoadingRecoverable, setIsLoadingRecoverable] = useState(false)
+  const [recoveringId, setRecoveringId] = useState<string | null>(null)
+
+  const handleFetchRecoverable = async () => {
+    setIsLoadingRecoverable(true)
+    try {
+      const response = await getRecoverableMedia()
+      if (response.success) {
+        setRecoverableRecords(response.data.records)
+        setRecoverDialogOpen(true)
+      }
+    } catch (error) {
+      toastError('获取可恢复记录失败')
+    } finally {
+      setIsLoadingRecoverable(false)
+    }
+  }
+
+  const handleRecover = async (id: string) => {
+    setRecoveringId(id)
+    try {
+      const response = await recoverMedia(id)
+      if (response.success) {
+        toastSuccess('文件恢复成功')
+        setRecoverableRecords(prev => prev.filter(r => r.id !== id))
+        if (response.data.record) {
+          fetchMedia(false)
+        }
+      }
+    } catch (error) {
+      toastError('恢复失败')
+    } finally {
+      setRecoveringId(null)
+    }
+  }
 
   const {
     records,
@@ -119,6 +161,10 @@ export default function MediaManagement() {
             <Button variant="outline" onClick={() => fetchMedia(false)} disabled={isLoading}>
               <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
               刷新
+            </Button>
+            <Button variant="outline" onClick={handleFetchRecoverable} disabled={isLoadingRecoverable}>
+              <Undo2 className={cn('w-4 h-4 mr-2', isLoadingRecoverable && 'animate-spin')} />
+              恢复上传
             </Button>
           </>
         }
@@ -455,6 +501,36 @@ export default function MediaManagement() {
         selectedCount={selectedIds.size}
         isDeleting={isBatchDeleting}
       />
+
+      <Dialog open={recoverDialogOpen} onClose={() => setRecoverDialogOpen(false)} title="恢复上传失败的文件" description={recoverableRecords.length === 0 ? '没有发现需要恢复的文件' : `发现 ${recoverableRecords.length} 个文件可以恢复`} size="lg">
+        {recoverableRecords.length > 0 && (
+          <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
+            {recoverableRecords.map((record) => (
+              <div key={record.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{record.original_name || record.filename}</p>
+                  <p className="text-xs text-muted-foreground">{record.type} · {record.source}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRecover(record.id)}
+                  disabled={recoveringId === record.id}
+                >
+                  {recoveringId === record.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '恢复'
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end mt-4">
+          <Button variant="outline" onClick={() => setRecoverDialogOpen(false)}>关闭</Button>
+        </div>
+      </Dialog>
 
       <BatchOperationsToolbar
         selectedCount={selectedIds.size}

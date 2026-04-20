@@ -23,6 +23,11 @@ import {
   createPaginatedResponse,
   withEntityNotFound,
 } from '../utils/index.js'
+import { access } from 'fs/promises'
+import { join } from 'path'
+import { existsSync } from 'fs'
+
+const DEFAULT_MEDIA_ROOT = process.env.MEDIA_ROOT || './data/media'
 
 const router = Router()
 
@@ -58,6 +63,49 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
   successResponse(res, createPaginatedResponse(result.records, result.total, page, limit))
 }))
 
+router.get('/recoverable', asyncHandler(async (req, res) => {
+  const db = getMediaService()
+  const ownerId = buildOwnerFilter(req).params[0]
+
+  const result = await db.getAll({
+    limit: 1000,
+    offset: 0,
+    visibilityOwnerId: ownerId,
+  })
+
+  const recoverable: Array<{
+    id: string
+    filename: string
+    original_name: string | null
+    type: string
+    source: string | null
+    metadata: Record<string, unknown> | null
+    created_at: string
+  }> = []
+
+  for (const record of result.records) {
+    if (!record.metadata || typeof record.metadata !== 'object') continue
+    const metadata = record.metadata as Record<string, unknown>
+    const sourceUrl = metadata?.source_url
+    if (!sourceUrl || typeof sourceUrl !== 'string') continue
+
+    const fullPath = join(DEFAULT_MEDIA_ROOT, record.filepath)
+    if (!existsSync(fullPath)) {
+      recoverable.push({
+        id: record.id,
+        filename: record.filename,
+        original_name: record.original_name,
+        type: record.type,
+        source: record.source,
+        metadata: record.metadata,
+        created_at: record.created_at,
+      })
+    }
+  }
+
+  successResponse(res, { records: recoverable, total: recoverable.length })
+}))
+
 router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
   const ownerId = buildOwnerFilter(req).params[0]
@@ -70,6 +118,55 @@ router.get('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req,
     return
   }
   successResponse(res, record)
+}))
+
+router.post('/:id/recover', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = getMediaService()
+  const ownerId = buildOwnerFilter(req).params[0]
+
+  const record = await db.getById(req.params.id, ownerId)
+  if (!record) {
+    errorResponse(res, 'Media record not found', 404)
+    return
+  }
+
+  if (!record.metadata || typeof record.metadata !== 'object') {
+    errorResponse(res, 'No source_url in metadata', 400)
+    return
+  }
+
+  const metadata = record.metadata as Record<string, unknown>
+  const sourceUrl = metadata?.source_url
+  if (!sourceUrl || typeof sourceUrl !== 'string') {
+    errorResponse(res, 'No source_url in metadata', 400)
+    return
+  }
+
+  const fullPath = join(DEFAULT_MEDIA_ROOT, record.filepath)
+  if (existsSync(fullPath)) {
+    successResponse(res, { message: 'File already exists', record })
+    return
+  }
+
+  try {
+    const response = await axios.get(sourceUrl, { responseType: 'arraybuffer' })
+    const buffer = Buffer.from(response.data)
+
+    const { filepath: savedFilepath } = await saveMediaFile(
+      buffer,
+      record.filename,
+      record.type as any
+    )
+
+    successResponse(res, {
+      message: 'File recovered successfully',
+      record,
+      savedFilepath,
+    })
+  } catch (error) {
+    logger.error({ error, recordId: record.id, sourceUrl }, 'Failed to recover file from source_url')
+    errorResponse(res, `Failed to download from source_url: ${(error as Error).message}`, 500)
+  }
 }))
 
 router.post('/', validate(createMediaRecordSchema), asyncHandler(async (req, res) => {
@@ -384,5 +481,4 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
 
   archive.finalize()
 }))
-
 export default router

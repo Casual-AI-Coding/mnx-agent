@@ -222,3 +222,29 @@ export async function batchTogglePublic(ids: string[], isPublic: boolean): Promi
   const response = await client.post('/media/batch/public', { ids, isPublic })
   return response.data
 }
+
+export interface RecoverableMediaRecord {
+  id: string
+  filename: string
+  original_name: string | null
+  type: string
+  source: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+export async function getRecoverableMedia(): Promise<{
+  success: boolean
+  data: { records: RecoverableMediaRecord[]; total: number }
+}> {
+  const response = await client.get('/media/recoverable')
+  return response.data
+}
+
+export async function recoverMedia(id: string): Promise<{
+  success: boolean
+  data: { message: string; record: MediaRecord; savedFilepath?: string }
+}> {
+  const response = await client.post(`/media/${id}/recover`)
+  return response.data
+}
