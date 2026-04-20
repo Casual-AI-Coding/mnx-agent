@@ -2,6 +2,83 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.6] - 2026-04-21
+
+### Added
+
+- **媒体上传失败重试机制** - 增强上传恢复能力
+  - `server/lib/media-storage.ts` (+20) - 重试逻辑封装
+  - `server/routes/media.ts` (+201) - 批量恢复 API 和重试端点
+  - `src/lib/api/media.ts` (+31) - 前端重试 API 调用
+  - `src/pages/MediaManagement.tsx` (+82) - 重试状态 UI 集成
+  - `docs/plans/2026-04-21-recover-failed-uploads.md` - 恢复计划文档
+
+- **歌词预览模态框增强** - 改善用户体验
+  - `src/components/lyrics/LyricsPreviewModal.tsx` (+223) - 复制、收藏按钮，结构标签识别
+  - `src/lib/utils/lyrics.ts` (+15) - 歌词工具函数
+  - `src/types/lyrics.ts` (+3) - 类型扩展
+
+- **音乐卡片交互改进** - 统一播放体验
+  - `src/components/media/MediaCard.tsx` (+50) - 音乐类型播放图标
+  - `src/components/media/MediaTableView.tsx` (+19) - 表格视图播放支持
+  - `src/components/media/TimelineItem.tsx` (+14) - 时间线视图播放支持
+  - `src/components/media/AudioPlayer.tsx` (+1) - 播放状态管理
+  - `server/routes/media.ts` - 防止双重音频播放修复
+
+- **测试基础设施扩展** - 提升测试覆盖
+  - `src/stores/__tests__/cronJobs.test.ts` (+180) - Cron Jobs Store 测试
+  - `src/stores/__tests__/executionLogs.test.ts` (+51) - 执行日志 Store 测试
+  - `src/stores/__tests__/taskQueue.test.ts` (+61) - 任务队列 Store 测试
+  - `server/repositories/__tests__/external-api-log.repository.test.ts` (+320) - 外部 API 日志 Repository 测试
+  - `server/repositories/__tests__/task-repository.test.ts` (+568) - 任务 Repository 测试
+  - `server/repositories/__tests__/workflow-repository.test.ts` (+560) - 工作流 Repository 测试
+  - `server/routes/__tests__/media.test.ts` (+127) - 媒体路由测试
+  - `server/routes/__tests__/workflows.test.ts` (+25) - 工作流路由测试
+
+- **并行测试执行** - 提升测试速度
+  - `vitest.server.config.ts` (+138) - 并行配置（pool='forks', fileParallelism）
+  - `vitest.config.ts` (+17) - 前端并行测试支持
+
+- **测试覆盖率命令优化** - 分离前后端覆盖
+  - `package.json` - 新增 `test:coverage:frontend` 和 `test:coverage:backend` 命令
+
+- **音乐恢复脚本** - 数据修复工具
+  - `scripts/restore-music-from-audit.ts` (+196) - 从审计日志恢复音乐文件
+
+- **测试指南文档** - 规范测试实践
+  - `docs/guides/testing-guide.md` (+70) - 测试配置和使用指南
+
+### Fixed
+
+- **音频播放修复** - 防止双重音频播放
+  - `fix(media): prevent dual audio playback`
+
+- **测试隔离修复** - 确保测试独立性
+  - `fix(test): properly cleanup NULL owner_id records in test isolation`
+  - `fix(test): isolate tests with unique owner_id per file`
+  - `fix(test): correct assertions for repository tests`
+
+- **卡片交互优化** - 平滑过渡效果
+  - `fix(media): polish card interactions and lyrics modal transitions`
+
+### Changed
+
+- **歌词结构标签识别** - 支持任意 `[xxxx]` 模式
+  - `src/lib/utils/lyrics.ts` - 识别任何 `[xxxx]` 格式作为结构标签
+
+### Performance
+
+- **测试执行速度** - 并行化优化
+  - 后端测试：pool='forks' + fileParallelism
+  - 前端测试：fileParallelism 启用
+  - **34 files changed** (+3104 insertions, -335 deletions)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 媒体上传重试为向后兼容增强
+- ✅ 测试基础设施不影响生产功能
+
 ## [2.1.5] - 2026-04-20
 
 ### Added

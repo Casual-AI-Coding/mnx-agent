@@ -1,7 +1,7 @@
 {
   "name": "mnx-agent",
   "private": true,
-  "version": "2.1.5",
+  "version": "2.1.6",
   "type": "module",
   "bin": {
     "mnx-agent": "./scripts/run.js"
