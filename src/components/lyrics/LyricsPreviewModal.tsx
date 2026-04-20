@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Download, Edit3, Copy, Star } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, copyToClipboard } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { parseLyricsSections, getSectionDisplayName } from '@/lib/utils/lyrics'
 import type { LyricsSection } from '@/types/lyrics'
@@ -146,14 +146,9 @@ export function LyricsPreviewModal({
   const handleCopy = async () => {
     if (isCopying) return
     setIsCopying(true)
-    try {
-      await navigator.clipboard.writeText(lyrics)
-      toastSuccess('歌词已复制到剪贴板')
-    } catch {
-      toastSuccess('复制失败')
-    } finally {
-      setIsCopying(false)
-    }
+    const success = await copyToClipboard(lyrics)
+    toastSuccess(success ? '歌词已复制到剪贴板' : '复制失败')
+    setIsCopying(false)
   }
 
   const handleFavoriteToggle = async () => {
