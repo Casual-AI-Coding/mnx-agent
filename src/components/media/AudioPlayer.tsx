@@ -113,6 +113,7 @@ export function AudioPlayer({
   useEffect(() => {
     if (signedUrl && audioRef.current) {
       const audio = audioRef.current
+      audio.pause() // Stop any currently playing audio before loading new source
       audio.src = signedUrl
       audio.load()
       setCurrentTime(0)
