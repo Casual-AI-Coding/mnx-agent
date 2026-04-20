@@ -3,19 +3,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
-import { Download, Edit3 } from 'lucide-react'
+import { Download, Edit3, Copy, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { parseLyricsSections, getSectionDisplayName } from '@/lib/utils/lyrics'
 import type { LyricsSection } from '@/types/lyrics'
 import { formatDate } from '@/lib/utils/media'
 import { toastSuccess } from '@/lib/toast'
+import { toggleFavorite } from '@/lib/api/media'
 
 interface LyricsPreviewModalProps {
   record: MediaRecord
   open: boolean
   onClose: () => void
   onEdit?: (record: MediaRecord) => void
+  onFavoriteToggle?: (record: MediaRecord) => void
 }
 
 // Segment types for rendering lyrics with active highlighting
@@ -74,8 +76,11 @@ export function LyricsPreviewModal({
   open,
   onClose,
   onEdit,
+  onFavoriteToggle,
 }: LyricsPreviewModalProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null)
+  const [isFavorite, setIsFavorite] = useState(record.is_favorite ?? false)
+  const [isCopying, setIsCopying] = useState(false)
   const lyricsContainerRef = useRef<HTMLDivElement>(null)
 
   // Get lyrics from metadata
@@ -135,11 +140,37 @@ export function LyricsPreviewModal({
     toastSuccess('歌词已导出')
   }
 
+  const handleCopy = async () => {
+    if (isCopying) return
+    setIsCopying(true)
+    try {
+      await navigator.clipboard.writeText(lyrics)
+      toastSuccess('歌词已复制到剪贴板')
+    } catch {
+      toastSuccess('复制失败')
+    } finally {
+      setIsCopying(false)
+    }
+  }
+
+  const handleFavoriteToggle = async () => {
+    try {
+      const result = await toggleFavorite(record.id)
+      const newFavoriteState = result.data.isFavorite
+      setIsFavorite(newFavoriteState)
+      onFavoriteToggle?.({ ...record, is_favorite: newFavoriteState })
+      toastSuccess(newFavoriteState ? '已收藏' : '已取消收藏')
+    } catch {
+      toastSuccess('操作失败')
+    }
+  }
+
   useEffect(() => {
     if (open) {
       setActiveSectionIndex(null)
+      setIsFavorite(record.is_favorite ?? false)
     }
-  }, [open])
+  }, [open, record.is_favorite])
 
   return (
     <Dialog
@@ -256,6 +287,27 @@ export function LyricsPreviewModal({
         </div>
 
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCopy}
+            disabled={isCopying}
+          >
+            <Copy className="w-3 h-3 mr-1" />
+            复制
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleFavoriteToggle}
+            className={cn(
+              'hover:text-yellow-500 transition-colors',
+              isFavorite && 'text-yellow-500'
+            )}
+          >
+            <Star className={cn('w-3 h-3 mr-1', isFavorite && 'fill-current')} />
+            {isFavorite ? '已收藏' : '收藏'}
+          </Button>
           {onEdit && (
             <Button
               size="sm"
