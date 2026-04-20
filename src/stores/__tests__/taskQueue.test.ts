@@ -8,11 +8,12 @@ vi.mock('@/lib/api/cron', () => ({
   deleteTask: vi.fn(),
 }))
 
+const mockWsClient = {
+  onEvent: vi.fn(() => vi.fn()),
+  offEvent: vi.fn(),
+}
 vi.mock('@/lib/websocket-client', () => ({
-  getWebSocketClient: vi.fn(() => ({
-    onEvent: vi.fn(() => vi.fn()),
-    offEvent: vi.fn(),
-  })),
+  getWebSocketClient: vi.fn(() => mockWsClient),
 }))
 
 import { getTasks, createTask, updateTask, deleteTask } from '@/lib/api/cron'
@@ -278,6 +279,58 @@ describe('taskQueue helper functions', () => {
 
     it('should return 0 for empty array', () => {
       expect(getFailedCount([])).toBe(0)
+    })
+  })
+})
+
+describe('useTaskQueueStore WebSocket', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useTaskQueueStore.setState({
+      tasks: [],
+      loading: false,
+      error: null,
+      filter: {},
+      _wsUnsubscribe: undefined,
+    })
+  })
+
+  describe('setFilter', () => {
+    it('should update filter state', () => {
+      useTaskQueueStore.setState({ filter: {} })
+      const { result } = renderHook(() => useTaskQueueStore())
+      act(() => {
+        result.current.setFilter({ status: 'pending' })
+      })
+
+      expect(result.current.filter).toEqual({ status: 'pending' })
+    })
+  })
+
+  describe('subscribeToWebSocket', () => {
+    it('should call subscribeToWebSocket and register event handler', () => {
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+
+      expect(mockWsClient.onEvent).toHaveBeenCalledWith('tasks', expect.any(Function))
+    })
+
+    it('should call unsubscribeFromWebSocket', () => {
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+      result.current.unsubscribeFromWebSocket()
+
+      expect(result.current._wsUnsubscribe).toBeUndefined()
+    })
+
+    it('should return early from subscribeToWebSocket if already subscribed', () => {
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+      const firstCallCount = mockWsClient.onEvent.mock.calls.length
+      result.current.subscribeToWebSocket()
+      const secondCallCount = mockWsClient.onEvent.mock.calls.length
+
+      expect(secondCallCount).toBe(firstCallCount)
     })
   })
 })

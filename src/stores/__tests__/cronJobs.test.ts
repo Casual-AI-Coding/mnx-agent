@@ -8,6 +8,12 @@ vi.mock('@/lib/api/cron', () => ({
   deleteCronJob: vi.fn(),
   toggleCronJob: vi.fn(),
   runCronJob: vi.fn(),
+  addJobTag: vi.fn(),
+  removeJobTag: vi.fn(),
+  getJobTags: vi.fn(),
+  addJobDependency: vi.fn(),
+  removeJobDependency: vi.fn(),
+  getJobDependencies: vi.fn(),
 }))
 
 import {
@@ -17,6 +23,12 @@ import {
   deleteCronJob,
   toggleCronJob,
   runCronJob,
+  addJobTag,
+  removeJobTag,
+  getJobTags,
+  addJobDependency,
+  removeJobDependency,
+  getJobDependencies,
 } from '@/lib/api/cron'
 
 const mockBackendJob = {
@@ -316,6 +328,174 @@ describe('useCronJobsStore', () => {
     it('should call unsubscribeFromWebSocket without error when not subscribed', () => {
       const { result } = renderHook(() => useCronJobsStore())
       expect(() => result.current.unsubscribeFromWebSocket()).not.toThrow()
+    })
+  })
+
+  describe('addJobTag', () => {
+    it('should add job tag via API', async () => {
+      ;(addJobTag as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { tags: ['production', 'critical'] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const tags = await result.current.addJobTag('job-1', 'production')
+
+      expect(addJobTag).toHaveBeenCalledWith('job-1', 'production')
+      expect(tags).toEqual(['production', 'critical'])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on add tag error', async () => {
+      ;(addJobTag as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Tag limit exceeded',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.addJobTag('job-1', 'new-tag')).rejects.toThrow()
+      expect(result.current.error).toBe('Tag limit exceeded')
+    })
+  })
+
+  describe('removeJobTag', () => {
+    it('should remove job tag via API', async () => {
+      ;(removeJobTag as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { tags: ['production'] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const tags = await result.current.removeJobTag('job-1', 'staging')
+
+      expect(removeJobTag).toHaveBeenCalledWith('job-1', 'staging')
+      expect(tags).toEqual(['production'])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on remove tag error', async () => {
+      ;(removeJobTag as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Tag not found',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.removeJobTag('job-1', 'nonexistent')).rejects.toThrow()
+      expect(result.current.error).toBe('Tag not found')
+    })
+  })
+
+  describe('getJobTags', () => {
+    it('should get job tags via API', async () => {
+      ;(getJobTags as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { tags: ['production', 'nightly'] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const tags = await result.current.getJobTags('job-1')
+
+      expect(getJobTags).toHaveBeenCalledWith('job-1')
+      expect(tags).toEqual(['production', 'nightly'])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on get tags error', async () => {
+      ;(getJobTags as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Job not found',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.getJobTags('invalid')).rejects.toThrow()
+      expect(result.current.error).toBe('Job not found')
+    })
+  })
+
+  describe('addJobDependency', () => {
+    it('should add job dependency via API', async () => {
+      ;(addJobDependency as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { dependencies: ['job-2', 'job-3'] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const deps = await result.current.addJobDependency('job-1', 'job-2')
+
+      expect(addJobDependency).toHaveBeenCalledWith('job-1', 'job-2')
+      expect(deps).toEqual(['job-2', 'job-3'])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on circular dependency error', async () => {
+      ;(addJobDependency as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Circular dependency detected',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.addJobDependency('job-1', 'job-2')).rejects.toThrow()
+      expect(result.current.error).toBe('Circular dependency detected')
+    })
+  })
+
+  describe('removeJobDependency', () => {
+    it('should remove job dependency via API', async () => {
+      ;(removeJobDependency as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { dependencies: [] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const deps = await result.current.removeJobDependency('job-1', 'job-2')
+
+      expect(removeJobDependency).toHaveBeenCalledWith('job-1', 'job-2')
+      expect(deps).toEqual([])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on remove dependency error', async () => {
+      ;(removeJobDependency as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Dependency not found',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.removeJobDependency('job-1', 'invalid')).rejects.toThrow()
+      expect(result.current.error).toBe('Dependency not found')
+    })
+  })
+
+  describe('getJobDependencies', () => {
+    it('should get job dependencies via API', async () => {
+      ;(getJobDependencies as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { dependencies: ['job-2', 'job-3', 'job-4'] },
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const deps = await result.current.getJobDependencies('job-1')
+
+      expect(getJobDependencies).toHaveBeenCalledWith('job-1')
+      expect(deps).toEqual(['job-2', 'job-3', 'job-4'])
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should throw on get dependencies error', async () => {
+      ;(getJobDependencies as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Job not found',
+      })
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.getJobDependencies('invalid')).rejects.toThrow()
+      expect(result.current.error).toBe('Job not found')
     })
   })
 })

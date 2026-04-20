@@ -8,10 +8,14 @@ vi.mock('@/lib/api/cron', () => ({
   getLogDetails: vi.fn(),
 }))
 
+const mockClient = {
+  subscribe: vi.fn(() => vi.fn()),
+  onEvent: vi.fn((eventType: string, handler: (event: { type: string; payload: unknown }) => void) => {
+    return vi.fn()
+  }),
+}
 vi.mock('@/lib/websocket-client', () => ({
-  getWebSocketClient: vi.fn(() => ({
-    subscribe: vi.fn(() => vi.fn()),
-  })),
+  getWebSocketClient: vi.fn(() => mockClient),
 }))
 
 import { getLogs, getLogById, getLogDetails } from '@/lib/api/cron'
@@ -168,6 +172,47 @@ describe('useExecutionLogsStore', () => {
 
   // WebSocket subscription tests skipped - requires complex mock setup
   // The store's WebSocket integration is tested via integration tests
+})
+
+describe('useExecutionLogsStore WebSocket', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useExecutionLogsStore.setState({
+      logs: [],
+      logDetails: new Map(),
+      loading: false,
+      detailsLoading: new Set(),
+      error: null,
+      _wsUnsubscribe: undefined,
+    })
+  })
+
+  describe('subscribeToWebSocket', () => {
+    it('should call subscribeToWebSocket and register event handler', () => {
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      expect(mockClient.onEvent).toHaveBeenCalledWith('logs', expect.any(Function))
+    })
+
+    it('should call unsubscribeFromWebSocket', () => {
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+      result.current.unsubscribeFromWebSocket()
+
+      expect(result.current._wsUnsubscribe).toBeUndefined()
+    })
+
+    it('should return early from subscribeToWebSocket if already subscribed', () => {
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+      const firstCallCount = mockClient.onEvent.mock.calls.length
+      result.current.subscribeToWebSocket()
+      const secondCallCount = mockClient.onEvent.mock.calls.length
+
+      expect(secondCallCount).toBe(firstCallCount)
+    })
+  })
 })
 
 describe('executionLogs helper functions', () => {
