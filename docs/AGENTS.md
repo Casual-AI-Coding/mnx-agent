@@ -6,13 +6,16 @@
 
 ```
 docs/
-├── specs/           # 规格文档（定义"是什么"）
-├── guides/          # 开发指南（环境配置、测试指南等）
-├── plans/           # 实现计划（定义"怎么做"）
-├── archive/         # 已归档 plans
+├── AGENTS.md            # 文档组织规范
+├── standards/          # 【新增】工程规范（coding/API/database/testing/security）
+├── decisions/          # 【新增】架构决策记录（ADR）
+├── specs/              # 规格文档（定义"是什么"，永不归档）
+├── guides/            # 开发指南（环境配置、测试指南等）
+├── plans/              # 实现计划（定义"怎么做"）
+├── archive/           # 已归档 plans
 │   └── v{MAJOR}.{MINOR}/
-├── incidents/       # 事故报告
-└── roadmap/         # 版本规划
+├── incidents/          # 事故报告
+└── roadmap/            # 版本规划
 ```
 
 ## 文档分类
@@ -76,6 +79,28 @@ docs/
 - 问题描述与影响范围
 - 根因分析
 - 修复措施与预防方案
+
+### decisions/ - 架构决策记录
+
+**用途**: 记录"为什么这样设计"，供后人追溯关键决策的背景和理由
+
+**命名规范**: `NNNN-短标题.md`（如 `0001-why-postgresql.md`）
+
+**触发规则**（宽松式）:
+> 当有人问"为什么不用 X？"而答案不简单时，就该写 ADR。
+
+**必须写 ADR 的场景**:
+- 技术选型（为什么选 A 而不是 B）
+- 架构模式变更（为什么从单体改分层）
+- 引入/替换核心依赖（为什么用 Zustand 不用 Redux）
+- 重大设计妥协（为什么接受软删除）
+- 对外部约束的响应（为什么 API 用 REST 不用 GraphQL）
+
+**内容特点**:
+- 背景（Context）：遇到了什么问题
+- 决策（Decision）：选了什么方案，考虑了哪些替代方案
+- 后果（Consequences）：正面、负面影响和风险
+- **永不归档**，始终保留在 `decisions/` 目录
 
 ### roadmap/ - 版本规划
 
@@ -187,19 +212,6 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 - 版本依赖可视化（ASCII 流程图）
 - 变更记录追踪文档修改历史
 
-## 版本历史
-
-| 版本 | 日期 | 主要特性 |
-|------|------|----------|
-| v1.7.0 | 2026-04-09 | Architecture Upgrade Phase 4-7, Media Enhancements |
-| v1.6.0 | 2026-04-06 | Architecture Upgrade v2 (DDD) |
-| v1.5.0 | 2026-04-05 | Architecture Refactoring, Settings, Delay Node, Cron Optimization |
-| v1.4.0 | 2026-04-05 | Architecture Upgrade, Workflow Cron Scheduling |
-| v1.3.0 | 2026-04-03 | Workflow System Refactoring |
-| v1.2.0 | 2026-04-02 | Theme System |
-| v1.1.0 | 2026-04-01 | Authentication |
-| v1.0.0 | 2026-03-31 | Initial Release |
-
 ## 文档维护
 
 ### 创建新文档
@@ -208,9 +220,10 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 2. **开发指南**: `guides/主题-guide.md`
 3. **实现计划**: `plans/YYYY-MM-DD-主题.md`
 4. **子计划**: `plans/YYYY-MM-DD-NN-主题.md`（NN 从 01 开始）
-5. **事故报告**: `incidents/YYYY-MM-DD-主题-incident.md`
-6. **版本规划**: `roadmap/v{VERSION}-roadmap.md`
-7. **新需求**: 在 `roadmap/requirement-pools.md` 添加需求卡片
+5. **架构决策**: `decisions/NNNN-短标题.md`（NNNN 递增，如 `0001-why-postgresql.md`）
+6. **事故报告**: `incidents/YYYY-MM-DD-主题-incident.md`
+7. **版本规划**: `roadmap/v{VERSION}-roadmap.md`
+8. **新需求**: 在 `roadmap/requirement-pools.md` 添加需求卡片
 
 ### 新需求录入流程
 
@@ -245,6 +258,8 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-22 | 新增 ADR 触发规则（宽松式）：当"为什么不用 X？"答案不简单时写 ADR |
+| 2026-04-22 | 新增 standards/ + decisions/ 目录；删除版本历史（已迁移 CHANGELOG） |
 | 2026-04-15 | 新增 guides/ 目录规范，引用路径更新为 archive/v1.3/，添加 guides 引用示例 |
 | 2026-04-15 | 补充 roadmap 目录详细规范：requirement-pools.md 结构、字段定义、来源字段；vX-roadmap.md 结构规范 |
 | 2026-04-15 | 新增「新需求录入流程」说明 |
