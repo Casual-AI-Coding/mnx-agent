@@ -451,7 +451,7 @@ const handleRetry = async (index: number) => {
         <div className="xl:col-span-7 xl:sticky xl:top-6">
           <div className="relative h-full">
             <div className="absolute -inset-0.5 bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/20 rounded-2xl blur opacity-50" />
-            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full xl:max-h-[calc(100vh-96px)] overflow-hidden flex flex-col">
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full xl:max-h-[620px] overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-accent-foreground" />
