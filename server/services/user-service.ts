@@ -276,7 +276,7 @@ export class UserService {
   }
 
   generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, this.getSecret(), { expiresIn: '15m' })
+    return jwt.sign(payload, this.getSecret(), { expiresIn: '30m' })
   }
 
   generateRefreshToken(payload: TokenPayload): string {

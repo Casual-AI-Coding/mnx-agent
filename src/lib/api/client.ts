@@ -9,9 +9,10 @@ import { ApiError } from './errors'
 class InternalAPIClient {
   private client: AxiosInstance
   private isRefreshing = false
-  private refreshSubscribers: Array<(token: string) => void> = []
+  private refreshSubscribers: Array<{ resolve: (token: string) => void; reject: (e: unknown) => void }> = []
   private authWaitTimeout = 5000 // 最多等待 5 秒
   private hydrationRefreshPromise: Promise<void> | null = null // 防止 hydration 时 token 刷新竞态
+  private readonly subscriberTimeout = 10000 // 等待 refresh 的超时时间
 
   /**
    * 执行 token 刷新（hydration 阶段专用）
@@ -48,7 +49,12 @@ class InternalAPIClient {
             this.hydrationRefreshPromise = null
           })
       }
-      await this.hydrationRefreshPromise
+      await Promise.race([
+        this.hydrationRefreshPromise,
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Hydration refresh timeout')), this.authWaitTimeout))
+      ]).catch((err) => {
+        console.warn('[API Client] Hydration refresh failed:', err)
+      })
     }
   }
 
@@ -90,10 +96,23 @@ class InternalAPIClient {
           }
 
           if (this.isRefreshing) {
-            return new Promise((resolve) => {
-              this.refreshSubscribers.push((token: string) => {
-                originalRequest.headers['Authorization'] = `Bearer ${token}`
-                resolve(this.client.request(originalRequest))
+            return new Promise((resolve, reject) => {
+              const timer = setTimeout(() => {
+                const idx = this.refreshSubscribers.findIndex(s => s.resolve === resolve)
+                if (idx !== -1) this.refreshSubscribers.splice(idx, 1)
+                reject(new Error('Token refresh timeout'))
+              }, this.subscriberTimeout)
+
+              this.refreshSubscribers.push({
+                resolve: (token: string) => {
+                  clearTimeout(timer)
+                  originalRequest.headers['Authorization'] = `Bearer ${token}`
+                  resolve(this.client.request(originalRequest))
+                },
+                reject: (e: unknown) => {
+                  clearTimeout(timer)
+                  reject(e)
+                },
               })
             })
           }
@@ -106,19 +125,20 @@ class InternalAPIClient {
             if (response.success && response.data?.accessToken) {
               const newToken = response.data.accessToken
               useAuthStore.getState().updateAccessToken(newToken)
-              this.refreshSubscribers.forEach((cb) => cb(newToken))
+              this.refreshSubscribers.forEach((s) => s.resolve(newToken))
               this.refreshSubscribers = []
               this.isRefreshing = false
               originalRequest.headers['Authorization'] = `Bearer ${newToken}`
               return this.client.request(originalRequest)
             }
           } catch {
-            useAuthStore.getState().logout()
-            window.location.href = '/login'
+            // refreshToken threw or returned success=false
           }
 
-          this.isRefreshing = false
+          // Failure: reject all waiting subscribers, logout, redirect
+          this.refreshSubscribers.forEach((s) => s.reject(new Error('Token refresh failed')))
           this.refreshSubscribers = []
+          this.isRefreshing = false
           useAuthStore.getState().logout()
           window.location.href = '/login'
           return Promise.reject(error)
