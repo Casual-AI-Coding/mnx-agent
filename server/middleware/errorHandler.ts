@@ -18,7 +18,12 @@ export const errorHandler = (
 }
 
 export function handleApiError(res: Response, error: unknown): void {
-  const err = error as Error & { code?: number }
-  const statusCode = err.code && err.code >= 100 && err.code < 600 ? err.code : 500
-  res.status(statusCode).json({ success: false, error: err.message })
+  const statusCode = error instanceof Error && 'code' in error && typeof error.code === 'number' && error.code >= 100 && error.code < 600
+    ? error.code
+    : 500
+
+  res.status(statusCode).json({
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error',
+  })
 }
