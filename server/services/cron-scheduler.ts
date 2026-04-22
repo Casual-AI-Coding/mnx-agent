@@ -153,7 +153,7 @@ export class CronScheduler {
         tasks_executed: 0,
         tasks_succeeded: 0,
         tasks_failed: 0,
-      })
+      }, job.owner_id ?? undefined)
 
       // Notify on_start
       await this.notificationService?.notifyJobEvent(job.id, 'on_start', {
