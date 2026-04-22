@@ -33,26 +33,36 @@ function parseLyricsBlocks(lyrics: string): LyricsBlock[] {
   return blocks
 }
 
-function useBlockFocus(containerRef: React.RefObject<HTMLDivElement | null>, blockCount: number) {
-  const blockRefs = useRef<(HTMLElement | null)[]>([])
+function useCenterBlock(containerRef: React.RefObject<HTMLDivElement | null>, blockCount: number) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const rafId = useRef<number>(0)
+  const offsetsRef = useRef<number[]>([])
+  const containerHeightRef = useRef(0)
 
-  const updateActive = useCallback(() => {
+  const recalc = useCallback(() => {
     const container = containerRef.current
     if (!container || blockCount === 0) return
 
+    containerHeightRef.current = container.clientHeight
     const containerRect = container.getBoundingClientRect()
-    const centerY = containerRect.top + containerRect.height / 2
+    const sections = container.querySelectorAll('[data-block-index]')
 
+    offsetsRef.current = Array.from(sections).map((s) => {
+      const el = s as HTMLElement
+      const rect = el.getBoundingClientRect()
+      return rect.top + rect.height / 2 - containerRect.top + container.scrollTop
+    })
+  }, [containerRef, blockCount])
+
+  const update = useCallback(() => {
+    const container = containerRef.current
+    if (!container || offsetsRef.current.length === 0) return
+
+    const center = container.scrollTop + containerHeightRef.current / 2
     let bestIdx = 0
     let bestDist = Infinity
 
-    blockRefs.current.forEach((el, i) => {
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const elCenter = rect.top + rect.height / 2
-      const dist = Math.abs(elCenter - centerY)
+    offsetsRef.current.forEach((offset, i) => {
+      const dist = Math.abs(offset - center)
       if (dist < bestDist) {
         bestDist = dist
         bestIdx = i
@@ -60,27 +70,39 @@ function useBlockFocus(containerRef: React.RefObject<HTMLDivElement | null>, blo
     })
 
     setActiveIndex(bestIdx)
-  }, [containerRef, blockCount])
+  }, [containerRef])
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || blockCount === 0) return
 
+    recalc()
+
+    let ticking = false
     const onScroll = () => {
-      if (rafId.current) cancelAnimationFrame(rafId.current)
-      rafId.current = requestAnimationFrame(updateActive)
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        update()
+        ticking = false
+      })
     }
 
-    updateActive()
     container.addEventListener('scroll', onScroll, { passive: true })
+
+    const ro = new ResizeObserver(() => {
+      recalc()
+      update()
+    })
+    ro.observe(container)
 
     return () => {
       container.removeEventListener('scroll', onScroll)
-      if (rafId.current) cancelAnimationFrame(rafId.current)
+      ro.disconnect()
     }
-  }, [containerRef, updateActive])
+  }, [containerRef, blockCount, recalc, update])
 
-  return { blockRefs, activeIndex }
+  return activeIndex
 }
 
 interface LyricsTaskCarouselProps {
@@ -104,9 +126,21 @@ interface LyricsPlayerViewProps {
 }
 
 function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
-  const lyricsContainerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const blocks = parseLyricsBlocks(result.lyrics)
-  const { blockRefs, activeIndex } = useBlockFocus(lyricsContainerRef, blocks.length)
+  const activeIndex = useCenterBlock(containerRef, blocks.length)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || blocks.length === 0) return
+    requestAnimationFrame(() => {
+      const first = container.querySelector('[data-block-index="0"]') as HTMLElement | null
+      if (!first) return
+      const containerH = container.clientHeight
+      const sectionH = first.offsetHeight
+      container.scrollTop = first.offsetTop - containerH / 2 + sectionH / 2
+    })
+  }, [blocks.length])
 
   const handleCopy = async () => {
     if (!result.lyrics) return
@@ -189,20 +223,21 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
           </button>
         </div>
         <div
-          ref={lyricsContainerRef}
+          ref={containerRef}
           className="flex-1 overflow-y-auto px-4 snap-y [&::-webkit-scrollbar]:hidden"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            scrollSnapType: 'y proximity',
+            scrollSnapType: 'y mandatory',
+            scrollPadding: '40% 0',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col py-[50%]">
+          <div className="flex flex-col py-8">
             {blocks.map((block, i) => (
               <section
                 key={i}
-                ref={(el) => { blockRefs.current[i] = el }}
+                data-block-index={i}
                 className={cn(
                   "snap-center transition-opacity duration-300",
                   i === activeIndex ? 'opacity-100' : 'opacity-30'
