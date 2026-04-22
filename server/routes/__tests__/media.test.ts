@@ -29,7 +29,7 @@ describe('Media API Routes', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)

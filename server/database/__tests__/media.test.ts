@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
-import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker, resetTestFileMarker } from '../../__tests__/test-helpers.js'
+import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
 import { DatabaseService } from '../service-async.js'
 import type { CreateMediaRecord, MediaType, MediaSource } from '../types.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -22,7 +22,7 @@ describe('MediaRecord Database Service', () => {
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
 
     const conn = getConnection()
     testOwnerId1 = uuidv4()
@@ -51,6 +51,7 @@ describe('MediaRecord Database Service', () => {
   beforeEach(async () => {
     const conn = getConnection()
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+    await conn.execute(`DELETE FROM media_records WHERE owner_id IN ($1, $2)`, [testOwnerId1, testOwnerId2])
     createdRecordIds.clear()
   })
 
@@ -810,6 +811,7 @@ describe('togglePublic', () => {
     beforeEach(async () => {
       const conn = getConnection()
       await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+      await conn.execute(`DELETE FROM media_records WHERE owner_id IN ($1, $2)`, [testOwnerId1, testOwnerId2])
       createdRecordIds.clear()
     })
 
