@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios, { AxiosError, AxiosInstance } from 'axios'
 import { MiniMaxClient, getMiniMaxClient, resetMiniMaxClient, createMiniMaxClientFromHeaders } from '../minimax'
@@ -167,6 +168,33 @@ describe('MiniMaxClient', () => {
   })
 
   describe('handleError method', () => {
+    it('should preserve structured context for base_resp errors', () => {
+      const responseData = {
+        base_resp: {
+          status_code: 1001,
+          status_msg: 'Invalid parameter',
+        },
+      }
+      const error = new AxiosError('Request failed')
+      error.response = {
+        status: 400,
+        data: responseData,
+      }
+
+      try {
+        MiniMaxClient.handleError(error)
+        throw new Error('expected handleError to throw')
+      } catch (thrown) {
+        expect(thrown).toMatchObject({
+          message: 'Invalid parameter',
+          code: 1001,
+          status: 400,
+          response: responseData,
+        })
+        expect(thrown).toHaveProperty('cause', error)
+      }
+    })
+
     it('should handle base_resp error format', async () => {
       const error = new AxiosError('Request failed')
       error.response = {
@@ -212,18 +240,38 @@ describe('MiniMaxClient', () => {
     })
 
     it('should handle ECONNABORTED timeout error', () => {
-      const error = new AxiosError('timeout of 60000ms exceeded') as AxiosError<MiniMaxErrorResponse>
+      const error = new AxiosError('timeout of 60000ms exceeded')
       error.code = 'ECONNABORTED'
 
-      expect(() => MiniMaxClient.handleError(error)).toThrow('Request timeout')
+      try {
+        MiniMaxClient.handleError(error)
+        throw new Error('expected handleError to throw')
+      } catch (thrown) {
+        expect(thrown).toMatchObject({
+          message: 'Request timeout',
+          code: 408,
+          status: 408,
+        })
+        expect(thrown).toHaveProperty('cause', error)
+      }
     })
 
     it('should handle generic axios error without response', () => {
-      const error = new AxiosError('Network Error') as AxiosError<MiniMaxErrorResponse>
+      const error = new AxiosError('Network Error')
       error.code = 'ERR_NETWORK'
       error.response = undefined
 
-      expect(() => MiniMaxClient.handleError(error)).toThrow('Network Error')
+      try {
+        MiniMaxClient.handleError(error)
+        throw new Error('expected handleError to throw')
+      } catch (thrown) {
+        expect(thrown).toMatchObject({
+          message: 'Network Error',
+          code: 500,
+          status: 500,
+        })
+        expect(thrown).toHaveProperty('cause', error)
+      }
     })
 
     it('should use response status and Unknown error when no base_resp or error.code', async () => {
@@ -244,7 +292,7 @@ describe('MiniMaxClient', () => {
     })
 
     it('should use default message when error.message is empty', () => {
-      const error = new AxiosError('') as AxiosError<MiniMaxErrorResponse>
+      const error = new AxiosError('')
       error.response = undefined
 
       expect(() => MiniMaxClient.handleError(error)).toThrow('Request failed')
@@ -276,6 +324,7 @@ describe('MiniMaxClient', () => {
 
     it('should handle error and throw', async () => {
       const error = new AxiosError('Request failed')
+      error.code = 'ERR_BAD_RESPONSE'
       error.response = {
         status: 500,
         data: {
@@ -291,6 +340,58 @@ describe('MiniMaxClient', () => {
       const client = new MiniMaxClient('test-key')
       
       await expect(client.chatCompletion({})).rejects.toThrow()
+    })
+
+    it('should preserve structured context and stable serialization through public call path', async () => {
+      const responseData = {
+        base_resp: {
+          status_code: 1002,
+          status_msg: 'Rate limit exceeded',
+        },
+      }
+      const error = new AxiosError('Request failed')
+      error.code = 'ERR_BAD_RESPONSE'
+      error.response = {
+        status: 503,
+        data: responseData,
+      }
+
+      mockClient.post.mockRejectedValueOnce(error)
+
+      const client = new MiniMaxClient('test-key')
+
+      try {
+        await client.chatCompletion({ model: 'abab6.5s-chat', messages: [] })
+        throw new Error('expected chatCompletion to throw')
+      } catch (thrown) {
+        expect(thrown).toBeInstanceOf(Error)
+        expect(thrown).toMatchObject({
+          name: 'MiniMaxClientError',
+          message: 'Rate limit exceeded',
+          code: 1002,
+          status: 503,
+          response: responseData,
+          axiosCode: 'ERR_BAD_RESPONSE',
+        })
+        expect(thrown).toHaveProperty('cause', error)
+
+        const serialized = JSON.parse(JSON.stringify(thrown)) as Record<string, unknown>
+
+        expect(serialized).toEqual({
+          name: 'MiniMaxClientError',
+          message: 'Rate limit exceeded',
+          code: 1002,
+          status: 503,
+          response: responseData,
+          axiosCode: 'ERR_BAD_RESPONSE',
+          cause: {
+            name: 'AxiosError',
+            message: 'Request failed',
+            code: 'ERR_BAD_RESPONSE',
+            status: 503,
+          },
+        })
+      }
     })
   })
 

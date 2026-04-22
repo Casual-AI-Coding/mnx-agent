@@ -27,6 +27,49 @@ interface MiniMaxError {
   message: string
 }
 
+interface MiniMaxErrorContext {
+  code: number
+  status: number
+  response?: MiniMaxErrorResponse
+  cause: AxiosError<MiniMaxErrorResponse>
+  axiosCode?: string
+}
+
+class MiniMaxClientError extends Error implements MiniMaxError {
+  code: number
+  status: number
+  response?: MiniMaxErrorResponse
+  cause: AxiosError<MiniMaxErrorResponse>
+  axiosCode?: string
+
+  constructor(message: string, context: MiniMaxErrorContext) {
+    super(message)
+    this.name = 'MiniMaxClientError'
+    this.code = context.code
+    this.status = context.status
+    this.response = context.response
+    this.cause = context.cause
+    this.axiosCode = context.axiosCode
+  }
+
+  toJSON(): Record<string, unknown> {
+    return {
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      status: this.status,
+      response: this.response,
+      axiosCode: this.axiosCode,
+      cause: {
+        name: this.cause.name,
+        message: this.cause.message,
+        code: this.cause.code,
+        status: this.cause.response?.status,
+      },
+    }
+  }
+}
+
 const ERROR_CODE_MAP: Record<number, { status: number; message: string }> = {
   0: { status: 200, message: 'success' },
   1002: { status: 429, message: 'Rate limit exceeded' },
@@ -54,30 +97,41 @@ export class MiniMaxClient {
   }
 
   static handleError(error: AxiosError<MiniMaxErrorResponse>): never {
-    const axiosError = error as AxiosError<MiniMaxErrorResponse>
-    
-    if (axiosError.response?.data) {
-      const data = axiosError.response.data
-      const statusCode = data.base_resp?.status_code 
-        ?? (data.error?.code ? Number(data.error?.code) : undefined)
-        ?? error.response?.status 
+    if (error.response?.data) {
+      const data = error.response.data
+      const parsedErrorCode = data.error?.code ? Number(data.error.code) : undefined
+      const code = data.base_resp?.status_code
+        ?? (Number.isNaN(parsedErrorCode) ? undefined : parsedErrorCode)
+        ?? error.response.status
         ?? 500
-      const statusMsg = data.base_resp?.status_msg ?? data.error?.message ?? 'Unknown error'
-      
-      const err = new Error(statusMsg) as Error & MiniMaxError
-      err.code = statusCode
-      throw err
+      const status = error.response.status ?? getErrorMapping(code).status
+      const message = data.base_resp?.status_msg ?? data.error?.message ?? 'Unknown error'
+
+      throw new MiniMaxClientError(message, {
+        code,
+        status,
+        response: data,
+        cause: error,
+        axiosCode: error.code,
+      })
     }
-    
+
     if (error.code === 'ECONNABORTED') {
-      const err = new Error('Request timeout') as Error & MiniMaxError
-      err.code = 408
-      throw err
+      throw new MiniMaxClientError('Request timeout', {
+        code: 408,
+        status: 408,
+        cause: error,
+        axiosCode: error.code,
+      })
     }
-    
-    const err = new Error(error.message || 'Request failed') as Error & MiniMaxError
-    err.code = error.response?.status ?? 500
-    throw err
+
+    throw new MiniMaxClientError(error.message || 'Request failed', {
+      code: error.response?.status ?? 500,
+      status: error.response?.status ?? 500,
+      response: error.response?.data,
+      cause: error,
+      axiosCode: error.code,
+    })
   }
 
   async chatCompletion(body: Record<string, unknown>): Promise<unknown> {
