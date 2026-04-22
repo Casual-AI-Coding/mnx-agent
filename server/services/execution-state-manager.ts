@@ -13,6 +13,34 @@ function rowToExecutionState(row: ExecutionStateRow): ExecutionState {
 export class ExecutionStateManager {
   constructor(private db: DatabaseService) {}
 
+  private async getByIdForUpdate(db: DatabaseService, id: string): Promise<ExecutionState | undefined> {
+    const row = await db.get<ExecutionStateRow>(
+      'SELECT * FROM execution_states WHERE id = $1 FOR UPDATE',
+      [id]
+    )
+    return row ? rowToExecutionState(row) : undefined
+  }
+
+  private async updateWithDb(db: DatabaseService, id: string, data: UpdateExecutionState): Promise<void> {
+    const sets: string[] = ['updated_at = $1']
+    const values: unknown[] = [toLocalISODateString()]
+    let paramIndex = 2
+
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        sets.push(`${key} = $${paramIndex}`)
+        values.push(value)
+        paramIndex++
+      }
+    }
+    values.push(id)
+
+    await db.run(
+      `UPDATE execution_states SET ${sets.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
+  }
+
   async create(data: CreateExecutionState): Promise<ExecutionState> {
     const id = `exec_${randomUUID().replace(/-/g, '')}`
     const now = toLocalISODateString()
@@ -67,52 +95,40 @@ export class ExecutionStateManager {
   }
 
   async update(id: string, data: UpdateExecutionState): Promise<void> {
-    const sets: string[] = ['updated_at = $1']
-    const values: unknown[] = [toLocalISODateString()]
-    let paramIndex = 2
-    
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined) {
-        sets.push(`${key} = $${paramIndex}`)
-        values.push(value)
-        paramIndex++
-      }
-    }
-    values.push(id)
-    
-    await this.db.run(
-      `UPDATE execution_states SET ${sets.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    )
+    await this.updateWithDb(this.db, id, data)
   }
 
   async markNodeComplete(id: string, nodeId: string, output: unknown): Promise<void> {
-    const state = await this.getById(id)
-    if (!state) throw new Error(`Execution state ${id} not found`)
+    await this.db.transaction(async (txDb) => {
+      const state = await this.getByIdForUpdate(txDb, id)
+      if (!state) throw new Error(`Execution state ${id} not found`)
 
-    const completedNodes = JSON.parse(state.completed_nodes) as string[]
-    const nodeOutputs = JSON.parse(state.node_outputs) as Record<string, unknown>
+      const completedNodes = JSON.parse(state.completed_nodes) as string[]
+      const nodeOutputs = JSON.parse(state.node_outputs) as Record<string, unknown>
 
-    if (!completedNodes.includes(nodeId)) {
-      completedNodes.push(nodeId)
-    }
-    nodeOutputs[nodeId] = output
+      if (!completedNodes.includes(nodeId)) {
+        completedNodes.push(nodeId)
+      }
+      nodeOutputs[nodeId] = output
 
-    await this.update(id, {
-      completed_nodes: JSON.stringify(completedNodes),
-      node_outputs: JSON.stringify(nodeOutputs),
+      await this.updateWithDb(txDb, id, {
+        completed_nodes: JSON.stringify(completedNodes),
+        node_outputs: JSON.stringify(nodeOutputs),
+      })
     })
   }
 
   async markNodeFailed(id: string, nodeId: string, error: string): Promise<void> {
-    const state = await this.getById(id)
-    if (!state) throw new Error(`Execution state ${id} not found`)
+    await this.db.transaction(async (txDb) => {
+      const state = await this.getByIdForUpdate(txDb, id)
+      if (!state) throw new Error(`Execution state ${id} not found`)
 
-    const failedNodes = JSON.parse(state.failed_nodes) as Array<{ nodeId: string; error: string; timestamp: string }>
-    failedNodes.push({ nodeId, error, timestamp: toLocalISODateString() })
+      const failedNodes = JSON.parse(state.failed_nodes) as Array<{ nodeId: string; error: string; timestamp: string }>
+      failedNodes.push({ nodeId, error, timestamp: toLocalISODateString() })
 
-    await this.update(id, {
-      failed_nodes: JSON.stringify(failedNodes),
+      await this.updateWithDb(txDb, id, {
+        failed_nodes: JSON.stringify(failedNodes),
+      })
     })
   }
 

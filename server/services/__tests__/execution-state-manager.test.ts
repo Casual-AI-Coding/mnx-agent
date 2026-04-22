@@ -18,6 +18,7 @@ describe('ExecutionStateManager', () => {
     run: ReturnType<typeof vi.fn>
     get: ReturnType<typeof vi.fn>
     all: ReturnType<typeof vi.fn>
+    transaction: ReturnType<typeof vi.fn>
   }
 
   const mockExecutionStateRow: ExecutionStateRow = {
@@ -47,7 +48,8 @@ describe('ExecutionStateManager', () => {
     mockDb = {
       run: vi.fn().mockResolvedValue({ changes: 1, lastInsertRowid: 'exec_12345678' }),
       get: vi.fn(),
-      all: vi.fn()
+      all: vi.fn(),
+      transaction: vi.fn(async (fn: (db: DatabaseService) => Promise<unknown>) => fn(mockDb as unknown as DatabaseService))
     }
 
     manager = new ExecutionStateManager(mockDb as unknown as DatabaseService)
@@ -454,6 +456,48 @@ describe('ExecutionStateManager', () => {
       expect(nodeOutputs).toHaveProperty('existing', 'data')
       expect(nodeOutputs).toHaveProperty('node-1')
     })
+
+    it('should reread and update inside a transaction to avoid stale completed node state', async () => {
+      const staleSnapshot: ExecutionStateRow = {
+        ...mockExecutionStateRow,
+        completed_nodes: '[]',
+        node_outputs: '{}'
+      }
+      const currentRow: ExecutionStateRow = {
+        ...mockExecutionStateRow,
+        completed_nodes: '["node-existing"]',
+        node_outputs: '{"node-existing":{"result":"kept"}}'
+      }
+
+      mockDb.get.mockResolvedValue(staleSnapshot)
+      mockDb.run.mockResolvedValue({ changes: 1 })
+      mockDb.transaction.mockImplementation(async (fn: (db: DatabaseService) => Promise<unknown>) => {
+        const txDb = {
+          ...mockDb,
+          get: vi.fn().mockResolvedValue(currentRow),
+          run: vi.fn().mockResolvedValue({ changes: 1 }),
+        }
+        await fn(txDb as unknown as DatabaseService)
+        expect(txDb.get).toHaveBeenCalledWith(
+          'SELECT * FROM execution_states WHERE id = $1 FOR UPDATE',
+          ['exec_12345678']
+        )
+        expect(txDb.run).toHaveBeenCalledWith(
+          expect.stringContaining('UPDATE execution_states SET'),
+          expect.arrayContaining([
+            '2024-01-15T10:30:00',
+            '["node-existing","node-1"]',
+            '{"node-existing":{"result":"kept"},"node-1":{"result":"fresh"}}',
+            'exec_12345678',
+          ])
+        )
+      })
+
+      await manager.markNodeComplete('exec_12345678', 'node-1', { result: 'fresh' })
+
+      expect(mockDb.transaction).toHaveBeenCalledOnce()
+      expect(mockDb.get).not.toHaveBeenCalled()
+    })
   })
 
   describe('markNodeFailed', () => {
@@ -513,6 +557,45 @@ describe('ExecutionStateManager', () => {
       expect(failedNodes).toHaveLength(2)
       expect(failedNodes[0].nodeId).toBe('node-0')
       expect(failedNodes[1].nodeId).toBe('node-1')
+    })
+
+    it('should reread and append failed nodes inside a transaction to avoid stale failure state', async () => {
+      const staleSnapshot: ExecutionStateRow = {
+        ...mockExecutionStateRow,
+        failed_nodes: '[]'
+      }
+      const currentRow: ExecutionStateRow = {
+        ...mockExecutionStateRow,
+        failed_nodes: '[{"nodeId":"node-existing","error":"kept","timestamp":"2024-01-15T09:00:00"}]'
+      }
+
+      mockDb.get.mockResolvedValue(staleSnapshot)
+      mockDb.run.mockResolvedValue({ changes: 1 })
+      mockDb.transaction.mockImplementation(async (fn: (db: DatabaseService) => Promise<unknown>) => {
+        const txDb = {
+          ...mockDb,
+          get: vi.fn().mockResolvedValue(currentRow),
+          run: vi.fn().mockResolvedValue({ changes: 1 }),
+        }
+        await fn(txDb as unknown as DatabaseService)
+        expect(txDb.get).toHaveBeenCalledWith(
+          'SELECT * FROM execution_states WHERE id = $1 FOR UPDATE',
+          ['exec_12345678']
+        )
+        expect(txDb.run).toHaveBeenCalledWith(
+          expect.stringContaining('UPDATE execution_states SET'),
+          expect.arrayContaining([
+            '2024-01-15T10:30:00',
+            '[{"nodeId":"node-existing","error":"kept","timestamp":"2024-01-15T09:00:00"},{"nodeId":"node-1","error":"Second","timestamp":"2024-01-15T10:30:00"}]',
+            'exec_12345678',
+          ])
+        )
+      })
+
+      await manager.markNodeFailed('exec_12345678', 'node-1', 'Second')
+
+      expect(mockDb.transaction).toHaveBeenCalledOnce()
+      expect(mockDb.get).not.toHaveBeenCalled()
     })
   })
 
