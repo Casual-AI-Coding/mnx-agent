@@ -6,61 +6,81 @@ import { cn } from '@/lib/utils'
 import { toastSuccess, toastError } from '@/lib/toast'
 import type { LyricsTask, LyricsGenerationResponse } from '@/types/lyrics'
 
-function useLyricsFocus(containerRef: React.RefObject<HTMLDivElement | null>, lineCount: number) {
-  const lineRefs = useRef<(HTMLParagraphElement | null)[]>([])
+interface LyricsBlock {
+  tag: string
+  lines: string[]
+}
+
+function parseLyricsBlocks(lyrics: string): LyricsBlock[] {
+  const lines = lyrics.split('\n')
+  const blocks: LyricsBlock[] = []
+  let current: LyricsBlock | null = null
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    if (/^\[.*\]$/.test(line)) {
+      if (current) blocks.push(current)
+      current = { tag: line, lines: [] }
+    } else {
+      if (!current) current = { tag: '', lines: [] }
+      current.lines.push(line)
+    }
+  }
+
+  if (current) blocks.push(current)
+  return blocks
+}
+
+function useBlockFocus(containerRef: React.RefObject<HTMLDivElement | null>, blockCount: number) {
+  const blockRefs = useRef<(HTMLElement | null)[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
   const rafId = useRef<number>(0)
 
-  const applyFocus = useCallback(() => {
+  const updateActive = useCallback(() => {
     const container = containerRef.current
-    if (!container || lineCount === 0) return
+    if (!container || blockCount === 0) return
 
     const containerRect = container.getBoundingClientRect()
     const centerY = containerRect.top + containerRect.height / 2
-    const threshold = containerRect.height * 1.2
 
-    lineRefs.current.forEach((line) => {
-      if (!line) return
-      const lineRect = line.getBoundingClientRect()
-      const lineCenterY = lineRect.top + lineRect.height / 2
-      const distance = Math.abs(lineCenterY - centerY)
-      const focus = Math.max(0, 1 - distance / threshold)
-      const isSection = /^\[.*\]$/.test(line.textContent?.trim() || '')
+    let bestIdx = 0
+    let bestDist = Infinity
 
-      line.style.opacity = isSection
-        ? String(0.5 + focus * 0.5)
-        : String(0.2 + focus * 0.8)
-      line.style.filter = isSection ? 'none' : `blur(${(1 - focus) * 2}px)`
-      line.style.transform = `scale(${0.96 + focus * 0.04})`
-      line.style.fontWeight = isSection ? '700' : String(400 + Math.round(focus * 300))
-      if (!isSection) {
-        line.style.color = `color-mix(in oklab, hsl(var(--foreground)) ${20 + focus * 80}%, hsl(var(--muted-foreground)))`
-      } else {
-        line.style.color = ''
+    blockRefs.current.forEach((el, i) => {
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const elCenter = rect.top + rect.height / 2
+      const dist = Math.abs(elCenter - centerY)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = i
       }
     })
-  }, [containerRef, lineCount])
+
+    setActiveIndex(bestIdx)
+  }, [containerRef, blockCount])
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    const handleScroll = () => {
+    const onScroll = () => {
       if (rafId.current) cancelAnimationFrame(rafId.current)
-      rafId.current = requestAnimationFrame(applyFocus)
+      rafId.current = requestAnimationFrame(updateActive)
     }
 
-    applyFocus()
-    container.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
+    updateActive()
+    container.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
-      container.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
+      container.removeEventListener('scroll', onScroll)
       if (rafId.current) cancelAnimationFrame(rafId.current)
     }
-  }, [containerRef, applyFocus])
+  }, [containerRef, updateActive])
 
-  return { lineRefs }
+  return { blockRefs, activeIndex }
 }
 
 interface LyricsTaskCarouselProps {
@@ -85,27 +105,8 @@ interface LyricsPlayerViewProps {
 
 function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
   const lyricsContainerRef = useRef<HTMLDivElement>(null)
-  const lyricsLines = result.lyrics.split('\n').filter(line => line.trim() !== '')
-  const { lineRefs } = useLyricsFocus(lyricsContainerRef, lyricsLines.length)
-
-  useEffect(() => {
-    const container = lyricsContainerRef.current
-    if (!container) return
-    const wrapper = container.firstElementChild as HTMLElement | null
-    if (!wrapper) return
-
-    const adjust = () => {
-      const h = container.clientHeight
-      const pad = Math.max(0, h / 2 - 14)
-      wrapper.style.paddingTop = `${pad}px`
-      wrapper.style.paddingBottom = `${pad}px`
-    }
-
-    adjust()
-    const resizeObserver = new ResizeObserver(adjust)
-    resizeObserver.observe(container)
-    return () => resizeObserver.disconnect()
-  }, [lyricsLines.length])
+  const blocks = parseLyricsBlocks(result.lyrics)
+  const { blockRefs, activeIndex } = useBlockFocus(lyricsContainerRef, blocks.length)
 
   const handleCopy = async () => {
     if (!result.lyrics) return
@@ -193,30 +194,37 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            maskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
             scrollSnapType: 'y proximity',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col items-center gap-1">
-            {lyricsLines.map((line, i) => {
-              const isSection = /^\[.*\]$/.test(line)
-              return (
-                <p
-                  key={i}
-                  ref={(el) => { lineRefs.current[i] = el }}
-                  className={cn(
-                    "text-center select-none snap-center",
-                    isSection
-                      ? "text-xs font-bold tracking-widest uppercase text-muted-foreground mt-3 mb-1"
-                      : "text-sm leading-relaxed"
-                  )}
-                >
-                  {line}
-                </p>
-              )
-            })}
+          <div className="flex flex-col py-[50%]">
+            {blocks.map((block, i) => (
+              <section
+                key={i}
+                ref={(el) => { blockRefs.current[i] = el }}
+                className={cn(
+                  "snap-center transition-opacity duration-300",
+                  i === activeIndex ? 'opacity-100' : 'opacity-30'
+                )}
+              >
+                {block.tag && (
+                  <p className="text-center text-xs font-bold tracking-widest uppercase text-muted-foreground mt-4 mb-2">
+                    {block.tag}
+                  </p>
+                )}
+                <div className="flex flex-col items-center gap-1">
+                  {block.lines.map((line, j) => (
+                    <p
+                      key={j}
+                      className="text-center text-sm leading-relaxed select-none"
+                    >
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
       </div>
