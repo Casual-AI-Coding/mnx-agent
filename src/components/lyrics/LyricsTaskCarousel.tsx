@@ -129,25 +129,24 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const blocks = parseLyricsBlocks(result.lyrics)
   const activeIndex = useCenterBlock(containerRef, blocks.length)
-  const [edgePadding, setEdgePadding] = useState({ top: 0, bottom: 0 })
 
   useEffect(() => {
     const container = containerRef.current
     if (!container || blocks.length === 0) return
 
-    const calc = () => {
+    const setSnapPadding = () => {
       const sections = container.querySelectorAll('[data-block-index]')
       if (sections.length === 0) return
       const containerH = container.clientHeight
       const firstH = sections[0].getBoundingClientRect().height
       const lastH = sections[sections.length - 1].getBoundingClientRect().height
-      setEdgePadding({
-        top: Math.max(0, containerH / 2 - firstH / 2),
-        bottom: Math.max(0, containerH / 2 - lastH / 2),
-      })
+      const topPad = Math.max(0, containerH / 2 - firstH / 2)
+      const bottomPad = Math.max(0, containerH / 2 - lastH / 2)
+      container.style.scrollPaddingTop = `${topPad}px`
+      container.style.scrollPaddingBottom = `${bottomPad}px`
     }
 
-    calc()
+    setSnapPadding()
     requestAnimationFrame(() => {
       const first = container.querySelector('[data-block-index="0"]') as HTMLElement | null
       if (first) {
@@ -156,7 +155,7 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
       }
     })
 
-    const ro = new ResizeObserver(calc)
+    const ro = new ResizeObserver(setSnapPadding)
     ro.observe(container)
     const sections = container.querySelectorAll('[data-block-index]')
     sections.forEach((s) => ro.observe(s))
@@ -249,20 +248,22 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            scrollSnapType: 'y mandatory',
-            scrollPadding: '0px',
+            scrollSnapType: 'y proximity',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col" style={{ paddingTop: edgePadding.top, paddingBottom: edgePadding.bottom }}>
+          <div className="flex flex-col py-8">
             {blocks.map((block, i) => (
               <section
                 key={i}
                 data-block-index={i}
                 className={cn(
-                  "snap-center transition-opacity duration-300",
-                  i === activeIndex ? 'opacity-100' : 'opacity-30'
+                  "snap-center transition-all duration-300 ease-out rounded-xl px-4 py-3",
+                  i === activeIndex
+                    ? 'opacity-100 scale-[1.02] text-foreground'
+                    : 'opacity-30 scale-100 text-muted-foreground'
                 )}
+                style={i === activeIndex ? { textShadow: '0 0 18px rgba(147,51,234,0.35), 0 0 40px rgba(147,51,234,0.15)' } : undefined}
               >
                 {block.tag && (
                   <p className="text-center text-xs font-bold tracking-widest uppercase text-muted-foreground mt-4 mb-2">
