@@ -309,7 +309,7 @@ const handleRetry = async (index: number) => {
         }
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* Left: Form */}
         <div className="xl:col-span-5 space-y-4">
           {/* Mode selection */}
@@ -448,10 +448,10 @@ const handleRetry = async (index: number) => {
         </div>
 
         {/* Right: Results */}
-        <div className="xl:col-span-7">
+        <div className="xl:col-span-7 xl:sticky xl:top-6">
           <div className="relative h-full">
             <div className="absolute -inset-0.5 bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/20 rounded-2xl blur opacity-50" />
-            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full min-h-[500px] overflow-hidden">
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl h-full xl:max-h-[calc(100vh-96px)] overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-accent-foreground" />
@@ -508,7 +508,7 @@ const handleRetry = async (index: number) => {
                 )}
               </div>
 
-              <div className="p-4">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
                 <LyricsTaskCarousel
                   tasks={tasks}
                   currentIndex={currentIndex}
