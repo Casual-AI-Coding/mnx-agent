@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.1] - 2026-04-22
+
+### Added
+
+- **可拖拽调整侧边栏宽度** - 用户可自由调整侧边栏宽度 (140-400px)
+  - `src/components/layout/Sidebar.tsx` (+120/-4) - 拖拽调整功能，localStorage 持久化
+  - `src/components/layout/AppLayout.tsx` (+9/-5) - 动态宽度支持
+
+- **歌词播放器风格滚动效果** - 段落级焦点高亮 + 60fps 流畅滚动
+  - `src/components/lyrics/LyricsTaskCarousel.tsx` (+394/-118) - 大幅重构：
+    - Block-level 焦点替代逐行 focus（性能优化）
+    - ResizeObserver 直接操作 DOM 实现 scroll-padding 同步
+    - scroll-snap `proximity` 模式配合精确 padding
+    - glow 效果和渐隐过渡
+  - `src/pages/LyricsGeneration.tsx` (+8/-7) - 歌词页面调整
+
+### Documentation
+
+- **ADR-0001 歌词滚动交互策略** - 技术决策记录
+  - `docs/decisions/0001-lyrics-scroll-interaction-strategy.md` (+76) - 段落级焦点方案决策
+
+- **代码审查修复计划** - 全项目代码审查问题修复方案
+  - `docs/plans/2026-04-22-code-review-fixes.md` (+126) - 26 个问题 (P0:3, P1:8, P2:12, P3:3)
+
+- **AGENTS.md 简体中文规范** - 协作语言规范化
+  - `AGENTS.md` (+7/-1) - 添加简体中文协作铁律
+
+### Performance
+
+- **歌词滚动帧率** - 从严重掉帧优化至 60fps 流畅
+  - 段落级 opacity 切换替代逐行样式计算
+  - ResizeObserver 替代 React state 避免 re-render 时序差
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 侧边栏宽度调整为纯 UI 增强
+- ✅ 歌词滚动优化为内部性能改进
+- ✅ 文档更新不影响功能逻辑
+
 ## [2.2.0] - 2026-04-22
 
 ### Fixed
