@@ -27,12 +27,17 @@ export interface DatabaseConnection {
 }
 
 function getConfigFromEnv(): DatabaseConfig {
+  const isTestEnv = process.env.NODE_ENV === 'test'
+  const testDatabase = process.env.DB_TEST_NAME
+  const testUser = process.env.DB_TEST_USER
+  const testPassword = process.env.DB_TEST_PASSWORD
+
   return {
     pgHost: process.env.DB_HOST || 'localhost',
     pgPort: parseInt(process.env.DB_PORT || '5432', 10),
-    pgUser: process.env.DB_USER || 'postgres',
-    pgPassword: process.env.DB_PASSWORD || '',
-    pgDatabase: process.env.DB_NAME || 'minimax',
+    pgUser: isTestEnv ? (testUser || process.env.DB_USER || 'postgres') : (process.env.DB_USER || 'postgres'),
+    pgPassword: isTestEnv ? (testPassword || process.env.DB_PASSWORD || '') : (process.env.DB_PASSWORD || ''),
+    pgDatabase: isTestEnv ? (testDatabase || `${process.env.DB_NAME || 'minimax'}_test`) : (process.env.DB_NAME || 'minimax'),
     pgPoolMax: parseInt(process.env.DB_POOL_MAX || '10', 10),
     pgPoolIdleTimeout: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000', 10),
     pgConnectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000', 10),

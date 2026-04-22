@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getTestFileMarker, resetTestFileMarker } from './test-helpers.js'
+import { getDatabase } from '../database/service-async.js'
+import { getConnection } from '../database/connection.js'
+import { getTestFileMarker, resetTestFileMarker, setupTestDatabase, globalTeardown } from './test-helpers.js'
 
 describe('test-helpers', () => {
   beforeEach(() => {
@@ -18,5 +20,27 @@ describe('test-helpers', () => {
     const secondMarker = getTestFileMarker('file:///tests/b.test.ts')
 
     expect(firstMarker).not.toBe(secondMarker)
+  })
+
+  it('setupTestDatabase 应重置已缓存的 DatabaseService 单例', async () => {
+    const staleDb = await getDatabase()
+    const staleConnection = staleDb.getConnection()
+
+    await setupTestDatabase()
+
+    const refreshedConnection = getConnection()
+
+    expect(refreshedConnection).not.toBe(staleConnection)
+
+    await globalTeardown()
+  })
+
+  it('测试环境下 getDatabase 默认应连接测试库', async () => {
+    const db = await getDatabase()
+    const rows = await db.getConnection().query<{ current_database: string }>('SELECT current_database() AS current_database')
+
+    expect(rows[0].current_database).toBe('mnx_agent_test')
+
+    await globalTeardown()
   })
 })
