@@ -129,17 +129,38 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const blocks = parseLyricsBlocks(result.lyrics)
   const activeIndex = useCenterBlock(containerRef, blocks.length)
+  const [edgePadding, setEdgePadding] = useState({ top: 0, bottom: 0 })
 
   useEffect(() => {
     const container = containerRef.current
     if (!container || blocks.length === 0) return
+
+    const calc = () => {
+      const sections = container.querySelectorAll('[data-block-index]')
+      if (sections.length === 0) return
+      const containerH = container.clientHeight
+      const firstH = sections[0].getBoundingClientRect().height
+      const lastH = sections[sections.length - 1].getBoundingClientRect().height
+      setEdgePadding({
+        top: Math.max(0, containerH / 2 - firstH / 2),
+        bottom: Math.max(0, containerH / 2 - lastH / 2),
+      })
+    }
+
+    calc()
     requestAnimationFrame(() => {
       const first = container.querySelector('[data-block-index="0"]') as HTMLElement | null
-      if (!first) return
-      const containerH = container.clientHeight
-      const sectionH = first.offsetHeight
-      container.scrollTop = first.offsetTop - containerH / 2 + sectionH / 2
+      if (first) {
+        const containerH = container.clientHeight
+        container.scrollTop = first.offsetTop - containerH / 2 + first.offsetHeight / 2
+      }
     })
+
+    const ro = new ResizeObserver(calc)
+    ro.observe(container)
+    const sections = container.querySelectorAll('[data-block-index]')
+    sections.forEach((s) => ro.observe(s))
+    return () => ro.disconnect()
   }, [blocks.length])
 
   const handleCopy = async () => {
@@ -229,11 +250,11 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             scrollSnapType: 'y mandatory',
-            scrollPadding: '40% 0',
+            scrollPadding: '0px',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col py-8">
+          <div className="flex flex-col" style={{ paddingTop: edgePadding.top, paddingBottom: edgePadding.bottom }}>
             {blocks.map((block, i) => (
               <section
                 key={i}
