@@ -1,7 +1,6 @@
 import type { DatabaseService } from '../database/service-async.js'
 import { MiniMaxClient } from '../lib/minimax'
 import { TASK_TIMEOUTS, POLLING_CONFIG } from '../config/timeouts.js'
-import { TASK_TYPE_MAP } from '../config/limits.js'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 
 export type { DatabaseService }
@@ -23,6 +22,13 @@ export class TaskExecutor implements ITaskExecutor {
   private client: MiniMaxClient
   private db: DatabaseService
 
+  private readonly directMethodRegistry: Record<string, (payload: Record<string, unknown>) => Promise<unknown>> = {
+    text: (payload) => this.client.chatCompletion(payload),
+    voice_sync: (payload) => this.client.textToAudioSync(payload),
+    image: (payload) => this.client.imageGeneration(payload),
+    music: (payload) => this.client.musicGeneration(payload),
+  }
+
   constructor(client: MiniMaxClient, db: DatabaseService) {
     this.client = client
     this.db = db
@@ -32,15 +38,6 @@ export class TaskExecutor implements ITaskExecutor {
     const startTime = Date.now()
 
     try {
-      const methodName = TASK_TYPE_MAP[taskType]
-      if (!methodName) {
-        return {
-          success: false,
-          error: `Unknown task type: ${taskType}`,
-          durationMs: Date.now() - startTime,
-        }
-      }
-
       let result: unknown
       const isAsyncTask = taskType === 'voice_async' || taskType === 'video'
       const timeout = isAsyncTask ? ASYNC_TIMEOUT : DEFAULT_TIMEOUT
@@ -66,7 +63,15 @@ export class TaskExecutor implements ITaskExecutor {
           taskType
         )
       } else {
-        result = await withTimeout(this.executeDirect(methodName, payload), timeout, taskType)
+        const method = this.directMethodRegistry[taskType]
+        if (!method) {
+          return {
+            success: false,
+            error: `Unknown task type: ${taskType}`,
+            durationMs: Date.now() - startTime,
+          }
+        }
+        result = await withTimeout(method(payload), timeout, taskType)
       }
 
       const durationMs = Date.now() - startTime
@@ -82,18 +87,6 @@ export class TaskExecutor implements ITaskExecutor {
         durationMs: Date.now() - startTime,
       }
     }
-  }
-
-  private async executeDirect(methodName: string, payload: Record<string, unknown>): Promise<unknown> {
-    const method = this.client[methodName as keyof MiniMaxClient] as (
-      body: Record<string, unknown>
-    ) => Promise<unknown>
-
-    if (typeof method !== 'function') {
-      throw new Error(`Method ${methodName} not found on MiniMaxClient`)
-    }
-
-    return method.call(this.client, payload)
   }
 
   private async executeWithPolling(
