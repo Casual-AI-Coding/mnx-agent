@@ -23,6 +23,7 @@ export default function AppLayout() {
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(220)
   
   const {
     currentRecord,
@@ -54,11 +55,14 @@ export default function AppLayout() {
   return (
     <div className="h-screen bg-background overflow-hidden">
       <Header onHistoryClick={() => setIsHistoryOpen(true)} onShowKeyModal={handleOpenKeyModal} />
-      <Sidebar onCollapseChange={setIsSidebarCollapsed} />
-      <main className={cn(
-        'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200',
-        isSidebarCollapsed ? 'ml-[60px]' : 'ml-[220px]'
-      )}>
+      <Sidebar onCollapseChange={setIsSidebarCollapsed} onWidthChange={setSidebarWidth} />
+      <main
+        id="app-main"
+        className={cn(
+          'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200'
+        )}
+        style={{ marginLeft: isSidebarCollapsed ? 60 : sidebarWidth }}
+      >
         <div className="p-6">
           <Outlet />
         </div>

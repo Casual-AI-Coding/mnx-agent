@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -51,6 +51,10 @@ const roleHierarchy: Record<UserRole, number> = {
 
 const EXPANDED_KEY = 'sidebar-expanded-sections'
 const COLLAPSED_KEY = 'sidebar-collapsed'
+const WIDTH_KEY = 'sidebar-width'
+const DEFAULT_WIDTH = 220
+const MIN_WIDTH = 140
+const MAX_WIDTH = 400
 
 function getStoredExpanded(): Record<string, boolean> {
   try {
@@ -78,17 +82,41 @@ function setStoredCollapsed(collapsed: boolean) {
   localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed))
 }
 
-interface SidebarProps {
-  onCollapseChange?: (collapsed: boolean) => void
+function getStoredWidth(): number {
+  try {
+    const stored = localStorage.getItem(WIDTH_KEY)
+    return stored ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Number(JSON.parse(stored)))) : DEFAULT_WIDTH
+  } catch {
+    return DEFAULT_WIDTH
+  }
 }
 
-export default function Sidebar({ onCollapseChange }: SidebarProps) {
+function setStoredWidth(width: number) {
+  localStorage.setItem(WIDTH_KEY, JSON.stringify(width))
+}
+
+function getMainElement(): HTMLElement | null {
+  return document.getElementById('app-main')
+}
+
+interface SidebarProps {
+  onCollapseChange?: (collapsed: boolean) => void
+  onWidthChange?: (width: number) => void
+}
+
+export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
   const [isCollapsed, setIsCollapsed] = useState(getStoredCollapsed)
+  const [sidebarWidth, setSidebarWidth] = useState(getStoredWidth)
+  const [isResizing, setIsResizing] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const asideRef = useRef<HTMLElement>(null)
+  const resizeStartX = useRef(0)
+  const resizeStartWidth = useRef(DEFAULT_WIDTH)
+  const currentWidthRef = useRef(DEFAULT_WIDTH)
 
   const userRoleLevel = user ? roleHierarchy[user.role] : 0
 
@@ -101,7 +129,79 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
     onCollapseChange?.(isCollapsed)
   }, [isCollapsed, onCollapseChange])
 
-const toggleSection = (sectionId: string) => {
+  useEffect(() => {
+    onWidthChange?.(isCollapsed ? 60 : sidebarWidth)
+  }, [sidebarWidth, isCollapsed, onWidthChange])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const delta = e.clientX - resizeStartX.current
+    const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, resizeStartWidth.current + delta))
+    currentWidthRef.current = newWidth
+
+    if (asideRef.current) {
+      asideRef.current.style.width = `${newWidth}px`
+    }
+    const mainEl = getMainElement()
+    if (mainEl) {
+      mainEl.style.marginLeft = `${newWidth}px`
+    }
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false)
+    const finalWidth = currentWidthRef.current
+    setSidebarWidth(finalWidth)
+    setStoredWidth(finalWidth)
+    onWidthChange?.(finalWidth)
+
+    document.body.style.userSelect = ''
+    document.body.style.cursor = ''
+
+    if (asideRef.current) {
+      asideRef.current.style.transition = ''
+    }
+    const mainEl = getMainElement()
+    if (mainEl) {
+      mainEl.style.transition = ''
+    }
+
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.removeEventListener('mouseleave', handleMouseUp)
+  }, [handleMouseMove, onWidthChange])
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    if (isCollapsed) return
+    e.preventDefault()
+    setIsResizing(true)
+    resizeStartX.current = e.clientX
+    resizeStartWidth.current = sidebarWidth
+    currentWidthRef.current = sidebarWidth
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
+
+    if (asideRef.current) {
+      asideRef.current.style.transition = 'none'
+    }
+    const mainEl = getMainElement()
+    if (mainEl) {
+      mainEl.style.transition = 'none'
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mouseleave', handleMouseUp)
+  }, [isCollapsed, sidebarWidth, handleMouseMove, handleMouseUp])
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mouseleave', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
+
+  const toggleSection = (sectionId: string) => {
     if (isCollapsed) {
       setIsCollapsed(false)
     }
@@ -268,10 +368,12 @@ const toggleSection = (sectionId: string) => {
 
   return (
     <aside
+      ref={asideRef}
       className={cn(
         'fixed left-0 top-[60px] bottom-0 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200',
-        isCollapsed ? 'w-[60px]' : 'w-[220px]'
+        isCollapsed ? 'w-[60px]' : ''
       )}
+      style={isCollapsed ? undefined : { width: sidebarWidth }}
     >
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -282,6 +384,16 @@ const toggleSection = (sectionId: string) => {
           scrollbar-width: none;
         }
       `}</style>
+
+      {!isCollapsed && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={cn(
+            'absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-20 transition-colors',
+            isResizing ? 'bg-primary-500/50' : 'bg-transparent hover:bg-primary-500/30'
+          )}
+        />
+      )}
 
       <button
         onClick={toggleCollapse}
