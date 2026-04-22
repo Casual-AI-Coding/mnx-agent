@@ -376,11 +376,11 @@ describe('CronScheduler', () => {
         createMockJob('job-1'),
         createMockJob('job-2'),
       ]
-      
+
       mockDb.getActiveCronJobs.mockResolvedValue(activeJobs)
-      
+
       await scheduler.init()
-      
+
       expect(mockDb.getActiveCronJobs).toHaveBeenCalled()
       expect(scheduler.getJobCount()).toBe(2)
     })
@@ -390,14 +390,36 @@ describe('CronScheduler', () => {
         createMockJob('job-1'),
         createMockJob('job-2', { cron_expression: 'invalid-expression' }), // This will fail validation
       ]
-      
+
       mockDb.getActiveCronJobs.mockResolvedValue(activeJobs)
-      
+
       await scheduler.init()
-      
+
       // Only valid job should be scheduled
       expect(scheduler.getJobCount()).toBe(1)
       expect(scheduler.isJobScheduled('job-1')).toBe(true)
+    })
+
+    it('should skip misfire handling when misfireHandler is not set', async () => {
+      // Create scheduler WITHOUT misfireHandler
+      const schedulerWithoutHandler = new CronScheduler(
+        mockDb as any,
+        mockWorkflowEngine as any,
+        null,
+        null,
+        mockEventBus,
+        mockConcurrencyManager,
+        undefined, // no misfireHandler
+        { timezone: 'UTC' }
+      )
+
+      const activeJobs = [createMockJob('job-1')]
+      mockDb.getActiveCronJobs.mockResolvedValue(activeJobs)
+
+      // Should not throw even though misfireHandler is undefined
+      await expect(schedulerWithoutHandler.init()).resolves.not.toThrow()
+
+      schedulerWithoutHandler.stopAll()
     })
   })
 

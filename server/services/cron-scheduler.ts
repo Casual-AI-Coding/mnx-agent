@@ -85,7 +85,9 @@ export class CronScheduler {
       }
     }
 
-    await this.misfireHandler!.checkAndHandleMisfires(activeJobs)
+    if (this.misfireHandler) {
+      await this.misfireHandler.checkAndHandleMisfires(activeJobs)
+    }
   }
 
   calculateNextRun(expression: string): Date | null {
