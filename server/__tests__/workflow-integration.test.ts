@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest'
 import { getDatabase } from '../database/service-async'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from './test-helpers.js'
 import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
@@ -198,7 +198,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     resetServiceNodeRegistry()
     for (const workflow of testWorkflows) {
       try {
-        await db.deleteWorkflowTemplate(workflow.id, null)
+        await db.deleteWorkflowTemplate(workflow.id, undefined)
       } catch {}
     }
     await teardownTestDatabase()
@@ -490,6 +490,63 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
   let engine: WorkflowEngine
   let scheduler: CronScheduler
   let fileMarker: string
+  let currentOwnerId: string
+
+  async function ensurePhaseCTestUser(ownerId: string): Promise<void> {
+    const conn = getConnection()
+    const now = new Date().toISOString()
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [ownerId, `workflow-int-${ownerId}`, 'hash', 'user', true, now, now]
+    )
+  }
+
+  async function cleanupPhaseCRecords(ownerId: string): Promise<void> {
+    const conn = getConnection()
+    await conn.execute(
+      `DELETE FROM execution_log_details
+        WHERE log_id IN (
+          SELECT el.id
+          FROM execution_logs el
+          INNER JOIN cron_jobs cj ON cj.id = el.job_id
+          WHERE cj.owner_id = $1
+        )`,
+      [ownerId]
+    )
+    await conn.execute(
+      `DELETE FROM execution_logs
+        WHERE job_id IN (
+          SELECT id FROM cron_jobs WHERE owner_id = $1
+        )`,
+      [ownerId]
+    )
+    await conn.execute('DELETE FROM task_queue WHERE owner_id = $1', [ownerId])
+    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1', [ownerId])
+    await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [ownerId])
+    await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1', [ownerId])
+  }
+
+  async function waitForLatestExecutionLog(jobId: string, ownerId: string, timeoutMs: number = 3000) {
+    const startTime = Date.now()
+
+    while (Date.now() - startTime < timeoutMs) {
+      const ownedLogs = await db.getAllExecutionLogs(jobId, 10, ownerId)
+      if (ownedLogs[0]) {
+        return ownedLogs[0]
+      }
+
+      const logs = await db.getAllExecutionLogs(jobId, 10)
+      if (logs[0]) {
+        return logs[0]
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+
+    return null
+  }
 
   beforeAll(async () => {
     await setupTestDatabase()
@@ -501,15 +558,18 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
     const mockConcurrencyManager = createMockConcurrencyManager()
     scheduler = new CronScheduler(db, engine, null, null, createMockEventBus(), mockConcurrencyManager)
-  })
+  }, 30000)
 
   beforeEach(async () => {
+    currentOwnerId = crypto.randomUUID()
+    await ensurePhaseCTestUser(currentOwnerId)
+    await cleanupPhaseCRecords(currentOwnerId)
+  })
+
+  afterEach(async () => {
+    await cleanupPhaseCRecords(currentOwnerId)
     const conn = getConnection()
-    await conn.execute('DELETE FROM execution_log_details')
-    await conn.execute('DELETE FROM execution_logs')
-    await conn.execute('DELETE FROM task_queue')
-    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1', [fileMarker])
-    await conn.execute('DELETE FROM media_records WHERE owner_id = $1', [fileMarker])
+    await conn.execute('DELETE FROM users WHERE id = $1', [currentOwnerId])
   })
 
   afterAll(async () => {
@@ -521,7 +581,6 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     it('should trigger workflow via cron and save results', async () => {
       
       const template = await db.createWorkflowTemplate({
-        id: 'test-cron-image',
         name: 'Test Cron Image Generation',
         description: 'E2E test for scheduled image generation',
         nodes_json: JSON.stringify([
@@ -563,7 +622,9 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
           { id: 'e1', source: 'image-node', target: 'save-node' },
         ]),
         is_public: false,
-      }, undefined)
+      }, currentOwnerId)
+
+      expect(template.owner_id).toBe(currentOwnerId)
 
       
       const job = await db.createCronJob({
@@ -571,30 +632,31 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
         cron_expression: '* * * * *',
         workflow_id: template.id,
         is_active: false,
-      }, undefined)
+      }, currentOwnerId)
+
+      expect(job.owner_id).toBe(currentOwnerId)
 
       
       await scheduler.executeJobNow(job.id)
 
       
-      const logs = await db.getAllExecutionLogs(undefined, 10)
-      const latestLog = logs.find(l => l.job_id === job.id)
+      const latestLog = await waitForLatestExecutionLog(job.id, currentOwnerId)
 
       expect(latestLog).toBeDefined()
+      expect(latestLog?.owner_id).toBe(currentOwnerId)
       expect(latestLog?.status).toBe('completed')
       expect(latestLog?.tasks_executed).toBe(2)
       expect(latestLog?.tasks_succeeded).toBe(2)
 
       
-      await db.deleteCronJob(job.id, undefined)
-      await db.deleteWorkflowTemplate(template.id, null)
+      await db.deleteCronJob(job.id, currentOwnerId)
+      await db.deleteWorkflowTemplate(template.id, currentOwnerId)
     }, 60000)
   })
 
   describe('C-2: Full Pipeline with Logs', () => {
     it('should execute full pipeline and create detailed logs', async () => {
       const template = await db.createWorkflowTemplate({
-        id: 'test-full-pipeline',
         name: 'Test Full Pipeline',
         description: 'E2E test for complete workflow execution',
         nodes_json: JSON.stringify([
@@ -636,22 +698,27 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
           { id: 'e1', source: 'gen-image', target: 'save-result' },
         ]),
         is_public: false,
-      }, undefined)
+      }, currentOwnerId)
+
+      expect(template.owner_id).toBe(currentOwnerId)
 
       const job = await db.createCronJob({
         name: 'Test Full Pipeline Job',
         cron_expression: '0 0 1 1 *',
         workflow_id: template.id,
         is_active: false,
-      }, undefined)
+      }, currentOwnerId)
+
+      expect(job.owner_id).toBe(currentOwnerId)
 
       
       await scheduler.executeJobNow(job.id)
 
       
-      const logs = await db.getAllExecutionLogs(undefined, 10)
-      const latestLog = logs.find(l => l.job_id === job.id)
+      const latestLog = await waitForLatestExecutionLog(job.id, currentOwnerId)
 
+      expect(latestLog).toBeDefined()
+      expect(latestLog?.owner_id).toBe(currentOwnerId)
       expect(latestLog?.status).toBe('completed')
       expect(latestLog?.tasks_executed).toBe(2)
 
@@ -665,8 +732,8 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
       expect(nodeIds).toContain('save-result')
 
       
-      await db.deleteCronJob(job.id, undefined)
-      await db.deleteWorkflowTemplate(template.id, null)
+      await db.deleteCronJob(job.id, currentOwnerId)
+      await db.deleteWorkflowTemplate(template.id, currentOwnerId)
     }, 60000)
   })
 })
