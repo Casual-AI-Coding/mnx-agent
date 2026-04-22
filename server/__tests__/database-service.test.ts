@@ -12,12 +12,14 @@ import type {
 describe('DatabaseService', () => {
   let db: DatabaseService
   let fileMarker: string
+  let shortMarker: string
 
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
     await db.init()
     fileMarker = getTestFileMarker(import.meta.url)
+    shortMarker = fileMarker.slice(0, 8)
 
     const conn = getConnection()
     const now = new Date().toISOString()
@@ -35,9 +37,9 @@ describe('DatabaseService', () => {
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
-    await conn.execute('DELETE FROM webhook_configs WHERE id LIKE $1', [`${fileMarker}-%`])
-    await conn.execute('DELETE FROM job_dependencies WHERE id LIKE $1', [`${fileMarker}-%`])
-    await conn.execute('DELETE FROM job_tags WHERE id LIKE $1', [`${fileMarker}-%`])
+    await conn.execute('DELETE FROM webhook_configs WHERE id LIKE $1', [`${shortMarker}-%`])
+    await conn.execute('DELETE FROM job_dependencies WHERE id LIKE $1', [`${shortMarker}-%`])
+    await conn.execute('DELETE FROM job_tags WHERE id LIKE $1', [`${shortMarker}-%`])
     await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM capacity_tracking WHERE service_type LIKE $1', [`${fileMarker}-%`])
     await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
@@ -45,6 +47,7 @@ describe('DatabaseService', () => {
 
   afterAll(async () => {
     const conn = getConnection()
+    await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM users WHERE id = $1', [fileMarker])
     await teardownTestDatabase()
   })
@@ -135,7 +138,7 @@ describe('DatabaseService', () => {
         await db.createCronJob({ name: 'Active Job', cron_expression: '0 * * * *', is_active: true }, fileMarker)
         await db.createCronJob({ name: 'Inactive Job', cron_expression: '0 0 * * *', is_active: false }, fileMarker)
 
-        const activeJobs = await db.getActiveCronJobs()
+        const activeJobs = await db.getActiveCronJobs(fileMarker)
         expect(activeJobs.length).toBe(1)
         expect(activeJobs[0].name).toBe('Active Job')
       })
@@ -750,7 +753,7 @@ describe('DatabaseService', () => {
   describe('Webhooks CRUD', () => {
     it('should create and retrieve webhook config', async () => {
       const conn = getConnection()
-      const id = `${fileMarker}-webhook-${Date.now()}`
+      const id = `${shortMarker}-wh-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -785,7 +788,7 @@ describe('DatabaseService', () => {
 
     it('should update webhook active status', async () => {
       const conn = getConnection()
-      const id = `${fileMarker}-webhook-update-${Date.now()}`
+      const id = `${shortMarker}-wh-upd-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -805,7 +808,7 @@ describe('DatabaseService', () => {
 
     it('should delete webhook', async () => {
       const conn = getConnection()
-      const id = `${fileMarker}-webhook-delete-${Date.now()}`
+      const id = `${shortMarker}-wh-del-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -888,11 +891,11 @@ describe('DatabaseService', () => {
 
       await conn.execute(
         'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
-        [`${fileMarker}-tag-1-${Date.now()}`, job.id, 'production', now]
+        [`${shortMarker}-tag-1-${Date.now()}`, job.id, 'production', now]
       )
       await conn.execute(
         'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
-        [`${fileMarker}-tag-2-${Date.now()}`, job.id, 'important', now]
+        [`${shortMarker}-tag-2-${Date.now()}`, job.id, 'important', now]
       )
 
       const rows = await conn.query<{ tag: string }>(
@@ -915,7 +918,7 @@ describe('DatabaseService', () => {
 
       await conn.execute(
         'INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)',
-        [`${fileMarker}-dep-${Date.now()}`, job2.id, job1.id, now]
+        [`${shortMarker}-dep-${Date.now()}`, job2.id, job1.id, now]
       )
 
       const rows = await conn.query<{ job_id: string; depends_on_job_id: string }>(
