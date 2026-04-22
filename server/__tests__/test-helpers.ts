@@ -6,12 +6,11 @@ import { v4 as uuidv4 } from 'uuid'
 
 const testMarkerCache = new Map<string, string>()
 
-export function getTestFileMarker(): string {
-  const file = import.meta.url
-  if (!testMarkerCache.has(file)) {
-    testMarkerCache.set(file, uuidv4())
+export function getTestFileMarker(testFileUrl: string): string {
+  if (!testMarkerCache.has(testFileUrl)) {
+    testMarkerCache.set(testFileUrl, uuidv4())
   }
-  return testMarkerCache.get(file)!
+  return testMarkerCache.get(testFileUrl)!
 }
 
 export function resetTestFileMarker(): void {
