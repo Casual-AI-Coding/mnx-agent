@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-04-22
+
+### Fixed
+
+- **Token Refresh 死锁修复** - 并发长请求场景下 token refresh 机制并发安全缺陷修复
+  - `src/lib/api/client.ts` (+31/-11) - 3 个核心缺陷修复：
+    - `refreshSubscribers` 改为 `{resolve, reject}` 对象 + `subscriberTimeout` (10s) 超时保护
+    - `hydrationRefreshPromise` 使用 `Promise.race` 包装，防止永久 hang
+    - 统一失败路径：subscriber 统一 reject、单次 logout、修复 `response.success === false` 漏处理
+  - 修复现象：10 个并发音乐生成时 access token 过期导致 `/auth/refresh` 超时、页面全屏加载卡死
+  - 根因：浏览器 HTTP/1.1 6 连接限制 + subscriber Promise 永不 reject
+
+### Changed
+
+- **Access Token 有效期延长** - 降低 token 在长时间生成任务期间过期的概率
+  - `server/services/user-service.ts` - `expiresIn` 从 `15m` 延长至 `30m`
+
+- **数据库连接池扩容** - 提升并发负载下的连接容量
+  - `.env` / `.env.example` - `DB_POOL_MAX` 从 `10` 增加到 `20`
+
+### Added
+
+- **文档系统重构** - 完善工程规范和事故记录体系
+  - `docs/standards/` - 新增 5 份工程规范（coding/API/database/testing/security）
+  - `docs/decisions/` - 新增架构决策记录（ADR）目录 + `_template.md`
+  - `docs/guides/` - 新增发布指南 (`release-guide.md`) 和故障排查指南 (`troubleshooting.md`)
+  - `docs/incidents/2026-04-22-auth-refresh-deadlock-incident.md` - Token Refresh 死锁事故报告（304 行）
+  - `AGENTS.md` - 精简为项目约束和原则，详细内容迁移至 `docs/AGENTS.md`
+
+- **路线图更新** - R-023 歌词生成需求延后至 v2.2
+  - `docs/roadmap/requirement-pools.md` - R-023 状态更新
+  - `docs/roadmap/v2-roadmap.md` - v2.2 ~ v2.7 版本规划顺延
+
+### Performance
+
+- **测试执行速度** - 并行化优化延续
+  - 前端/后端测试 pool='forks' + fileParallelism 持续生效
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ token 有效期延长为向后兼容配置变更
+- ✅ DB 连接池扩容为环境配置变更，不影响功能逻辑
+- ✅ 文档系统重构为纯文档变更，不影响代码
+
 ## [2.1.6] - 2026-04-21
 
 ### Added
