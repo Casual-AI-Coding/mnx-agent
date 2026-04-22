@@ -28,6 +28,8 @@ import {
 import { access } from 'fs/promises'
 
 const router = Router()
+const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
+const REMOTE_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -378,13 +380,18 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
   const { ids } = req.body as { ids: string[] }
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const records = await Promise.all(
-    ids.map(id => db.getById(id, ownerId))
-  )
+  const records = await Promise.all(ids.map(id => db.getById(id, ownerId)))
+
+  const missingRecordIndex = records.findIndex(record => !record || record.is_deleted)
+  if (missingRecordIndex !== -1) {
+    errorResponse(res, `Media record not found: ${ids[missingRecordIndex]}`, 404)
+    return
+  }
+
+  const validRecords = records.filter((record): record is NonNullable<typeof record> => record !== null)
 
   await Promise.all(
-    records
-      .filter((r): r is NonNullable<typeof r> => r !== null && !r.is_deleted)
+    validRecords
       .map(r => deleteMediaFile(r.filepath).catch(error => {
         logger.error({ filepath: r.filepath, recordId: r.id, error }, 'Failed to delete media file during batch delete')
       }))
@@ -457,7 +464,12 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     return
   }
 
-  const response = await axios.get(url, { responseType: 'arraybuffer' })
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: REMOTE_DOWNLOAD_TIMEOUT_MS,
+    maxContentLength: REMOTE_DOWNLOAD_MAX_BYTES,
+    maxBodyLength: REMOTE_DOWNLOAD_MAX_BYTES,
+  })
   const buffer = Buffer.from(response.data)
   const finalFilename = filename || `image_${Date.now()}.png`
 
