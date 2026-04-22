@@ -3,12 +3,14 @@ import type { DatabaseService } from '../../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../../database/types.js'
 import { WEBHOOK_RATE_LIMITS } from '../../config/rate-limits.js'
 
+const loggerMock = vi.hoisted(() => ({
+  warn: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn()
+}))
+
 vi.mock('../../lib/logger.js', () => ({
-  default: {
-    warn: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn()
-  }
+  default: loggerMock
 }))
 
 import { NotificationService, WebhookPayload } from '../notification-service.js'
@@ -252,6 +254,27 @@ describe('NotificationService', () => {
         expect.objectContaining({
           webhook_id: 'webhook-1',
           error_message: 'Network error'
+        })
+      )
+    })
+
+    it('should record failed deliveries during notification attempts', async () => {
+      mockDb.getWebhookConfigsByJobId.mockResolvedValue([mockWebhookConfig])
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: vi.fn().mockResolvedValue('Internal Server Error')
+      })
+      mockDb.createWebhookDelivery.mockResolvedValue({})
+
+      await service.notifyJobEvent('job-1', 'on_failure', { error: 'job failed' })
+
+      expect(mockDb.createWebhookDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          webhook_id: 'webhook-1',
+          event: 'on_failure',
+          response_status: 500,
+          error_message: expect.stringContaining('HTTP 500')
         })
       )
     })
@@ -551,10 +574,9 @@ describe('NotificationService', () => {
       )
     })
 
-    it('should handle database errors silently', async () => {
-      mockDb.createWebhookDelivery.mockRejectedValue(new Error('Database error'))
-      
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    it('should normalize non-Error values without using console.error', async () => {
+      mockDb.createWebhookDelivery.mockRejectedValue('Database exploded')
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       const recordDelivery = (service as any).recordDelivery.bind(service)
       await recordDelivery(
@@ -566,8 +588,26 @@ describe('NotificationService', () => {
         null
       )
 
-      expect(consoleSpy).toHaveBeenCalled()
-      consoleSpy.mockRestore()
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should not use console.error for database Error failures', async () => {
+      mockDb.createWebhookDelivery.mockRejectedValue(new Error('Database error'))
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const recordDelivery = (service as any).recordDelivery.bind(service)
+      await recordDelivery(
+        'webhook-1',
+        null,
+        { event: 'on_success', timestamp: '2024-01-01T00:00:00Z', job_id: 'job-1', data: {} },
+        200,
+        'OK',
+        null
+      )
+
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
   })
 

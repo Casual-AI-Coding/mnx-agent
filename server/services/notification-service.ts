@@ -22,6 +22,10 @@ export class NotificationService {
     this.timeout = options?.timeout ?? 10000
   }
 
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error'
+  }
+
   private checkRateLimit(webhookId: string): boolean {
     const now = Date.now()
     const limiter = this.webhookRateLimiter.get(webhookId)
@@ -51,9 +55,24 @@ export class NotificationService {
       data
     }
 
-    await Promise.allSettled(
+    const deliveryResults = await Promise.allSettled(
       relevantConfigs.map(config => this.sendWebhook(config, payload))
     )
+
+    deliveryResults.forEach((result, index) => {
+      if (result.status !== 'fulfilled') {
+        const config = relevantConfigs[index]
+        logger.warn(
+          {
+            webhookId: config.id,
+            event,
+            error: result.reason,
+            errorMessage: this.getErrorMessage(result.reason)
+          },
+          'Webhook delivery failed'
+        )
+      }
+    })
   }
 
   private async sendWebhook(
@@ -61,7 +80,7 @@ export class NotificationService {
     payload: WebhookPayload
   ): Promise<void> {
     if (!this.checkRateLimit(config.id)) {
-      console.warn(`Webhook ${config.id} rate limited, skipping delivery`)
+      logger.warn({ webhookId: config.id, event: payload.event }, 'Webhook rate limited, skipping delivery')
       await this.recordDelivery(config.id, null, payload, null, null, 'Rate limited: exceeded 100 requests per minute')
       return
     }
@@ -105,10 +124,22 @@ export class NotificationService {
         errorMessage = `HTTP ${response.status}: ${(responseBody || '').slice(0, 200)}`
       }
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      errorMessage = this.getErrorMessage(error)
     }
 
     await this.recordDelivery(config.id, null, payload, responseStatus, responseBody, errorMessage)
+
+    if (errorMessage) {
+      logger.warn(
+        {
+          webhookId: config.id,
+          event: payload.event,
+          responseStatus,
+          errorMessage
+        },
+        'Webhook delivery failed'
+      )
+    }
   }
 
   private generateSignature(payload: string, secret: string): string {
@@ -137,7 +168,14 @@ export class NotificationService {
         error_message: errorMessage,
       })
     } catch (err) {
-      console.error('Failed to record webhook delivery:', err)
+      logger.error(
+        {
+          webhookId,
+          error: err,
+          errorMessage: this.getErrorMessage(err)
+        },
+        'Failed to record webhook delivery'
+      )
     }
   }
 
@@ -202,7 +240,7 @@ export class NotificationService {
         return { success: false, error: `HTTP ${response.status}: ${errorBody || 'Unknown error'}` }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      const errorMessage = this.getErrorMessage(err)
       return { success: false, error: errorMessage }
     }
   }
