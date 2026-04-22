@@ -66,12 +66,15 @@ export class MisfireHandler implements IMisfireHandler {
     console.info(`[MisfireHandler] Detected ${misfiredJobs.length} misfired jobs, handling asynchronously...`)
 
     const delayBetweenJobs = 500
-    
-    for (let i = 0; i < misfiredJobs.length; i++) {
-      const job = misfiredJobs[i]
-      setTimeout(async () => {
-        await this.handleMisfire(job)
-      }, i * delayBetweenJobs)
-    }
+
+    await Promise.all(
+      misfiredJobs.map((job, index) => {
+        return new Promise<void>((resolve) => {
+          setTimeout(() => {
+            void this.handleMisfire(job).finally(resolve)
+          }, index * delayBetweenJobs)
+        })
+      })
+    )
   }
 }

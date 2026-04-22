@@ -255,10 +255,11 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'future-job', next_run_at: futureTime, is_active: true }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
 
       // Advance timers to allow async setTimeout handlers to execute
       await vi.runAllTimersAsync()
+      await result
 
       // Only past job should be handled
       expect(mockExecuteJobCallback).toHaveBeenCalledTimes(1)
@@ -304,16 +305,50 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'job-3', next_run_at: pastTime }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
 
       // Jobs should not be called immediately (they are scheduled with delay)
       expect(mockExecuteJobCallback).not.toHaveBeenCalled()
 
       // Advance timers to execute all setTimeout callbacks
       await vi.runAllTimersAsync()
+      await result
 
       // All jobs should eventually be handled
       expect(mockExecuteJobCallback).toHaveBeenCalledTimes(3)
+    })
+
+    it('should not resolve until all scheduled catch-up executions finish', async () => {
+      const completionOrder: string[] = []
+      handler.setExecuteJobCallback(vi.fn((job: CronJob) => {
+        return new Promise<void>((resolve) => {
+          setTimeout(() => {
+            completionOrder.push(job.id)
+            resolve()
+          }, 50)
+        })
+      }))
+
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const jobs = [
+        createMockJob({ id: 'job-1', next_run_at: pastTime }),
+        createMockJob({ id: 'job-2', next_run_at: pastTime }),
+      ]
+
+      let resolved = false
+      const result = handler.checkAndHandleMisfires(jobs)
+      result.then(() => {
+        resolved = true
+      })
+
+      await Promise.resolve()
+
+      expect(resolved).toBe(false)
+
+      await vi.runAllTimersAsync()
+      await result
+
+      expect(completionOrder).toEqual(['job-1', 'job-2'])
     })
 
     it('should log detection info for misfired jobs', async () => {
@@ -325,7 +360,10 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'job-2', next_run_at: pastTime }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
+
+      await vi.runAllTimersAsync()
+      await result
 
       expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('Detected')
@@ -359,9 +397,10 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'active-2', next_run_at: pastTime, is_active: true }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
 
       await vi.runAllTimersAsync()
+      await result
 
       // Only active jobs should be handled
       expect(mockExecuteJobCallback).toHaveBeenCalledTimes(2)
@@ -378,9 +417,10 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'not-misfired', next_run_at: futureTime, is_active: true }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
 
       await vi.runAllTimersAsync()
+      await result
 
       expect(mockExecuteJobCallback).toHaveBeenCalledTimes(2)
     })
@@ -393,6 +433,7 @@ describe('MisfireHandler', () => {
       const result = handler.checkAndHandleMisfires(jobs)
 
       expect(result).toBeInstanceOf(Promise)
+      await vi.runAllTimersAsync()
       await result
     })
 
@@ -404,9 +445,10 @@ describe('MisfireHandler', () => {
         createMockJob({ id: 'ignore-job', next_run_at: pastTime, misfire_policy: MisfirePolicy.IGNORE }),
       ]
 
-      await handler.checkAndHandleMisfires(jobs)
+      const result = handler.checkAndHandleMisfires(jobs)
 
       await vi.runAllTimersAsync()
+      await result
 
       // IGNORE policy should skip execution
       expect(mockExecuteJobCallback).not.toHaveBeenCalled()
@@ -453,9 +495,10 @@ describe('MisfireHandler', () => {
       const veryOldTime = new Date(Date.now() - 86400000 * 30).toISOString() // 30 days ago
       const job = createMockJob({ next_run_at: veryOldTime })
 
-      await handler.checkAndHandleMisfires([job])
+      const result = handler.checkAndHandleMisfires([job])
 
       await vi.runAllTimersAsync()
+      await result
 
       expect(mockExecuteJobCallback).toHaveBeenCalled()
     })
