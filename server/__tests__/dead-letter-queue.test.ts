@@ -18,38 +18,48 @@ describe('Dead Letter Queue CRUD Operations', () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
     fileMarker = getTestFileMarker(import.meta.url)
+    testUser1Id = uuidv4()
+    testUser2Id = uuidv4()
+
+    const conn = getConnection()
+    const now = new Date().toISOString()
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [fileMarker, `dlq-${fileMarker}`, 'hash', 'user', true, now, now]
+    )
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [testUser1Id, `test-user-1-${Date.now()}`, 'hash', 'user', true, now, now]
+    )
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [testUser2Id, `test-user-2-${Date.now()}`, 'hash', 'user', true, now, now]
+    )
   })
 
   beforeEach(async () => {
     const conn = getConnection()
-    await conn.execute('DELETE FROM dead_letter_queue')
-    await conn.execute('DELETE FROM task_queue')
-
-    testUser1Id = uuidv4()
-    testUser2Id = uuidv4()
-
-    await conn.execute(
-      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       ON CONFLICT (id) DO NOTHING`,
-      [testUser1Id, `test-user-1-${Date.now()}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
-    )
-    await conn.execute(
-      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       ON CONFLICT (id) DO NOTHING`,
-      [testUser2Id, `test-user-2-${Date.now()}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
-    )
+    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
+    await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
   })
 
   afterEach(async () => {
     const conn = getConnection()
-    await conn.execute('DELETE FROM task_queue WHERE owner_id IN ($1, $2)', [testUser1Id, testUser2Id])
-    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3 OR owner_id IS NULL', [fileMarker, testUser1Id, testUser2Id])
-    await conn.execute('DELETE FROM users WHERE id IN ($1, $2)', [testUser1Id, testUser2Id])
+    await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
+    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
   })
 
   afterAll(async () => {
+    const conn = getConnection()
+    await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
+    await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id = $2 OR owner_id = $3', [fileMarker, testUser1Id, testUser2Id])
+    await conn.execute('DELETE FROM users WHERE id IN ($1, $2, $3)', [fileMarker, testUser1Id, testUser2Id])
     await teardownTestDatabase()
   })
 
@@ -84,11 +94,11 @@ describe('Dead Letter Queue CRUD Operations', () => {
         payload: { text: 'Hello world' },
       }
 
-      const item = await db.createDeadLetterQueueItem(data)
+      const item = await db.createDeadLetterQueueItem(data, fileMarker)
 
       expect(item.original_task_id).toBe('task-abc')
       expect(item.job_id).toBeNull()
-      expect(item.owner_id).toBeNull()
+      expect(item.owner_id).toBe(fileMarker)
     })
 
     it('should create DLQ item with default retry_count and max_retries', async () => {
@@ -97,7 +107,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
         payload: { model: 'abab6.5s-chat' },
       }
 
-      const item = await db.createDeadLetterQueueItem(data)
+      const item = await db.createDeadLetterQueueItem(data, fileMarker)
 
       expect(item.retry_count).toBe(0)
       expect(item.max_retries).toBe(3)
@@ -107,11 +117,11 @@ describe('Dead Letter Queue CRUD Operations', () => {
       const item1 = await db.createDeadLetterQueueItem({
         task_type: 'task1',
         payload: {},
-      })
+      }, fileMarker)
       const item2 = await db.createDeadLetterQueueItem({
         task_type: 'task2',
         payload: {},
-      })
+      }, fileMarker)
 
       expect(item1.id).not.toBe(item2.id)
     })
@@ -122,13 +132,13 @@ describe('Dead Letter Queue CRUD Operations', () => {
       await db.createDeadLetterQueueItem({
         task_type: 'task1',
         payload: {},
-      })
+      }, fileMarker)
       await db.createDeadLetterQueueItem({
         task_type: 'task2',
         payload: {},
-      })
+      }, fileMarker)
 
-      const items = await db.getDeadLetterQueueItems()
+      const items = await db.getDeadLetterQueueItems(fileMarker)
 
       expect(items.length).toBe(2)
     })
@@ -143,12 +153,13 @@ describe('Dead Letter Queue CRUD Operations', () => {
         testUser2Id
       )
       await db.createDeadLetterQueueItem(
-        { task_type: 'public-task', payload: {} }
+        { task_type: 'public-task', payload: {} },
+        fileMarker
       )
 
       const user1Items = await db.getDeadLetterQueueItems(testUser1Id)
       const user2Items = await db.getDeadLetterQueueItems(testUser2Id)
-      const allItems = await db.getDeadLetterQueueItems()
+      const allItems = await db.getDeadLetterQueueItems(fileMarker)
 
       expect(user1Items.length).toBe(1)
       expect(user1Items[0].task_type).toBe('user1-task')
@@ -156,25 +167,26 @@ describe('Dead Letter Queue CRUD Operations', () => {
       expect(user2Items.length).toBe(1)
       expect(user2Items[0].task_type).toBe('user2-task')
 
-      expect(allItems.length).toBe(3)
+      expect(allItems.length).toBe(1)
+      expect(allItems[0].task_type).toBe('public-task')
     })
 
     it('should exclude resolved items from results', async () => {
       const unresolved = await db.createDeadLetterQueueItem({
         task_type: 'unresolved-task',
         payload: {},
-      })
+      }, testUser1Id)
       const resolved = await db.createDeadLetterQueueItem({
         task_type: 'resolved-task',
         payload: {},
-      })
+      }, testUser1Id)
 
       await db.updateDeadLetterQueueItem(resolved.id, {
         resolved_at: new Date().toISOString(),
         resolution: 'manual',
-      })
+      }, testUser1Id)
 
-      const items = await db.getDeadLetterQueueItems()
+      const items = await db.getDeadLetterQueueItems(testUser1Id)
 
       expect(items.length).toBe(1)
       expect(items[0].id).toBe(unresolved.id)
@@ -185,10 +197,10 @@ describe('Dead Letter Queue CRUD Operations', () => {
         await db.createDeadLetterQueueItem({
           task_type: `task-${i}`,
           payload: {},
-        })
+        }, testUser1Id)
       }
 
-      const items = await db.getDeadLetterQueueItems(undefined, 5)
+      const items = await db.getDeadLetterQueueItems(testUser1Id, 5)
 
       expect(items.length).toBe(5)
     })
@@ -197,19 +209,19 @@ describe('Dead Letter Queue CRUD Operations', () => {
       const first = await db.createDeadLetterQueueItem({
         task_type: 'first',
         payload: {},
-      })
+      }, testUser1Id)
       await new Promise(r => setTimeout(r, 10))
       const second = await db.createDeadLetterQueueItem({
         task_type: 'second',
         payload: {},
-      })
+      }, testUser1Id)
       await new Promise(r => setTimeout(r, 10))
       const third = await db.createDeadLetterQueueItem({
         task_type: 'third',
         payload: {},
-      })
+      }, testUser1Id)
 
-      const items = await db.getDeadLetterQueueItems()
+      const items = await db.getDeadLetterQueueItems(testUser1Id)
 
       expect(items[0].id).toBe(third.id)
       expect(items[1].id).toBe(second.id)
@@ -222,9 +234,9 @@ describe('Dead Letter Queue CRUD Operations', () => {
       const created = await db.createDeadLetterQueueItem({
         task_type: 'test-task',
         payload: { key: 'value' },
-      })
+      }, fileMarker)
 
-      const fetched = await db.getDeadLetterQueueItemById(created.id)
+      const fetched = await db.getDeadLetterQueueItemById(created.id, fileMarker)
 
       expect(fetched).toBeDefined()
       expect(fetched?.id).toBe(created.id)
@@ -261,7 +273,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
       const item = await db.createDeadLetterQueueItem({
         task_type: 'test',
         payload: {},
-      })
+      }, fileMarker)
 
       const updated = await db.updateDeadLetterQueueItem(item.id, {
         resolved_at: new Date().toISOString(),
@@ -277,7 +289,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
         task_type: 'test',
         payload: {},
         retry_count: 0,
-      })
+      }, fileMarker)
 
       const updated = await db.updateDeadLetterQueueItem(item.id, {
         retry_count: 1,
@@ -332,11 +344,11 @@ describe('Dead Letter Queue CRUD Operations', () => {
 
       expect(newTaskId).toBeDefined()
 
-      const resolvedItem = await db.getDeadLetterQueueItemById(dlqItem.id)
+      const resolvedItem = await db.getDeadLetterQueueItemById(dlqItem.id, testUser1Id)
       expect(resolvedItem?.resolved_at).toBeDefined()
       expect(resolvedItem?.resolution).toBe('retried')
 
-      const newTask = await db.getTaskById(newTaskId)
+      const newTask = await db.getTaskById(newTaskId, testUser1Id)
       expect(newTask).toBeDefined()
       expect(newTask?.task_type).toBe('image_generation')
       expect(newTask?.owner_id).toBe(testUser1Id)
@@ -358,7 +370,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
         db.retryDeadLetterQueueItem(dlqItem.id, testUser2Id)
       ).rejects.toThrow()
 
-      const unchanged = await db.getDeadLetterQueueItemById(dlqItem.id)
+      const unchanged = await db.getDeadLetterQueueItemById(dlqItem.id, testUser1Id)
       expect(unchanged?.resolved_at).toBeNull()
     })
   })
@@ -381,9 +393,6 @@ describe('Dead Letter Queue CRUD Operations', () => {
       const user2Items = await db.getDeadLetterQueueItems(testUser2Id)
       expect(user2Items.length).toBe(1)
       expect(user2Items[0].task_type).toBe('user2-item')
-
-      const allItems = await db.getDeadLetterQueueItems()
-      expect(allItems.length).toBe(2)
     })
 
     it('should prevent cross-user updates', async () => {
