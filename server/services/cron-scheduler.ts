@@ -9,7 +9,6 @@ import type { IConcurrencyManager } from './interfaces/concurrency-manager.inter
 import type { IMisfireHandler } from './interfaces/misfire-handler.interface.js'
 import { 
   CronJob, 
-  CreateExecutionLog, 
   ExecutionStatus,
   TriggerType,
 } from '../database/types'
@@ -142,8 +141,6 @@ export class CronScheduler {
     }
 
     const startTime = Date.now()
-    const startedAt = toLocalISODateString()
-    
     let log: { id: string } | null = null
     let executionSuccess = false
     let durationMs = 0
@@ -217,14 +214,14 @@ export class CronScheduler {
         })
       }
 
-      const newTotalRuns = job.total_runs + 1
-      const newTotalFailures = result.success ? job.total_failures : job.total_failures + 1
-      
-      await this.db.updateCronJob(job.id, {
-        last_run_at: completedAt,
-        total_runs: newTotalRuns,
-        total_failures: newTotalFailures,
-      })
+      await this.db.updateCronJobRunStats(job.id, {
+        success: result.success,
+        tasksExecuted,
+        tasksSucceeded,
+        tasksFailed,
+        durationMs,
+        errorSummary: result.error ?? undefined,
+      }, job.owner_id ?? undefined)
 
       // Notify on_success
       await this.notificationService?.notifyJobEvent(job.id, 'on_success', {
@@ -252,11 +249,14 @@ export class CronScheduler {
           })
         }
 
-        await this.db.updateCronJob(job.id, {
-          last_run_at: completedAt,
-          total_runs: job.total_runs + 1,
-          total_failures: job.total_failures + 1,
-        })
+        await this.db.updateCronJobRunStats(job.id, {
+          success: false,
+          tasksExecuted: 0,
+          tasksSucceeded: 0,
+          tasksFailed: 0,
+          durationMs,
+          errorSummary: errorMessage,
+        }, job.owner_id ?? undefined)
       } catch (dbError) {
         console.error(`[CronScheduler] Failed to update database after job failure:`, dbError)
       }

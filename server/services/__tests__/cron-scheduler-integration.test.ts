@@ -4,16 +4,18 @@ import { WorkflowEngine } from '../workflow/index'
 import { QueueProcessor } from '../queue-processor'
 import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../service-node-registry'
-import type { IConcurrencyManager, IRetryManager } from '../interfaces'
+import type { IConcurrencyManager } from '../interfaces/concurrency-manager.interface'
+import type { IRetryManager } from '../interfaces/retry-manager.interface'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus'
 
 function createMockConcurrencyManager(): IConcurrencyManager {
   return {
-    runningJobs: new Set<string>(),
+    acquireSlot: vi.fn().mockResolvedValue(true),
+    releaseSlot: vi.fn(),
+    getRunningJobs: () => new Set<string>(),
     getRunningCount: () => 0,
-    canStart: () => true,
-    markRunning: vi.fn(),
-    markCompleted: vi.fn(),
+    isShuttingDown: () => false,
+    setShuttingDown: vi.fn(),
   }
 }
 
@@ -124,6 +126,7 @@ describe('QueueProcessor Dead Letter Queue', () => {
   let mockTaskExecutor: { executeTask: ReturnType<typeof vi.fn> }
   let mockCapacityChecker: {
     hasCapacity: ReturnType<typeof vi.fn>
+    reserveCapacity: ReturnType<typeof vi.fn>
     decrementCapacity: ReturnType<typeof vi.fn>
     getSafeExecutionLimit: ReturnType<typeof vi.fn>
   }
@@ -152,6 +155,7 @@ describe('QueueProcessor Dead Letter Queue', () => {
 
     mockCapacityChecker = {
       hasCapacity: vi.fn().mockResolvedValue(true),
+      reserveCapacity: vi.fn().mockResolvedValue(true),
       decrementCapacity: vi.fn().mockResolvedValue(undefined),
       getSafeExecutionLimit: vi.fn().mockResolvedValue(10),
     }

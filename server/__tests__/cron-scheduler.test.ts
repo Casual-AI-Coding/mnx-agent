@@ -1,9 +1,9 @@
 import { CronScheduler } from '../services/cron-scheduler'
-import { CronJob, ExecutionStatus, TriggerType, MisfirePolicy } from '../database/types'
+import { CronJob, ExecutionStatus, MisfirePolicy } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest'
 import type { IEventBus } from '../services/interfaces/event-bus.interface'
 import type { IConcurrencyManager } from '../services/interfaces/concurrency-manager.interface'
-import { MisfireHandler, createMisfireHandler } from '../services/misfire-handler'
+import { MisfireHandler } from '../services/misfire-handler'
 
 vi.mock('node-cron', () => {
   return {
@@ -12,7 +12,7 @@ vi.mock('node-cron', () => {
         const parts = expr.trim().split(' ')
         return parts.length === 5
       }),
-      schedule: vi.fn((expr: string, callback: () => void) => ({
+      schedule: vi.fn((_expr: string, _callback: () => void) => ({
         stop: vi.fn(),
         start: vi.fn(),
       })),
@@ -26,6 +26,7 @@ describe('CronScheduler', () => {
     getActiveCronJobs: Mock
     getCronJobById: Mock
     updateCronJob: Mock
+    updateCronJobRunStats: Mock
     createExecutionLog: Mock
     updateExecutionLog: Mock
     getWorkflowTemplateById: Mock
@@ -68,6 +69,7 @@ describe('CronScheduler', () => {
       getActiveCronJobs: vi.fn().mockResolvedValue([]),
       getCronJobById: vi.fn().mockResolvedValue(null),
       updateCronJob: vi.fn().mockResolvedValue(undefined),
+      updateCronJobRunStats: vi.fn().mockResolvedValue(undefined),
       createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
       updateExecutionLog: vi.fn().mockResolvedValue(undefined),
       getWorkflowTemplateById: vi.fn().mockResolvedValue(null),
@@ -502,6 +504,80 @@ describe('CronScheduler', () => {
       expect(mockDb.updateExecutionLog).toHaveBeenCalledWith('log-1', expect.objectContaining({
         status: ExecutionStatus.COMPLETED,
       }))
+    })
+  })
+
+  describe('Run stats atomic updates', () => {
+    it('should update successful run stats via atomic repository path instead of snapshot counters', async () => {
+      const job = createMockJob('job-atomic-success', {
+        workflow_id: 'workflow-1',
+        total_runs: 41,
+        total_failures: 7,
+      })
+
+      mockDb.getWorkflowTemplateById.mockResolvedValue({
+        id: 'workflow-1',
+        nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
+        edges_json: JSON.stringify([]),
+      })
+
+      mockWorkflowEngine.executeWorkflow.mockResolvedValue({
+        success: true,
+        nodeResults: new Map([['node-1', { success: true }]]),
+        error: null,
+      })
+
+      await scheduler.executeJobTick(job)
+
+      expect(mockDb.updateCronJobRunStats).toHaveBeenCalledWith('job-atomic-success', {
+        success: true,
+        tasksExecuted: 1,
+        tasksSucceeded: 1,
+        tasksFailed: 0,
+        durationMs: expect.any(Number),
+        errorSummary: undefined,
+      }, undefined)
+      expect(mockDb.updateCronJob).not.toHaveBeenCalledWith(
+        'job-atomic-success',
+        expect.objectContaining({
+          total_runs: expect.any(Number),
+          total_failures: expect.any(Number),
+        })
+      )
+    })
+
+    it('should update failed run stats via atomic repository path instead of snapshot counters', async () => {
+      const job = createMockJob('job-atomic-failure', {
+        workflow_id: 'workflow-1',
+        total_runs: 10,
+        total_failures: 2,
+      })
+
+      mockDb.getWorkflowTemplateById.mockResolvedValue({
+        id: 'workflow-1',
+        nodes_json: JSON.stringify([{ id: 'node-1', type: 'action' }]),
+        edges_json: JSON.stringify([]),
+      })
+
+      mockWorkflowEngine.executeWorkflow.mockRejectedValue(new Error('boom'))
+
+      await scheduler.executeJobTick(job)
+
+      expect(mockDb.updateCronJobRunStats).toHaveBeenCalledWith('job-atomic-failure', {
+        success: false,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        durationMs: expect.any(Number),
+        errorSummary: 'boom',
+      }, undefined)
+      expect(mockDb.updateCronJob).not.toHaveBeenCalledWith(
+        'job-atomic-failure',
+        expect.objectContaining({
+          total_runs: expect.any(Number),
+          total_failures: expect.any(Number),
+        })
+      )
     })
   })
 
