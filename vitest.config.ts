@@ -46,7 +46,12 @@ export default defineConfig({
         'src/stores/index.ts',
         '**/*.types.ts',
       ],
-      thresholds: undefined,
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70,
+      },
     },
   },
 })
