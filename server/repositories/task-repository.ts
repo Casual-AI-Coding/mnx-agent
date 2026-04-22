@@ -94,12 +94,16 @@ export class TaskRepository extends BaseRepository<TaskQueueItem, CreateTaskQueu
   async create(task: CreateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem> {
     const id = uuidv4()
     const now = toLocalISODateString()
-    await this.conn.execute(
+    const rows = await this.conn.query<TaskQueueRow>(
       `INSERT INTO task_queue (id, job_id, task_type, payload, priority, status, max_retries, created_at, owner_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
       [id, task.job_id ?? null, task.task_type, task.payload, task.priority ?? 0, task.status ?? TaskStatus.PENDING, task.max_retries ?? 3, now, ownerId ?? null]
     )
-    return (await this.getById(id))!
+    if (rows.length === 0) {
+      throw new Error('Insert failed: no row returned')
+    }
+    return rowToTaskQueueItem(rows[0])
   }
 
   async update(id: string, updates: UpdateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem | null> {

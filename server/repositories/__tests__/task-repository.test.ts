@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { TaskRepository, TaskListOptions } from '../task-repository'
+import { TaskRepository } from '../task-repository'
 import { DatabaseConnection } from '../../database/connection'
 import { TaskStatus } from '../../database/types'
-import type { TaskQueueRow, CreateTaskQueueItem, UpdateTaskQueueItem } from '../../database/types'
+import type { TaskQueueRow, CreateTaskQueueItem } from '../../database/types'
 
 describe('TaskRepository', () => {
   let mockDb: DatabaseConnection
@@ -86,7 +86,7 @@ describe('TaskRepository', () => {
         jobId: 'job-abc',
       })
 
-      const queryCall = mockDb.query.mock.calls[0]
+      const queryCall = vi.mocked(mockDb.query).mock.calls[0]
       expect(queryCall[0]).toContain('status = $')
       expect(queryCall[0]).toContain('owner_id = $')
       expect(queryCall[0]).toContain('job_id = $')
@@ -100,7 +100,7 @@ describe('TaskRepository', () => {
       const repo = new TaskRepository(mockDb)
       await repo.listTasks({})
 
-      const queryCall = mockDb.query.mock.calls[1]
+      const queryCall = vi.mocked(mockDb.query).mock.calls[1]
       expect(queryCall[0]).toContain('ORDER BY priority DESC, created_at ASC')
     })
   })
@@ -130,10 +130,20 @@ describe('TaskRepository', () => {
   })
 
   describe('create', () => {
-    it('should create task with all fields', async () => {
-      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+    it('should create task with all fields using insert returning row', async () => {
       vi.mocked(mockDb.query).mockResolvedValueOnce([
-        { id: 'task-new', job_id: 'job-1', task_type: 'text', status: 'pending', payload: '{}', priority: 5, retry_count: 0, max_retries: 3, created_at: '2026-04-20' },
+        {
+          id: 'task-new',
+          job_id: 'job-1',
+          task_type: 'text',
+          status: 'pending',
+          payload: '{}',
+          priority: 5,
+          retry_count: 0,
+          max_retries: 3,
+          created_at: '2026-04-20',
+          owner_id: 'user-123',
+        },
       ] as TaskQueueRow[])
 
       const repo = new TaskRepository(mockDb)
@@ -147,25 +157,28 @@ describe('TaskRepository', () => {
       }
       const result = await repo.create(taskData, 'user-123')
 
-      expect(mockDb.execute).toHaveBeenCalledWith(
+      expect(mockDb.query).toHaveBeenCalledTimes(1)
+      expect(mockDb.execute).not.toHaveBeenCalled()
+      expect(mockDb.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO task_queue'),
         expect.arrayContaining([
-          expect.any(String), // id
+          expect.any(String),
           'job-1',
           'text',
           '{}',
           5,
           'pending',
           3,
-          expect.any(String), // created_at
+          expect.any(String),
           'user-123',
         ])
       )
+      expect(vi.mocked(mockDb.query).mock.calls[0]?.[0]).toContain('RETURNING *')
       expect(result.priority).toBe(5)
+      expect(result.owner_id).toBe('user-123')
     })
 
-    it('should default optional fields', async () => {
-      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 } as any)
+    it('should default optional fields without extra lookup query', async () => {
       vi.mocked(mockDb.query).mockResolvedValueOnce([
         { id: 'task-new', job_id: null, task_type: 'image', status: 'pending', payload: '{}', priority: 0, retry_count: 0, max_retries: 3, created_at: '2026-04-20' },
       ] as TaskQueueRow[])
@@ -175,12 +188,27 @@ describe('TaskRepository', () => {
         task_type: 'image',
         payload: '{}',
       }
-      await repo.create(taskData)
+      const result = await repo.create(taskData)
 
-      const executeCall = mockDb.execute.mock.calls[0]
-      expect(executeCall[1]).toContain(null) // job_id
-      expect(executeCall[1]).toContain(0) // priority
-      expect(executeCall[1]).toContain(3) // max_retries
+      expect(mockDb.query).toHaveBeenCalledTimes(1)
+      const queryCall = vi.mocked(mockDb.query).mock.calls[0]
+      expect(queryCall?.[1]).toContain(null)
+      expect(queryCall?.[1]).toContain(0)
+      expect(queryCall?.[1]).toContain(3)
+      expect(result.status).toBe('pending')
+    })
+
+    it('should throw when INSERT RETURNING yields empty array', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as TaskQueueRow[])
+
+      const repo = new TaskRepository(mockDb)
+      const taskData: CreateTaskQueueItem = {
+        task_type: 'text',
+        payload: '{}',
+      }
+
+      await expect(repo.create(taskData)).rejects.toThrow('Insert failed: no row returned')
+      expect(mockDb.execute).not.toHaveBeenCalled()
     })
   })
 
@@ -527,7 +555,7 @@ describe('TaskRepository', () => {
       const repo = new TaskRepository(mockDb)
       await repo.updateStatusBatch(['task-1', 'task-2'], TaskStatus.CANCELLED, 'user-123')
 
-      const executeCall = mockDb.execute.mock.calls[0]
+      const executeCall = vi.mocked(mockDb.execute).mock.calls[0]
       expect(executeCall[0]).toContain('owner_id = $')
     })
   })
