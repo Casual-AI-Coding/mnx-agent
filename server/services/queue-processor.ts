@@ -24,6 +24,7 @@ export interface QueueResult {
 
 export interface CapacityChecker {
   hasCapacity(serviceType: string): Promise<boolean>
+  reserveCapacity(serviceType: string): Promise<boolean>
   decrementCapacity(serviceType: string): Promise<void>
   getSafeExecutionLimit(serviceType: string): Promise<number>
 }
@@ -74,8 +75,8 @@ export class QueueProcessor {
       }
 
       for (const task of pendingTasks) {
-        const hasCapacity = await this.capacityChecker.hasCapacity(task.task_type)
-        if (!hasCapacity) {
+        const reservedCapacity = await this.capacityChecker.reserveCapacity(task.task_type)
+        if (!reservedCapacity) {
           queueError = `Capacity exhausted for task type: ${task.task_type}`
           break
         }
@@ -86,7 +87,6 @@ export class QueueProcessor {
 
         if (taskResult.success) {
           stats.tasksSucceeded++
-          await this.capacityChecker.decrementCapacity(task.task_type)
         } else {
           stats.tasksFailed++
           
@@ -103,7 +103,7 @@ export class QueueProcessor {
       }
 
     } catch (error) {
-      queueError = (error as Error).message
+      queueError = error instanceof Error ? error.message : 'Unknown queue processing error'
     }
 
     return {
@@ -173,7 +173,7 @@ export class QueueProcessor {
       return result
 
     } catch (error) {
-      const errorMessage = (error as Error).message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown task execution error'
 
       await this.db.updateTask(task.id, {
         status: TaskStatus.FAILED,
@@ -244,8 +244,8 @@ export class QueueProcessor {
     }
 
     for (const task of batch) {
-      const hasCapacity = await this.capacityChecker.hasCapacity(task.task_type)
-      if (!hasCapacity) {
+      const reservedCapacity = await this.capacityChecker.reserveCapacity(task.task_type)
+      if (!reservedCapacity) {
         return {
           success: false,
           tasksExecuted: stats.tasksExecuted,
@@ -261,7 +261,6 @@ export class QueueProcessor {
 
       if (taskResult.success) {
         stats.tasksSucceeded++
-        await this.capacityChecker.decrementCapacity(task.task_type)
       } else {
         stats.tasksFailed++
         
@@ -329,8 +328,8 @@ export class QueueProcessor {
     }
 
     for (const task of pendingTasks) {
-      const stillHasCapacity = await this.capacityChecker.hasCapacity('image')
-      if (!stillHasCapacity) {
+      const reservedCapacity = await this.capacityChecker.reserveCapacity('image')
+      if (!reservedCapacity) {
         break
       }
 
@@ -339,7 +338,6 @@ export class QueueProcessor {
 
       if (taskResult.success) {
         stats.tasksSucceeded++
-        await this.capacityChecker.decrementCapacity('image')
       } else {
         stats.tasksFailed++
         

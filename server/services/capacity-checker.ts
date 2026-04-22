@@ -95,6 +95,21 @@ export class CapacityChecker {
     return capacity.remaining_quota > 0
   }
 
+  async reserveCapacity(serviceType: string): Promise<boolean> {
+    const balance = await this.checkBalance()
+    if (balance.totalBalance < MIN_BALANCE_THRESHOLD) {
+      return false
+    }
+
+    const existingCapacity = await this.fetchCapacityRecord(serviceType)
+    if (!existingCapacity) {
+      return true
+    }
+
+    const reserved = await this.db.decrementCapacity(serviceType)
+    return reserved !== null
+  }
+
   async getRemainingCapacity(serviceType: string): Promise<number> {
     const capacity = await this.fetchCapacityRecord(serviceType)
     if (!capacity) {

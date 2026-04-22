@@ -18,6 +18,7 @@ interface MockDatabaseService {
 
 interface MockCapacityChecker {
   hasCapacity: ReturnType<typeof vi.fn>
+  reserveCapacity: ReturnType<typeof vi.fn>
   decrementCapacity: ReturnType<typeof vi.fn>
 }
 
@@ -72,6 +73,7 @@ describe('QueueProcessor', () => {
 
     mockCapacityChecker = {
       hasCapacity: vi.fn().mockResolvedValue(true),
+      reserveCapacity: vi.fn().mockResolvedValue(true),
       decrementCapacity: vi.fn().mockResolvedValue(undefined),
       getSafeExecutionLimit: vi.fn().mockResolvedValue(10),
     }
@@ -198,13 +200,24 @@ describe('QueueProcessor', () => {
       }))
     })
 
-    it('should decrement capacity on successful task', async () => {
+    it('should reserve capacity on successful task', async () => {
       const task = createMockTask(0, 3)
       mockDb.getPendingTasks.mockResolvedValueOnce([task])
 
       await processor.processQueue('job-1')
 
-      expect(mockCapacityChecker.decrementCapacity).toHaveBeenCalledWith('text')
+      expect(mockCapacityChecker.reserveCapacity).toHaveBeenCalledWith('text')
+    })
+
+    it('should reserve capacity atomically before executing task', async () => {
+      const task = createMockTask(0, 3)
+      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+
+      await processor.processQueue('job-1')
+
+      expect(mockCapacityChecker.reserveCapacity).toHaveBeenCalledWith('text')
+      expect(mockCapacityChecker.hasCapacity).not.toHaveBeenCalled()
+      expect(mockCapacityChecker.decrementCapacity).not.toHaveBeenCalled()
     })
 
     it('should NOT decrement capacity on failed task', async () => {
@@ -219,6 +232,7 @@ describe('QueueProcessor', () => {
       await processor.processQueue('job-1')
 
       expect(mockCapacityChecker.decrementCapacity).not.toHaveBeenCalled()
+      expect(mockCapacityChecker.reserveCapacity).toHaveBeenCalledWith('text')
     })
   })
 
@@ -362,7 +376,7 @@ describe('QueueProcessor', () => {
       const task2 = createMockTask(0, 3, 'task-2')
       
       mockDb.getPendingTasks.mockResolvedValueOnce([task1, task2])
-      mockCapacityChecker.hasCapacity = vi.fn()
+      mockCapacityChecker.reserveCapacity = vi.fn()
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false)
 
@@ -500,7 +514,7 @@ describe('QueueProcessor', () => {
         createMockTask(0, 3, 'task-2')
       ]
       
-      mockCapacityChecker.hasCapacity = vi.fn()
+      mockCapacityChecker.reserveCapacity = vi.fn()
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false)
 
