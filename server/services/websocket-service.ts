@@ -304,8 +304,7 @@ function startHeartbeat(): void {
   if (heartbeatInterval) return
 
   heartbeatInterval = setInterval(() => {
-    const now = Date.now()
-    for (const client of clients) {
+    for (const client of [...clients]) {
       if (!client.isAlive) {
         client.ws.terminate()
         clients.delete(client)
@@ -336,6 +335,23 @@ export function closeCronWebSocket(): void {
 
 export function getWebSocketClientCount(): number {
   return clients.size
+}
+
+// Test helpers - these are exported only for testing purposes
+export function getClients(): Set<WebSocketClient> {
+  return clients
+}
+
+export function triggerHeartbeat(): void {
+  for (const client of [...clients]) {
+    if (!client.isAlive) {
+      client.ws.terminate()
+      clients.delete(client)
+      continue
+    }
+    client.isAlive = false
+    client.ws.ping()
+  }
 }
 
 export class WebSocketService {

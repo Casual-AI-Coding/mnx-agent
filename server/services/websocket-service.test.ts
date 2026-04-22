@@ -4,6 +4,8 @@ import {
   initCronWebSocket,
   closeCronWebSocket,
   getWebSocketClientCount,
+  getClients,
+  triggerHeartbeat,
 } from '../services/websocket-service'
 import type { Server } from 'http'
 
@@ -12,6 +14,9 @@ const mockWebSocket = {
   send: vi.fn(),
   readyState: 1,
   close: vi.fn(),
+  terminate: vi.fn(),
+  ping: vi.fn(),
+  pong: vi.fn(),
 }
 
 vi.mock('ws', () => {
@@ -23,11 +28,6 @@ vi.mock('ws', () => {
       }
     })
     this.close = vi.fn()
-    this.triggerConnection = () => {
-      if (connectionHandler.current) {
-        connectionHandler.current(mockWebSocket)
-      }
-    }
   }
   return {
     WebSocketServer: MockWebSocketServer as unknown as ReturnType<typeof vi.fn>,
@@ -248,6 +248,62 @@ describe('WebSocketService', () => {
       const count = getWebSocketClientCount()
 
       expect(count).toBe(0)
+    })
+  })
+
+  describe('heartbeat cleanup', () => {
+    it('should remove only unresponsive clients during heartbeat', () => {
+      closeCronWebSocket()
+      initCronWebSocket(mockServer as Server)
+
+      const clients = getClients()
+      const mockWs1 = { ...mockWebSocket }
+      const mockWs2 = { ...mockWebSocket }
+      const mockWs3 = { ...mockWebSocket }
+
+      clients.add({ ws: mockWs1 as unknown as import('ws').WebSocket, subscriptions: new Set(['all']), isAlive: true, lastPong: Date.now() })
+      clients.add({ ws: mockWs2 as unknown as import('ws').WebSocket, subscriptions: new Set(['all']), isAlive: true, lastPong: Date.now() })
+      clients.add({ ws: mockWs3 as unknown as import('ws').WebSocket, subscriptions: new Set(['all']), isAlive: true, lastPong: Date.now() })
+
+      expect(getWebSocketClientCount()).toBe(3)
+
+      const clientsArray = [...clients]
+      const responsiveClient = clientsArray[0]
+      const unresponsiveClient1 = clientsArray[1]
+      const unresponsiveClient2 = clientsArray[2]
+
+      unresponsiveClient1.isAlive = false
+      unresponsiveClient2.isAlive = false
+
+      triggerHeartbeat()
+
+      expect(getWebSocketClientCount()).toBe(1)
+      expect([...getClients()][0]).toBe(responsiveClient)
+    })
+
+    it('should handle cleanup of multiple unresponsive clients without skipping', () => {
+      closeCronWebSocket()
+      initCronWebSocket(mockServer as Server)
+
+      const clients = getClients()
+      for (let i = 0; i < 5; i++) {
+        const mockWs = { ...mockWebSocket }
+        clients.add({ ws: mockWs as unknown as import('ws').WebSocket, subscriptions: new Set(['all']), isAlive: true, lastPong: Date.now() })
+      }
+
+      expect(getWebSocketClientCount()).toBe(5)
+
+      const clientsArray = [...clients]
+      for (const client of clientsArray) {
+        if (client !== clientsArray[0]) {
+          client.isAlive = false
+        }
+      }
+
+      triggerHeartbeat()
+
+      expect(getWebSocketClientCount()).toBe(1)
+      expect([...getClients()][0]).toBe(clientsArray[0])
     })
   })
 
