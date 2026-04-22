@@ -387,6 +387,27 @@ describe('MisfireHandler', () => {
       expect(mockExecuteJobCallback).not.toHaveBeenCalled()
     })
 
+    it('should handle handleMisfire rejection gracefully without unhandled rejection', async () => {
+      // Create a subclass that makes handleMisfire return rejected promise
+      class RejectingMisfireHandler extends MisfireHandler {
+        async handleMisfire(job: CronJob): Promise<void> {
+          throw new Error('handleMisfire intentionally rejects')
+        }
+      }
+
+      const rejectingHandler = new RejectingMisfireHandler()
+      const pastTime = new Date(Date.now() - 3600000).toISOString()
+      const jobs = [createMockJob({ id: 'job-1', next_run_at: pastTime })]
+
+      // This should not throw and should not produce unhandled rejection
+      const result = rejectingHandler.checkAndHandleMisfires(jobs)
+
+      await vi.runAllTimersAsync()
+
+      // Should complete without throwing even though handleMisfire rejected
+      await expect(result).resolves.toBeUndefined()
+    })
+
     it('should handle mixed active and inactive misfired jobs', async () => {
       handler.setExecuteJobCallback(mockExecuteJobCallback)
       const pastTime = new Date(Date.now() - 3600000).toISOString()
