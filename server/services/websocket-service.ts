@@ -178,6 +178,54 @@ interface WebSocketClient {
 let wss: WebSocketServer | null = null
 const clients: Set<WebSocketClient> = new Set()
 let heartbeatInterval: NodeJS.Timeout | null = null
+let eventForwardersRegistered = false
+
+function handleJobEvent(event: CronEvent): void {
+  sendToSubscribedClients('jobs', event)
+}
+
+function handleTaskEvent(event: CronEvent): void {
+  sendToSubscribedClients('tasks', event)
+}
+
+function handleLogEvent(event: CronEvent): void {
+  sendToSubscribedClients('logs', event)
+}
+
+function handleWorkflowEvent(event: CronEvent): void {
+  sendToSubscribedClients('workflows', event)
+}
+
+function sendToSubscribedClients(channel: string, event: CronEvent): void {
+  const message = JSON.stringify(event)
+  for (const client of clients) {
+    if (client.subscriptions.has('all') || client.subscriptions.has(channel)) {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(message)
+      }
+    }
+  }
+}
+
+function registerEventForwarders(): void {
+  if (eventForwardersRegistered) return
+  cronEvents.on('job_event', handleJobEvent)
+  cronEvents.on('task_event', handleTaskEvent)
+  cronEvents.on('log_event', handleLogEvent)
+  cronEvents.on('workflow_event', handleWorkflowEvent)
+  cronEvents.on('workflow_node_event', handleWorkflowEvent)
+  eventForwardersRegistered = true
+}
+
+function unregisterEventForwarders(): void {
+  if (!eventForwardersRegistered) return
+  cronEvents.off('job_event', handleJobEvent)
+  cronEvents.off('task_event', handleTaskEvent)
+  cronEvents.off('log_event', handleLogEvent)
+  cronEvents.off('workflow_event', handleWorkflowEvent)
+  cronEvents.off('workflow_node_event', handleWorkflowEvent)
+  eventForwardersRegistered = false
+}
 
 export function initCronWebSocket(server: Server): WebSocketServer {
   if (wss) return wss
@@ -245,22 +293,7 @@ export function initCronWebSocket(server: Server): WebSocketServer {
     }))
   })
 
-  const sendToClients = (channel: string, event: CronEvent) => {
-    const message = JSON.stringify(event)
-    for (const client of clients) {
-      if (client.subscriptions.has('all') || client.subscriptions.has(channel)) {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.send(message)
-        }
-      }
-    }
-  }
-
-  cronEvents.on('job_event', (event: CronEvent) => sendToClients('jobs', event))
-  cronEvents.on('task_event', (event: CronEvent) => sendToClients('tasks', event))
-  cronEvents.on('log_event', (event: CronEvent) => sendToClients('logs', event))
-  cronEvents.on('workflow_event', (event: CronEvent) => sendToClients('workflows', event))
-  cronEvents.on('workflow_node_event', (event: CronEvent) => sendToClients('workflows', event))
+  registerEventForwarders()
 
   startHeartbeat()
 
@@ -293,6 +326,7 @@ function stopHeartbeat(): void {
 
 export function closeCronWebSocket(): void {
   stopHeartbeat()
+  unregisterEventForwarders()
   if (wss) {
     wss.close()
     wss = null

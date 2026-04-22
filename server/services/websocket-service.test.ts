@@ -228,6 +228,16 @@ describe('WebSocketService', () => {
       const wss = initCronWebSocket(mockServer as Server)
       expect(wss).toBeDefined()
     })
+
+    it('should clean up cron event listeners before reinitializing', () => {
+      initCronWebSocket(mockServer as Server)
+      const initialJobListeners = cronEvents.listenerCount('job_event')
+
+      closeCronWebSocket()
+      initCronWebSocket(mockServer as Server)
+
+      expect(cronEvents.listenerCount('job_event')).toBe(initialJobListeners)
+    })
   })
 
   describe('getWebSocketClientCount', () => {
