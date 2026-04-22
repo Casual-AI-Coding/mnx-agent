@@ -7,27 +7,37 @@ import { toastSuccess, toastError } from '@/lib/toast'
 import type { LyricsTask, LyricsGenerationResponse } from '@/types/lyrics'
 
 function useLyricsFocus(containerRef: React.RefObject<HTMLDivElement | null>, lineCount: number) {
-  const [focusValues, setFocusValues] = useState<number[]>(() => Array(lineCount).fill(0))
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([])
   const rafId = useRef<number>(0)
 
-  const calculateFocus = useCallback(() => {
+  const applyFocus = useCallback(() => {
     const container = containerRef.current
     if (!container || lineCount === 0) return
 
     const containerRect = container.getBoundingClientRect()
     const centerY = containerRect.top + containerRect.height / 2
-    const threshold = containerRect.height * 0.45
+    const threshold = containerRect.height * 1.2
 
-    const newValues = lineRefs.current.map((line) => {
-      if (!line) return 0
+    lineRefs.current.forEach((line) => {
+      if (!line) return
       const lineRect = line.getBoundingClientRect()
       const lineCenterY = lineRect.top + lineRect.height / 2
       const distance = Math.abs(lineCenterY - centerY)
-      return Math.max(0, 1 - distance / threshold)
-    })
+      const focus = Math.max(0, 1 - distance / threshold)
+      const isSection = /^\[.*\]$/.test(line.textContent?.trim() || '')
 
-    setFocusValues(newValues)
+      line.style.opacity = isSection
+        ? String(0.5 + focus * 0.5)
+        : String(0.2 + focus * 0.8)
+      line.style.filter = isSection ? 'none' : `blur(${(1 - focus) * 2}px)`
+      line.style.transform = `scale(${0.96 + focus * 0.04})`
+      line.style.fontWeight = isSection ? '700' : String(400 + Math.round(focus * 300))
+      if (!isSection) {
+        line.style.color = `color-mix(in oklab, hsl(var(--foreground)) ${20 + focus * 80}%, hsl(var(--muted-foreground)))`
+      } else {
+        line.style.color = ''
+      }
+    })
   }, [containerRef, lineCount])
 
   useEffect(() => {
@@ -36,10 +46,10 @@ function useLyricsFocus(containerRef: React.RefObject<HTMLDivElement | null>, li
 
     const handleScroll = () => {
       if (rafId.current) cancelAnimationFrame(rafId.current)
-      rafId.current = requestAnimationFrame(calculateFocus)
+      rafId.current = requestAnimationFrame(applyFocus)
     }
 
-    calculateFocus()
+    applyFocus()
     container.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('resize', handleScroll)
 
@@ -48,9 +58,9 @@ function useLyricsFocus(containerRef: React.RefObject<HTMLDivElement | null>, li
       window.removeEventListener('resize', handleScroll)
       if (rafId.current) cancelAnimationFrame(rafId.current)
     }
-  }, [containerRef, calculateFocus])
+  }, [containerRef, applyFocus])
 
-  return { focusValues, lineRefs }
+  return { lineRefs }
 }
 
 interface LyricsTaskCarouselProps {
@@ -76,7 +86,26 @@ interface LyricsPlayerViewProps {
 function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
   const lyricsContainerRef = useRef<HTMLDivElement>(null)
   const lyricsLines = result.lyrics.split('\n').filter(line => line.trim() !== '')
-  const { focusValues, lineRefs } = useLyricsFocus(lyricsContainerRef, lyricsLines.length)
+  const { lineRefs } = useLyricsFocus(lyricsContainerRef, lyricsLines.length)
+
+  useEffect(() => {
+    const container = lyricsContainerRef.current
+    if (!container) return
+    const wrapper = container.firstElementChild as HTMLElement | null
+    if (!wrapper) return
+
+    const adjust = () => {
+      const h = container.clientHeight
+      const pad = Math.max(0, h / 2 - 14)
+      wrapper.style.paddingTop = `${pad}px`
+      wrapper.style.paddingBottom = `${pad}px`
+    }
+
+    adjust()
+    const resizeObserver = new ResizeObserver(adjust)
+    resizeObserver.observe(container)
+    return () => resizeObserver.disconnect()
+  }, [lyricsLines.length])
 
   const handleCopy = async () => {
     if (!result.lyrics) return
@@ -160,35 +189,29 @@ function LyricsPlayerView({ result, onEdit, onExport }: LyricsPlayerViewProps) {
         </div>
         <div
           ref={lyricsContainerRef}
-          className="flex-1 overflow-y-auto custom-scrollbar px-4 py-8"
+          className="flex-1 overflow-y-auto px-4 snap-y [&::-webkit-scrollbar]:hidden"
           style={{
-            maskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
+            scrollSnapType: 'y proximity',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col items-center justify-center min-h-full gap-1">
+          <div className="flex flex-col items-center gap-1">
             {lyricsLines.map((line, i) => {
-              const focus = focusValues[i] ?? 0
               const isSection = /^\[.*\]$/.test(line)
               return (
                 <p
                   key={i}
                   ref={(el) => { lineRefs.current[i] = el }}
                   className={cn(
-                    "text-center transition-all duration-200 ease-out select-none",
+                    "text-center select-none snap-center",
                     isSection
                       ? "text-xs font-bold tracking-widest uppercase text-muted-foreground mt-3 mb-1"
                       : "text-sm leading-relaxed"
                   )}
-                  style={{
-                    opacity: isSection ? 0.6 + focus * 0.4 : 0.25 + focus * 0.75,
-                    filter: `blur(${isSection ? 0 : (1 - focus) * 3}px)`,
-                    transform: `scale(${0.96 + focus * 0.04})`,
-                    fontWeight: isSection ? 700 : (400 + Math.round(focus * 300)),
-                    color: isSection
-                      ? undefined
-                      : `color-mix(in oklab, hsl(var(--foreground)) ${25 + focus * 75}%, hsl(var(--muted-foreground)))`,
-                  }}
                 >
                   {line}
                 </p>
