@@ -5,7 +5,7 @@ import { SimpleCache } from '../lib/cache.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
 import { RATE_LIMITS_BY_SERVICE } from '../config/rate-limits.js'
 
-const BALANCE_CACHE_TTL_MS = 30000
+const BALANCE_CACHE_TTL_MS = 5000
 
 export interface BalanceResult {
   totalBalance: number
@@ -24,6 +24,23 @@ export interface ServiceCapacity {
 }
 
 const MIN_BALANCE_THRESHOLD = 1.0
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function parseBalanceValue(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
 
 export class CapacityChecker {
   private client: MiniMaxClient
@@ -55,21 +72,12 @@ export class CapacityChecker {
   }
 
   parseBalanceResponse(raw: unknown): BalanceResult {
-    const data = raw as {
-      base_resp?: { status_code: number }
-      account_balance?: number | string
-      grant_balance?: number | string
-      cash_balance?: number | string
-      data?: {
-        account_balance?: number | string
-        grant_balance?: number | string
-        cash_balance?: number | string
-      }
-    }
+    const data = isRecord(raw) ? raw : null
+    const nestedData = isRecord(data?.data) ? data.data : null
 
-    const accountBalance = Number(data?.account_balance ?? data?.data?.account_balance ?? 0)
-    const grantBalance = Number(data?.grant_balance ?? data?.data?.grant_balance ?? 0)
-    const cashBalance = Number(data?.cash_balance ?? data?.data?.cash_balance ?? 0)
+    const accountBalance = parseBalanceValue(data?.account_balance ?? nestedData?.account_balance)
+    const grantBalance = parseBalanceValue(data?.grant_balance ?? nestedData?.grant_balance)
+    const cashBalance = parseBalanceValue(data?.cash_balance ?? nestedData?.cash_balance)
     const totalBalance = accountBalance + grantBalance + cashBalance
 
     return {
