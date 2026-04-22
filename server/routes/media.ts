@@ -26,6 +26,15 @@ import {
   withEntityNotFound,
 } from '../utils/index.js'
 import { access } from 'fs/promises'
+import type { MediaType, MediaSource } from '../database/types.js'
+
+interface ApiResponseData {
+  image_urls?: string[]
+  data?: {
+    audio?: string
+    audio_url?: string
+  }
+}
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -47,8 +56,8 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
   const visibilityOwnerId = ownerFilter.ownerId
 
   const result = await db.getAll({
-    type: type as any,
-    source: source as any,
+    type: type as string,
+    source: source as string,
     search: search as string,
     limit,
     offset,
@@ -66,7 +75,7 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 router.get('/recoverable', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const OPERATION_MEDIA_MAP: Record<string, { type: string; source: string; extractUrls: (responseData: any) => string[] }> = {
+  const OPERATION_MEDIA_MAP: Record<string, { type: MediaType; source: MediaSource; extractUrls: (responseData: ApiResponseData) => string[] }> = {
     image_generation: {
       type: 'image',
       source: 'image_generation',
@@ -199,7 +208,7 @@ router.post('/recover/:logId', asyncHandler(async (req, res) => {
     return
   }
 
-  const OPERATION_MEDIA_MAP: Record<string, { type: string; source: string; ext: string; extractUrls: (responseData: any) => string[] }> = {
+  const OPERATION_MEDIA_MAP: Record<string, { type: MediaType; source: MediaSource; ext: string; extractUrls: (responseData: ApiResponseData) => string[] }> = {
     image_generation: { type: 'image', source: 'image_generation', ext: '.png', extractUrls: (rd) => rd?.image_urls ?? [] },
     music_generation: { type: 'music', source: 'music_generation', ext: '.mp3', extractUrls: (rd) => rd?.data?.audio ? [rd.data.audio] : [] },
     text_to_audio_sync: { type: 'audio', source: 'voice_sync', ext: '.wav', extractUrls: (rd) => rd?.data?.audio_url ? [rd.data.audio_url] : [] },
@@ -240,7 +249,7 @@ router.post('/recover/:logId', asyncHandler(async (req, res) => {
 
   try {
     const originalName = `${log.operation}_${logId}${opConfig.ext}`
-    const { filepath, filename, size_bytes } = await saveFromUrl(targetUrl, originalName, opConfig.type as any)
+    const { filepath, filename, size_bytes } = await saveFromUrl(targetUrl, originalName, opConfig.type as MediaType)
 
     const mediaService = getMediaService()
     const ownerId = buildOwnerFilter(req).params[0]
@@ -248,10 +257,10 @@ router.post('/recover/:logId', asyncHandler(async (req, res) => {
       filename,
       original_name: originalName,
       filepath,
-      type: opConfig.type as any,
+      type: opConfig.type as MediaType,
       mime_type: undefined,
       size_bytes,
-      source: opConfig.source as any,
+      source: opConfig.source as MediaSource,
       metadata: {
         ...extraMetadata,
         source_url: targetUrl,
@@ -438,17 +447,17 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const { filepath, filename, size_bytes } = await saveMediaFile(
     req.file.buffer,
     req.file.originalname,
-    type as any
+    type as MediaType
   )
 
   const record = await db.create({
     filename,
     original_name: req.file.originalname,
     filepath,
-    type: type as any,
+    type: type as MediaType,
     mime_type: req.file.mimetype,
     size_bytes,
-    source: source as any,
+    source: source as MediaSource,
   }, ownerId)
 
   createdResponse(res, record)
@@ -476,17 +485,17 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
   const { filepath, filename: savedFilename, size_bytes } = await saveMediaFile(
     buffer,
     finalFilename,
-    type as any
+    type as MediaType
   )
 
   const record = await db.create({
     filename: savedFilename,
     original_name: finalFilename,
     filepath,
-    type: type as any,
+    type: type as MediaType,
     mime_type: response.headers['content-type'],
     size_bytes,
-    source: source as any,
+    source: source as MediaSource,
     metadata: metadata || null,
   }, ownerId)
 
