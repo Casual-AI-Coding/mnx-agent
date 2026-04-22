@@ -44,7 +44,12 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
     return
   }
 
-  req.user = { userId: result.user!.id, username: result.user!.username, role: result.user!.role }
+  if (!result.user || !result.accessToken || !result.refreshToken) {
+    errorResponse(res, 'Login failed', 401)
+    return
+  }
+
+  req.user = { userId: result.user.id, username: result.user.username, role: result.user.role }
 
   res.cookie('refreshToken', result.refreshToken, {
     httpOnly: true,
