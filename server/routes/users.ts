@@ -55,12 +55,17 @@ const listUsersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
 
+type ListUsersQuery = z.infer<typeof listUsersQuerySchema>
+type UpdateUserInput = z.infer<typeof updateUserSchema>
+type UserUpdateValue = UpdateUserInput[keyof UpdateUserInput] | string
+
 router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, res) => {
-  const { page, limit } = req.query as unknown as { page: number; limit: number }
+  const query = listUsersQuerySchema.parse(req.query)
+  const { page, limit } = query
   const conn = getConnection()
 
   const countResult = await conn.query<{ total: number }>('SELECT COUNT(*) as total FROM users')
-  const total = countResult[0]?.total || 0
+  const total = Number(countResult[0]?.total ?? 0)
 
   const offset = (page - 1) * limit
   const rows = await conn.query(
@@ -99,11 +104,11 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
 
 router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const updates = req.body
+  const updates: UpdateUserInput = req.body
   const conn = getConnection()
 
   const fields: string[] = []
-  const values: any[] = []
+  const values: UserUpdateValue[] = []
   let idx = 1
 
   if (updates.email !== undefined) { fields.push(`email = $${idx++}`); values.push(updates.email) }
