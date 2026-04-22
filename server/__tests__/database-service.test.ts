@@ -18,6 +18,15 @@ describe('DatabaseService', () => {
     db = new DatabaseService(getConnection())
     await db.init()
     fileMarker = getTestFileMarker(import.meta.url)
+
+    const conn = getConnection()
+    const now = new Date().toISOString()
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [fileMarker, `db-service-${fileMarker}`, 'hash', 'user', true, now, now]
+    )
   })
 
   beforeEach(async () => {
@@ -26,19 +35,17 @@ describe('DatabaseService', () => {
     await conn.execute('DELETE FROM execution_logs')
     await conn.execute('DELETE FROM task_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM dead_letter_queue WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
-    await conn.execute('DELETE FROM webhook_deliveries')
-    await conn.execute('DELETE FROM webhook_configs')
-    await conn.execute('DELETE FROM job_dependencies')
-    await conn.execute('DELETE FROM job_tags')
+    await conn.execute('DELETE FROM webhook_configs WHERE id LIKE $1', [`${fileMarker}-%`])
+    await conn.execute('DELETE FROM job_dependencies WHERE id LIKE $1', [`${fileMarker}-%`])
+    await conn.execute('DELETE FROM job_tags WHERE id LIKE $1', [`${fileMarker}-%`])
     await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
-    await conn.execute('DELETE FROM capacity_tracking')
-    await conn.execute('DELETE FROM prompt_templates')
+    await conn.execute('DELETE FROM capacity_tracking WHERE service_type LIKE $1', [`${fileMarker}-%`])
     await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
-    await conn.execute('DELETE FROM audit_logs')
-    await conn.execute('DELETE FROM service_node_permissions')
   })
 
   afterAll(async () => {
+    const conn = getConnection()
+    await conn.execute('DELETE FROM users WHERE id = $1', [fileMarker])
     await teardownTestDatabase()
   })
 
@@ -67,7 +74,7 @@ describe('DatabaseService', () => {
           name: 'Test Job',
           cron_expression: '0 * * * *',
         }
-        const job = await db.createCronJob(jobData)
+        const job = await db.createCronJob(jobData, fileMarker)
 
         expect(job.id).toBeDefined()
         expect(job.name).toBe('Test Job')
@@ -95,7 +102,7 @@ describe('DatabaseService', () => {
           is_active: false,
           timeout_ms: 600000,
         }
-        const job = await db.createCronJob(jobData)
+        const job = await db.createCronJob(jobData, fileMarker)
 
         expect(job.name).toBe('Full Job')
         expect(job.description).toBe('A complete job')
@@ -110,23 +117,23 @@ describe('DatabaseService', () => {
           name: 'No Workflow',
           cron_expression: '0 * * * *',
           workflow_id: null,
-        })
+        }, fileMarker)
         expect(job.workflow_id).toBeNull()
       })
     })
 
     describe('Read Cron Jobs', () => {
       it('should get all cron jobs', async () => {
-        await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
-        await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+        await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' }, fileMarker)
+        await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' }, fileMarker)
 
-        const jobs = await db.getAllCronJobs()
+        const jobs = await db.getAllCronJobs(fileMarker)
         expect(jobs.length).toBe(2)
       })
 
       it('should get only active cron jobs', async () => {
-        await db.createCronJob({ name: 'Active Job', cron_expression: '0 * * * *', is_active: true })
-        await db.createCronJob({ name: 'Inactive Job', cron_expression: '0 0 * * *', is_active: false })
+        await db.createCronJob({ name: 'Active Job', cron_expression: '0 * * * *', is_active: true }, fileMarker)
+        await db.createCronJob({ name: 'Inactive Job', cron_expression: '0 0 * * *', is_active: false }, fileMarker)
 
         const activeJobs = await db.getActiveCronJobs()
         expect(activeJobs.length).toBe(1)
@@ -134,7 +141,7 @@ describe('DatabaseService', () => {
       })
 
       it('should get cron job by id', async () => {
-        const created = await db.createCronJob({ name: 'Find Me', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Find Me', cron_expression: '0 * * * *' }, fileMarker)
 
         const job = await db.getCronJobById(created.id)
         expect(job).not.toBeNull()
@@ -149,7 +156,7 @@ describe('DatabaseService', () => {
 
     describe('Update Cron Jobs', () => {
       it('should update cron job fields', async () => {
-        const created = await db.createCronJob({ name: 'Original', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Original', cron_expression: '0 * * * *' }, fileMarker)
 
         const updated = await db.updateCronJob(created.id, {
           name: 'Updated',
@@ -162,7 +169,7 @@ describe('DatabaseService', () => {
       })
 
       it('should update is_active status via toggle', async () => {
-        const created = await db.createCronJob({ name: 'Toggle Test', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Toggle Test', cron_expression: '0 * * * *' }, fileMarker)
 
         const toggled = await db.toggleCronJobActive(created.id)
         expect(toggled!.is_active).toBe(false)
@@ -172,7 +179,7 @@ describe('DatabaseService', () => {
       })
 
       it('should update run stats', async () => {
-        const created = await db.createCronJob({ name: 'Stats Test', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Stats Test', cron_expression: '0 * * * *' }, fileMarker)
 
         const stats = {
           success: true,
@@ -189,7 +196,7 @@ describe('DatabaseService', () => {
       })
 
       it('should update last run time', async () => {
-        const created = await db.createCronJob({ name: 'Last Run Test', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Last Run Test', cron_expression: '0 * * * *' }, fileMarker)
         const nextRun = '2025-01-01T12:00:00.000Z'
 
         await db.updateCronJobLastRun(created.id, nextRun)
@@ -207,7 +214,7 @@ describe('DatabaseService', () => {
 
     describe('Delete Cron Jobs', () => {
       it('should delete cron job by id', async () => {
-        const created = await db.createCronJob({ name: 'Delete Me', cron_expression: '0 * * * *' })
+        const created = await db.createCronJob({ name: 'Delete Me', cron_expression: '0 * * * *' }, fileMarker)
 
         const deleted = await db.deleteCronJob(created.id)
         expect(deleted).toBe(true)
@@ -243,7 +250,7 @@ describe('DatabaseService', () => {
       })
 
       it('should create task with all fields', async () => {
-        const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' })
+          const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' }, fileMarker)
 
         const task = await db.createTask({
           job_id: job.id,
@@ -298,7 +305,7 @@ describe('DatabaseService', () => {
       })
 
       it('should get pending tasks by job', async () => {
-        const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' })
+        const job = await db.createCronJob({ name: 'Task Job', cron_expression: '0 * * * *' }, fileMarker)
         await db.createTask({ job_id: job.id, task_type: 't1', payload: '{}' })
         await db.createTask({ job_id: job.id, task_type: 't2', payload: '{}' })
 
@@ -367,30 +374,30 @@ describe('DatabaseService', () => {
       })
 
       it('should retry failed task up to max_retries', async () => {
-        const created = await db.createTask({ task_type: 'test', payload: '{}', max_retries: 3 })
+        const created = await db.createTask({ task_type: 'test', payload: '{}', max_retries: 3 }, fileMarker)
 
-        let task = await db.markTaskFailed(created.id, 'Error 1')
+        let task = await db.markTaskFailed(created.id, 'Error 1', fileMarker)
         expect(task!.status).toBe(TaskStatus.PENDING)
         expect(task!.retry_count).toBe(1)
 
-        task = await db.markTaskFailed(created.id, 'Error 2')
+        task = await db.markTaskFailed(created.id, 'Error 2', fileMarker)
         expect(task!.status).toBe(TaskStatus.PENDING)
         expect(task!.retry_count).toBe(2)
 
-        task = await db.markTaskFailed(created.id, 'Error 3')
+        task = await db.markTaskFailed(created.id, 'Error 3', fileMarker)
         expect(task!.status).toBe(TaskStatus.FAILED)
         expect(task!.retry_count).toBe(3)
       })
 
       it('should batch update task statuses', async () => {
-        const t1 = await db.createTask({ task_type: 't1', payload: '{}' })
-        const t2 = await db.createTask({ task_type: 't2', payload: '{}' })
-        const t3 = await db.createTask({ task_type: 't3', payload: '{}' })
+        const t1 = await db.createTask({ task_type: 't1', payload: '{}' }, fileMarker)
+        const t2 = await db.createTask({ task_type: 't2', payload: '{}' }, fileMarker)
+        const t3 = await db.createTask({ task_type: 't3', payload: '{}' }, fileMarker)
 
-        const count = await db.updateTasksStatusBatch([t1.id, t2.id, t3.id], TaskStatus.CANCELLED)
+        const count = await db.updateTasksStatusBatch([t1.id, t2.id, t3.id], TaskStatus.CANCELLED, fileMarker)
         expect(count).toBe(3)
 
-        const task1 = await db.getTaskById(t1.id)
+        const task1 = await db.getTaskById(t1.id, fileMarker)
         expect(task1!.status).toBe(TaskStatus.CANCELLED)
       })
     })
@@ -428,7 +435,7 @@ describe('DatabaseService', () => {
       })
 
       it('should create execution log with job_id', async () => {
-        const job = await db.createCronJob({ name: 'Log Job', cron_expression: '0 * * * *' })
+        const job = await db.createCronJob({ name: 'Log Job', cron_expression: '0 * * * *' }, fileMarker)
 
         const logData: CreateExecutionLog = {
           job_id: job.id,
@@ -451,8 +458,8 @@ describe('DatabaseService', () => {
       })
 
       it('should get execution logs by job_id', async () => {
-        const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
-        const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+        const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' }, fileMarker)
+        const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' }, fileMarker)
 
         await db.createExecutionLog({ job_id: job1.id, trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
         await db.createExecutionLog({ job_id: job2.id, trigger_type: TriggerType.CRON, status: ExecutionStatus.RUNNING })
@@ -564,18 +571,19 @@ describe('DatabaseService', () => {
 
   describe('Capacity Tracking', () => {
     it('should get all capacity records', async () => {
-      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
-      await db.upsertCapacityRecord('voice', { remaining_quota: 50, total_quota: 500 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-voice`, { remaining_quota: 50, total_quota: 500 })
 
       const records = await db.getAllCapacityRecords()
-      expect(records.length).toBe(2)
+      const ourRecords = records.filter(r => r.service_type.startsWith(`${fileMarker}-`))
+      expect(ourRecords.length).toBe(2)
     })
 
     it('should get capacity by service type', async () => {
-      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 100, total_quota: 1000 })
 
-      const record = await db.getCapacityByService('text')
-      expect(record!.service_type).toBe('text')
+      const record = await db.getCapacityByService(`${fileMarker}-text`)
+      expect(record!.service_type).toBe(`${fileMarker}-text`)
       expect(record!.remaining_quota).toBe(100)
       expect(record!.total_quota).toBe(1000)
     })
@@ -586,27 +594,27 @@ describe('DatabaseService', () => {
     })
 
     it('should upsert capacity record', async () => {
-      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
-      await db.upsertCapacityRecord('text', { remaining_quota: 80, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 80, total_quota: 1000 })
 
-      const record = await db.getCapacityByService('text')
+      const record = await db.getCapacityByService(`${fileMarker}-text`)
       expect(record!.remaining_quota).toBe(80)
     })
 
     it('should decrement capacity', async () => {
-      await db.upsertCapacityRecord('text', { remaining_quota: 100, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 100, total_quota: 1000 })
 
-      const record = await db.decrementCapacity('text', 10)
+      const record = await db.decrementCapacity(`${fileMarker}-text`, 10)
       expect(record!.remaining_quota).toBe(90)
     })
 
     it('should return null when decrementing insufficient quota', async () => {
-      await db.upsertCapacityRecord('text', { remaining_quota: 5, total_quota: 1000 })
+      await db.upsertCapacityRecord(`${fileMarker}-text`, { remaining_quota: 5, total_quota: 1000 })
 
-      const record = await db.decrementCapacity('text', 10)
+      const record = await db.decrementCapacity(`${fileMarker}-text`, 10)
       expect(record).toBeNull()
 
-      const existingRecord = await db.getCapacityRecord('text')
+      const existingRecord = await db.getCapacityRecord(`${fileMarker}-text`)
       expect(existingRecord!.remaining_quota).toBe(5)
     })
 
@@ -688,10 +696,10 @@ describe('DatabaseService', () => {
 
       it('should get paginated templates', async () => {
         for (let i = 0; i < 5; i++) {
-          await db.createWorkflowTemplate({ name: `T${i}`, nodes_json: '{}', edges_json: '{}' })
+          await db.createWorkflowTemplate({ name: `T${i}`, nodes_json: '{}', edges_json: '{}' }, fileMarker)
         }
 
-        const result = await db.getWorkflowTemplatesPaginated({ limit: 2, offset: 0 })
+        const result = await db.getWorkflowTemplatesPaginated({ ownerId: fileMarker, limit: 2, offset: 0 })
         expect(result.templates.length).toBe(2)
         expect(result.total).toBe(5)
       })
@@ -742,7 +750,7 @@ describe('DatabaseService', () => {
   describe('Webhooks CRUD', () => {
     it('should create and retrieve webhook config', async () => {
       const conn = getConnection()
-      const id = 'webhook-' + Date.now()
+      const id = `${fileMarker}-webhook-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -777,7 +785,7 @@ describe('DatabaseService', () => {
 
     it('should update webhook active status', async () => {
       const conn = getConnection()
-      const id = 'webhook-update-' + Date.now()
+      const id = `${fileMarker}-webhook-update-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -797,7 +805,7 @@ describe('DatabaseService', () => {
 
     it('should delete webhook', async () => {
       const conn = getConnection()
-      const id = 'webhook-delete-' + Date.now()
+      const id = `${fileMarker}-webhook-delete-${Date.now()}`
       const now = new Date().toISOString()
 
       await conn.execute(
@@ -875,16 +883,16 @@ describe('DatabaseService', () => {
   describe('Job Tags', () => {
     it('should add tags to job', async () => {
       const conn = getConnection()
-      const job = await db.createCronJob({ name: 'Tagged Job', cron_expression: '0 * * * *' })
+      const job = await db.createCronJob({ name: 'Tagged Job', cron_expression: '0 * * * *' }, fileMarker)
       const now = new Date().toISOString()
 
       await conn.execute(
         'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
-        ['tag-1-' + Date.now(), job.id, 'production', now]
+        [`${fileMarker}-tag-1-${Date.now()}`, job.id, 'production', now]
       )
       await conn.execute(
         'INSERT INTO job_tags (id, job_id, tag, created_at) VALUES ($1, $2, $3, $4)',
-        ['tag-2-' + Date.now(), job.id, 'important', now]
+        [`${fileMarker}-tag-2-${Date.now()}`, job.id, 'important', now]
       )
 
       const rows = await conn.query<{ tag: string }>(
@@ -901,13 +909,13 @@ describe('DatabaseService', () => {
     it('should create job dependency', async () => {
       const conn = getConnection()
 
-      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
-      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' }, fileMarker)
+      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' }, fileMarker)
       const now = new Date().toISOString()
 
       await conn.execute(
         'INSERT INTO job_dependencies (id, job_id, depends_on_job_id, created_at) VALUES ($1, $2, $3, $4)',
-        ['dep-' + Date.now(), job2.id, job1.id, now]
+        [`${fileMarker}-dep-${Date.now()}`, job2.id, job1.id, now]
       )
 
       const rows = await conn.query<{ job_id: string; depends_on_job_id: string }>(
@@ -922,12 +930,12 @@ describe('DatabaseService', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty cron expression', async () => {
-      const job = await db.createCronJob({ name: 'Empty Expr', cron_expression: '' })
+      const job = await db.createCronJob({ name: 'Empty Expr', cron_expression: '' }, fileMarker)
       expect(job.cron_expression).toBe('')
     })
 
     it('should handle null workflow_id', async () => {
-      const job = await db.createCronJob({ name: 'No Workflow', cron_expression: '0 * * * *' })
+      const job = await db.createCronJob({ name: 'No Workflow', cron_expression: '0 * * * *' }, fileMarker)
       expect(job.workflow_id).toBeNull()
     })
 
@@ -943,9 +951,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle capacity with zero remaining', async () => {
-      await db.upsertCapacityRecord('zero_service', { remaining_quota: 0, total_quota: 100 })
+      await db.upsertCapacityRecord(`${fileMarker}-zero_service`, { remaining_quota: 0, total_quota: 100 })
 
-      const record = await db.getCapacityByService('zero_service')
+      const record = await db.getCapacityByService(`${fileMarker}-zero_service`)
       expect(record!.remaining_quota).toBe(0)
     })
 
@@ -970,8 +978,8 @@ describe('DatabaseService', () => {
     })
 
     it('should get queue stats for specific job', async () => {
-      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' })
-      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' })
+      const job1 = await db.createCronJob({ name: 'Job 1', cron_expression: '0 * * * *' }, fileMarker)
+      const job2 = await db.createCronJob({ name: 'Job 2', cron_expression: '0 0 * * *' }, fileMarker)
 
       await db.createTask({ job_id: job1.id, task_type: 't1', payload: '{}', status: TaskStatus.PENDING })
       await db.createTask({ job_id: job1.id, task_type: 't2', payload: '{}', status: TaskStatus.COMPLETED })
@@ -989,7 +997,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle ISO date strings correctly', async () => {
-      const job = await db.createCronJob({ name: 'Date Test', cron_expression: '0 * * * *' })
+      const job = await db.createCronJob({ name: 'Date Test', cron_expression: '0 * * * *' }, fileMarker)
       expect(job.created_at).toBeDefined()
       expect(job.created_at).toBeTruthy()
     })
