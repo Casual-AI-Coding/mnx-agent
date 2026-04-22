@@ -17,7 +17,7 @@ describe('Dead Letter Queue CRUD Operations', () => {
   beforeAll(async () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
   })
 
   beforeEach(async () => {

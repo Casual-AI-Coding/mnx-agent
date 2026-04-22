@@ -30,7 +30,7 @@ export default defineConfig((envConfig) => {
       include: ['server/**/*.{test,spec}.ts'],
       exclude: ['node_modules', 'dist'],
       pool: 'forks',
-      fileParallelism: true,
+      fileParallelism: false,
       maxWorkers: 4,
       coverage: {
         provider: 'v8',

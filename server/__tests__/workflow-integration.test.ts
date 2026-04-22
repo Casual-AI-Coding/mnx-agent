@@ -177,7 +177,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
 
   beforeAll(async () => {
     await setupTestDatabase()
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerServices(db)
@@ -493,7 +493,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
     resetServiceNodeRegistry()
     db = await getDatabase()
     await registerMockServices(db)

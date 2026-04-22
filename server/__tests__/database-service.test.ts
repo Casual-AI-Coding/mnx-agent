@@ -17,7 +17,7 @@ describe('DatabaseService', () => {
     await setupTestDatabase()
     db = new DatabaseService(getConnection())
     await db.init()
-    fileMarker = getTestFileMarker()
+    fileMarker = getTestFileMarker(import.meta.url)
   })
 
   beforeEach(async () => {
