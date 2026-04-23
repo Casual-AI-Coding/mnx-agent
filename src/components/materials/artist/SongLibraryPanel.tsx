@@ -38,14 +38,17 @@ export function SongLibraryPanel({
   const [isSaving, setIsSaving] = useState(false)
 
   const handleMoveSong = async (index: number, direction: 'up' | 'down') => {
+    if (!materialId) return
     const newIndex = direction === 'up' ? index - 1 : index + 1
     if (newIndex < 0 || newIndex >= songs.length) return
     const newOrder = [...songs]
     const [moved] = newOrder.splice(index, 1)
     newOrder.splice(newIndex, 0, moved)
-    const itemIds = newOrder.map((s) => s.id)
     setIsSaving(true)
-    const result = await reorderMaterialItems(materialId, itemIds)
+    const result = await reorderMaterialItems(
+      materialId,
+      newOrder.map((song, orderIndex) => ({ id: song.id, sort_order: orderIndex }))
+    )
     setIsSaving(false)
     if (result.success) {
       onSongsChange?.()
@@ -173,6 +176,7 @@ export function SongLibraryPanel({
                 onClick={() => handleMoveSong(songs.indexOf(song), 'up')}
                 disabled={songs.indexOf(song) === 0 || isSaving}
                 title="向上移动"
+                aria-label={`向上移动 ${song.name}`}
               >
                 <ArrowUp className="w-3 h-3" />
               </Button>
@@ -183,6 +187,7 @@ export function SongLibraryPanel({
                 onClick={() => handleMoveSong(songs.indexOf(song), 'down')}
                 disabled={songs.indexOf(song) === songs.length - 1 || isSaving}
                 title="向下移动"
+                aria-label={`向下移动 ${song.name}`}
               >
                 <ArrowDown className="w-3 h-3" />
               </Button>

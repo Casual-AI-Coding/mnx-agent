@@ -43,7 +43,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
       target_type: 'material-main',
       target_id: targetId,
       slot_type: 'artist-style',
-      items: newOrder.map((p) => p.id),
+      items: newOrder.map((prompt, orderIndex) => ({ id: prompt.id, sort_order: orderIndex })),
     })
     setIsSaving(false)
     if (result.success) {
@@ -181,6 +181,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     onClick={() => handleMovePrompt(index, 'up')}
                     disabled={index === 0 || isSaving}
                     title="向上移动"
+                    aria-label={`向上移动 ${prompt.name}`}
                   >
                     <ArrowUp className="w-3 h-3" />
                   </Button>
@@ -190,6 +191,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     onClick={() => handleMovePrompt(index, 'down')}
                     disabled={index === prompts.length - 1 || isSaving}
                     title="向下移动"
+                    aria-label={`向下移动 ${prompt.name}`}
                   >
                     <ArrowDown className="w-3 h-3" />
                   </Button>

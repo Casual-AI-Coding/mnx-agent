@@ -32,6 +32,11 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
   const [deleteConfirm, setDeleteConfirm] = useState<PromptRecord | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  useEffect(() => {
+    const nextActiveTab = prompts.find((p) => p.is_default)?.id || prompts[0]?.id || ''
+    setActiveTab(nextActiveTab)
+  }, [prompts, songId])
+
   const handleMovePrompt = async (index: number, direction: 'up' | 'down') => {
     if (!songId) return
     const newIndex = direction === 'up' ? index - 1 : index + 1
@@ -44,7 +49,7 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
       target_type: 'material-item',
       target_id: songId,
       slot_type: 'song-style',
-      items: newOrder.map((p) => p.id),
+      items: newOrder.map((prompt, orderIndex) => ({ id: prompt.id, sort_order: orderIndex })),
     })
     setIsSaving(false)
     if (result.success) {
@@ -211,6 +216,7 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
                     onClick={() => handleMovePrompt(index, 'up')}
                     disabled={index === 0 || isSaving}
                     title="向上移动"
+                    aria-label={`向上移动 ${prompt.name}`}
                   >
                     <ArrowUp className="w-3 h-3" />
                   </Button>
@@ -220,6 +226,7 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
                     onClick={() => handleMovePrompt(index, 'down')}
                     disabled={index === prompts.length - 1 || isSaving}
                     title="向下移动"
+                    aria-label={`向下移动 ${prompt.name}`}
                   >
                     <ArrowDown className="w-3 h-3" />
                   </Button>

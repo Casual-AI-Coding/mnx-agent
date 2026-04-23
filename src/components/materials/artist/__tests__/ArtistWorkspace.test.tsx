@@ -255,15 +255,19 @@ it('switches song selection and updates the song prompt panel', async () => {
     render(<ArtistWorkspace materialId="artist-1" />)
 
     const nameInput = await screen.findByDisplayValue('Test Artist')
+    const descriptionInput = screen.getByDisplayValue('Test description')
     await user.clear(nameInput)
-    await user.fill(nameInput, 'Updated Artist Name')
+    await user.type(nameInput, 'Updated Artist Name')
+    await user.clear(descriptionInput)
+    await user.type(descriptionInput, 'Updated description')
 
-    const saveButton = screen.getByRole('button', { name: '保存' })
+    const saveButtons = screen.getAllByRole('button', { name: '保存' })
+    const saveButton = saveButtons[0]
     await user.click(saveButton)
 
     expect(updateMaterial).toHaveBeenCalledWith('artist-1', {
       name: 'Updated Artist Name',
-      description: expect.any(String),
+      description: 'Updated description',
     })
   })
 
@@ -281,14 +285,14 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    const moveDownButtons = screen.getAllByRole('button', { name: /向下移动/i })
-    if (moveDownButtons.length > 0) {
-      await user.click(moveDownButtons[0])
-      expect(reorderMaterialItems).toHaveBeenCalledWith(
-        'artist-1',
-        expect.arrayContaining(['song-1', 'song-2'])
-      )
-    }
+    await screen.findByText('Blue Night')
+    const moveDownButton = screen.getByRole('button', { name: '向下移动 Blue Night' })
+    await user.click(moveDownButton)
+
+    expect(reorderMaterialItems).toHaveBeenCalledWith('artist-1', [
+      { id: 'song-2', sort_order: 0 },
+      { id: 'song-1', sort_order: 1 },
+    ])
   })
 
   it('can reorder artist-level prompts', async () => {
@@ -306,26 +310,60 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    const moveButtons = screen.getAllByRole('button', { name: /向下移动|向上移动/i })
-    const reorderButton = moveButtons.find((btn) => btn.closest('[data-testid]') || true)
-    if (moveButtons.length > 0) {
-      await user.click(moveButtons[0])
-      expect(reorderPrompts).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target_type: 'material-main',
-          target_id: 'artist-1',
-          slot_type: 'artist-style',
-        })
-      )
-    }
+    await screen.findByText('风格A')
+    const moveDownButton = screen.getByRole('button', { name: '向下移动 风格A' })
+    await user.click(moveDownButton)
+
+    expect(reorderPrompts).toHaveBeenCalledWith({
+      target_type: 'material-main',
+      target_id: 'artist-1',
+      slot_type: 'artist-style',
+      items: [
+        { id: 'prompt-2', sort_order: 0 },
+        { id: 'prompt-1', sort_order: 1 },
+      ],
+    })
   })
 
   it('can reorder song-level prompts', async () => {
     const { getMaterialDetail } = await import('@/lib/api/materials')
     const { reorderPrompts } = await import('@/lib/api/prompts')
+    const detailWithSongPromptCandidates = createMockMaterialDetail()
+    detailWithSongPromptCandidates.items[1].prompts = [
+      {
+        id: 'song-prompt-2',
+        target_type: 'material-item',
+        target_id: 'song-2',
+        slot_type: 'song-style',
+        name: '歌曲风格B',
+        content: 'Red Sunset song style content',
+        sort_order: 0,
+        is_default: true,
+        owner_id: 'user-1',
+        is_deleted: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        deleted_at: null,
+      },
+      {
+        id: 'song-prompt-3',
+        target_type: 'material-item',
+        target_id: 'song-2',
+        slot_type: 'song-style',
+        name: '歌曲风格C',
+        content: 'Another style',
+        sort_order: 1,
+        is_default: false,
+        owner_id: 'user-1',
+        is_deleted: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        deleted_at: null,
+      },
+    ]
     vi.mocked(getMaterialDetail).mockResolvedValue({
       success: true,
-      data: createMockMaterialDetail(),
+      data: detailWithSongPromptCandidates,
     })
     vi.mocked(reorderPrompts).mockResolvedValue({
       success: true,
@@ -335,17 +373,21 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
+    await screen.findByRole('button', { name: 'Red Sunset' })
     await user.click(screen.getByRole('button', { name: 'Red Sunset' }))
 
-    const moveButtons = screen.getAllByRole('button', { name: /向下移动|向上移动/i })
-    if (moveButtons.length > 0) {
-      await user.click(moveButtons[0])
-      expect(reorderPrompts).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target_type: 'material-item',
-          slot_type: 'song-style',
-        })
-      )
-    }
+    await screen.findByText('歌曲风格B')
+    const moveDownButton = screen.getByRole('button', { name: '向下移动 歌曲风格B' })
+    await user.click(moveDownButton)
+
+    expect(reorderPrompts).toHaveBeenCalledWith({
+      target_type: 'material-item',
+      target_id: 'song-2',
+      slot_type: 'song-style',
+      items: [
+        { id: 'song-prompt-3', sort_order: 0 },
+        { id: 'song-prompt-2', sort_order: 1 },
+      ],
+    })
   })
 })
