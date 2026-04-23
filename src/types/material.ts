@@ -1,0 +1,74 @@
+/**
+ * 素材管理前端类型
+ * 基于 packages/shared-types/entities/material.ts 的领域类型
+ */
+
+import type {
+  Material as SharedMaterial,
+  CreateMaterial as SharedCreateMaterial,
+  UpdateMaterial as SharedUpdateMaterial,
+  MaterialItem as SharedMaterialItem,
+  CreateMaterialItem as SharedCreateMaterialItem,
+  UpdateMaterialItem as SharedUpdateMaterialItem,
+  MaterialDetailResult as SharedMaterialDetailResult,
+} from 'packages/shared-types/entities/material'
+
+// Re-export from shared-types with explicit naming
+export type {
+} from 'packages/shared-types/entities/material'
+
+// 前端友好的 Material 类型 (与 shared-types 相同结构)
+export type Material = SharedMaterial
+export type CreateMaterial = SharedCreateMaterial
+export type UpdateMaterial = SharedUpdateMaterial
+export type MaterialItem = SharedMaterialItem
+export type CreateMaterialItem = SharedCreateMaterialItem
+export type UpdateMaterialItem = SharedUpdateMaterialItem
+export type MaterialDetailResult = SharedMaterialDetailResult
+
+// 素材类型
+export type MaterialType = 'artist'
+
+// 内部类型别名
+export type {
+  Material as MaterialRecord,
+  MaterialItem as MaterialItemRecord,
+}
+
+// API 响应类型
+export interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+}
+
+// 列表查询参数
+export interface ListMaterialsParams {
+  ownerId?: string
+  materialType?: MaterialType
+  limit?: number
+  offset?: number
+}
+
+// 分页响应
+export interface PaginatedResponse<T> {
+  records: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+// 素材列表响应
+export interface ListMaterialsResponse {
+  records: Material[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+// 简化的删除响应
+export interface DeleteResponse {
+  deleted: boolean
+}
