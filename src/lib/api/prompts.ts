@@ -7,6 +7,8 @@ import { internalAxios } from './client'
 import type {
   ApiResponse,
   CreatePromptParams,
+  PromptSlotType,
+  PromptTargetType,
   UpdatePromptParams,
   PromptRecord,
   DeleteResponse,
@@ -62,10 +64,10 @@ export async function deletePrompt(
 }
 
 export async function reorderPrompts(params: {
-  target_type: string
+  target_type: PromptTargetType
   target_id: string
-  slot_type: string
-  items: string[]
+  slot_type: PromptSlotType
+  items: Array<{ id: string; sort_order: number }>
 }): Promise<ApiResponse<{ reordered: boolean }>> {
   try {
     const response = await internalAxios.post('/prompts/reorder', params)

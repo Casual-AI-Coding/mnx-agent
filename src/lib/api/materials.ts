@@ -131,10 +131,10 @@ export async function deleteMaterialItem(
 
 export async function reorderMaterialItems(
   materialId: string,
-  items: string[]
+  items: Array<{ id: string; sort_order: number }>
 ): Promise<ApiResponse<{ reordered: boolean }>> {
   try {
-    const response = await internalAxios.post(`/materials/${materialId}/reorder-items`, { items })
+    const response = await internalAxios.post(`/materials/${materialId}/items/reorder`, { items })
     return { success: true, data: response.data.data }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
