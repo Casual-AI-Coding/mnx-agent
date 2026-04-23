@@ -41,7 +41,7 @@ export class MaterialService implements IMaterialService {
     return this.db.createMaterial(data, ownerId)
   }
 
-  async update(id: string, data: Partial<Material>, ownerId?: string): Promise<Material | null> {
+  async update(id: string, data: UpdateMaterial, ownerId?: string): Promise<Material | null> {
     const updateData: UpdateMaterial = {}
     if (data.name !== undefined) {
       updateData.name = data.name

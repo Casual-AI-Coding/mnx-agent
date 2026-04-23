@@ -1,6 +1,7 @@
 import type {
   Material,
   CreateMaterial,
+  UpdateMaterial,
   MaterialItem,
   CreateMaterialItem,
   UpdateMaterialItem,
@@ -45,7 +46,7 @@ export interface IMaterialService {
   getById(id: string, ownerId?: string): Promise<Material | null>
   list(filter: MaterialFilter): Promise<MaterialQueryResult>
   create(data: CreateMaterial, ownerId?: string): Promise<Material>
-  update(id: string, data: Partial<Material>, ownerId?: string): Promise<Material | null>
+  update(id: string, data: UpdateMaterial, ownerId?: string): Promise<Material | null>
   softDelete(id: string, ownerId?: string): Promise<boolean>
   getMaterialDetail(id: string, ownerId?: string): Promise<MaterialDetailResult | null>
   createMaterialItem(data: CreateMaterialItem, ownerId?: string): Promise<MaterialItem>
