@@ -10,7 +10,7 @@ import { getServiceNodeRegistry, type ServiceNodeRegistry } from './services/ser
 import { WebSocketService } from './services/websocket-service.js'
 import { NotificationService } from './services/notification-service.js'
 import { ExecutionStateManager } from './services/execution-state-manager.js'
-import { WorkflowService, JobService, TaskService, LogService, MediaService, WebhookService, CapacityService } from './services/domain/index.js'
+import { WorkflowService, JobService, TaskService, LogService, MediaService, WebhookService, CapacityService, MaterialService } from './services/domain/index.js'
 import { cronEvents, CronEventEmitter } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
@@ -46,6 +46,7 @@ export const TOKENS = {
   MEDIA_SERVICE: 'mediaService',
   WEBHOOK_SERVICE: 'webhookService',
   CAPACITY_SERVICE: 'capacityService',
+  MATERIAL_SERVICE: 'materialService',
 } as const
 
 export async function registerServices(): Promise<void> {
@@ -154,6 +155,10 @@ export async function registerServices(): Promise<void> {
     return new CapacityService(c.resolve(TOKENS.DATABASE))
   })
 
+  container.registerSingleton(TOKENS.MATERIAL_SERVICE, (c) => {
+    return new MaterialService(c.resolve(TOKENS.DATABASE))
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -244,4 +249,8 @@ export function getWebhookService(): WebhookService {
 
 export function getCapacityService(): CapacityService {
   return getGlobalContainer().resolve<CapacityService>(TOKENS.CAPACITY_SERVICE)
+}
+
+export function getMaterialService(): MaterialService {
+  return getGlobalContainer().resolve<MaterialService>(TOKENS.MATERIAL_SERVICE)
 }

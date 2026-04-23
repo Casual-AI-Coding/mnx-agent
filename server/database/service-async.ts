@@ -48,6 +48,17 @@ import type {
   ExternalApiLog,
   ExternalApiLogQuery,
   ExternalApiLogStats,
+  Material,
+  CreateMaterial,
+  UpdateMaterial,
+  MaterialItem,
+  CreateMaterialItem,
+  UpdateMaterialItem,
+  PromptRecord,
+  CreatePromptRecord,
+  UpdatePromptRecord,
+  MaterialQueryOptions,
+  MaterialDetailResult,
 } from './types.js'
 import {
   JobRepository,
@@ -62,6 +73,9 @@ import {
   PromptTemplateRepository,
   SystemConfigRepository,
   ExternalApiLogRepository,
+  MaterialRepository,
+  MaterialItemRepository,
+  PromptRepository,
 } from '../repositories/index.js'
 
 export class DatabaseService {
@@ -79,6 +93,9 @@ export class DatabaseService {
   private _promptTemplateRepo: PromptTemplateRepository | null = null
   private _systemConfigRepo: SystemConfigRepository | null = null
   private _externalApiLogRepo: ExternalApiLogRepository | null = null
+  private _materialRepo: MaterialRepository | null = null
+  private _materialItemRepo: MaterialItemRepository | null = null
+  private _promptRepo: PromptRepository | null = null
 
   constructor(conn: DatabaseConnection) {
     this.conn = conn
@@ -142,6 +159,21 @@ export class DatabaseService {
   private get externalApiLogRepo(): ExternalApiLogRepository {
     if (!this._externalApiLogRepo) this._externalApiLogRepo = new ExternalApiLogRepository(this.conn)
     return this._externalApiLogRepo
+  }
+
+  private get materialRepo(): MaterialRepository {
+    if (!this._materialRepo) this._materialRepo = new MaterialRepository(this.conn)
+    return this._materialRepo
+  }
+
+  private get materialItemRepo(): MaterialItemRepository {
+    if (!this._materialItemRepo) this._materialItemRepo = new MaterialItemRepository(this.conn)
+    return this._materialItemRepo
+  }
+
+  private get promptRepo(): PromptRepository {
+    if (!this._promptRepo) this._promptRepo = new PromptRepository(this.conn)
+    return this._promptRepo
   }
 
   async init(): Promise<void> {
@@ -878,6 +910,116 @@ export class DatabaseService {
 
   async deleteSystemConfig(key: string): Promise<boolean> {
     return this.systemConfigRepo.delete(key)
+  }
+
+  // =====================================================================
+  // Materials
+  // =====================================================================
+
+  async getMaterialById(id: string, ownerId?: string): Promise<Material | null> {
+    return this.materialRepo.getById(id, ownerId)
+  }
+
+  async getMaterials(options: MaterialQueryOptions): Promise<{ records: Material[]; total: number }> {
+    const result = await this.materialRepo.list(options as any)
+    return { records: result.items, total: result.total }
+  }
+
+  async createMaterial(data: CreateMaterial, ownerId?: string): Promise<Material> {
+    return this.materialRepo.create({
+      ...data,
+      ownerId: ownerId ?? '',
+    })
+  }
+
+  async updateMaterial(id: string, data: UpdateMaterial, ownerId?: string): Promise<Material | null> {
+    if (!ownerId) throw new Error('ownerId is required for updateMaterial')
+    return this.materialRepo.update(id, data, ownerId)
+  }
+
+  async softDeleteMaterial(id: string, ownerId?: string): Promise<boolean> {
+    if (!ownerId) throw new Error('ownerId is required for softDeleteMaterial')
+    return this.materialRepo.softDelete(id, ownerId)
+  }
+
+  async getMaterialDetail(id: string, ownerId?: string): Promise<MaterialDetailResult | null> {
+    const material = await this.materialRepo.getById(id, ownerId)
+    if (!material) return null
+
+    if (!ownerId) {
+      throw new Error('ownerId is required for getMaterialDetail')
+    }
+
+    const items = await this.materialItemRepo.listByMaterial(id, ownerId)
+    const materialPrompts = await this.promptRepo.listByTarget({
+      targetType: 'material-main',
+      targetId: id,
+      slotType: 'artist-style',
+      ownerId,
+    })
+
+    const itemsWithPromises = await Promise.all(
+      items.map(async (item) => {
+        const itemPrompts = await this.promptRepo.listByTarget({
+          targetType: 'material-item',
+          targetId: item.id,
+          slotType: 'song-style',
+          ownerId,
+        })
+        return { ...item, prompts: itemPrompts }
+      })
+    )
+
+    return {
+      material,
+      materialPrompts,
+      items: itemsWithPromises,
+    }
+  }
+
+  async createMaterialItem(data: CreateMaterialItem, ownerId?: string): Promise<MaterialItem> {
+    return this.materialItemRepo.create({
+      ...data,
+      ownerId: ownerId ?? '',
+    })
+  }
+
+  async updateMaterialItem(id: string, data: UpdateMaterialItem, ownerId?: string): Promise<MaterialItem | null> {
+    if (!ownerId) throw new Error('ownerId is required for updateMaterialItem')
+    return this.materialItemRepo.update(id, data, ownerId)
+  }
+
+  async softDeleteMaterialItem(id: string, ownerId?: string): Promise<boolean> {
+    if (!ownerId) throw new Error('ownerId is required for softDeleteMaterialItem')
+    return this.materialItemRepo.softDelete(id, ownerId)
+  }
+
+  async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> {
+    return this.promptRepo.create({
+      targetType: data.target_type,
+      targetId: data.target_id,
+      slotType: data.slot_type,
+      name: data.name,
+      content: data.content,
+      ownerId: ownerId ?? '',
+      sortOrder: data.sort_order,
+      isDefault: data.is_default,
+    })
+  }
+
+  async updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null> {
+    if (!ownerId) throw new Error('ownerId is required for updatePrompt')
+    return this.promptRepo.update(id, data, ownerId)
+  }
+
+  async softDeletePrompt(id: string, ownerId?: string): Promise<boolean> {
+    if (!ownerId) throw new Error('ownerId is required for softDeletePrompt')
+    return this.promptRepo.softDelete(id, ownerId)
+  }
+
+  async setDefaultPrompt(id: string, ownerId?: string): Promise<PromptRecord | null> {
+    if (!ownerId) throw new Error('ownerId is required for setDefaultPrompt')
+    return this.promptRepo.setDefault(id, ownerId)
   }
 
   // =====================================================================
