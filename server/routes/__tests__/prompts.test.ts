@@ -146,4 +146,29 @@ describe('Prompts API Routes', () => {
     expect(detail?.materialPrompts[0]?.id).toBe(second.body.data.id)
     expect(detail?.materialPrompts[0]?.is_default).toBe(true)
   })
+
+  it('reorders prompts within the same target and slot', async () => {
+    const first = await createPrompt('Prompt A', true)
+    const second = await createPrompt('Prompt B', false)
+
+    const reorderRes = await request(app)
+      .post('/api/prompts/reorder')
+      .send({
+        target_type: 'material-main',
+        target_id: materialId,
+        slot_type: 'artist-style',
+        items: [
+          { id: second.body.data.id, sort_order: 0 },
+          { id: first.body.data.id, sort_order: 1 },
+        ],
+      })
+
+    expect(reorderRes.status).toBe(200)
+    expect(reorderRes.body.success).toBe(true)
+
+    const detail = await getDatabaseService().getMaterialDetail(materialId, ownerId)
+    expect(detail?.materialPrompts).toHaveLength(2)
+    expect(detail?.materialPrompts[0]?.id).toBe(second.body.data.id)
+    expect(detail?.materialPrompts[1]?.id).toBe(first.body.data.id)
+  })
 })

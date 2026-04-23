@@ -1,5 +1,12 @@
 import type { DatabaseService } from '../../database/service-async.js'
-import type { IMaterialService, MaterialFilter, MaterialQueryResult, MaterialDetailResult } from './interfaces/material.interface.js'
+import type {
+  IMaterialService,
+  MaterialFilter,
+  MaterialQueryResult,
+  MaterialDetailResult,
+  ReorderMaterialItemInput,
+  ReorderPromptsRequest,
+} from './interfaces/material.interface.js'
 import type {
   Material,
   CreateMaterial,
@@ -64,6 +71,10 @@ export class MaterialService implements IMaterialService {
     return this.db.softDeleteMaterialItem(id, ownerId)
   }
 
+  async reorderMaterialItems(materialId: string, items: ReorderMaterialItemInput[], ownerId?: string): Promise<void> {
+    return this.db.reorderMaterialItems(materialId, items, ownerId)
+  }
+
   async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> {
     return this.db.createPrompt(data, ownerId)
   }
@@ -78,5 +89,9 @@ export class MaterialService implements IMaterialService {
 
   async setDefaultPrompt(id: string, ownerId?: string): Promise<PromptRecord | null> {
     return this.db.setDefaultPrompt(id, ownerId)
+  }
+
+  async reorderPrompts(request: ReorderPromptsRequest, ownerId?: string): Promise<void> {
+    return this.db.reorderPrompts(request, ownerId)
   }
 }

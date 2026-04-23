@@ -26,5 +26,13 @@ export { WebhookService } from './webhook.service.js'
 export type { ICapacityService } from './interfaces/index.js'
 export { CapacityService } from './capacity.service.js'
 
-export type { IMaterialService, MaterialFilter, MaterialQueryResult, MaterialDetailResult } from './interfaces/material.interface.js'
+export type {
+  IMaterialService,
+  MaterialFilter,
+  MaterialQueryResult,
+  MaterialDetailResult,
+  ReorderMaterialItemInput,
+  ReorderPromptInput,
+  ReorderPromptsRequest,
+} from './interfaces/material.interface.js'
 export { MaterialService } from './material.service.js'

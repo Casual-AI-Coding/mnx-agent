@@ -3,7 +3,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { createdResponse, deletedResponse, successResponse } from '../middleware/api-response'
 import { validate, validateParams } from '../middleware/validate'
 import { getMaterialService } from '../service-registration.js'
-import { createPromptSchema, promptIdParamsSchema, updatePromptSchema } from '../validation/prompt-schemas.js'
+import { createPromptSchema, promptIdParamsSchema, reorderPromptsSchema, updatePromptSchema } from '../validation/prompt-schemas.js'
 import { withEntityNotFound } from '../utils/index.js'
 
 const router = Router()
@@ -43,6 +43,20 @@ router.post('/:promptId/set-default', validateParams(promptIdParamsSchema), asyn
   if (!withEntityNotFound(prompt, res, 'Prompt')) return
 
   successResponse(res, prompt)
+}))
+
+router.post('/reorder', validate(reorderPromptsSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+
+  await materialService.reorderPrompts({
+    target_type: req.body.target_type,
+    target_id: req.body.target_id,
+    slot_type: req.body.slot_type,
+    items: req.body.items,
+  }, ownerId)
+
+  successResponse(res, { reordered: true })
 }))
 
 router.delete('/:promptId', validateParams(promptIdParamsSchema), asyncHandler(async (req, res) => {

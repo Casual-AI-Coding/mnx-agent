@@ -5,8 +5,12 @@ import { validate, validateParams, validateQuery } from '../middleware/validate'
 import { getMaterialService } from '../service-registration.js'
 import {
   createMaterialSchema,
+  createMaterialItemSchema,
   listMaterialsQuerySchema,
   materialIdParamsSchema,
+  materialItemIdParamsSchema,
+  reorderMaterialItemsSchema,
+  updateMaterialItemSchema,
 } from '../validation/material-schemas.js'
 import {
   createPaginatedResponse,
@@ -23,7 +27,7 @@ router.get('/', validateQuery(listMaterialsQuerySchema), asyncHandler(async (req
 
   const result = await materialService.list({
     ownerId: ownerId ?? '',
-    materialType: typeof req.query.material_type === 'string' ? req.query.material_type : undefined,
+    materialType: req.query.material_type === 'artist' ? 'artist' : undefined,
     limit,
     offset,
   })
@@ -63,6 +67,57 @@ router.get('/:id/detail', validateParams(materialIdParamsSchema), asyncHandler(a
   if (!withEntityNotFound(detail, res, 'Material')) return
 
   successResponse(res, detail)
+}))
+
+router.post('/:id/items', validateParams(materialIdParamsSchema), validate(createMaterialItemSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+
+  const item = await materialService.createMaterialItem({
+    material_id: req.params.id,
+    item_type: req.body.item_type,
+    name: req.body.name,
+    lyrics: req.body.lyrics,
+    remark: req.body.remark,
+    metadata: req.body.metadata,
+    sort_order: req.body.sort_order,
+  }, ownerId)
+
+  createdResponse(res, item)
+}))
+
+router.put('/items/:itemId', validateParams(materialItemIdParamsSchema), validate(updateMaterialItemSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+  const item = await materialService.updateMaterialItem(req.params.itemId, req.body, ownerId)
+
+  if (!withEntityNotFound(item, res, 'Material item')) return
+
+  successResponse(res, item)
+}))
+
+router.post('/:id/items/reorder', validateParams(materialIdParamsSchema), validate(reorderMaterialItemsSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+
+  await materialService.reorderMaterialItems(req.params.id, req.body.items, ownerId)
+  successResponse(res, { reordered: true })
+}))
+
+router.delete('/items/:itemId', validateParams(materialItemIdParamsSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+  const deleted = await materialService.softDeleteMaterialItem(req.params.itemId, ownerId)
+
+  if (!deleted) {
+    res.status(404).json({
+      success: false,
+      error: 'Material item not found',
+    })
+    return
+  }
+
+  deletedResponse(res)
 }))
 
 router.delete('/:id', validateParams(materialIdParamsSchema), asyncHandler(async (req, res) => {

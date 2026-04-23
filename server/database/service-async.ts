@@ -994,6 +994,15 @@ export class DatabaseService {
     return this.materialItemRepo.softDelete(id, ownerId)
   }
 
+  async reorderMaterialItems(
+    materialId: string,
+    items: Array<{ id: string; sort_order: number }>,
+    ownerId?: string
+  ): Promise<void> {
+    if (!ownerId) throw new Error('ownerId is required for reorderMaterialItems')
+    return this.materialItemRepo.reorder(materialId, items, ownerId)
+  }
+
   async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> {
     return this.promptRepo.create({
       targetType: data.target_type,
@@ -1020,6 +1029,24 @@ export class DatabaseService {
   async setDefaultPrompt(id: string, ownerId?: string): Promise<PromptRecord | null> {
     if (!ownerId) throw new Error('ownerId is required for setDefaultPrompt')
     return this.promptRepo.setDefault(id, ownerId)
+  }
+
+  async reorderPrompts(
+    request: {
+      target_type: PromptRecord['target_type']
+      target_id: string
+      slot_type: PromptRecord['slot_type']
+      items: Array<{ id: string; sort_order: number }>
+    },
+    ownerId?: string
+  ): Promise<void> {
+    if (!ownerId) throw new Error('ownerId is required for reorderPrompts')
+    return this.promptRepo.reorder({
+      targetType: request.target_type,
+      targetId: request.target_id,
+      slotType: request.slot_type,
+      ownerId,
+    }, request.items)
   }
 
   // =====================================================================

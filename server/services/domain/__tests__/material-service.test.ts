@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MaterialService } from '../material.service.js'
-import type { DatabaseService } from '../../database/service-async.js'
+import type { DatabaseService } from '../../../database/service-async.js'
+import type { MaterialQueryResult } from '../interfaces/material.interface.js'
 import type {
   Material,
   CreateMaterial,
   CreateMaterialItem,
   CreatePromptRecord,
   MaterialItem,
-  MaterialQueryResult,
   PromptRecord,
 } from '../../../database/types.js'
 
@@ -27,6 +27,8 @@ describe('MaterialService', () => {
     updatePrompt: ReturnType<typeof vi.fn>
     softDeletePrompt: ReturnType<typeof vi.fn>
     setDefaultPrompt: ReturnType<typeof vi.fn>
+    reorderMaterialItems: ReturnType<typeof vi.fn>
+    reorderPrompts: ReturnType<typeof vi.fn>
   }
 
   const mockMaterial: Material = {
@@ -90,6 +92,8 @@ describe('MaterialService', () => {
       updatePrompt: vi.fn(),
       softDeletePrompt: vi.fn(),
       setDefaultPrompt: vi.fn(),
+      reorderMaterialItems: vi.fn(),
+      reorderPrompts: vi.fn(),
     }
     service = new MaterialService(mockDb as unknown as DatabaseService)
   })
@@ -215,6 +219,20 @@ describe('MaterialService', () => {
       expect(mockDb.softDeleteMaterialItem).toHaveBeenCalledWith('item-1', 'owner-1')
       expect(result).toBe(true)
     })
+
+    it('reorders material items', async () => {
+      mockDb.reorderMaterialItems.mockResolvedValue(undefined)
+
+      await service.reorderMaterialItems('mat-1', [
+        { id: 'item-2', sort_order: 0 },
+        { id: 'item-1', sort_order: 1 },
+      ], 'owner-1')
+
+      expect(mockDb.reorderMaterialItems).toHaveBeenCalledWith('mat-1', [
+        { id: 'item-2', sort_order: 0 },
+        { id: 'item-1', sort_order: 1 },
+      ], 'owner-1')
+    })
   })
 
   describe('prompt methods', () => {
@@ -260,6 +278,30 @@ describe('MaterialService', () => {
 
       expect(mockDb.setDefaultPrompt).toHaveBeenCalledWith('prompt-1', 'owner-1')
       expect(result).toEqual(mockPrompt)
+    })
+
+    it('reorders prompts', async () => {
+      mockDb.reorderPrompts.mockResolvedValue(undefined)
+
+      await service.reorderPrompts({
+        target_type: 'material-main',
+        target_id: 'mat-1',
+        slot_type: 'artist-style',
+        items: [
+          { id: 'prompt-2', sort_order: 0 },
+          { id: 'prompt-1', sort_order: 1 },
+        ],
+      }, 'owner-1')
+
+      expect(mockDb.reorderPrompts).toHaveBeenCalledWith({
+        target_type: 'material-main',
+        target_id: 'mat-1',
+        slot_type: 'artist-style',
+        items: [
+          { id: 'prompt-2', sort_order: 0 },
+          { id: 'prompt-1', sort_order: 1 },
+        ],
+      }, 'owner-1')
     })
   })
 })

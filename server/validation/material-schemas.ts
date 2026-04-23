@@ -48,6 +48,7 @@ export const createMaterialItemSchema = z.object({
   lyrics: z.string().optional(),
   remark: z.string().max(1000).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  sort_order: z.number().int().min(0).optional(),
 })
 
 export const updateMaterialItemSchema = z.object({
@@ -55,10 +56,18 @@ export const updateMaterialItemSchema = z.object({
   lyrics: z.string().optional().nullable(),
   remark: z.string().max(1000).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  sort_order: z.number().int().min(0).optional(),
 })
 
 export const materialItemIdParamsSchema = z.object({
   itemId: idSchema('material item id'),
+})
+
+export const reorderMaterialItemsSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().uuid(),
+    sort_order: z.number().int().min(0),
+  })).min(1),
 })
 
 export const createPromptSchema = z.object({

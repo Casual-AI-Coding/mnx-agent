@@ -25,3 +25,13 @@ export const updatePromptSchema = z.object({
 export const promptIdParamsSchema = z.object({
   promptId: idSchema('prompt id'),
 })
+
+export const reorderPromptsSchema = z.object({
+  target_type: promptTargetTypeEnum,
+  target_id: z.string().uuid(),
+  slot_type: promptSlotTypeEnum,
+  items: z.array(z.object({
+    id: z.string().uuid(),
+    sort_order: z.number().int().min(0),
+  })).min(1),
+})

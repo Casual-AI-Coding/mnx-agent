@@ -6,11 +6,19 @@ import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMark
 import { getDatabaseService } from '../../service-registration.js'
 import materialsRouter from '../materials.js'
 
+type AuthenticatedRequest = express.Request & {
+  user?: {
+    userId: string
+    username: string
+    role: 'user'
+  }
+}
+
 describe('Materials API Routes', () => {
   let app: express.Application
   let ownerId: string
 
-  const mockAuthMiddleware = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  const mockAuthMiddleware = (req: AuthenticatedRequest, _res: express.Response, next: express.NextFunction) => {
     req.user = {
       userId: ownerId,
       username: 'materials-api-test',
@@ -135,6 +143,70 @@ describe('Materials API Routes', () => {
     expect(res.body.data.items).toHaveLength(1)
     expect(res.body.data.items[0].id).toBe(item.id)
     expect(res.body.data.items[0].prompts).toHaveLength(1)
+  })
+
+  it('creates, updates, reorders and soft deletes material items', async () => {
+    const material = await getDatabaseService().createMaterial({
+      name: 'Item Artist',
+      material_type: 'artist',
+    }, ownerId)
+
+    const firstCreate = await request(app)
+      .post(`/api/materials/${material.id}/items`)
+      .send({
+        name: 'Song A',
+        item_type: 'song',
+        lyrics: 'lyrics-a',
+        sort_order: 0,
+      })
+
+    const secondCreate = await request(app)
+      .post(`/api/materials/${material.id}/items`)
+      .send({
+        name: 'Song B',
+        item_type: 'song',
+        lyrics: 'lyrics-b',
+        sort_order: 1,
+      })
+
+    expect(firstCreate.status).toBe(201)
+    expect(secondCreate.status).toBe(201)
+
+    const updateRes = await request(app)
+      .put(`/api/materials/items/${firstCreate.body.data.id}`)
+      .send({
+        name: 'Song A Revised',
+        lyrics: 'lyrics-a-2',
+      })
+
+    expect(updateRes.status).toBe(200)
+    expect(updateRes.body.data.name).toBe('Song A Revised')
+
+    const reorderRes = await request(app)
+      .post(`/api/materials/${material.id}/items/reorder`)
+      .send({
+        items: [
+          { id: secondCreate.body.data.id, sort_order: 0 },
+          { id: firstCreate.body.data.id, sort_order: 1 },
+        ],
+      })
+
+    expect(reorderRes.status).toBe(200)
+    expect(reorderRes.body.success).toBe(true)
+
+    const detailAfterReorder = await request(app).get(`/api/materials/${material.id}/detail`)
+    expect(detailAfterReorder.status).toBe(200)
+    expect(detailAfterReorder.body.data.items[0].id).toBe(secondCreate.body.data.id)
+    expect(detailAfterReorder.body.data.items[1].id).toBe(firstCreate.body.data.id)
+
+    const deleteRes = await request(app).delete(`/api/materials/items/${secondCreate.body.data.id}`)
+    expect(deleteRes.status).toBe(200)
+    expect(deleteRes.body.success).toBe(true)
+
+    const detailAfterDelete = await request(app).get(`/api/materials/${material.id}/detail`)
+    expect(detailAfterDelete.status).toBe(200)
+    expect(detailAfterDelete.body.data.items).toHaveLength(1)
+    expect(detailAfterDelete.body.data.items[0].id).toBe(firstCreate.body.data.id)
   })
 
   it('returns 404 after soft delete', async () => {
