@@ -537,11 +537,6 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
         return ownedLogs[0]
       }
 
-      const logs = await db.getAllExecutionLogs(jobId, 10)
-      if (logs[0]) {
-        return logs[0]
-      }
-
       await new Promise(resolve => setTimeout(resolve, 50))
     }
 

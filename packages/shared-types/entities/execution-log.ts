@@ -6,6 +6,7 @@ import { TriggerType, ExecutionStatus } from './enums.js'
 
 export interface ExecutionLog {
   id: string
+  owner_id: string | null
   job_id: string | null
   trigger_type: TriggerType
   status: ExecutionStatus
@@ -34,6 +35,7 @@ export interface ExecutionLogDetail {
 }
 
 export interface CreateExecutionLog {
+  owner_id?: string | null
   job_id?: string | null
   trigger_type: TriggerType
   status: ExecutionStatus
@@ -69,6 +71,7 @@ export interface UpdateExecutionLog {
 
 export interface ExecutionLogRow {
   id: string
+  owner_id: string | null
   job_id: string | null
   trigger_type: string
   status: string
