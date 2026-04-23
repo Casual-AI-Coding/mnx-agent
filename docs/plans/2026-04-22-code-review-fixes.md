@@ -2,7 +2,7 @@
 
 > 日期: 2026-04-22
 > 来源: 全项目代码审查
-> 状态: 待实施
+> 状态: 已完成
 
 ## 概述
 
@@ -54,7 +54,7 @@
 
 | 序号 | 问题 | 文件 | 修复方案 |
 |------|------|------|----------|
-| 24 | Vite 构建弃用警告 | `vite.config.ts` | 将 `esbuild` 配置迁移到 `oxc` 选项 |
+| 24 | Vite 构建弃用警告 | `vite.config.ts` | ~~将 `esbuild` 配置迁移到 `oxc` 选项~~ **已解决**：升级 Vite 5→6 后 oxc 为默认内置，无需额外配置。Vite 6 的 `build.target` 默认使用 oxc transformer，`build.minify` 默认为 oxc（比 terser 快 30~90x）。|
 | 25 | 静默捕获异常 | `server/services/notification-service.ts:139-141` | 添加 `instanceof Error` 检查，非 Error 对象记录原始值 |
 | 26 | 禁用严格 TypeScript 标志 | `tsconfig.json:15-16` | 启用 `noUnusedLocals` 和 `noUnusedParameters`，清理产生的编译错误 |
 
@@ -123,4 +123,5 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-04-23 | 全部 26 个问题 + 3 项 R-Plan 已完成并提交（10 个原子 commit）。D24 oxc 配置澄清：Vite 6 默认内置 oxc，无需额外配置，已更新文档。 |
 | 2026-04-22 | 初始版本，记录 26 个代码审查问题和 3 项 Removal Plan |
