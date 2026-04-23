@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.2] - 2026-04-23
+
+### Added
+
+- **GitHub Actions CI/CD** - 自动化持续集成和部署
+  - `.github/workflows/ci.yml` (+61) - GitHub Actions 工作流配置
+  - 支持自动化测试和构建
+
+- **Dockerfile** - 容器化部署支持
+  - `Dockerfile` (+26) - 生产环境 Docker 镜像构建
+
+- **ESLint 集成** - 代码质量检查
+  - `.eslintrc.cjs` (+23) - ESLint 配置
+
+### Fixed
+
+- **26 个代码审查问题修复** - 全项目代码质量提升
+  - 涉及多个核心模块的错误处理、类型安全、测试隔离等
+
+### Changed
+
+- **测试隔离加固** - 提升测试稳定性
+  - `server/__tests__/test-helpers.ts` (+11) - 测试辅助函数
+  - `server/__tests__/cron-scheduler.test.ts` (+118) - 调度器测试增强
+  - `server/__tests__/database-service.test.ts` (+151) - 数据库服务测试
+  - `server/__tests__/dead-letter-queue.test.ts` (+107) - 死信队列测试
+  - `server/__tests__/queue-processor.test.ts` (+24) - 队列处理器测试
+  - `server/__tests__/workflow-integration.test.ts` (+117) - 工作流集成测试
+
+- **多项 Bug 修复**
+  - `server/services/capacity-checker.ts` (+55) - 容量检查器改进
+  - `server/services/cron-scheduler.ts` (+38) - 调度器改进
+  - `server/services/execution-state-manager.ts` (+86) - 执行状态管理改进
+  - `server/services/misfire-handler.ts` (+19) - misfire 处理改进
+  - `server/services/notification-service.ts` (+48) - 通知服务改进
+  - `server/services/queue-processor.ts` (+20) - 队列处理改进
+  - `server/services/task-executor.ts` (+39) - 任务执行器改进
+  - `server/services/websocket-service.ts` (+88) - WebSocket 服务改进
+
+- **API 路由增强**
+  - `server/routes/auth.ts` (+9) - 认证路由
+  - `server/routes/media.ts` (+61) - 媒体路由
+  - `server/routes/users.ts` (+15) - 用户路由
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 新增 CI/CD 和 Dockerfile 不影响现有功能
+- ✅ 代码审查修复为内部改进
+
 ## [2.2.1] - 2026-04-22
 
 ### Added
