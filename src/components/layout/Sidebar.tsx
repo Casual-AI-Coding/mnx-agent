@@ -237,6 +237,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
         { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
         { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
+        { path: '/materials', label: t('sidebar.materials', '素材管理'), icon: FolderCog },
       ],
     },
     {

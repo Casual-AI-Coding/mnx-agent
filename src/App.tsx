@@ -40,6 +40,8 @@ const DeadLetterQueue = lazy(() => import('@/pages/DeadLetterQueue'))
 const WebhookManagement = lazy(() => import('@/pages/CronManagement/WebhookManagement'))
 const WorkflowMarketplace = lazy(() => import('@/pages/WorkflowMarketplace'))
 const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
+const MaterialManagement = lazy(() => import('@/pages/MaterialManagement'))
+const ArtistMaterialEditor = lazy(() => import('@/pages/ArtistMaterialEditor'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -362,6 +364,22 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="系统配置">
               <SystemConfig />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="materials"
+          element={
+            <RouteWithErrorBoundary pageName="素材管理">
+              <MaterialManagement />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="materials/:id/edit"
+          element={
+            <RouteWithErrorBoundary pageName="素材编辑器">
+              <ArtistMaterialEditor />
             </RouteWithErrorBoundary>
           }
         />
