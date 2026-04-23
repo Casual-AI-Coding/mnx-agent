@@ -47,6 +47,7 @@ describe('DatabaseService', () => {
 
   afterAll(async () => {
     const conn = getConnection()
+    await conn.execute('DELETE FROM workflow_templates WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM cron_jobs WHERE owner_id = $1 OR owner_id IS NULL', [fileMarker])
     await conn.execute('DELETE FROM users WHERE id = $1', [fileMarker])
     await teardownTestDatabase()
@@ -669,11 +670,12 @@ describe('DatabaseService', () => {
 
     describe('Read Workflow Templates', () => {
       it('should get all templates', async () => {
-        await db.createWorkflowTemplate({ name: 'T1', nodes_json: '{}', edges_json: '{}' })
-        await db.createWorkflowTemplate({ name: 'T2', nodes_json: '{}', edges_json: '{}' })
+        await db.createWorkflowTemplate({ name: 'T1', nodes_json: '{}', edges_json: '{}' }, fileMarker)
+        await db.createWorkflowTemplate({ name: 'T2', nodes_json: '{}', edges_json: '{}' }, fileMarker)
 
-        const templates = await db.getAllWorkflowTemplates()
-        expect(templates.length).toBe(2)
+        const templates = await db.getAllWorkflowTemplates(fileMarker)
+        const ourTemplates = templates.filter(t => t.owner_id === fileMarker)
+        expect(ourTemplates.length).toBe(2)
       })
 
       it('should get template by id', async () => {
@@ -689,12 +691,13 @@ describe('DatabaseService', () => {
       })
 
       it('should get public templates', async () => {
-        await db.createWorkflowTemplate({ name: 'Public', nodes_json: '{}', edges_json: '{}', is_public: true })
-        await db.createWorkflowTemplate({ name: 'Private', nodes_json: '{}', edges_json: '{}', is_public: false })
+        await db.createWorkflowTemplate({ name: `${fileMarker}-Public`, nodes_json: '{}', edges_json: '{}', is_public: true }, fileMarker)
+        await db.createWorkflowTemplate({ name: `${fileMarker}-Private`, nodes_json: '{}', edges_json: '{}', is_public: false }, fileMarker)
 
         const publicTemplates = await db.getMarkedWorkflowTemplates()
-        expect(publicTemplates.length).toBe(1)
-        expect(publicTemplates[0].name).toBe('Public')
+        const ourPublic = publicTemplates.filter(t => t.name.startsWith(fileMarker))
+        expect(ourPublic.length).toBe(1)
+        expect(ourPublic[0].name).toBe(`${fileMarker}-Public`)
       })
 
       it('should get paginated templates', async () => {

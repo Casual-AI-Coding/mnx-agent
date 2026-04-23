@@ -71,7 +71,7 @@ describe('Media API Routes', () => {
 
   describe('GET /api/media', () => {
     it('should return empty list initially', async () => {
-      const res = await request(app).get('/api/media')
+      const res = await request(app).get('/api/media?publicFilter=private')
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
@@ -151,7 +151,7 @@ describe('Media API Routes', () => {
         })
       }
 
-      const res = await request(app).get('/api/media?page=1&limit=3')
+      const res = await request(app).get('/api/media?page=1&limit=3&publicFilter=private')
 
       expect(res.body.data.records.length).toBe(3)
       expect(res.body.data.pagination.total).toBe(5)
@@ -168,10 +168,10 @@ describe('Media API Routes', () => {
 
       await request(app).delete(`/api/media/${createRes.body.data.id}`)
 
-      const withoutDeleted = await request(app).get('/api/media')
+      const withoutDeleted = await request(app).get('/api/media?publicFilter=private')
       expect(withoutDeleted.body.data.records.length).toBe(0)
 
-      const withDeleted = await request(app).get('/api/media?includeDeleted=true')
+      const withDeleted = await request(app).get('/api/media?includeDeleted=true&publicFilter=private')
       expect(withDeleted.body.data.records.length).toBe(1)
       expect(withDeleted.body.data.records[0].is_deleted).toBe(true)
     })
@@ -409,7 +409,7 @@ describe('Media API Routes', () => {
         })
       }
 
-      const res = await request(app).get('/api/media?page=2&limit=3')
+      const res = await request(app).get('/api/media?page=2&limit=3&publicFilter=private')
 
       expect(res.body.data.pagination.total).toBe(7)
       expect(res.body.data.pagination.totalPages).toBe(3)
