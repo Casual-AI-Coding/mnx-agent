@@ -21,6 +21,8 @@ import usageRouter from './routes/usage'
 import capacityRouter from './routes/capacity'
 import cronRouter from './routes/cron'
 import mediaRouter from './routes/media'
+import materialsRouter from './routes/materials.js'
+import promptsRouter from './routes/prompts.js'
 import templatesRouter from './routes/templates'
 import workflowsRouter from './routes/workflows'
 import adminServiceNodesRouter from './routes/admin/service-nodes'
@@ -99,6 +101,8 @@ app.use('/api/usage', usageRouter)
 app.use('/api/capacity', capacityRouter)
 app.use('/api/cron', cronRouter)
 app.use('/api/media', mediaRouter)
+app.use('/api/materials', materialsRouter)
+app.use('/api/prompts', promptsRouter)
 app.use('/api/templates', templatesRouter)
 app.use('/api/workflows', workflowsRouter)
 app.use('/api/admin/service-nodes', adminServiceNodesRouter)
