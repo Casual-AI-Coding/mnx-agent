@@ -46,6 +46,25 @@ export type {
 } from '@mnx/shared-types/entities'
 
 export type {
+  MaterialType,
+  MaterialItemType,
+  PromptTargetType,
+  PromptSlotType,
+  Material,
+  CreateMaterial,
+  UpdateMaterial,
+  MaterialRow,
+  MaterialItem,
+  CreateMaterialItem,
+  UpdateMaterialItem,
+  MaterialItemRow,
+  PromptRecord,
+  CreatePromptRecord,
+  UpdatePromptRecord,
+  PromptRecordRow,
+} from '@mnx/shared-types/entities'
+
+export type {
   WorkflowTemplate,
   WorkflowVersion,
   CreateWorkflowTemplate,
