@@ -10,6 +10,7 @@ import type {
 import type {
   Material,
   CreateMaterial,
+  UpdateMaterial,
   MaterialItem,
   CreateMaterialItem,
   UpdateMaterialItem,
@@ -41,12 +42,15 @@ export class MaterialService implements IMaterialService {
   }
 
   async update(id: string, data: Partial<Material>, ownerId?: string): Promise<Material | null> {
-    const updateData: { name?: string; metadata?: Record<string, unknown> | null } = {}
+    const updateData: UpdateMaterial = {}
     if (data.name !== undefined) {
       updateData.name = data.name
     }
+    if (data.description !== undefined) {
+      updateData.description = data.description
+    }
     if (data.metadata !== undefined) {
-      updateData.metadata = data.metadata as Record<string, unknown> | null
+      updateData.metadata = data.metadata
     }
     return this.db.updateMaterial(id, updateData, ownerId)
   }

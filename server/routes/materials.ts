@@ -10,6 +10,7 @@ import {
   materialIdParamsSchema,
   materialItemIdParamsSchema,
   reorderMaterialItemsSchema,
+  updateMaterialSchema,
   updateMaterialItemSchema,
 } from '../validation/material-schemas.js'
 import {
@@ -53,6 +54,16 @@ router.get('/:id', validateParams(materialIdParamsSchema), asyncHandler(async (r
   const materialService = getMaterialService()
   const ownerId = req.user?.userId
   const material = await materialService.getById(req.params.id, ownerId)
+
+  if (!withEntityNotFound(material, res, 'Material')) return
+
+  successResponse(res, material)
+}))
+
+router.put('/:id', validateParams(materialIdParamsSchema), validate(updateMaterialSchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+  const material = await materialService.update(req.params.id, req.body, ownerId)
 
   if (!withEntityNotFound(material, res, 'Material')) return
 

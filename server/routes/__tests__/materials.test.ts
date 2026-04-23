@@ -99,6 +99,23 @@ describe('Materials API Routes', () => {
     expect(res.body.data.name).toBe('Test Artist')
   })
 
+  it('updates a material successfully', async () => {
+    const createRes = await createMaterial()
+
+    const updateRes = await request(app)
+      .put(`/api/materials/${createRes.body.data.id}`)
+      .send({
+        name: 'Updated Artist',
+        description: 'Updated description',
+      })
+
+    expect(updateRes.status).toBe(200)
+    expect(updateRes.body.success).toBe(true)
+    expect(updateRes.body.data.id).toBe(createRes.body.data.id)
+    expect(updateRes.body.data.name).toBe('Updated Artist')
+    expect(updateRes.body.data.description).toBe('Updated description')
+  })
+
   it('returns aggregated detail structure', async () => {
     const db = getDatabaseService()
     const material = await db.createMaterial({
