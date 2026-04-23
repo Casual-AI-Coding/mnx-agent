@@ -62,6 +62,8 @@ export type {
   CreatePromptRecord,
   UpdatePromptRecord,
   PromptRecordRow,
+  MaterialQueryOptions,
+  MaterialDetailResult,
 } from '@mnx/shared-types/entities'
 
 export type {

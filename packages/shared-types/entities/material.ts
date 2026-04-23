@@ -154,3 +154,17 @@ export interface PromptRecordRow {
   updated_at: string
   deleted_at: string | null
 }
+
+export interface MaterialQueryOptions {
+  ownerId?: string
+  materialType?: MaterialType
+  includeDeleted?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface MaterialDetailResult {
+  material: Material
+  materialPrompts: PromptRecord[]
+  items: Array<MaterialItem & { prompts: PromptRecord[] }>
+}
