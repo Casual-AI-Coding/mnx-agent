@@ -36,10 +36,9 @@ export default function ArtistMaterialEditor() {
 
   const renderWorkspace = () => {
     if (!detail) return null
-
     switch (detail.material.material_type) {
       case 'artist':
-        return <ArtistWorkspace materialId={id!} />
+        return <ArtistWorkspace materialId={id!} initialDetail={detail ?? undefined} />
       default:
         return (
           <Card className="p-6">
@@ -95,9 +94,7 @@ export default function ArtistMaterialEditor() {
           </p>
         )}
       </div>
-      {detail && detail.material.material_type === 'artist'
-        ? <ArtistWorkspace materialId={id!} initialDetail={detail} />
-        : renderWorkspace()}
+      {renderWorkspace()}
     </div>
   )
 }
