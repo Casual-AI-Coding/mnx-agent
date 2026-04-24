@@ -43,11 +43,11 @@ export const WEBSOCKET = {
  */
 export const PAGINATION = {
   /** Default page size */
-  DEFAULT_PAGE_SIZE: 20,
+  DEFAULT_PAGE_SIZE: 8,
   /** Maximum page size */
   MAX_PAGE_SIZE: 100,
   /** Page size options for selectors */
-  PAGE_SIZE_OPTIONS: [20, 50, 100] as const,
+  PAGE_SIZE_OPTIONS: [8, 20, 50, 100] as const,
 } as const
 
 /**

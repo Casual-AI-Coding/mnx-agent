@@ -68,13 +68,18 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
-// 素材列表响应
-export interface ListMaterialsResponse {
-  records: Material[]
-  total: number
+// 分页元数据（与后端 createPaginatedResponse 一致）
+export interface PaginationMeta {
   page: number
   limit: number
+  total: number
   totalPages: number
+}
+
+// 素材列表响应（后端返回 { records, pagination } 结构）
+export interface ListMaterialsResponse {
+  records: Material[]
+  pagination: PaginationMeta
 }
 
 // 简化的删除响应
