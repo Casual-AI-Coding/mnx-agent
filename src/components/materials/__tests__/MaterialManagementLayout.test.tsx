@@ -155,6 +155,6 @@ describe('MaterialManagementLayout', () => {
     const createButtons = screen.getAllByRole('button', { name: /创建素材/i })
     await user.click(createButtons[0])
 
-    expect(screen.getByText('创建一个新的素材')).toBeInTheDocument()
+    expect(screen.getByText('创建一个新的素材集，用于管理音乐人和歌曲风格')).toBeInTheDocument()
   })
 })

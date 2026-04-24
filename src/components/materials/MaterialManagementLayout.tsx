@@ -91,8 +91,8 @@ export function MaterialManagementLayout() {
         description="管理素材、条目和提示词"
         gradient="green-emerald"
         actions={
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-1.5 shadow-sm">
+            <Plus className="w-4 h-4" />
             创建素材
           </Button>
         }
@@ -108,29 +108,32 @@ export function MaterialManagementLayout() {
       )}
 
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-4 border-b border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="relative flex-1 sm:max-w-md">
+            <div className="relative flex-1 sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="搜索素材..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-background"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-accent transition-colors"
                 >
-                  <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                 </button>
               )}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              共 {filteredMaterials.length} 个素材
             </div>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="pt-4">
           {isLoading && materials.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -143,45 +146,46 @@ export function MaterialManagementLayout() {
               description={searchQuery ? '尝试其他搜索词' : '创建您的第一个素材'}
               action={
                 !searchQuery && (
-                  <Button onClick={() => setIsCreateDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
                     创建素材
                   </Button>
                 )
               }
             />
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredMaterials.map((material) => (
                 <div
                   key={material.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  className="group flex items-center justify-between p-4 rounded-xl border border-border/60 bg-card hover:bg-accent/50 hover:border-border transition-all duration-150 shadow-sm hover:shadow-md"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{material.name}</p>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <p className="font-semibold text-base truncate">{material.name}</p>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${MATERIAL_TYPE_COLORS[material.material_type]}`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${MATERIAL_TYPE_COLORS[material.material_type]}`}
                       >
                         {MATERIAL_TYPE_LABELS[material.material_type]}
                       </span>
                     </div>
                     {material.description && (
-                      <p className="text-sm text-muted-foreground truncate mt-0.5">
+                      <p className="text-sm text-muted-foreground truncate mt-1 max-w-md">
                         {material.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-3 mt-1">
-                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                         <Calendar className="w-3 h-3" />
-                         更新于 {formatDate(material.updated_at)}
-                       </span>
-                     </div>
+                    <div className="flex items-center gap-4 mt-2">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3" />
+                          更新于 {formatDate(material.updated_at)}
+                        </span>
+                      </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-1 ml-4 opacity-60 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="hover:bg-primary/10 hover:text-primary"
                       onClick={() => navigate(`/materials/${material.id}/edit`)}
                     >
                       <Pencil className="w-4 h-4" />
@@ -189,7 +193,7 @@ export function MaterialManagementLayout() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive"
+                      className="hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => openDeleteConfirm(material.id, material.name)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -206,43 +210,45 @@ export function MaterialManagementLayout() {
         open={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         title="创建素材"
-        description="创建一个新的素材"
+        description="创建一个新的素材集，用于管理音乐人和歌曲风格"
       >
-        <div className="space-y-4 mt-4">
+        <div className="space-y-4 py-2">
           <div>
-            <label className="text-sm font-medium mb-1.5 block">素材类型</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">素材类型</label>
             <select
               value={newMaterialType}
               onChange={(e) => setNewMaterialType(e.target.value as MaterialType)}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full h-11 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
             >
               <option value="artist">{MATERIAL_TYPE_LABELS.artist}</option>
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">素材名称</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">素材名称</label>
             <Input
-              placeholder="输入素材名称"
+              placeholder="例如：我的音乐人素材"
               value={newMaterialName}
               onChange={(e) => setNewMaterialName(e.target.value)}
+              className="h-11"
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">描述（可选）</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">描述（可选）</label>
             <Input
-              placeholder="输入素材描述"
+              placeholder="简要描述这个素材的用途"
               value={newMaterialDescription}
               onChange={(e) => setNewMaterialDescription(e.target.value)}
+              className="h-11"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
+          <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="px-5">
             取消
           </Button>
-          <Button onClick={handleCreate} disabled={isCreating || !newMaterialName.trim()}>
-            {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            创建
+          <Button onClick={handleCreate} disabled={isCreating || !newMaterialName.trim()} className="px-5 gap-1.5">
+            {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            创建素材
           </Button>
         </div>
       </Dialog>
@@ -253,11 +259,12 @@ export function MaterialManagementLayout() {
         title="确认删除"
         description={`确定要删除素材 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
       >
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+        <div className="flex justify-end gap-3 mt-4">
+          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5">
             取消
           </Button>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={handleDelete} className="px-5 gap-1.5">
+            <Trash2 className="w-4 h-4" />
             删除
           </Button>
         </div>
