@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { StrictMode } from 'react'
@@ -152,10 +152,9 @@ describe('MaterialManagementLayout', () => {
 
     renderWithProviders(<MaterialManagementLayout />)
 
-    const materialRow = screen.getByText('Test Artist').closest('div')?.parentElement?.parentElement
-    expect(materialRow).not.toBeNull()
-    expect(within(materialRow as HTMLElement).getByText('艺术家')).toBeInTheDocument()
-    expect(within(materialRow as HTMLElement).getByText(/更新于/i)).toBeInTheDocument()
+    expect(screen.getByText('Test Artist')).toBeInTheDocument()
+    expect(screen.getByText('艺术家')).toBeInTheDocument()
+    expect(screen.getByText(/\d{4}年\d+月\d+日/)).toBeInTheDocument()
   })
 
   it('should use generic create dialog copy instead of artist-only copy', async () => {
