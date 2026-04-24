@@ -22,6 +22,8 @@ export interface Material {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  songCount?: number
+  promptVariantsCount?: number
 }
 
 export interface CreateMaterial {

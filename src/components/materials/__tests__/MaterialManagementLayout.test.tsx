@@ -28,6 +28,8 @@ const mockMaterial = {
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   deleted_at: null,
+  songCount: 3,
+  promptVariantsCount: 2,
 }
 
 const renderWithProviders = (ui: ReactNode) => {
@@ -155,6 +157,8 @@ describe('MaterialManagementLayout', () => {
     expect(screen.getByText('Test Artist')).toBeInTheDocument()
     expect(screen.getByText('艺术家')).toBeInTheDocument()
     expect(screen.getByText(/\d{4}年\d+月\d+日/)).toBeInTheDocument()
+    expect(screen.getByText('歌曲 3')).toBeInTheDocument()
+    expect(screen.getByText('变体 2')).toBeInTheDocument()
   })
 
   it('should use generic create dialog copy instead of artist-only copy', async () => {

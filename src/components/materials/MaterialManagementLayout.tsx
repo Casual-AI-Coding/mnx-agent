@@ -207,11 +207,11 @@ export function MaterialManagementLayout() {
           ) : (
             <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {filteredMaterials.map((material) => (
-                <div
-                  key={material.id}
-                  className="group flex h-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lg hover:shadow-black/5"
-                >
-                  <div className="flex flex-1 flex-col gap-4 p-5">
+                  <div
+                    key={material.id}
+                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/5"
+                  >
+                    <div className="flex flex-1 flex-col gap-4 p-6">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1 space-y-2.5">
                         <p className="truncate text-lg font-bold tracking-tight text-foreground/95">
@@ -226,6 +226,14 @@ export function MaterialManagementLayout() {
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-background/90 px-2 py-0.5 text-[11px] font-medium text-muted-foreground/90">
                             <Calendar className="h-3 w-3 text-muted-foreground/70" />
                             {formatDate(material.updated_at)}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
+                            <Sparkles className="h-3 w-3" />
+                            {typeof material.songCount === 'number' ? `歌曲 ${material.songCount}` : '歌曲 0'}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            <Library className="h-3 w-3" />
+                            {typeof material.promptVariantsCount === 'number' ? `变体 ${material.promptVariantsCount}` : '变体 0'}
                           </span>
                         </div>
                       </div>

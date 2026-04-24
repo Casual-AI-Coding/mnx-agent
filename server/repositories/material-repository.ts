@@ -77,7 +77,7 @@ function normalizeBoolean(value: unknown): boolean {
   return false
 }
 
-function toMaterial(row: MaterialRow): Material {
+function toMaterial(row: MaterialRow & { song_count?: number; prompt_variants_count?: number }): Material {
   return {
     ...row,
     metadata: normalizeMetadata(row.metadata),
@@ -86,6 +86,9 @@ function toMaterial(row: MaterialRow): Material {
     created_at: normalizeTimestamp(row.created_at) ?? '',
     updated_at: normalizeTimestamp(row.updated_at) ?? '',
     deleted_at: normalizeTimestamp(row.deleted_at),
+    songCount: row.song_count !== undefined ? normalizeNumber(row.song_count) : undefined,
+    promptVariantsCount:
+      row.prompt_variants_count !== undefined ? normalizeNumber(row.prompt_variants_count) : undefined,
   }
 }
 
@@ -208,5 +211,59 @@ export class MaterialRepository extends BaseRepository<Material> {
       [true, now, id, ownerId]
     )
     return result.changes > 0
+  }
+
+  async listWithItemCount(filter: {
+    ownerId?: string
+    materialType?: Material['material_type']
+    limit?: number
+    offset?: number
+  }): Promise<{ items: Material[]; total: number }> {
+    const { ownerId, materialType, limit = 50, offset = 0 } = filter
+
+    const conditions: string[] = ['m.is_deleted = false']
+    const params: unknown[] = []
+
+    if (ownerId) {
+      params.push(ownerId)
+      conditions.push(`m.owner_id = $${params.length}`)
+    }
+
+    if (materialType) {
+      params.push(materialType)
+      conditions.push(`m.material_type = $${params.length}`)
+    }
+
+    const whereClause = conditions.join(' AND ')
+
+    const countRows = await this.conn.query<{ count: number }>(
+      `SELECT COUNT(DISTINCT m.id) as count
+       FROM materials m
+       WHERE ${whereClause}`,
+      params
+    )
+    const total = normalizeNumber(countRows[0]?.count)
+
+    params.push(limit)
+    params.push(offset)
+
+    const rows = await this.conn.query<MaterialRow & { song_count: number; prompt_variants_count: number }>(
+      `SELECT m.*, 
+         COUNT(DISTINCT mi.id) FILTER (WHERE mi.item_type = 'song') as song_count,
+         COUNT(DISTINCT pr.id) FILTER (WHERE pr.target_type = 'material-main' AND pr.slot_type = 'artist-style') as prompt_variants_count
+       FROM materials m
+       LEFT JOIN material_items mi ON m.id = mi.material_id AND mi.is_deleted = false
+       LEFT JOIN prompts pr ON m.id = pr.target_id AND pr.target_type = 'material-main' AND pr.slot_type = 'artist-style' AND pr.is_deleted = false
+       WHERE ${whereClause}
+       GROUP BY m.id
+       ORDER BY m.sort_order, m.created_at
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    )
+
+    return {
+      items: rows.map(row => this.rowToEntity(row)),
+      total,
+    }
   }
 }

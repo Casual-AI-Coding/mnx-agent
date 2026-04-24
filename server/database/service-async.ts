@@ -921,7 +921,7 @@ export class DatabaseService {
   }
 
   async getMaterials(options: MaterialQueryOptions): Promise<{ records: Material[]; total: number }> {
-    const result = await this.materialRepo.list(options as any)
+    const result = await this.materialRepo.listWithItemCount(options)
     return { records: result.items, total: result.total }
   }
 
