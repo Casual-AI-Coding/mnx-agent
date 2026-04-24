@@ -390,6 +390,23 @@ it('switches song selection and updates the song prompt panel', async () => {
     })
   })
 
+  it('opens the create artist prompt dialog when clicking the new prompt button', async () => {
+    const detail = createMockMaterialDetail()
+    const user = userEvent.setup()
+
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    const promptCard = screen.getByText('音乐人风格 Prompt').closest('[class*="rounded"]')
+    expect(promptCard).not.toBeNull()
+
+    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+
+    const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
+    const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
+    expect(dialog).not.toBeNull()
+    expect(within(dialog as HTMLElement).getByPlaceholderText('例如：流行风格')).toBeInTheDocument()
+  })
+
   it('creates artist-level prompts locally without refetching detail', async () => {
     const { getMaterialDetail } = await import('@/lib/api/materials')
     const { createPrompt } = await import('@/lib/api/prompts')
@@ -420,10 +437,15 @@ it('switches song selection and updates the song prompt panel', async () => {
     const promptCard = screen.getByText('音乐人风格 Prompt').closest('[class*="rounded"]')
     expect(promptCard).not.toBeNull()
 
-    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建' }))
-    await user.type(screen.getByPlaceholderText('提示词名称'), '风格C')
-    await user.type(screen.getByPlaceholderText('提示词内容...'), '风格C内容')
-    await user.click(screen.getByRole('button', { name: '创建' }))
+    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+    const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
+    const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
+    expect(dialog).not.toBeNull()
+
+    await user.type(within(dialog as HTMLElement).getByPlaceholderText('例如：流行风格'), '风格C')
+    const promptContentFields = within(dialog as HTMLElement).getAllByPlaceholderText('输入提示词内容...')
+    await user.type(promptContentFields[promptContentFields.length - 1], '风格C内容')
+    await user.click(within(dialog as HTMLElement).getByRole('button', { name: '创建提示词' }))
 
     expect(createPrompt).toHaveBeenCalledWith({
       target_type: 'material-main',
@@ -532,10 +554,14 @@ it('switches song selection and updates the song prompt panel', async () => {
     const songCard = screen.getByText('歌曲库').closest('[class*="rounded"]')
     expect(songCard).not.toBeNull()
 
-    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建' }))
-    await user.type(screen.getByPlaceholderText('歌曲名称'), 'Golden Hour')
-    await user.type(screen.getByPlaceholderText('歌词内容...'), '新歌词')
-    await user.click(screen.getByRole('button', { name: '创建' }))
+    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建歌曲' }))
+    const dialogTitle = await screen.findByRole('heading', { name: '新建歌曲' })
+    const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
+    expect(dialog).not.toBeNull()
+
+    await user.type(within(dialog as HTMLElement).getByPlaceholderText('例如：夜空中最亮的星'), 'Golden Hour')
+    await user.type(within(dialog as HTMLElement).getByPlaceholderText('粘贴歌词内容...'), '新歌词')
+    await user.click(within(dialog as HTMLElement).getByRole('button', { name: '创建歌曲' }))
 
     expect(createMaterialItem).toHaveBeenCalledWith('artist-1', {
       material_id: 'artist-1',
@@ -545,6 +571,23 @@ it('switches song selection and updates the song prompt panel', async () => {
     })
     expect(getMaterialDetail).not.toHaveBeenCalled()
     expect(await screen.findByText('Golden Hour')).toBeInTheDocument()
+  })
+
+  it('opens the create song dialog when clicking the new song button', async () => {
+    const detail = createMockMaterialDetail()
+    const user = userEvent.setup()
+
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    const songCard = screen.getByText('歌曲库').closest('[class*="rounded"]')
+    expect(songCard).not.toBeNull()
+
+    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建歌曲' }))
+
+    const dialogTitle = await screen.findByRole('heading', { name: '新建歌曲' })
+    const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
+    expect(dialog).not.toBeNull()
+    expect(within(dialog as HTMLElement).getByPlaceholderText('例如：夜空中最亮的星')).toBeInTheDocument()
   })
 
   it('creates song-level prompts locally without refetching detail', async () => {
@@ -579,10 +622,15 @@ it('switches song selection and updates the song prompt panel', async () => {
     const songPromptCard = screen.getByText('歌曲风格 Prompt').closest('[class*="rounded"]')
     expect(songPromptCard).not.toBeNull()
 
-    await user.click(within(songPromptCard as HTMLElement).getByRole('button', { name: '新建' }))
-    await user.type(screen.getByPlaceholderText('提示词名称'), '歌曲风格C')
-    await user.type(screen.getByPlaceholderText('提示词内容...'), '歌曲风格C内容')
-    await user.click(screen.getByRole('button', { name: '创建' }))
+    await user.click(within(songPromptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+    const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
+    const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
+    expect(dialog).not.toBeNull()
+
+    await user.type(within(dialog as HTMLElement).getByPlaceholderText('例如：摇滚风格'), '歌曲风格C')
+    const promptContentFields = within(dialog as HTMLElement).getAllByPlaceholderText('输入提示词内容...')
+    await user.type(promptContentFields[promptContentFields.length - 1], '歌曲风格C内容')
+    await user.click(within(dialog as HTMLElement).getByRole('button', { name: '创建提示词' }))
 
     expect(createPrompt).toHaveBeenCalledWith({
       target_type: 'material-item',

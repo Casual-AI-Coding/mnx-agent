@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Star, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Trash2, Star, ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -153,17 +153,20 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
 
   if (prompts.length === 0) {
     return (
-      <Card className="h-full">
+      <Card className="h-full border-dashed">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">音乐人风格 Prompt</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Star className="w-4 h-4 text-primary/70" />
+            音乐人风格 Prompt
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
             title="暂无提示词"
-            description="创建第一个提示词候选"
+            description="创建第一个音乐人风格提示词"
             action={
-              <Button onClick={() => setIsCreating(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button onClick={() => setIsCreating(true)} className="gap-1.5">
+                <Plus className="w-4 h-4" />
                 新建提示词
               </Button>
             }
@@ -175,28 +178,31 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">音乐人风格 Prompt</CardTitle>
-          <Button size="sm" variant="ghost" onClick={() => setIsCreating(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            新建
+          <CardTitle className="text-base flex items-center gap-2">
+            <Star className="w-4 h-4 text-primary/70" />
+            音乐人风格 Prompt
+          </CardTitle>
+          <Button size="sm" onClick={() => setIsCreating(true)} className="gap-1.5 shadow-sm">
+            <Plus className="w-3.5 h-3.5" />
+            新建提示词
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="pt-4 space-y-4">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex flex-wrap h-auto">
+          <TabsList className="flex flex-wrap h-auto gap-1">
             {prompts.map((prompt) => (
-              <TabsTrigger key={prompt.id} value={prompt.id} className="text-xs">
-                {prompt.is_default && <Star className="w-3 h-3 mr-1 fill-yellow-500 text-yellow-500" />}
+              <TabsTrigger key={prompt.id} value={prompt.id} className="text-xs gap-1.5">
+                {prompt.is_default && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />}
                 {prompt.name}
               </TabsTrigger>
             ))}
           </TabsList>
 {prompts.map((prompt, index) => (
-              <TabsContent key={prompt.id} value={prompt.id} className="space-y-3">
-                <div className="flex items-center gap-1">
+              <TabsContent key={prompt.id} value={prompt.id} className="space-y-4 mt-4">
+                <div className="flex items-center gap-2 bg-accent/50 rounded-lg p-2">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -204,6 +210,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     disabled={index === 0 || isSaving}
                     title="向上移动"
                     aria-label={`向上移动 ${prompt.name}`}
+                    className="h-7 w-7 p-0"
                   >
                     <ArrowUp className="w-3 h-3" />
                   </Button>
@@ -214,24 +221,32 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     disabled={index === prompts.length - 1 || isSaving}
                     title="向下移动"
                     aria-label={`向下移动 ${prompt.name}`}
+                    className="h-7 w-7 p-0"
                   >
                     <ArrowDown className="w-3 h-3" />
                   </Button>
-                  <span className="text-xs text-muted-foreground ml-2">
+                  <span className="text-xs text-muted-foreground ml-2 font-medium">
                     {index + 1} / {prompts.length}
                   </span>
+                  {prompt.is_default && (
+                    <span className="ml-auto text-xs bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded-full font-medium">
+                      默认
+                    </span>
+                  )}
                 </div>
                 <Textarea
                   value={editingContent}
                   onChange={(e) => setEditingContent(e.target.value)}
                   placeholder="输入提示词内容..."
                   rows={6}
+                  className="font-mono text-sm"
                 />
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={handleUpdateContent}
                     disabled={isSaving || editingContent === prompt.content}
+                    className="shadow-sm"
                   >
                     保存
                   </Button>
@@ -240,15 +255,16 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                       size="sm"
                       variant="outline"
                       onClick={() => handleSetDefault(prompt.id)}
+                      className="gap-1"
                     >
-                      <Star className="w-3 h-3 mr-1" />
+                      <Star className="w-3 h-3" />
                       设为默认
                     </Button>
                   )}
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-destructive hover:text-destructive ml-auto"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
                     onClick={() => setDeleteConfirm(prompt)}
                   >
                     <Trash2 className="w-3 h-3" />
@@ -264,31 +280,34 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
         title="新建提示词"
         description="创建一个新的音乐人风格提示词候选"
       >
-        <div className="space-y-4 mt-4">
+        <div className="space-y-4 py-2">
           <div>
-            <label className="text-sm font-medium mb-1.5 block">名称</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">名称</label>
             <Input
-              placeholder="提示词名称"
+              placeholder="例如：流行风格"
               value={newPromptName}
               onChange={(e) => setNewPromptName(e.target.value)}
+              className="h-10"
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">内容</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">内容</label>
             <Textarea
-              placeholder="提示词内容..."
+              placeholder="输入提示词内容..."
               value={newPromptContent}
               onChange={(e) => setNewPromptContent(e.target.value)}
               rows={4}
+              className="font-mono text-sm"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={() => setIsCreating(false)}>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
+          <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5">
             取消
           </Button>
-          <Button onClick={handleCreatePrompt} disabled={isSaving}>
-            {isSaving ? '创建中...' : '创建'}
+          <Button onClick={handleCreatePrompt} disabled={isSaving} className="px-5 gap-1.5">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            创建提示词
           </Button>
         </div>
       </Dialog>
@@ -298,11 +317,12 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
         title="确认删除"
         description={`确定要删除提示词 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
       >
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+        <div className="flex justify-end gap-3 mt-4">
+          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5">
             取消
           </Button>
-          <Button variant="destructive" onClick={handleDeletePrompt}>
+          <Button variant="destructive" onClick={handleDeletePrompt} className="px-5 gap-1.5">
+            <Trash2 className="w-4 h-4" />
             删除
           </Button>
         </div>
