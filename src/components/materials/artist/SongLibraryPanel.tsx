@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
 import type { MaterialItem } from '@/types/material'
+import type { PromptRecord } from '@/types/prompt'
 import {
   createMaterialItem,
   updateMaterialItem,
@@ -15,11 +16,13 @@ import {
 } from '@/lib/api/materials'
 import { toastSuccess, toastError } from '@/lib/toast'
 
+export type SongWithPrompts = MaterialItem & { prompts: PromptRecord[] }
+
 interface SongLibraryPanelProps {
-  songs: MaterialItem[]
+  songs: SongWithPrompts[]
   selectedSongId: string | null
-  onSelectSong: (songId: string) => void
-  onSongsChange?: () => void
+  onSelectSong: (songId: string | null) => void
+  onSongsChange?: (songs: SongWithPrompts[], nextSelectedSongId?: string | null) => void
   materialId?: string
 }
 
@@ -37,6 +40,13 @@ export function SongLibraryPanel({
   const [newSongLyrics, setNewSongLyrics] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const normalizeSongs = (nextSongs: SongWithPrompts[]) =>
+    nextSongs.map((song, index) => ({
+      ...song,
+      sort_order: index,
+      prompts: song.prompts || [],
+    }))
+
   const handleMoveSong = async (index: number, direction: 'up' | 'down') => {
     if (!materialId) return
     const newIndex = direction === 'up' ? index - 1 : index + 1
@@ -51,7 +61,15 @@ export function SongLibraryPanel({
     )
     setIsSaving(false)
     if (result.success) {
-      onSongsChange?.()
+      onSongsChange?.(
+        normalizeSongs(
+          newOrder.map((song, orderIndex) => ({
+            ...song,
+            sort_order: orderIndex,
+            prompts: song.prompts || [],
+          }))
+        )
+      )
     } else {
       toastError('排序失败', result.error || '请稍后重试')
     }
@@ -79,7 +97,8 @@ export function SongLibraryPanel({
       setIsCreating(false)
       setNewSongName('')
       setNewSongLyrics('')
-      onSongsChange?.()
+      const nextSongs = normalizeSongs([...songs, { ...result.data, prompts: [] }])
+      onSongsChange?.(nextSongs, result.data.id)
     } else {
       toastError('创建失败', result.error || '请稍后重试')
     }
@@ -93,10 +112,20 @@ export function SongLibraryPanel({
       lyrics: editingSong.lyrics?.trim() || undefined,
     })
     setIsSaving(false)
-    if (result.success) {
+    if (result.success && result.data) {
       toastSuccess('更新成功', '歌曲已更新')
       setEditingSong(null)
-      onSongsChange?.()
+      onSongsChange?.(
+        songs.map((song) =>
+          song.id === editingSong.id
+            ? {
+                ...song,
+                ...result.data,
+                prompts: song.prompts || [],
+              }
+            : song
+        )
+      )
     } else {
       toastError('更新失败', result.error || '请稍后重试')
     }
@@ -104,14 +133,22 @@ export function SongLibraryPanel({
 
   const handleDeleteSong = async () => {
     if (!deleteConfirm) return
+    const deletedSongId = deleteConfirm.id
     const result = await deleteMaterialItem(deleteConfirm.id)
     if (result.success) {
       toastSuccess('删除成功', '歌曲已删除')
       setDeleteConfirm(null)
-      if (selectedSongId === deleteConfirm.id) {
-        onSelectSong('')
+      const nextSongs = normalizeSongs(songs.filter((song) => song.id !== deletedSongId))
+      const nextSelectedSongId =
+        selectedSongId === deletedSongId
+          ? (nextSongs[0]?.id ?? null)
+          : selectedSongId
+
+      if (selectedSongId === deletedSongId) {
+        onSelectSong(nextSelectedSongId)
       }
-      onSongsChange?.()
+
+      onSongsChange?.(nextSongs, nextSelectedSongId)
     } else {
       toastError('删除失败', result.error || '请稍后重试')
     }

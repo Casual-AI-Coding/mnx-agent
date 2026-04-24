@@ -20,7 +20,7 @@ import { toastSuccess, toastError } from '@/lib/toast'
 interface SongPromptPanelProps {
   prompts: PromptRecord[]
   songId: string | null
-  onPromptsChange?: () => void
+  onPromptsChange?: (prompts: PromptRecord[]) => void
 }
 
 export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPromptPanelProps) {
@@ -31,6 +31,12 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
   const [newPromptContent, setNewPromptContent] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<PromptRecord | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  const normalizePrompts = (nextPrompts: PromptRecord[]) =>
+    nextPrompts.map((prompt, index) => ({
+      ...prompt,
+      sort_order: index,
+    }))
 
   useEffect(() => {
     const nextActiveTab = prompts.find((p) => p.is_default)?.id || prompts[0]?.id || ''
@@ -53,7 +59,14 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
     })
     setIsSaving(false)
     if (result.success) {
-      onPromptsChange?.()
+      onPromptsChange?.(
+        normalizePrompts(
+          newOrder.map((prompt, orderIndex) => ({
+            ...prompt,
+            sort_order: orderIndex,
+          }))
+        )
+      )
     } else {
       toastError('排序失败', result.error || '请稍后重试')
     }
@@ -82,7 +95,12 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
     const result = await setDefaultPrompt(promptId)
     if (result.success) {
       toastSuccess('设置成功', '已设为默认风格')
-      onPromptsChange?.()
+      onPromptsChange?.(
+        prompts.map((prompt) => ({
+          ...prompt,
+          is_default: prompt.id === promptId,
+        }))
+      )
     } else {
       toastError('设置失败', result.error || '请稍后重试')
     }
@@ -90,14 +108,15 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
 
   const handleDeletePrompt = async () => {
     if (!deleteConfirm) return
+    const deletedPromptId = deleteConfirm.id
     const result = await deletePrompt(deleteConfirm.id)
     if (result.success) {
       toastSuccess('删除成功', '提示词已删除')
       setDeleteConfirm(null)
-      if (activeTab === deleteConfirm.id) {
+      if (activeTab === deletedPromptId) {
         setActiveTab('')
       }
-      onPromptsChange?.()
+      onPromptsChange?.(normalizePrompts(prompts.filter((prompt) => prompt.id !== deletedPromptId)))
     } else {
       toastError('删除失败', result.error || '请稍后重试')
     }
@@ -122,12 +141,12 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
       is_default: prompts.length === 0,
     })
     setIsSaving(false)
-    if (result.success) {
+    if (result.success && result.data) {
       toastSuccess('创建成功', '提示词已创建')
       setIsCreating(false)
       setNewPromptName('')
       setNewPromptContent('')
-      onPromptsChange?.()
+      onPromptsChange?.(normalizePrompts([...prompts, result.data]))
     } else {
       toastError('创建失败', result.error || '请稍后重试')
     }
@@ -140,9 +159,12 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
       content: editingContent.trim(),
     })
     setIsSaving(false)
-    if (result.success) {
+    if (result.success && result.data) {
+      const updatedPrompt = result.data
       toastSuccess('保存成功', '提示词已更新')
-      onPromptsChange?.()
+      onPromptsChange?.(
+        prompts.map((prompt) => (prompt.id === currentPrompt.id ? updatedPrompt : prompt))
+      )
     } else {
       toastError('保存失败', result.error || '请稍后重试')
     }

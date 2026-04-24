@@ -20,7 +20,7 @@ import { toastSuccess, toastError } from '@/lib/toast'
 interface ArtistPromptPanelProps {
   prompts: PromptRecord[]
   targetId: string
-  onPromptsChange?: () => void
+  onPromptsChange?: (prompts: PromptRecord[]) => void
 }
 
 export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: ArtistPromptPanelProps) {
@@ -31,6 +31,12 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
   const [newPromptContent, setNewPromptContent] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<PromptRecord | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  const normalizePrompts = (nextPrompts: PromptRecord[]) =>
+    nextPrompts.map((prompt, index) => ({
+      ...prompt,
+      sort_order: index,
+    }))
 
   const handleMovePrompt = async (index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1
@@ -47,7 +53,14 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
     })
     setIsSaving(false)
     if (result.success) {
-      onPromptsChange?.()
+      onPromptsChange?.(
+        normalizePrompts(
+          newOrder.map((prompt, orderIndex) => ({
+            ...prompt,
+            sort_order: orderIndex,
+          }))
+        )
+      )
     } else {
       toastError('排序失败', result.error || '请稍后重试')
     }
@@ -67,7 +80,12 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
     const result = await setDefaultPrompt(promptId)
     if (result.success) {
       toastSuccess('设置成功', '已设为默认风格')
-      onPromptsChange?.()
+      onPromptsChange?.(
+        prompts.map((prompt) => ({
+          ...prompt,
+          is_default: prompt.id === promptId,
+        }))
+      )
     } else {
       toastError('设置失败', result.error || '请稍后重试')
     }
@@ -75,14 +93,15 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
 
   const handleDeletePrompt = async () => {
     if (!deleteConfirm) return
+    const deletedPromptId = deleteConfirm.id
     const result = await deletePrompt(deleteConfirm.id)
     if (result.success) {
       toastSuccess('删除成功', '提示词已删除')
       setDeleteConfirm(null)
-      if (activeTab === deleteConfirm.id) {
-        setActiveTab('')
-      }
-      onPromptsChange?.()
+       if (activeTab === deletedPromptId) {
+         setActiveTab('')
+       }
+      onPromptsChange?.(normalizePrompts(prompts.filter((prompt) => prompt.id !== deletedPromptId)))
     } else {
       toastError('删除失败', result.error || '请稍后重试')
     }
@@ -103,12 +122,12 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
       is_default: prompts.length === 0,
     })
     setIsSaving(false)
-    if (result.success) {
+    if (result.success && result.data) {
       toastSuccess('创建成功', '提示词已创建')
       setIsCreating(false)
       setNewPromptName('')
       setNewPromptContent('')
-      onPromptsChange?.()
+      onPromptsChange?.(normalizePrompts([...prompts, result.data]))
     } else {
       toastError('创建失败', result.error || '请稍后重试')
     }
@@ -121,9 +140,12 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
       content: editingContent.trim(),
     })
     setIsSaving(false)
-    if (result.success) {
+    if (result.success && result.data) {
+      const updatedPrompt = result.data
       toastSuccess('保存成功', '提示词已更新')
-      onPromptsChange?.()
+      onPromptsChange?.(
+        prompts.map((prompt) => (prompt.id === currentPrompt.id ? updatedPrompt : prompt))
+      )
     } else {
       toastError('保存失败', result.error || '请稍后重试')
     }

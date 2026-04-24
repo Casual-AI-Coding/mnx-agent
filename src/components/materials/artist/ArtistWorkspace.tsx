@@ -70,6 +70,66 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
     })
   }
 
+  const updateMaterialPrompts = (materialPrompts: PromptRecord[]) => {
+    setDetail((currentDetail) => {
+      if (!currentDetail) return currentDetail
+
+      return {
+        ...currentDetail,
+        materialPrompts,
+      }
+    })
+  }
+
+  const updateSongs = (
+    items: MaterialDetailResult['items'],
+    nextSelectedSongId?: string | null
+  ) => {
+    setDetail((currentDetail) => {
+      if (!currentDetail) return currentDetail
+
+      return {
+        ...currentDetail,
+        items,
+      }
+    })
+
+    if (nextSelectedSongId !== undefined) {
+      setSelectedSongId(nextSelectedSongId)
+      return
+    }
+
+    setSelectedSongId((currentSelectedSongId) => {
+      if (items.length === 0) {
+        return null
+      }
+
+      if (currentSelectedSongId && items.some((item) => item.id === currentSelectedSongId)) {
+        return currentSelectedSongId
+      }
+
+      return items[0].id
+    })
+  }
+
+  const updateSongPrompts = (songId: string, prompts: PromptRecord[]) => {
+    setDetail((currentDetail) => {
+      if (!currentDetail) return currentDetail
+
+      return {
+        ...currentDetail,
+        items: currentDetail.items.map((item) =>
+          item.id === songId
+            ? {
+                ...item,
+                prompts,
+              }
+            : item
+        ),
+      }
+    })
+  }
+
   const selectedSong = detail?.items.find((item) => item.id === selectedSongId) as ArtistItemWithPrompts | undefined
 
   if (isLoading) {
@@ -100,21 +160,24 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
         <ArtistPromptPanel
           prompts={detail.materialPrompts}
           targetId={detail.material.id}
-          onPromptsChange={fetchDetail}
+          onPromptsChange={updateMaterialPrompts}
         />
       </div>
       <div className="space-y-4">
         <SongLibraryPanel
-          songs={detail.items as MaterialItem[]}
+          songs={detail.items}
           selectedSongId={selectedSongId}
           onSelectSong={setSelectedSongId}
-          onSongsChange={fetchDetail}
+          onSongsChange={updateSongs}
           materialId={materialId}
         />
         <SongPromptPanel
           prompts={selectedSong?.prompts || []}
           songId={selectedSongId}
-          onPromptsChange={fetchDetail}
+          onPromptsChange={(prompts) => {
+            if (!selectedSongId) return
+            updateSongPrompts(selectedSongId, prompts)
+          }}
         />
       </div>
     </div>
