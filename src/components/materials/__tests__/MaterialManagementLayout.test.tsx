@@ -1,13 +1,19 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { StrictMode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { MaterialManagementLayout } from '../MaterialManagementLayout'
 import { useMaterialsStore } from '@/stores/materials'
+import { useAuthStore } from '@/stores/auth'
 import type { ReactNode } from 'react'
 
 vi.mock('@/stores/materials', () => ({
   useMaterialsStore: vi.fn(),
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: vi.fn(),
 }))
 
 const mockMaterial = {
@@ -28,9 +34,11 @@ const renderWithProviders = (ui: ReactNode) => {
   return {
     user: userEvent.setup(),
     ...render(
-      <MemoryRouter>
-        {ui}
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter>
+          {ui}
+        </MemoryRouter>
+      </StrictMode>
     ),
   }
 }
@@ -47,6 +55,7 @@ describe('MaterialManagementLayout', () => {
       removeMaterial: vi.fn(),
       clearError: vi.fn(),
     })
+    vi.mocked(useAuthStore).mockReturnValue({ isHydrated: true })
   })
 
   it('should render page header with title', () => {
@@ -110,7 +119,7 @@ describe('MaterialManagementLayout', () => {
     await user.type(searchInput, 'Artist')
   })
 
-  it('should call fetchMaterials on mount', () => {
+  it('should call fetchMaterials on mount only once', () => {
     const fetchMaterials = vi.fn()
     vi.mocked(useMaterialsStore).mockReturnValue({
       materials: [],
@@ -122,7 +131,7 @@ describe('MaterialManagementLayout', () => {
       clearError: vi.fn(),
     })
     renderWithProviders(<MaterialManagementLayout />)
-    expect(fetchMaterials).toHaveBeenCalled()
+    expect(fetchMaterials).toHaveBeenCalledTimes(1)
   })
 
   it('should render material type and updated time in the list', () => {

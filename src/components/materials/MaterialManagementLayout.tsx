@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FolderCog, Loader2, Pencil, Plus, Search, Trash2, X, Calendar, Sparkles, Library, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -17,6 +17,7 @@ export function MaterialManagementLayout() {
   const { materials, isLoading, error, fetchMaterials, addMaterial, removeMaterial, clearError } = useMaterialsStore()
   const { isHydrated } = useAuthStore()
   const navigate = useNavigate()
+  const hasInitializedRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -26,9 +27,9 @@ export function MaterialManagementLayout() {
   const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
-    if (isHydrated) {
-      fetchMaterials()
-    }
+    if (!isHydrated || hasInitializedRef.current) return
+    hasInitializedRef.current = true
+    fetchMaterials()
   }, [isHydrated, fetchMaterials])
 
   const filteredMaterials = materials.filter((m) =>
