@@ -26,8 +26,17 @@ export type CreateMaterialItem = SharedCreateMaterialItem
 export type UpdateMaterialItem = SharedUpdateMaterialItem
 export type MaterialDetailResult = SharedMaterialDetailResult
 
-// 素材类型
+// 素材类型 - 目前仅 'artist'，后续可扩展
 export type MaterialType = 'artist'
+
+// 素材类型元数据（用于 UI 显示）
+export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
+  artist: '艺术家',
+} as const
+
+export const MATERIAL_TYPE_COLORS: Record<MaterialType, string> = {
+  artist: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+} as const
 
 // 内部类型别名
 export type {

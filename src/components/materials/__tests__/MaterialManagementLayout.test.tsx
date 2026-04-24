@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -123,5 +123,38 @@ describe('MaterialManagementLayout', () => {
     })
     renderWithProviders(<MaterialManagementLayout />)
     expect(fetchMaterials).toHaveBeenCalled()
+  })
+
+  it('should render material type and updated time in the list', () => {
+    vi.mocked(useMaterialsStore).mockReturnValue({
+      materials: [
+        {
+          ...mockMaterial,
+          updated_at: '2024-02-03T00:00:00Z',
+        },
+      ],
+      isLoading: false,
+      error: null,
+      fetchMaterials: vi.fn(),
+      addMaterial: vi.fn(),
+      removeMaterial: vi.fn(),
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<MaterialManagementLayout />)
+
+    const materialRow = screen.getByText('Test Artist').closest('div')?.parentElement?.parentElement
+    expect(materialRow).not.toBeNull()
+    expect(within(materialRow as HTMLElement).getByText('艺术家')).toBeInTheDocument()
+    expect(within(materialRow as HTMLElement).getByText(/更新于/i)).toBeInTheDocument()
+  })
+
+  it('should use generic create dialog copy instead of artist-only copy', async () => {
+    const { user } = renderWithProviders(<MaterialManagementLayout />)
+
+    const createButtons = screen.getAllByRole('button', { name: /创建素材/i })
+    await user.click(createButtons[0])
+
+    expect(screen.getByText('创建一个新的素材')).toBeInTheDocument()
   })
 })

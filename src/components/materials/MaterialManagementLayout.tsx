@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FolderCog, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { FolderCog, Loader2, Pencil, Plus, Search, Trash2, X, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,7 +10,8 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useMaterialsStore } from '@/stores/materials'
 import { useAuthStore } from '@/stores/auth'
 import { toastSuccess, toastError } from '@/lib/toast'
-import type { CreateMaterial } from '@/types/material'
+import type { CreateMaterial, MaterialType } from '@/types/material'
+import { MATERIAL_TYPE_LABELS, MATERIAL_TYPE_COLORS } from '@/types/material'
 
 export function MaterialManagementLayout() {
   const { materials, isLoading, error, fetchMaterials, addMaterial, removeMaterial, clearError } = useMaterialsStore()
@@ -21,6 +22,7 @@ export function MaterialManagementLayout() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newMaterialName, setNewMaterialName] = useState('')
   const [newMaterialDescription, setNewMaterialDescription] = useState('')
+  const [newMaterialType, setNewMaterialType] = useState<MaterialType>('artist')
   const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function MaterialManagementLayout() {
     }
     setIsCreating(true)
     const data: CreateMaterial = {
-      material_type: 'artist',
+      material_type: newMaterialType,
       name: newMaterialName.trim(),
       description: newMaterialDescription.trim() || undefined,
     }
@@ -51,6 +53,7 @@ export function MaterialManagementLayout() {
       toastSuccess('创建成功', `素材 "${newMaterialName}" 已创建`)
       setNewMaterialName('')
       setNewMaterialDescription('')
+      setNewMaterialType('artist')
       setIsCreateDialogOpen(false)
     } else {
       toastError('创建失败', '请稍后重试')
@@ -72,12 +75,20 @@ export function MaterialManagementLayout() {
     setDeleteConfirm({ id, name })
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         icon={<FolderCog className="w-5 h-5" />}
         title="素材管理"
-        description="管理艺术家素材和提示词"
+        description="管理素材、条目和提示词"
         gradient="green-emerald"
         actions={
           <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -147,12 +158,25 @@ export function MaterialManagementLayout() {
                   className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{material.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium truncate">{material.name}</p>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${MATERIAL_TYPE_COLORS[material.material_type]}`}
+                      >
+                        {MATERIAL_TYPE_LABELS[material.material_type]}
+                      </span>
+                    </div>
                     {material.description && (
                       <p className="text-sm text-muted-foreground truncate mt-0.5">
                         {material.description}
                       </p>
                     )}
+                    <div className="flex items-center gap-3 mt-1">
+                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                         <Calendar className="w-3 h-3" />
+                         更新于 {formatDate(material.updated_at)}
+                       </span>
+                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <Button
@@ -182,9 +206,19 @@ export function MaterialManagementLayout() {
         open={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         title="创建素材"
-        description="创建一个新的艺术家素材"
+        description="创建一个新的素材"
       >
         <div className="space-y-4 mt-4">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">素材类型</label>
+            <select
+              value={newMaterialType}
+              onChange={(e) => setNewMaterialType(e.target.value as MaterialType)}
+              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="artist">{MATERIAL_TYPE_LABELS.artist}</option>
+            </select>
+          </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">素材名称</label>
             <Input
