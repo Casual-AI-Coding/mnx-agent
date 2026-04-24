@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { ArtistBasicInfoPanel } from './ArtistBasicInfoPanel'
 import { ArtistPromptPanel } from './ArtistPromptPanel'
-import { SongLibraryPanel } from './SongLibraryPanel'
+import { SongLibraryPanel, type SongWithPrompts } from './SongLibraryPanel'
 import { SongPromptPanel } from './SongPromptPanel'
 import { Card, CardContent } from '@/components/ui/Card'
 import { getMaterialDetail } from '@/lib/api/materials'
-import type { MaterialDetailResult, MaterialItem } from '@/types/material'
+import type { MaterialDetailResult } from '@/types/material'
 import type { PromptRecord } from '@/types/prompt'
 
-type ArtistItemWithPrompts = MaterialItem & { prompts: PromptRecord[] }
+type ArtistItemWithPrompts = SongWithPrompts
 
 interface ArtistWorkspaceProps {
   materialId: string
@@ -82,7 +82,7 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
   }
 
   const updateSongs = (
-    items: MaterialDetailResult['items'],
+    items: SongWithPrompts[],
     nextSelectedSongId?: string | null
   ) => {
     setDetail((currentDetail) => {
@@ -151,8 +151,8 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-5">
         <ArtistBasicInfoPanel
           material={detail.material}
           onMaterialChange={updateMaterial}
@@ -163,7 +163,7 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
           onPromptsChange={updateMaterialPrompts}
         />
       </div>
-      <div className="space-y-4">
+      <div className="space-y-5">
         <SongLibraryPanel
           songs={detail.items}
           selectedSongId={selectedSongId}

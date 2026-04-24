@@ -65,8 +65,8 @@ export default function ArtistMaterialEditor() {
   if (error || !detail) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate('/materials')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        <Button variant="ghost" onClick={() => navigate('/materials')} className="gap-2 hover:bg-accent/50">
+          <ArrowLeft className="w-4 h-4" />
           返回素材列表
         </Button>
         <Card className="p-6">
@@ -81,14 +81,19 @@ export default function ArtistMaterialEditor() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/materials')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          返回素材列表
+        <Button variant="ghost" onClick={() => navigate('/materials')} className="gap-2 hover:bg-accent/50">
+          <ArrowLeft className="w-4 h-4" />
+          返回
         </Button>
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">素材编辑器</p>
-          <h1 className="text-2xl font-bold">{detail.material.name}</h1>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-muted-foreground mb-0.5">素材编辑器</p>
+          <h1 className="text-2xl font-bold truncate">{detail.material.name}</h1>
         </div>
+        {detail.material.description && (
+          <p className="hidden sm:block text-sm text-muted-foreground max-w-xs truncate">
+            {detail.material.description}
+          </p>
+        )}
       </div>
       {detail && detail.material.material_type === 'artist'
         ? <ArtistWorkspace materialId={id!} initialDetail={detail} />
