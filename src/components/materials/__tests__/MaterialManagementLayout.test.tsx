@@ -157,4 +157,19 @@ describe('MaterialManagementLayout', () => {
 
     expect(screen.getByText('创建一个新的素材集，用于管理音乐人和歌曲风格')).toBeInTheDocument()
   })
+
+  it('should render the create dialog in document.body instead of inside the page card container', async () => {
+    const { user, container } = renderWithProviders(<MaterialManagementLayout />)
+
+    const pageCard = container.querySelector('.rounded-xl.border')
+    expect(pageCard).not.toBeNull()
+
+    const createButtons = screen.getAllByRole('button', { name: /创建素材/i })
+    await user.click(createButtons[0])
+
+    const dialogTitle = screen.getByRole('heading', { name: '创建素材' })
+
+    expect(document.body).toContainElement(dialogTitle)
+    expect(pageCard).not.toContainElement(dialogTitle)
+  })
 })
