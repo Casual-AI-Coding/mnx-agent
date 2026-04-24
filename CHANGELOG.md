@@ -2,6 +2,68 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.3] - 2026-04-24
+
+### Added
+
+- **Materials Workspace Refresh** - 素材工作区整体刷新
+  - `client/src/pages/Materials.tsx` - 素材管理页面重构
+  - `client/src/components/materials/` - 全新的素材编辑器和管理组件
+  - `client/src/stores/materials-store.ts` - 素材状态管理
+  - 基于 Vibrant Block 设计系统的视觉升级
+
+- **Artist Workspace** - 艺术家工作区
+  - `client/src/components/materials/artist-workspace/` - 艺术家面板和编辑器
+  - 支持艺术家工作区的创建、编辑和排序
+
+- **Resource Management API** - 资源管理 API 客户端
+  - `client/src/api/materials/` - 素材和资源管理 API
+  - 完整的 CRUD 操作和类型定义
+
+- **Material Management Types** - 素材管理类型系统
+  - `client/src/types/material-types.ts` - 素材相关类型定义
+  - `client/src/types/resource-types.ts` - 资源类型定义
+
+- **Prompts API Routes** - 提示词 API 路由
+  - `server/routes/prompts.ts` - 提示词管理路由
+  - `server/routes/materials.ts` - 素材管理路由
+
+### Fixed
+
+- **Dialog 状态管理** - 简化对话框渲染逻辑
+  - `client/src/components/ui/Dialog.tsx` - Portal 渲染优化
+  - 更可靠的对话框显示和交互
+
+- **Material Service 类型对齐** - 修复 API payload 类型
+  - `server/services/material-service.ts` - 更新服务类型
+  - 修正 reorder API payload 格式
+
+- **Artist Workspace 排序和刷新** - 优化工作区交互
+  - 减少不必要的工作区重新获取
+  - 稳定艺术家工作区排序流程
+
+- **Database Service 测试** - 稳定化模板测试
+  - `server/__tests__/database-service.test.ts` - 测试加固
+
+### Changed
+
+- **Editor Shell 布局重构** - 更精细的编辑器外壳
+  - `client/src/components/materials/editor-shell/` - 改进布局和交互
+  - 类型感知的素材编辑器
+
+- **Material Management List** - 素材管理列表优化
+  - 增强列表展示和交互细节
+  - 美化管理列表视觉效果
+
+- **Navigation 增强** - 素材管理导航
+  - `client/src/components/layout/AppLayout.tsx` - 添加素材管理入口
+
+### Backward Compatibility
+
+- ✅ 所有现有 API 端点保持不变
+- ✅ 数据库 schema 通过 migration 安全升级
+- ✅ 新增功能不影响现有工作流
+
 ## [2.2.2] - 2026-04-23
 
 ### Added
