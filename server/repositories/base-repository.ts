@@ -54,7 +54,8 @@ export abstract class BaseRepository<T, CreateDto = Partial<T>, UpdateDto = Part
 
     for (const [key, value] of Object.entries(rest)) {
       if (value !== undefined && value !== null) {
-        conditions.push(`${key} = $${paramIndex}`)
+        const columnName = key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+        conditions.push(`${columnName} = $${paramIndex}`)
         params.push(value as string | number)
         paramIndex++
       }

@@ -79,6 +79,19 @@ describe('Materials API Routes', () => {
     expect(res.body.data.pagination.total).toBe(0)
   })
 
+  it('filters materials by material_type', async () => {
+    const created = await createMaterial()
+
+    const res = await request(app).get('/api/materials?material_type=artist')
+
+    expect(res.status).toBe(200)
+    expect(res.body.success).toBe(true)
+    expect(res.body.data.records).toHaveLength(1)
+    expect(res.body.data.records[0].id).toBe(created.body.data.id)
+    expect(res.body.data.records[0].material_type).toBe('artist')
+    expect(res.body.data.pagination.total).toBe(1)
+  })
+
   it('creates a material successfully', async () => {
     const res = await createMaterial()
 
