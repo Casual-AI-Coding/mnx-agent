@@ -236,6 +236,71 @@ it('switches song selection and updates the song prompt panel', async () => {
     await screen.findByText(/加载失败/i)
   })
 
+  it('shows an explicit empty selection state when no song is selected', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+    detail.items = []
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: detail,
+    })
+
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    expect(await screen.findByText('未选择歌曲')).toBeInTheDocument()
+    expect(screen.getByText('请先在歌曲库中选择或创建一首歌曲')).toBeInTheDocument()
+  })
+
+  it('loads detail only once on initial render', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: createMockMaterialDetail(),
+    })
+
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    await screen.findByText('基本信息')
+
+    expect(getMaterialDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses initial detail without refetching and updates basic info locally after save', async () => {
+    const { getMaterialDetail, updateMaterial } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+
+    vi.mocked(updateMaterial).mockResolvedValue({
+      success: true,
+      data: {
+        ...detail.material,
+        name: 'Updated Artist Name',
+        description: 'Updated description',
+      },
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    expect(getMaterialDetail).not.toHaveBeenCalled()
+
+    const nameInput = screen.getByDisplayValue('Test Artist')
+    const descriptionInput = screen.getByDisplayValue('Test description')
+
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Artist Name')
+    await user.clear(descriptionInput)
+    await user.type(descriptionInput, 'Updated description')
+
+    await user.click(screen.getAllByRole('button', { name: '保存' })[0])
+
+    expect(updateMaterial).toHaveBeenCalledWith('artist-1', {
+      name: 'Updated Artist Name',
+      description: 'Updated description',
+    })
+    expect(getMaterialDetail).not.toHaveBeenCalled()
+    expect(await screen.findByDisplayValue('Updated Artist Name')).toBeInTheDocument()
+  })
+
   it('allows editing and saving artist basic info', async () => {
     const { getMaterialDetail, updateMaterial } = await import('@/lib/api/materials')
     vi.mocked(getMaterialDetail).mockResolvedValue({

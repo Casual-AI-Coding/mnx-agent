@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Save } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -9,13 +9,28 @@ import { toastSuccess, toastError } from '@/lib/toast'
 
 interface ArtistBasicInfoPanelProps {
   material: Material
-  onMaterialChange?: () => void
+  onMaterialChange?: (material: Material) => void
 }
 
 export function ArtistBasicInfoPanel({ material, onMaterialChange }: ArtistBasicInfoPanelProps) {
   const [name, setName] = useState(material.name)
   const [description, setDescription] = useState(material.description || '')
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    setName(material.name)
+    setDescription(material.description || '')
+  }, [material.id, material.name, material.description])
+
+  const saveDisabledReason = useMemo(() => {
+    if (isSaving) return '正在保存，请稍候'
+    if (!name.trim()) return '请先填写素材名称'
+    if (name === material.name && description === (material.description || '')) {
+      return '修改内容后才可保存'
+    }
+
+    return null
+  }, [description, isSaving, material.description, material.name, name])
 
   const hasChanges = name !== material.name || description !== (material.description || '')
 
@@ -31,7 +46,7 @@ export function ArtistBasicInfoPanel({ material, onMaterialChange }: ArtistBasic
       toastSuccess('保存成功', '基本信息已更新')
       setName(result.data.name)
       setDescription(result.data.description || '')
-      onMaterialChange?.()
+      onMaterialChange?.(result.data)
     } else {
       toastError('保存失败', result.error || '请稍后重试')
     }
@@ -67,7 +82,8 @@ export function ArtistBasicInfoPanel({ material, onMaterialChange }: ArtistBasic
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={isSaving || !hasChanges || !name.trim()}
+            disabled={Boolean(saveDisabledReason) || !hasChanges || !name.trim()}
+            title={saveDisabledReason || undefined}
           >
             <Save className="w-3 h-3 mr-1" />
             {isSaving ? '保存中...' : '保存'}

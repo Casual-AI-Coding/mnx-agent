@@ -157,7 +157,7 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
         <CardContent>
           <EmptyState
             title="未选择歌曲"
-            description="请从歌曲库中选择一首歌曲"
+            description="请先在歌曲库中选择或创建一首歌曲"
           />
         </CardContent>
       </Card>

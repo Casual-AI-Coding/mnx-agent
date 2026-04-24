@@ -13,23 +13,34 @@ type ArtistItemWithPrompts = MaterialItem & { prompts: PromptRecord[] }
 
 interface ArtistWorkspaceProps {
   materialId: string
+  initialDetail?: MaterialDetailResult
 }
 
-export function ArtistWorkspace({ materialId }: ArtistWorkspaceProps) {
-  const [detail, setDetail] = useState<MaterialDetailResult | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspaceProps) {
+  const [detail, setDetail] = useState<MaterialDetailResult | null>(initialDetail ?? null)
+  const [isLoading, setIsLoading] = useState(initialDetail ? false : true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(initialDetail?.items[0]?.id ?? null)
 
   const fetchDetail = async () => {
     setIsLoading(true)
     setError(null)
     const result = await getMaterialDetail(materialId)
     if (result.success && result.data) {
-      setDetail(result.data)
-      if (result.data.items.length > 0) {
-        setSelectedSongId(result.data.items[0].id)
-      }
+      const nextDetail = result.data
+
+      setDetail(nextDetail)
+      setSelectedSongId((currentSelectedSongId) => {
+        if (nextDetail.items.length === 0) {
+          return null
+        }
+
+        const hasCurrentSelection = currentSelectedSongId
+          ? nextDetail.items.some((item) => item.id === currentSelectedSongId)
+          : false
+
+        return hasCurrentSelection ? currentSelectedSongId : nextDetail.items[0].id
+      })
     } else {
       setError(result.error || '加载失败')
     }
@@ -37,8 +48,27 @@ export function ArtistWorkspace({ materialId }: ArtistWorkspaceProps) {
   }
 
   useEffect(() => {
+    if (initialDetail) {
+      setDetail(initialDetail)
+      setSelectedSongId(initialDetail.items[0]?.id ?? null)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
     fetchDetail()
-  }, [materialId])
+  }, [initialDetail, materialId])
+
+  const updateMaterial = (material: MaterialDetailResult['material']) => {
+    setDetail((currentDetail) => {
+      if (!currentDetail) return currentDetail
+
+      return {
+        ...currentDetail,
+        material,
+      }
+    })
+  }
 
   const selectedSong = detail?.items.find((item) => item.id === selectedSongId) as ArtistItemWithPrompts | undefined
 
@@ -65,7 +95,7 @@ export function ArtistWorkspace({ materialId }: ArtistWorkspaceProps) {
       <div className="space-y-4">
         <ArtistBasicInfoPanel
           material={detail.material}
-          onMaterialChange={fetchDetail}
+          onMaterialChange={updateMaterial}
         />
         <ArtistPromptPanel
           prompts={detail.materialPrompts}
