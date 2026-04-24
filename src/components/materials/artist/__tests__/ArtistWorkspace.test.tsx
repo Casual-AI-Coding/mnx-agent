@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ArtistWorkspace } from '../ArtistWorkspace'
@@ -390,6 +390,53 @@ it('switches song selection and updates the song prompt panel', async () => {
     })
   })
 
+  it('creates artist-level prompts locally without refetching detail', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const { createPrompt } = await import('@/lib/api/prompts')
+    const detail = createMockMaterialDetail()
+
+    vi.mocked(createPrompt).mockResolvedValue({
+      success: true,
+      data: {
+        id: 'prompt-3',
+        target_type: 'material-main',
+        target_id: 'artist-1',
+        slot_type: 'artist-style',
+        name: '风格C',
+        content: '风格C内容',
+        sort_order: 2,
+        is_default: false,
+        owner_id: 'user-1',
+        is_deleted: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        deleted_at: null,
+      },
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    const promptCard = screen.getByText('音乐人风格 Prompt').closest('[class*="rounded"]')
+    expect(promptCard).not.toBeNull()
+
+    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建' }))
+    await user.type(screen.getByPlaceholderText('提示词名称'), '风格C')
+    await user.type(screen.getByPlaceholderText('提示词内容...'), '风格C内容')
+    await user.click(screen.getByRole('button', { name: '创建' }))
+
+    expect(createPrompt).toHaveBeenCalledWith({
+      target_type: 'material-main',
+      target_id: 'artist-1',
+      slot_type: 'artist-style',
+      name: '风格C',
+      content: '风格C内容',
+      is_default: false,
+    })
+    expect(getMaterialDetail).not.toHaveBeenCalled()
+    expect(await screen.findByText('风格C')).toBeInTheDocument()
+  })
+
   it('can reorder song-level prompts', async () => {
     const { getMaterialDetail } = await import('@/lib/api/materials')
     const { reorderPrompts } = await import('@/lib/api/prompts')
@@ -454,5 +501,98 @@ it('switches song selection and updates the song prompt panel', async () => {
         { id: 'song-prompt-2', sort_order: 1 },
       ],
     })
+  })
+
+  it('creates songs locally without refetching detail', async () => {
+    const { getMaterialDetail, createMaterialItem } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+
+    vi.mocked(createMaterialItem).mockResolvedValue({
+      success: true,
+      data: {
+        id: 'song-3',
+        material_id: 'artist-1',
+        item_type: 'song',
+        name: 'Golden Hour',
+        lyrics: '新歌词',
+        remark: null,
+        metadata: null,
+        owner_id: 'user-1',
+        sort_order: 2,
+        is_deleted: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        deleted_at: null,
+      },
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    const songCard = screen.getByText('歌曲库').closest('[class*="rounded"]')
+    expect(songCard).not.toBeNull()
+
+    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建' }))
+    await user.type(screen.getByPlaceholderText('歌曲名称'), 'Golden Hour')
+    await user.type(screen.getByPlaceholderText('歌词内容...'), '新歌词')
+    await user.click(screen.getByRole('button', { name: '创建' }))
+
+    expect(createMaterialItem).toHaveBeenCalledWith('artist-1', {
+      material_id: 'artist-1',
+      item_type: 'song',
+      name: 'Golden Hour',
+      lyrics: '新歌词',
+    })
+    expect(getMaterialDetail).not.toHaveBeenCalled()
+    expect(await screen.findByText('Golden Hour')).toBeInTheDocument()
+  })
+
+  it('creates song-level prompts locally without refetching detail', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const { createPrompt } = await import('@/lib/api/prompts')
+    const detail = createMockMaterialDetail()
+
+    vi.mocked(createPrompt).mockResolvedValue({
+      success: true,
+      data: {
+        id: 'song-prompt-3',
+        target_type: 'material-item',
+        target_id: 'song-2',
+        slot_type: 'song-style',
+        name: '歌曲风格C',
+        content: '歌曲风格C内容',
+        sort_order: 1,
+        is_default: false,
+        owner_id: 'user-1',
+        is_deleted: false,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        deleted_at: null,
+      },
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
+
+    await user.click(screen.getByRole('button', { name: 'Red Sunset' }))
+
+    const songPromptCard = screen.getByText('歌曲风格 Prompt').closest('[class*="rounded"]')
+    expect(songPromptCard).not.toBeNull()
+
+    await user.click(within(songPromptCard as HTMLElement).getByRole('button', { name: '新建' }))
+    await user.type(screen.getByPlaceholderText('提示词名称'), '歌曲风格C')
+    await user.type(screen.getByPlaceholderText('提示词内容...'), '歌曲风格C内容')
+    await user.click(screen.getByRole('button', { name: '创建' }))
+
+    expect(createPrompt).toHaveBeenCalledWith({
+      target_type: 'material-item',
+      target_id: 'song-2',
+      slot_type: 'song-style',
+      name: '歌曲风格C',
+      content: '歌曲风格C内容',
+      is_default: false,
+    })
+    expect(getMaterialDetail).not.toHaveBeenCalled()
+    expect(await screen.findByText('歌曲风格C')).toBeInTheDocument()
   })
 })
