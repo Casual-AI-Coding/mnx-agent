@@ -59,6 +59,7 @@ describe('useMaterialsStore', () => {
       await result.current.fetchMaterials()
 
       expect(listMaterials).toHaveBeenCalled()
+      expect(listMaterials).toHaveBeenCalledWith({ material_type: 'artist' })
       expect(result.current.materials).toHaveLength(1)
       expect(result.current.materials[0].id).toBe('material-1')
       expect(result.current.isLoading).toBe(false)

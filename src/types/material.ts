@@ -54,7 +54,7 @@ export interface ApiResponse<T> {
 // 列表查询参数
 export interface ListMaterialsParams {
   ownerId?: string
-  materialType?: MaterialType
+  material_type?: MaterialType
   limit?: number
   offset?: number
 }

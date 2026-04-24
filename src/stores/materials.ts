@@ -26,7 +26,7 @@ export const useMaterialsStore = create<MaterialsState>((set) => ({
   fetchMaterials: async () => {
     set({ isLoading: true, error: null })
     const result: ApiResponse<{ records: Material[] }> = await listMaterials({
-      materialType: 'artist',
+      material_type: 'artist',
     })
     if (result.success && result.data) {
       set({ materials: result.data.records || [], isLoading: false })
