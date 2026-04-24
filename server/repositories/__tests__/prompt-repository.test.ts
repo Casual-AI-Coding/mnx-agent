@@ -182,4 +182,64 @@ describe('PromptRepository', () => {
     expect(ownPrompts).toHaveLength(1)
     expect(ownPrompts[0]?.name).toBe('我的提示词')
   })
+
+  it('throws on reorder when any prompt id does not belong to the target/slot scope', async () => {
+    const promptB = await repository.create({
+      targetType: 'material-main',
+      targetId: materialId,
+      slotType: 'artist-style',
+      name: 'Prompt B',
+      content: 'content b',
+      isDefault: false,
+      ownerId,
+      sortOrder: 1,
+    })
+
+    const bogusId = uuidv4()
+
+    await expect(
+      repository.reorder(
+        { targetType: 'material-main', targetId: materialId, slotType: 'artist-style', ownerId },
+        [
+          { id: promptB.id, sort_order: 0 },
+          { id: bogusId, sort_order: 1 },
+        ]
+      )
+    ).rejects.toThrow('not all items matched')
+  })
+
+  it('throws on reorder when any prompt id belongs to a different target/slot', async () => {
+    const promptA = await repository.create({
+      targetType: 'material-main',
+      targetId: materialId,
+      slotType: 'artist-style',
+      name: 'Prompt A',
+      content: 'content a',
+      isDefault: false,
+      ownerId,
+      sortOrder: 0,
+    })
+
+    const otherMaterialId = uuidv4()
+    const promptFromOther = await repository.create({
+      targetType: 'material-main',
+      targetId: otherMaterialId,
+      slotType: 'artist-style',
+      name: 'Prompt Other',
+      content: 'content other',
+      isDefault: false,
+      ownerId,
+      sortOrder: 0,
+    })
+
+    await expect(
+      repository.reorder(
+        { targetType: 'material-main', targetId: materialId, slotType: 'artist-style', ownerId },
+        [
+          { id: promptA.id, sort_order: 0 },
+          { id: promptFromOther.id, sort_order: 1 },
+        ]
+      )
+    ).rejects.toThrow('not all items matched')
+  })
 })

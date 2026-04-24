@@ -394,6 +394,18 @@ export class PromptRepository extends BaseRepository<PromptRecord> {
       return
     }
 
+    const ids = items.map((item) => item.id)
+    const matchResult = await this.conn.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM prompts
+       WHERE id = ANY($1) AND target_type = $2 AND target_id = $3 AND slot_type = $4
+         AND owner_id = $5 AND is_deleted = false`,
+      [ids, filter.targetType, filter.targetId, filter.slotType, filter.ownerId]
+    )
+    const matchedCount = Number(matchResult[0].count)
+    if (matchedCount !== items.length) {
+      throw new Error('not all items matched')
+    }
+
     await this.conn.transaction(async (txConn) => {
       for (const item of items) {
         await txConn.execute(
