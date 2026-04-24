@@ -203,9 +203,12 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
           <EmptyState
             icon={Music2}
             title="暂无提示词"
-            description="创建第一个歌曲风格提示词"
+            description="创建第一个歌曲风格提示词来定义歌曲的独特风格"
             action={
-              <Button onClick={() => setIsCreating(true)} className="gap-1.5">
+              <Button
+                onClick={() => setIsCreating(true)}
+                className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all duration-200"
+              >
                 <Plus className="w-4 h-4" />
                 新建提示词
               </Button>
@@ -224,7 +227,11 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
             <Music2 className="w-4 h-4 text-primary/70" />
             歌曲风格 Prompt
           </CardTitle>
-          <Button size="sm" onClick={() => setIsCreating(true)} className="gap-1.5 shadow-sm">
+          <Button
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            className="gap-1.5 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200"
+          >
             <Plus className="w-3.5 h-3.5" />
             新建提示词
           </Button>
@@ -232,9 +239,13 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsList className="flex flex-wrap h-auto gap-1 p-1 bg-accent/30 rounded-xl">
             {prompts.map((prompt) => (
-              <TabsTrigger key={prompt.id} value={prompt.id} className="text-xs gap-1.5">
+              <TabsTrigger
+                key={prompt.id}
+                value={prompt.id}
+                className="text-xs gap-1.5 transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
                 {prompt.is_default && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />}
                 {prompt.name}
               </TabsTrigger>
@@ -244,129 +255,130 @@ export function SongPromptPanel({ prompts, songId, onPromptsChange }: SongPrompt
               <TabsContent key={prompt.id} value={prompt.id} className="space-y-4 mt-4">
                 <div className="flex items-center gap-2 bg-accent/50 rounded-lg p-2">
                   <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleMovePrompt(index, 'up')}
-                    disabled={index === 0 || isSaving}
-                    title="向上移动"
-                    aria-label={`向上移动 ${prompt.name}`}
-                    className="h-7 w-7 p-0"
-                  >
-                    <ArrowUp className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleMovePrompt(index, 'down')}
-                    disabled={index === prompts.length - 1 || isSaving}
-                    title="向下移动"
-                    aria-label={`向下移动 ${prompt.name}`}
-                    className="h-7 w-7 p-0"
-                  >
-                    <ArrowDown className="w-3 h-3" />
-                  </Button>
-                  <span className="text-xs text-muted-foreground ml-2 font-medium">
-                    {index + 1} / {prompts.length}
-                  </span>
-                  {prompt.is_default && (
-                    <span className="ml-auto text-xs bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded-full font-medium">
-                      默认
-                    </span>
-                  )}
+                     size="sm"
+                     variant="ghost"
+                     onClick={() => handleMovePrompt(index, 'up')}
+                     disabled={index === 0 || isSaving}
+                     title="向上移动"
+                     aria-label={`向上移动 ${prompt.name}`}
+                     className="h-7 w-7 p-0 transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                   >
+                     <ArrowUp className="w-3 h-3" />
+                   </Button>
+                   <Button
+                     size="sm"
+                     variant="ghost"
+                     onClick={() => handleMovePrompt(index, 'down')}
+                     disabled={index === prompts.length - 1 || isSaving}
+                     title="向下移动"
+                     aria-label={`向下移动 ${prompt.name}`}
+                     className="h-7 w-7 p-0 transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                   >
+                     <ArrowDown className="w-3 h-3" />
+                   </Button>
+                   <span className="text-xs text-muted-foreground ml-2 font-medium">
+                     {index + 1} / {prompts.length}
+                   </span>
+                   {prompt.is_default && (
+                     <span className="ml-auto text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                       <Star className="w-3 h-3 fill-green-500 text-green-500" />
+                       默认
+                     </span>
+                   )}
                 </div>
                 <Textarea
-                  value={editingContent}
-                  onChange={(e) => setEditingContent(e.target.value)}
-                  placeholder="输入提示词内容..."
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleUpdateContent}
-                    disabled={isSaving || editingContent === prompt.content}
-                    className="shadow-sm"
-                  >
-                    保存
-                  </Button>
-                  {!prompt.is_default && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSetDefault(prompt.id)}
-                      className="gap-1"
-                    >
-                      <Star className="w-3 h-3" />
-                      设为默认
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
-                    onClick={() => setDeleteConfirm(prompt)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
+                   value={editingContent}
+                   onChange={(e) => setEditingContent(e.target.value)}
+                   placeholder="输入提示词内容..."
+                   rows={6}
+                   className="font-mono text-sm transition-all duration-200 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30"
+                 />
+                 <div className="flex gap-2">
+                   <Button
+                     size="sm"
+                     onClick={handleUpdateContent}
+                     disabled={isSaving || editingContent === prompt.content}
+                     className="shadow-sm transition-all duration-200 hover:shadow-md bg-primary hover:bg-primary/90"
+                   >
+                     保存
+                   </Button>
+                   {!prompt.is_default && (
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={() => handleSetDefault(prompt.id)}
+                       className="gap-1 transition-all duration-200 hover:border-green-500/50 hover:text-green-600"
+                     >
+                       <Star className="w-3 h-3" />
+                       设为默认
+                     </Button>
+                   )}
+                   <Button
+                     size="sm"
+                     variant="ghost"
+                     className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto transition-all duration-200"
+                     onClick={() => setDeleteConfirm(prompt)}
+                   >
+                     <Trash2 className="w-3 h-3" />
+                   </Button>
+                 </div>
               </TabsContent>
             ))}
         </Tabs>
       </CardContent>
-      <Dialog
-        open={isCreating}
-        onClose={() => setIsCreating(false)}
-        title="新建提示词"
-        description="创建一个新的歌曲风格提示词候选"
-      >
-        <div className="space-y-4 py-2">
-          <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">名称</label>
-            <Input
-              placeholder="例如：摇滚风格"
-              value={newPromptName}
-              onChange={(e) => setNewPromptName(e.target.value)}
-              className="h-10"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">内容</label>
-            <Textarea
-              placeholder="输入提示词内容..."
-              value={newPromptContent}
-              onChange={(e) => setNewPromptContent(e.target.value)}
-              rows={4}
-              className="font-mono text-sm"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5">
-            取消
-          </Button>
-          <Button onClick={handleCreatePrompt} disabled={isSaving} className="px-5 gap-1.5">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            创建提示词
-          </Button>
-        </div>
-      </Dialog>
-      <Dialog
-        open={deleteConfirm !== null}
-        onClose={() => setDeleteConfirm(null)}
-        title="确认删除"
-        description={`确定要删除提示词 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
-      >
-        <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5">
-            取消
-          </Button>
-          <Button variant="destructive" onClick={handleDeletePrompt} className="px-5 gap-1.5">
-            <Trash2 className="w-4 h-4" />
-            删除
-          </Button>
-        </div>
-      </Dialog>
+       <Dialog
+         open={isCreating}
+         onClose={() => setIsCreating(false)}
+         title="新建提示词"
+         description="创建一个新的歌曲风格提示词候选"
+       >
+         <div className="space-y-4 py-2">
+           <div>
+             <label className="text-sm font-medium mb-2 block text-foreground">名称</label>
+             <Input
+               placeholder="例如：摇滚风格"
+               value={newPromptName}
+               onChange={(e) => setNewPromptName(e.target.value)}
+               className="h-10 transition-all duration-200 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30"
+             />
+           </div>
+           <div>
+             <label className="text-sm font-medium mb-2 block text-foreground">内容</label>
+             <Textarea
+               placeholder="输入提示词内容..."
+               value={newPromptContent}
+               onChange={(e) => setNewPromptContent(e.target.value)}
+               rows={4}
+               className="font-mono text-sm transition-all duration-200 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30"
+             />
+           </div>
+         </div>
+         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
+           <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5 transition-all duration-200 hover:bg-accent/50">
+             取消
+           </Button>
+           <Button onClick={handleCreatePrompt} disabled={isSaving} className="px-5 gap-1.5 transition-all duration-200 bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md">
+             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+             创建提示词
+           </Button>
+         </div>
+       </Dialog>
+       <Dialog
+         open={deleteConfirm !== null}
+         onClose={() => setDeleteConfirm(null)}
+         title="确认删除"
+         description={`确定要删除提示词 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
+       >
+         <div className="flex justify-end gap-3 mt-4">
+           <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5 transition-all duration-200 hover:bg-accent/50">
+             取消
+           </Button>
+           <Button variant="destructive" onClick={handleDeletePrompt} className="px-5 gap-1.5 transition-all duration-200 hover:shadow-md">
+             <Trash2 className="w-4 h-4" />
+             删除
+           </Button>
+         </div>
+       </Dialog>
     </Card>
   )
 }

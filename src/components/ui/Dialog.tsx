@@ -9,7 +9,7 @@ const dialogOverlayVariants = cva(
 )
 
 const dialogContentVariants = cva(
-  'fixed left-[50%] top-[50%] z-[81] grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/50 bg-background shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl',
+  'fixed left-[50%] top-[50%] z-[81] grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-2xl overflow-hidden',
   {
     variants: {
       size: {
@@ -72,26 +72,43 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
           {...props}
         >
           {title && (
-            <div className="flex flex-col space-y-1.5 pr-8">
-              <h2 className={cn(
-                "font-semibold leading-none tracking-tight text-foreground",
-                size === 'sm' ? "text-base" : "text-xl"
-              )}>{title}</h2>
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
-              )}
+            <div className={cn(
+              "relative flex flex-col space-y-1.5",
+              size === 'sm' ? "px-4 pt-4 pb-2" : "-mx-6 px-6 pt-6 pb-3 border-b border-border/30"
+            )}>
+              <div className="pr-8">
+                <h2 className={cn(
+                  "font-bold leading-none tracking-tight text-foreground",
+                  size === 'sm' ? "text-base" : "text-xl"
+                )}>{title}</h2>
+                {description && (
+                  <p className="text-sm text-muted-foreground mt-1">{description}</p>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className={cn(
+                  "absolute rounded-lg p-1.5 opacity-60 ring-offset-background transition-all duration-200 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none",
+                  size === 'sm' ? "right-2 top-2" : "right-5 top-5"
+                )}
+              >
+                <X className={cn("text-muted-foreground", size === 'sm' ? "h-3 w-3" : "h-4 w-4")} />
+                <span className="sr-only">关闭</span>
+              </button>
             </div>
           )}
-          <button
-            onClick={onClose}
-            className={cn(
-              "absolute rounded-full p-1.5 opacity-60 ring-offset-background transition-all duration-150 hover:opacity-100 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none",
-              size === 'sm' ? "right-2 top-2" : "right-4 top-4"
-            )}
-          >
-            <X className={cn("text-muted-foreground", size === 'sm' ? "h-3 w-3" : "h-4 w-4")} />
-            <span className="sr-only">关闭</span>
-          </button>
+          {!title && (
+            <button
+              onClick={onClose}
+              className={cn(
+                "absolute rounded-lg p-1.5 opacity-60 ring-offset-background transition-all duration-200 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none",
+                size === 'sm' ? "right-2 top-2" : "right-5 top-5"
+              )}
+            >
+              <X className={cn("text-muted-foreground", size === 'sm' ? "h-3 w-3" : "h-4 w-4")} />
+              <span className="sr-only">关闭</span>
+            </button>
+          )}
           {children}
         </div>
       </div>,

@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const cardVariants = cva(
-  'rounded-xl border-border border bg-card text-card-foreground shadow-sm'
+  'rounded-xl border-border/50 border bg-card text-card-foreground shadow-md transition-all duration-200 hover:shadow-lg hover:border-border'
 )
 
 export interface CardProps

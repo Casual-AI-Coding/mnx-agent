@@ -191,7 +191,11 @@ export function SongLibraryPanel({
               ({songs.length})
             </span>
           </CardTitle>
-          <Button size="sm" onClick={() => setIsCreating(true)} className="gap-1.5 shadow-sm">
+          <Button
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            className="gap-1.5 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200"
+          >
             <Plus className="w-3.5 h-3.5" />
             新建歌曲
           </Button>
@@ -202,10 +206,10 @@ export function SongLibraryPanel({
           {songs.map((song) => (
             <div
               key={song.id}
-              className={`group flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-150 ${
+              className={`group flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
                 selectedSongId === song.id
-                  ? 'border-primary bg-primary/5 shadow-sm'
-                  : 'border-border/60 bg-card hover:bg-accent/50 hover:border-border'
+                  ? 'border-primary/70 bg-primary/10 shadow-md'
+                  : 'border-border/60 bg-card hover:bg-accent/80 hover:border-border/80'
               }`}
             >
               <GripVertical className="w-4 h-4 text-muted-foreground/50 cursor-grab" />
@@ -268,32 +272,32 @@ export function SongLibraryPanel({
         <div className="space-y-4 py-2">
           <div>
             <label className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
-            <Input
-              placeholder="例如：夜空中最亮的星"
-              value={newSongName}
-              onChange={(e) => setNewSongName(e.target.value)}
-              className="h-10"
-            />
+              <Input
+               placeholder="例如：夜空中最亮的星"
+               value={newSongName}
+               onChange={(e) => setNewSongName(e.target.value)}
+               className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
-            <Textarea
-              placeholder="粘贴歌词内容..."
-              value={newSongLyrics}
-              onChange={(e) => setNewSongLyrics(e.target.value)}
-              rows={4}
-              className="font-mono text-sm"
-            />
+              <Textarea
+               placeholder="粘贴歌词内容..."
+               value={newSongLyrics}
+               onChange={(e) => setNewSongLyrics(e.target.value)}
+               rows={4}
+               className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+             />
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5">
-            取消
-          </Button>
-          <Button onClick={handleCreateSong} disabled={isSaving} className="px-5 gap-1.5">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            创建歌曲
-          </Button>
+          <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5 transition-all duration-200">
+             取消
+           </Button>
+           <Button onClick={handleCreateSong} disabled={isSaving} className="px-5 gap-1.5 bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200">
+             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+             创建歌曲
+           </Button>
         </div>
       </Dialog>
       <Dialog
@@ -307,31 +311,31 @@ export function SongLibraryPanel({
             <div>
               <label className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
               <Input
-                value={editingSong.name}
-                onChange={(e) =>
-                  setEditingSong({ ...editingSong, name: e.target.value })
-                }
-                className="h-10"
-              />
+                 value={editingSong.name}
+                 onChange={(e) =>
+                   setEditingSong({ ...editingSong, name: e.target.value })
+                 }
+                 className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+               />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
               <Textarea
-                value={editingSong.lyrics || ''}
-                onChange={(e) =>
-                  setEditingSong({ ...editingSong, lyrics: e.target.value })
-                }
-                rows={4}
-                className="font-mono text-sm"
-              />
+                 value={editingSong.lyrics || ''}
+                 onChange={(e) =>
+                   setEditingSong({ ...editingSong, lyrics: e.target.value })
+                 }
+                 rows={4}
+                 className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+               />
             </div>
           </div>
         )}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => setEditingSong(null)} className="px-5">
+          <Button variant="outline" onClick={() => setEditingSong(null)} className="px-5 transition-all duration-200">
             取消
           </Button>
-          <Button onClick={handleUpdateSong} disabled={isSaving} className="px-5 gap-1.5">
+          <Button onClick={handleUpdateSong} disabled={isSaving} className="px-5 gap-1.5 bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             保存
           </Button>
@@ -344,10 +348,10 @@ export function SongLibraryPanel({
         description={`确定要删除歌曲 "${deleteConfirm?.name}" 吗？关联的提示词也会被删除。此操作无法撤销。`}
       >
         <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5">
+          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5 transition-all duration-200">
             取消
           </Button>
-          <Button variant="destructive" onClick={handleDeleteSong} className="px-5 gap-1.5">
+          <Button variant="destructive" onClick={handleDeleteSong} className="px-5 gap-1.5 transition-all duration-200">
             <Trash2 className="w-4 h-4" />
             删除
           </Button>
