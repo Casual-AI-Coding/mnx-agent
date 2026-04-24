@@ -181,6 +181,18 @@ describe('ArtistWorkspace', () => {
     expect(screen.getByText('风格B')).toBeInTheDocument()
   })
 
+  it('shows the default artist prompt content on initial render', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: createMockMaterialDetail(),
+    })
+
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    expect(await screen.findByDisplayValue('风格A内容')).toBeInTheDocument()
+  })
+
   it('renders song library with songs', async () => {
     const { getMaterialDetail } = await import('@/lib/api/materials')
     vi.mocked(getMaterialDetail).mockResolvedValue({
@@ -190,8 +202,12 @@ describe('ArtistWorkspace', () => {
 
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    expect(await screen.findByText('Blue Night')).toBeInTheDocument()
-    expect(screen.getByText('Red Sunset')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /^Blue Night当前正在编辑这首歌的风格工作区$/ })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^Red Sunset点击切换到这首歌的风格候选与歌词上下文$/ })
+    ).toBeInTheDocument()
   })
 
 it('switches song selection and updates the song prompt panel', async () => {
@@ -204,7 +220,9 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    const redSunsetButton = await screen.findByRole('button', { name: 'Red Sunset' })
+    const redSunsetButton = await screen.findByRole('button', {
+      name: /^Red Sunset点击切换到这首歌的风格候选与歌词上下文$/,
+    })
     await user.click(redSunsetButton)
 
     expect(await screen.findByText('歌曲风格B')).toBeInTheDocument()
@@ -350,7 +368,9 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    await screen.findByText('Blue Night')
+    await screen.findByRole('button', {
+      name: /^Blue Night当前正在编辑这首歌的风格工作区$/,
+    })
     const moveDownButton = screen.getByRole('button', { name: '向下移动 Blue Night' })
     await user.click(moveDownButton)
 
@@ -399,12 +419,34 @@ it('switches song selection and updates the song prompt panel', async () => {
     const promptCard = screen.getByText('音乐人风格 Prompt').closest('[class*="rounded"]')
     expect(promptCard).not.toBeNull()
 
-    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: /新建提示词/ }))
 
     const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
     const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
     expect(dialog).not.toBeNull()
     expect(within(dialog as HTMLElement).getByPlaceholderText('例如：流行风格')).toBeInTheDocument()
+  })
+
+  it('opens the create artist prompt dialog from the empty artist prompt state', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+    detail.materialPrompts = []
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: detail,
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    const artistPromptPanelTitle = await screen.findByText('音乐人风格 Prompt')
+    const artistPromptPanel = artistPromptPanelTitle.closest('[class*="rounded"]')
+    expect(artistPromptPanel).not.toBeNull()
+
+    await user.click(within(artistPromptPanel as HTMLElement).getByRole('button', { name: /新建提示词/ }))
+
+    expect(screen.getByRole('heading', { name: '新建提示词' })).toBeInTheDocument()
+    expect(screen.getByText('创建一个新的音乐人风格提示词候选')).toBeInTheDocument()
   })
 
   it('creates artist-level prompts locally without refetching detail', async () => {
@@ -437,7 +479,7 @@ it('switches song selection and updates the song prompt panel', async () => {
     const promptCard = screen.getByText('音乐人风格 Prompt').closest('[class*="rounded"]')
     expect(promptCard).not.toBeNull()
 
-    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+    await user.click(within(promptCard as HTMLElement).getByRole('button', { name: /新建提示词/ }))
     const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
     const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
     expect(dialog).not.toBeNull()
@@ -507,8 +549,8 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" />)
 
-    await screen.findByRole('button', { name: 'Red Sunset' })
-    await user.click(screen.getByRole('button', { name: 'Red Sunset' }))
+    await screen.findByRole('button', { name: /^Red Sunset点击切换到这首歌的风格候选与歌词上下文$/ })
+    await user.click(screen.getByRole('button', { name: /^Red Sunset点击切换到这首歌的风格候选与歌词上下文$/ }))
 
     await screen.findByText('歌曲风格B')
     const moveDownButton = screen.getByRole('button', { name: '向下移动 歌曲风格B' })
@@ -554,7 +596,7 @@ it('switches song selection and updates the song prompt panel', async () => {
     const songCard = screen.getByText('歌曲库').closest('[class*="rounded"]')
     expect(songCard).not.toBeNull()
 
-    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建歌曲' }))
+    await user.click(within(songCard as HTMLElement).getByRole('button', { name: /新建歌曲/ }))
     const dialogTitle = await screen.findByRole('heading', { name: '新建歌曲' })
     const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
     expect(dialog).not.toBeNull()
@@ -570,7 +612,8 @@ it('switches song selection and updates the song prompt panel', async () => {
       lyrics: '新歌词',
     })
     expect(getMaterialDetail).not.toHaveBeenCalled()
-    expect(await screen.findByText('Golden Hour')).toBeInTheDocument()
+    expect(await screen.findByText('当前选中歌曲：')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Golden Hour当前正在编辑这首歌的风格工作区$/ })).toBeInTheDocument()
   })
 
   it('opens the create song dialog when clicking the new song button', async () => {
@@ -582,12 +625,30 @@ it('switches song selection and updates the song prompt panel', async () => {
     const songCard = screen.getByText('歌曲库').closest('[class*="rounded"]')
     expect(songCard).not.toBeNull()
 
-    await user.click(within(songCard as HTMLElement).getByRole('button', { name: '新建歌曲' }))
+    await user.click(within(songCard as HTMLElement).getByRole('button', { name: /新建歌曲/ }))
 
     const dialogTitle = await screen.findByRole('heading', { name: '新建歌曲' })
     const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
     expect(dialog).not.toBeNull()
     expect(within(dialog as HTMLElement).getByPlaceholderText('例如：夜空中最亮的星')).toBeInTheDocument()
+  })
+
+  it('opens the create song dialog from the empty song state', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+    detail.items = []
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: detail,
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    await user.click(await screen.findByRole('button', { name: /新建歌曲/ }))
+
+    expect(screen.getByRole('heading', { name: '新建歌曲' })).toBeInTheDocument()
+    expect(screen.getByText('创建一首新歌曲，可以添加歌词和风格提示词')).toBeInTheDocument()
   })
 
   it('creates song-level prompts locally without refetching detail', async () => {
@@ -617,12 +678,12 @@ it('switches song selection and updates the song prompt panel', async () => {
     const user = userEvent.setup()
     render(<ArtistWorkspace materialId="artist-1" initialDetail={detail} />)
 
-    await user.click(screen.getByRole('button', { name: 'Red Sunset' }))
+    await user.click(screen.getByRole('button', { name: /^Red Sunset点击切换到这首歌的风格候选与歌词上下文$/ }))
 
     const songPromptCard = screen.getByText('歌曲风格 Prompt').closest('[class*="rounded"]')
     expect(songPromptCard).not.toBeNull()
 
-    await user.click(within(songPromptCard as HTMLElement).getByRole('button', { name: '新建提示词' }))
+    await user.click(within(songPromptCard as HTMLElement).getByRole('button', { name: /新建提示词/ }))
     const dialogTitle = await screen.findByRole('heading', { name: '新建提示词' })
     const dialog = dialogTitle.closest('div[class*="fixed"]')?.parentElement
     expect(dialog).not.toBeNull()
@@ -642,5 +703,32 @@ it('switches song selection and updates the song prompt panel', async () => {
     })
     expect(getMaterialDetail).not.toHaveBeenCalled()
     expect(await screen.findByText('歌曲风格C')).toBeInTheDocument()
+  })
+
+  it('opens the create song-style prompt dialog from the empty song prompt state', async () => {
+    const { getMaterialDetail } = await import('@/lib/api/materials')
+    const detail = createMockMaterialDetail()
+    detail.items = [
+      {
+        ...detail.items[0],
+        prompts: [],
+      },
+    ]
+    vi.mocked(getMaterialDetail).mockResolvedValue({
+      success: true,
+      data: detail,
+    })
+
+    const user = userEvent.setup()
+    render(<ArtistWorkspace materialId="artist-1" />)
+
+    const songPromptPanelTitle = await screen.findByText('歌曲风格 Prompt')
+    const songPromptPanel = songPromptPanelTitle.closest('[class*="rounded"]')
+    expect(songPromptPanel).not.toBeNull()
+
+    await user.click(within(songPromptPanel as HTMLElement).getByRole('button', { name: /新建提示词/ }))
+
+    expect(screen.getByRole('heading', { name: '新建提示词' })).toBeInTheDocument()
+    expect(screen.getByText('创建一个新的歌曲风格提示词候选')).toBeInTheDocument()
   })
 })

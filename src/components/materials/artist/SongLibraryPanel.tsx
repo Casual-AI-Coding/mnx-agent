@@ -154,152 +154,198 @@ export function SongLibraryPanel({
     }
   }
 
+  const createSongDialog = (
+    <Dialog
+      open={isCreating}
+      onClose={() => setIsCreating(false)}
+      title="新建歌曲"
+      description="创建一首新歌曲，可以添加歌词和风格提示词"
+    >
+      <div className="space-y-4 py-2">
+        <div>
+          <label htmlFor="create-song-name" className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
+          <Input
+            id="create-song-name"
+            placeholder="例如：夜空中最亮的星"
+            value={newSongName}
+            onChange={(e) => setNewSongName(e.target.value)}
+            className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+          />
+        </div>
+        <div>
+          <label htmlFor="create-song-lyrics" className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
+          <Textarea
+            id="create-song-lyrics"
+            placeholder="粘贴歌词内容..."
+            value={newSongLyrics}
+            onChange={(e) => setNewSongLyrics(e.target.value)}
+            rows={4}
+            className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
+        <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5 transition-all duration-200">
+          取消
+        </Button>
+        <Button onClick={handleCreateSong} disabled={isSaving} className="px-5 gap-1.5 bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200">
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          创建歌曲
+        </Button>
+      </div>
+    </Dialog>
+  )
+
   if (songs.length === 0) {
     return (
-      <Card className="h-full border-dashed">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Music className="w-4 h-4 text-primary/70" />
-            歌曲库
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={Music}
-            title="暂无歌曲"
-            description="创建第一首歌曲开始创作"
-            action={
-              <Button onClick={() => setIsCreating(true)} className="gap-1.5">
-                <Plus className="w-4 h-4" />
-                新建歌曲
-              </Button>
-            }
-          />
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-full overflow-hidden border border-dashed border-cyan-500/30 bg-gradient-to-br from-card via-card to-cyan-500/10 shadow-xl shadow-black/10">
+          <CardHeader className="border-b border-border/40 pb-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-cyan-200/90">
+                <Music className="h-3.5 w-3.5" />
+                Song Catalog
+              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Music className="w-4 h-4 text-cyan-300" />
+                歌曲库
+              </CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">
+                这里是人物素材下的歌曲编目区。先落下一首歌，后面的歌词和风格工作区才会真正开始运转。
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="rounded-[24px] border border-dashed border-cyan-500/20 bg-background/50 p-3">
+              <EmptyState
+                icon={Music}
+                title="暂无歌曲"
+                description="从第一首歌开始建立编目区，后续歌词、风格候选和排序都会围绕它继续展开。"
+                action={
+                  <Button
+                    onClick={() => setIsCreating(true)}
+                    className="gap-1.5 rounded-xl px-5 shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-500/25"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新建歌曲
+                  </Button>
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+        {createSongDialog}
+      </>
     )
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Music className="w-4 h-4 text-primary/70" />
-            歌曲库
-            <span className="text-xs font-normal text-muted-foreground ml-1">
-              ({songs.length})
-            </span>
-          </CardTitle>
-          <Button
-            size="sm"
-            onClick={() => setIsCreating(true)}
-            className="gap-1.5 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            新建歌曲
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4">
-        <div className="space-y-2">
-          {songs.map((song) => (
-            <div
-              key={song.id}
-              className={`group flex items-center gap-3 p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
-                selectedSongId === song.id
-                  ? 'border-primary/70 bg-primary/10 shadow-md'
-                  : 'border-border/60 bg-card hover:bg-accent/80 hover:border-border/80'
-              }`}
-            >
-              <GripVertical className="w-4 h-4 text-muted-foreground/50 cursor-grab" />
-              <button
-                onClick={() => onSelectSong(song.id)}
-                className="flex-1 text-left font-medium truncate"
-              >
-                {song.name}
-              </button>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                  onClick={() => handleMoveSong(songs.indexOf(song), 'up')}
-                  disabled={songs.indexOf(song) === 0 || isSaving}
-                  title="向上移动"
-                  aria-label={`向上移动 ${song.name}`}
-                >
-                  <ArrowUp className="w-3 h-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                  onClick={() => handleMoveSong(songs.indexOf(song), 'down')}
-                  disabled={songs.indexOf(song) === songs.length - 1 || isSaving}
-                  title="向下移动"
-                  aria-label={`向下移动 ${song.name}`}
-                >
-                  <ArrowDown className="w-3 h-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                  onClick={() => setEditingSong(song)}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setDeleteConfirm(song)}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
+    <>
+      <Card className="h-full overflow-hidden border-cyan-500/15 bg-gradient-to-br from-card via-card to-cyan-500/5 shadow-xl shadow-black/10">
+        <CardHeader className="border-b border-border/50 pb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-cyan-200/90">
+                <Music className="h-3.5 w-3.5" />
+                Song Catalog
               </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Music className="w-4 h-4 text-cyan-300" />
+                歌曲库
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  ({songs.length})
+                </span>
+              </CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">
+                让歌曲以可浏览、可重排、可继续编辑的方式排成一列，像真正的创作目录，而不是一组普通列表项。
+              </p>
             </div>
-          ))}
-        </div>
-      </CardContent>
-      <Dialog
-        open={isCreating}
-        onClose={() => setIsCreating(false)}
-        title="新建歌曲"
-        description="创建一首新歌曲，可以添加歌词和风格提示词"
-      >
-        <div className="space-y-4 py-2">
-          <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
-              <Input
-               placeholder="例如：夜空中最亮的星"
-               value={newSongName}
-               onChange={(e) => setNewSongName(e.target.value)}
-               className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
-             />
+
+            <Button
+              size="sm"
+              onClick={() => setIsCreating(true)}
+              className="gap-1.5 rounded-xl px-4 shadow-lg shadow-cyan-500/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-500/20"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              歌曲库
+              新建歌曲
+            </Button>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
-              <Textarea
-               placeholder="粘贴歌词内容..."
-               value={newSongLyrics}
-               onChange={(e) => setNewSongLyrics(e.target.value)}
-               rows={4}
-               className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
-             />
+        </CardHeader>
+
+        <CardContent className="pt-5">
+          <div className="space-y-3">
+            {songs.map((song) => (
+              <div
+                key={song.id}
+                className={`group flex cursor-pointer items-center gap-3 rounded-[22px] border p-4 transition-all duration-300 ${
+                  selectedSongId === song.id
+                    ? 'border-cyan-400/40 bg-cyan-500/10 shadow-lg shadow-cyan-500/10'
+                    : 'border-border/60 bg-background/60 hover:-translate-y-0.5 hover:border-cyan-400/20 hover:bg-background/80 hover:shadow-lg hover:shadow-black/10'
+                }`}
+              >
+                <div className="rounded-xl border border-border/40 bg-background/60 p-2 text-muted-foreground/60 shadow-sm">
+                  <GripVertical className="h-4 w-4 cursor-grab" />
+                </div>
+                <button
+                  onClick={() => onSelectSong(song.id)}
+                  className="flex-1 text-left"
+                >
+                  <span className="block truncate text-sm font-semibold tracking-[0.01em] text-foreground">
+                    {song.name}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    {selectedSongId === song.id ? '当前正在编辑这首歌的风格工作区' : '点击切换到这首歌的风格候选与歌词上下文'}
+                  </span>
+                </button>
+                <div className="flex items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-300"
+                    onClick={() => handleMoveSong(songs.indexOf(song), 'up')}
+                    disabled={songs.indexOf(song) === 0 || isSaving}
+                    title="向上移动"
+                    aria-label={`向上移动 ${song.name}`}
+                  >
+                    <ArrowUp className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-300"
+                    onClick={() => handleMoveSong(songs.indexOf(song), 'down')}
+                    disabled={songs.indexOf(song) === songs.length - 1 || isSaving}
+                    title="向下移动"
+                    aria-label={`向下移动 ${song.name}`}
+                  >
+                    <ArrowDown className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-300"
+                    onClick={() => setEditingSong(song)}
+                    aria-label={`编辑 ${song.name}`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-xl hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteConfirm(song)}
+                    aria-label={`删除 ${song.name}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5 transition-all duration-200">
-             取消
-           </Button>
-           <Button onClick={handleCreateSong} disabled={isSaving} className="px-5 gap-1.5 bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200">
-             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-             创建歌曲
-           </Button>
-        </div>
-      </Dialog>
+        </CardContent>
+      </Card>
+      {createSongDialog}
       <Dialog
         open={editingSong !== null}
         onClose={() => setEditingSong(null)}
@@ -309,25 +355,27 @@ export function SongLibraryPanel({
         {editingSong && (
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
+              <label htmlFor="edit-song-name" className="text-sm font-medium mb-2 block text-foreground">歌曲名称</label>
               <Input
-                 value={editingSong.name}
-                 onChange={(e) =>
-                   setEditingSong({ ...editingSong, name: e.target.value })
-                 }
-                 className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
-               />
+                id="edit-song-name"
+                value={editingSong.name}
+                onChange={(e) =>
+                  setEditingSong({ ...editingSong, name: e.target.value })
+                }
+                className="h-10 border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
+              <label htmlFor="edit-song-lyrics" className="text-sm font-medium mb-2 block text-foreground">歌词（可选）</label>
               <Textarea
-                 value={editingSong.lyrics || ''}
-                 onChange={(e) =>
-                   setEditingSong({ ...editingSong, lyrics: e.target.value })
-                 }
-                 rows={4}
-                 className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
-               />
+                id="edit-song-lyrics"
+                value={editingSong.lyrics || ''}
+                onChange={(e) =>
+                  setEditingSong({ ...editingSong, lyrics: e.target.value })
+                }
+                rows={4}
+                className="font-mono text-sm border-border/50 focus:border-primary/70 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
+              />
             </div>
           </div>
         )}
@@ -357,6 +405,6 @@ export function SongLibraryPanel({
           </Button>
         </div>
       </Dialog>
-    </Card>
+    </>
   )
 }
