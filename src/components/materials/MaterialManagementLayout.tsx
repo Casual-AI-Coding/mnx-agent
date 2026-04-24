@@ -205,33 +205,33 @@ export function MaterialManagementLayout() {
               />
             </div>
           ) : (
-            <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="mt-5 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
               {filteredMaterials.map((material) => (
                   <div
                     key={material.id}
-                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/5"
+                    className="group flex min-h-[300px] h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/5"
                   >
-                    <div className="flex flex-1 flex-col gap-4 p-6">
+                    <div className="flex flex-1 flex-col gap-5 p-7">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1 space-y-2.5">
-                        <p className="truncate text-lg font-bold tracking-tight text-foreground/95">
+                        <p className="truncate text-xl font-bold tracking-tight text-foreground/95">
                           {material.name}
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.15em] ${MATERIAL_TYPE_COLORS[material.material_type]} shadow-sm`}
+                            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] ${MATERIAL_TYPE_COLORS[material.material_type]} shadow-sm`}
                           >
                             {MATERIAL_TYPE_LABELS[material.material_type]}
                           </span>
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-background/90 px-2 py-0.5 text-[11px] font-medium text-muted-foreground/90">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/90">
                             <Calendar className="h-3 w-3 text-muted-foreground/70" />
                             {formatDate(material.updated_at)}
                           </span>
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
                             <Sparkles className="h-3 w-3" />
                             {typeof material.songCount === 'number' ? `歌曲 ${material.songCount}` : '歌曲 0'}
                           </span>
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
                             <Library className="h-3 w-3" />
                             {typeof material.promptVariantsCount === 'number' ? `变体 ${material.promptVariantsCount}` : '变体 0'}
                           </span>
@@ -240,12 +240,12 @@ export function MaterialManagementLayout() {
                     </div>
 
                     {material.description && (
-                      <p className="line-clamp-2 text-sm leading-relaxed text-foreground/65">
+                      <p className="line-clamp-3 text-[15px] leading-relaxed text-foreground/65">
                         {material.description}
                       </p>
                     )}
 
-                    <div className="mt-auto flex items-center gap-2 border-t border-border/40 pt-3">
+                    <div className="mt-auto flex items-center gap-2 border-t border-border/40 pt-4">
                       <Button
                         variant="ghost"
                         size="icon"
