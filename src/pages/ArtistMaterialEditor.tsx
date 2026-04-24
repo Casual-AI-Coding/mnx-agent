@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ArtistWorkspace } from '@/components/materials/artist/ArtistWorkspace'
 import { getMaterialDetail } from '@/lib/api/materials'
 import type { MaterialDetailResult } from '@/types/material'
+import { MATERIAL_TYPE_LABELS } from '@/types/material'
 
 export default function ArtistMaterialEditor() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +33,26 @@ export default function ArtistMaterialEditor() {
 
     fetchDetail()
   }, [id])
+
+  const renderWorkspace = () => {
+    if (!detail) return null
+
+    switch (detail.material.material_type) {
+      case 'artist':
+        return <ArtistWorkspace materialId={id!} />
+      default:
+        return (
+          <Card className="p-6">
+            <CardContent>
+              <EmptyState
+                title="暂不支持此素材类型的编辑工作台"
+                description={`当前仅支持 ${MATERIAL_TYPE_LABELS.artist} 类型的完整编辑流程。`}
+              />
+            </CardContent>
+          </Card>
+        )
+    }
+  }
 
   if (isLoading) {
     return (
@@ -64,9 +85,14 @@ export default function ArtistMaterialEditor() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回素材列表
         </Button>
-        <h1 className="text-2xl font-bold">{detail.material.name}</h1>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">素材编辑器</p>
+          <h1 className="text-2xl font-bold">{detail.material.name}</h1>
+        </div>
       </div>
-      <ArtistWorkspace materialId={id!} />
+      {detail && detail.material.material_type === 'artist'
+        ? <ArtistWorkspace materialId={id!} initialDetail={detail} />
+        : renderWorkspace()}
     </div>
   )
 }
