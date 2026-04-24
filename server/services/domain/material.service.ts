@@ -64,6 +64,14 @@ export class MaterialService implements IMaterialService {
   }
 
   async createMaterialItem(data: CreateMaterialItem, ownerId?: string): Promise<MaterialItem> {
+    if (ownerId) {
+      const parentMaterial = await this.db.getMaterialById(data.material_id, ownerId)
+      if (!parentMaterial) {
+        const error = new Error('Material not found or access denied') as Error & { code?: number }
+        error.code = 403
+        throw error
+      }
+    }
     return this.db.createMaterialItem(data, ownerId)
   }
 

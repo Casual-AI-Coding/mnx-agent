@@ -244,4 +244,70 @@ describe('Materials API Routes', () => {
     expect(res.status).toBe(404)
     expect(res.body.success).toBe(false)
   })
+
+  it('rejects creating item under a material owned by another user', async () => {
+    // Create material as ownerId (the default test user)
+    const material = await getDatabaseService().createMaterial({
+      name: 'Other User Material',
+      material_type: 'artist',
+    }, ownerId)
+
+    // Simulate a different user trying to create an item under that material
+    const otherUserId = getTestFileMarker(import.meta.url + '-other-user')
+
+    // Create the other user in DB
+    const conn = getConnection()
+    await conn.execute(
+      `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [otherUserId, `other-user-${otherUserId.slice(0, 8)}`, 'hash', 'user', true, new Date().toISOString(), new Date().toISOString()]
+    )
+
+    // Set mock auth to use the other user's ID
+    const originalUserId = ownerId
+    ownerId = otherUserId
+
+    const res = await request(app)
+      .post(`/api/materials/${material.id}/items`)
+      .send({
+        name: 'Unauthorized Item',
+        item_type: 'song',
+        lyrics: 'lyrics',
+        sort_order: 0,
+      })
+
+    // Should be rejected - either 403 or 404
+    expect(res.status).toBe(403)
+    expect(res.body.success).toBe(false)
+
+    // Restore original ownerId
+    ownerId = originalUserId
+
+    // Cleanup other user
+    await conn.execute('DELETE FROM prompts WHERE owner_id = $1', [otherUserId])
+    await conn.execute('DELETE FROM material_items WHERE owner_id = $1', [otherUserId])
+    await conn.execute('DELETE FROM materials WHERE owner_id = $1', [otherUserId])
+    await conn.execute('DELETE FROM users WHERE id = $1', [otherUserId])
+  })
+
+  it('allows creating item under a material owned by the same user', async () => {
+    const material = await getDatabaseService().createMaterial({
+      name: 'Same Owner Material',
+      material_type: 'artist',
+    }, ownerId)
+
+    const res = await request(app)
+      .post(`/api/materials/${material.id}/items`)
+      .send({
+        name: 'Authorized Item',
+        item_type: 'song',
+        lyrics: 'lyrics',
+        sort_order: 0,
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body.success).toBe(true)
+    expect(res.body.data.name).toBe('Authorized Item')
+  })
 })
