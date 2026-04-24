@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 
 const dialogOverlayVariants = cva(
-  'fixed inset-0 z-[80] bg-foreground/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
+  'fixed inset-0 z-[80] bg-foreground/40 backdrop-blur-sm transition-opacity duration-300',
 )
 
 const dialogContentVariants = cva(
-  'fixed left-[50%] top-[50%] z-[81] grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-2xl overflow-hidden',
+  'fixed left-[50%] top-[50%] z-[81] grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background shadow-2xl sm:rounded-2xl overflow-hidden transition-all duration-300',
   {
     variants: {
       size: {
@@ -34,40 +34,41 @@ export interface DialogProps extends React.HTMLAttributes<HTMLDivElement>, Varia
 
 const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
   ({ className, size, open, onClose, title, description, children, ...props }, ref) => {
-    const [isVisible, setIsVisible] = React.useState(open)
-    const [animationState, setAnimationState] = React.useState<'open' | 'closed'>(open ? 'open' : 'closed')
-    const [mounted, setMounted] = React.useState(false)
-
-    React.useEffect(() => {
-      setMounted(true)
-      return () => setMounted(false)
-    }, [])
+    const [shouldRender, setShouldRender] = React.useState(open)
+    const [isAnimating, setIsAnimating] = React.useState(false)
 
     React.useEffect(() => {
       if (open) {
-        setIsVisible(true)
-        setAnimationState('open')
-      } else if (isVisible) {
-        setAnimationState('closed')
-        // Wait for animation to complete before hiding
-        const timer = setTimeout(() => setIsVisible(false), 200)
+        setShouldRender(true)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setIsAnimating(true))
+        })
+      } else if (shouldRender) {
+        setIsAnimating(false)
+        const timer = setTimeout(() => setShouldRender(false), 300)
         return () => clearTimeout(timer)
       }
-    }, [open, isVisible])
+    }, [open])
 
-    if (!mounted || !isVisible) return null
+    if (!shouldRender) return null
 
     return createPortal(
       <div className="relative">
-        <div 
-          className={dialogOverlayVariants()} 
+        <div
+          className={cn(
+            dialogOverlayVariants(),
+            isAnimating ? 'opacity-100' : 'opacity-0'
+          )}
           onClick={onClose}
-          data-state={animationState}
         />
         <div
           ref={ref}
-          className={cn(dialogContentVariants({ size, className }))}
-          data-state={animationState}
+          className={cn(
+            dialogContentVariants({ size, className }),
+            isAnimating
+              ? 'opacity-100 scale-100'
+              : 'opacity-0 scale-90'
+          )}
           onClick={(event) => event.stopPropagation()}
           {...props}
         >
