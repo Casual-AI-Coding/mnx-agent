@@ -105,4 +105,54 @@ describe('MaterialItemRepository', () => {
     expect(items[0]?.id).toBe(second.id)
     expect(items[1]?.id).toBe(first.id)
   })
+
+  it('throws on reorder when any item id does not belong to the material', async () => {
+    const itemB = await itemRepository.create({
+      ownerId,
+      material_id: materialId,
+      item_type: 'song',
+      name: 'Song B',
+      sort_order: 1,
+    })
+
+    const bogusId = uuidv4()
+
+    await expect(
+      itemRepository.reorder(materialId, [
+        { id: itemB.id, sort_order: 0 },
+        { id: bogusId, sort_order: 1 },
+      ], ownerId)
+    ).rejects.toThrow('not all items matched')
+  })
+
+  it('throws on reorder when any item id belongs to a different material', async () => {
+    const itemA = await itemRepository.create({
+      ownerId,
+      material_id: materialId,
+      item_type: 'song',
+      name: 'Song A',
+      sort_order: 0,
+    })
+
+    const otherMaterial = await materialRepository.create({
+      ownerId,
+      material_type: 'artist',
+      name: 'Other Artist',
+      description: null,
+    })
+    const itemFromOther = await itemRepository.create({
+      ownerId,
+      material_id: otherMaterial.id,
+      item_type: 'song',
+      name: 'Other Song',
+      sort_order: 0,
+    })
+
+    await expect(
+      itemRepository.reorder(materialId, [
+        { id: itemA.id, sort_order: 0 },
+        { id: itemFromOther.id, sort_order: 1 },
+      ], ownerId)
+    ).rejects.toThrow('not all items matched')
+  })
 })

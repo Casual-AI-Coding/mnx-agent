@@ -223,6 +223,17 @@ export class MaterialItemRepository extends BaseRepository<MaterialItem> {
       return
     }
 
+    const ids = reorderItems.map((item) => item.id)
+    const matchResult = await this.conn.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM material_items
+       WHERE id = ANY($1) AND material_id = $2 AND owner_id = $3 AND is_deleted = false`,
+      [ids, materialId, ownerId]
+    )
+    const matchedCount = Number(matchResult[0].count)
+    if (matchedCount !== reorderItems.length) {
+      throw new Error('not all items matched')
+    }
+
     await this.conn.transaction(async (txConn) => {
       for (const item of reorderItems) {
         await txConn.execute(
