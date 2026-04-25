@@ -168,13 +168,18 @@ describe('OpenAIImage2 Component', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const fakeBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
     fetchSpy.mockResolvedValue({
-      ok: true,
       json: async () => ({
-        created: 123,
-        data: [{ b64_json: fakeBase64 }],
-        model: 'chatgpt-image-2',
-        size: '1024x1024',
-        usage: { total_tokens: 100 },
+        success: true,
+        data: {
+          status: 200,
+          body: {
+            created: 123,
+            data: [{ b64_json: fakeBase64 }],
+            model: 'chatgpt-image-2',
+            size: '1024x1024',
+            usage: { total_tokens: 100 },
+          },
+        },
       }),
     } as Response)
 

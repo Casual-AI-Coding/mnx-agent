@@ -273,23 +273,35 @@ export default function OpenAIImage2() {
     try {
       const startTime = performance.now()
       const url = buildOpenAIImage2Url(baseUrl)
-      const response = await fetch(url, {
+      const proxyResponse = await fetch('/api/external-proxy', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${bearerToken}`,
+            'Content-Type': 'application/json',
+          },
+          body,
+        }),
       })
       durationMs = Math.round(performance.now() - startTime)
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '')
-        throw new Error(`外部 API 响应 ${response.status}: ${errorText.slice(0, 200)}`)
+      const proxyResult = await proxyResponse.json()
+      if (!proxyResult.success) {
+        throw new Error(proxyResult.error || '代理请求失败')
       }
 
-      const json = await response.json()
-      parsed = parseOpenAIImage2Response(json)
+      const { status: upstreamStatus, body: upstreamBody } = proxyResult.data
+      if (upstreamStatus >= 400) {
+        const errorText = typeof upstreamBody === 'string'
+          ? upstreamBody.slice(0, 200)
+          : JSON.stringify(upstreamBody).slice(0, 200)
+        throw new Error(`外部 API 响应 ${upstreamStatus}: ${errorText}`)
+      }
+
+      parsed = parseOpenAIImage2Response(upstreamBody)
       setLastParsedResponse(parsed)
     } catch (err) {
       const errorMsg = formatExternalApiError(err)
