@@ -49,5 +49,6 @@ export type MediaSource =
   | 'video_generation' 
   | 'music_generation'
   | 'lyrics_generation'
+  | 'external_debug'
 
 export type WebhookEvent = 'on_start' | 'on_success' | 'on_failure'
