@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon } from 'lucide-react'
+import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -167,6 +168,7 @@ export default function OpenAIImage2() {
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
+  const [fullscreenPreview, setFullscreenPreview] = useState(false)
 
   const lastAutoFillRef = useRef<string>('')
 
@@ -186,6 +188,15 @@ export default function OpenAIImage2() {
       }
     }
   }, [result.previewUrl])
+
+  useEffect(() => {
+    if (!fullscreenPreview) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreenPreview(false)
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [fullscreenPreview])
 
   const updateForm = useCallback((updates: Partial<OpenAIImage2FormData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
@@ -470,6 +481,7 @@ export default function OpenAIImage2() {
   const isBusy = result.status !== 'idle' && result.status !== 'success' && result.status !== 'failed'
 
   return (
+    <>
     <motion.div
       initial="hidden"
       animate="visible"
@@ -656,17 +668,25 @@ export default function OpenAIImage2() {
                       <ImageIcon className="w-4 h-4 text-indigo-500" />
                       结果预览
                     </CardTitle>
-                    <AnimatePresence mode="wait">
-                      <motion.span
-                        key={result.status}
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className={cn('text-xs font-medium', STATUS_COLORS[result.status])}
-                      >
-                        {STATUS_LABELS[result.status]}
-                      </motion.span>
-                    </AnimatePresence>
+                    <div className="flex items-center gap-2">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={result.status}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className={cn('text-xs font-medium', STATUS_COLORS[result.status])}
+                        >
+                          {STATUS_LABELS[result.status]}
+                        </motion.span>
+                      </AnimatePresence>
+                      {(result.status === 'success' || result.status === 'failed') && (
+                        <Button variant="outline" size="sm" onClick={resetResult}>
+                          <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                          重新生成
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -744,7 +764,7 @@ export default function OpenAIImage2() {
                         exit={{ opacity: 0 }}
                         className="space-y-4"
                       >
-                        <div className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/10">
+                        <div className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/10 group">
                           {result.previewUrl && (
                             <img
                               src={result.previewUrl}
@@ -753,13 +773,24 @@ export default function OpenAIImage2() {
                             />
                           )}
                           {result.previewUrl && (
-                            <a
-                              href={result.previewUrl}
-                              download={`openai-image-${Date.now()}.${formData.outputFormat}`}
-                              className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </a>
+                            <>
+                              <button
+                                onClick={() => setFullscreenPreview(true)}
+                                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-foreground/10 backdrop-blur-[1px]"
+                              >
+                                <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-background transition-colors">
+                                  <Maximize2 className="w-5 h-5 text-foreground" />
+                                </div>
+                              </button>
+                              <a
+                                href={result.previewUrl}
+                                download={`openai-image-${Date.now()}.${formData.outputFormat}`}
+                                className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            </>
                           )}
                         </div>
 
@@ -810,12 +841,7 @@ export default function OpenAIImage2() {
                           </div>
                         )}
 
-                        <div className="flex justify-end">
-                          <Button variant="outline" size="sm" onClick={resetResult}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                            重新生成
-                          </Button>
-                        </div>
+
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -824,5 +850,24 @@ export default function OpenAIImage2() {
             </motion.div>
           </div>
         </motion.div>
+
+        {fullscreenPreview && result.previewUrl && createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setFullscreenPreview(false)}>
+            <button
+              onClick={() => setFullscreenPreview(false)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+            <img
+              src={result.previewUrl}
+              alt="Fullscreen preview"
+              className="max-w-[90vw] max-h-[90vh] object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>,
+          document.body
+        )}
+      </>
   )
 }
