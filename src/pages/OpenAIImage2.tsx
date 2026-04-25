@@ -134,7 +134,7 @@ const MODEL_OPTIONS = [
 ]
 
 const SIZE_OPTIONS = [
-  '1024x1024', '1536x1024', '1024x1536', 'auto',
+  '1024x1024', '1536x1024', '1024x1536', '1536x2048', '2048x1536', '2048x2048', 'auto',
 ]
 
 const QUALITY_OPTIONS = [
@@ -170,7 +170,7 @@ export default function OpenAIImage2() {
       prompt: '',
       model: 'chatgpt-image-2',
       n: 1,
-      size: '1024x1024',
+      size: '1536x2048',
       quality: 'auto',
       background: 'auto',
       outputFormat: 'png',
