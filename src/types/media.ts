@@ -1,5 +1,5 @@
 export type MediaType = 'audio' | 'image' | 'video' | 'music' | 'lyrics'
-export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation' | 'lyrics_generation'
+export type MediaSource = 'voice_sync' | 'voice_async' | 'image_generation' | 'video_generation' | 'music_generation' | 'lyrics_generation' | 'external_debug'
 
 export interface MediaRecord {
   id: string

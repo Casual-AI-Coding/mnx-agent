@@ -34,6 +34,7 @@ export const SOURCE_LABELS: Record<MediaSource, string> = {
   video_generation: '视频生成',
   music_generation: '音乐生成',
   lyrics_generation: '歌词生成',
+  external_debug: '外部调试',
 }
 
 export const TYPE_GRADIENTS: Record<MediaType, string> = {
