@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ComboboxInput } from '@/components/ui/ComboboxInput'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { createExternalApiLog, updateExternalApiLog } from '@/lib/api/external-api-logs'
 import { uploadMedia } from '@/lib/api/media'
@@ -426,6 +427,24 @@ export default function OpenAIImage2() {
     }
   }, [result.externalApiLogId, result.durationMs, lastParsedResponse])
 
+  const generateCurl = useCallback(() => {
+    const body: Record<string, unknown> = {
+      model: formData.model,
+      prompt: formData.prompt || 'your prompt here',
+      n: formData.n,
+      size: formData.size,
+    }
+    if (formData.quality !== 'auto') body.quality = formData.quality
+    if (formData.background !== 'auto') body.background = formData.background
+    if (formData.outputFormat !== 'png') body.output_format = formData.outputFormat
+    if (formData.moderation !== 'auto') body.moderation = formData.moderation
+
+    return `curl -X POST "${buildOpenAIImage2Url(formData.baseUrl)}" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${formData.bearerToken || 'YOUR_TOKEN'}" \\
+  -d '${JSON.stringify(body, null, 2)}'`
+  }, [formData])
+
   const resetResult = useCallback(() => {
     if (result.previewUrl) {
       URL.revokeObjectURL(result.previewUrl)
@@ -435,6 +454,40 @@ export default function OpenAIImage2() {
     setMediaSaveFailed(false)
     setLastParsedResponse(null)
   }, [result.previewUrl])
+
+  const clearAll = useCallback(() => {
+    setFormData({
+      baseUrl: 'https://mikuapi.org',
+      bearerToken: '',
+      prompt: '',
+      model: 'gpt-image-2',
+      n: 1,
+      size: '1536x2048',
+      quality: 'high',
+      background: 'auto',
+      outputFormat: 'png',
+      moderation: 'low',
+      imageTitle: '',
+    })
+    resetResult()
+  }, [setFormData, resetResult])
+
+  const helpTips = (
+    <div className="space-y-3 text-sm">
+      <div>
+        <p className="font-medium text-foreground">连接配置</p>
+        <p className="text-muted-foreground">填写外部 OpenAI 兼容 API 的 Base URL 和 Bearer Token。支持多个预设地址，Token 按地址独立缓存。</p>
+      </div>
+      <div>
+        <p className="font-medium text-foreground">图像生成</p>
+        <p className="text-muted-foreground">填写提示词后点击「生成图像」，页面会直连外部 API 进行生成，生成结果自动保存到媒体库。</p>
+      </div>
+      <div>
+        <p className="font-medium text-foreground">注意事项</p>
+        <p className="text-muted-foreground">外部 API 可能存在 CORS 限制，如遇网络错误请确认 API 地址可访问。每次生成的请求和响应都会记录到外部 API 日志中。</p>
+      </div>
+    </div>
+  )
 
   const isBusy = result.status !== 'idle' && result.status !== 'success' && result.status !== 'failed'
 
@@ -451,6 +504,15 @@ export default function OpenAIImage2() {
               title="OpenAI Image-2"
               description="直连外部 OpenAI 兼容 API 进行图像生成调试"
               gradient="indigo-violet"
+              actions={
+                <WorkbenchActions
+                  helpTitle="OpenAI Image-2 使用帮助"
+                  helpTips={helpTips}
+                  generateCurl={generateCurl}
+                  onClear={clearAll}
+                  clearLabel="清空"
+                />
+              }
             />
           </motion.div>
 
