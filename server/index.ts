@@ -32,6 +32,7 @@ import statsRouter from './routes/stats'
 import exportRouter from './routes/export'
 import auditRouter from './routes/audit'
 import externalApiLogsRouter from './routes/external-api-logs'
+import externalProxyRouter from './routes/external-proxy'
 import authRouter from './routes/auth.js'
 import usersRouter from './routes/users.js'
 import invitationCodesRouter from './routes/invitation-codes.js'
@@ -112,6 +113,7 @@ app.use('/api/stats', statsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/audit', auditRouter)
 app.use('/api/external-api-logs', authenticateJWT, externalApiLogsRouter)
+app.use('/api/external-proxy', externalProxyRouter)
 app.use('/api/users', authenticateJWT, usersRouter)
 app.use('/api/invitation-codes', authenticateJWT, invitationCodesRouter)
 app.use('/api/system-config', authenticateJWT, systemConfigRouter)
