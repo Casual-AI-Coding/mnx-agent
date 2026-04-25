@@ -10,6 +10,7 @@ import type {
   ExternalApiLogQuery,
   ExternalApiLogStats,
 } from '../database/types.js'
+import type { UpdateExternalApiLog } from '../../packages/shared-types/entities/external-api-log.js'
 import { BaseRepository } from './base-repository.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
 
@@ -17,9 +18,13 @@ function rowToExternalApiLog(row: ExternalApiLogRow): ExternalApiLog {
   const requestParams = row.request_params
     ? (typeof row.request_params === 'string' ? JSON.parse(row.request_params) : row.request_params)
     : null
+  const status = row.status === 'pending' || row.status === 'success' || row.status === 'failed'
+    ? row.status
+    : 'failed'
+
   return {
     ...row,
-    status: row.status as 'success' | 'failed',
+    status,
     request_params: requestParams,
   }
 }
@@ -75,6 +80,37 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
       [parseInt(id, 10)]
     )
     return rows[0] ? rowToExternalApiLog(rows[0]) : null
+  }
+
+  async updateResult(id: string, data: UpdateExternalApiLog): Promise<ExternalApiLog | null> {
+    const fields: string[] = []
+    const values: unknown[] = []
+
+    const addField = (column: string, value: unknown) => {
+      values.push(value)
+      fields.push(`${column} = $${values.length}`)
+    }
+
+    if (data.response_body !== undefined) addField('response_body', data.response_body)
+    if (data.status !== undefined) addField('status', data.status)
+    if (data.error_message !== undefined) addField('error_message', data.error_message)
+    if (data.duration_ms !== undefined) addField('duration_ms', data.duration_ms)
+
+    if (fields.length === 0) {
+      return this.getById(id)
+    }
+
+    values.push(parseInt(id, 10))
+    const rows = await this.conn.query<ExternalApiLogRow>(
+      `UPDATE external_api_logs SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      values
+    )
+
+    if (rows.length === 0) {
+      return null
+    }
+
+    return rowToExternalApiLog(rows[0])
   }
 
   async queryLogs(query: ExternalApiLogQuery): Promise<{ logs: ExternalApiLog[]; total: number }> {
@@ -173,9 +209,11 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
       `SELECT status, COUNT(*) as count FROM external_api_logs ${ownerFilter} GROUP BY status`,
       params
     )
-    const by_status: Record<string, number> = { success: 0, failed: 0 }
+    const by_status: ExternalApiLogStats['by_status'] = { pending: 0, success: 0, failed: 0 }
     statusRows.forEach(row => {
-      by_status[row.status] = parseInt(row.count, 10)
+      if (row.status === 'pending' || row.status === 'success' || row.status === 'failed') {
+        by_status[row.status] = parseInt(row.count, 10)
+      }
     })
 
     const operationRows = await this.conn.query<{ operation: string; count: string }>(
@@ -203,7 +241,6 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
   }
 
   async getUniqueOperations(userId?: string): Promise<string[]> {
-    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
     const params = userId ? [userId] : []
 
     const rows = await this.conn.query<{ operation: string }>(
@@ -214,7 +251,6 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
   }
 
   async getUniqueServiceProviders(userId?: string): Promise<string[]> {
-    const ownerFilter = userId ? 'WHERE user_id = $1' : ''
     const params = userId ? [userId] : []
 
     const rows = await this.conn.query<{ service_provider: string }>(

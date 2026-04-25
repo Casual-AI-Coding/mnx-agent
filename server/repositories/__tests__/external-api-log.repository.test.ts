@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ExternalApiLogRepository } from '../external-api-log.repository'
 import { DatabaseConnection } from '../../database/connection'
-import type { ExternalApiLogRow, CreateExternalApiLog, ExternalApiLogQuery } from '../../database/types'
+import type { ExternalApiLogRow, CreateExternalApiLog } from '../../database/types'
 
 describe('ExternalApiLogRepository', () => {
   let mockDb: DatabaseConnection
@@ -73,6 +73,69 @@ describe('ExternalApiLogRepository', () => {
 
       expect(result.status).toBe('failed')
       expect(result.error_message).toBe('Rate limit exceeded')
+    })
+
+    it('creates browser initiated pending logs', async () => {
+      const logData: CreateExternalApiLog = {
+        service_provider: 'openai',
+        api_endpoint: 'POST /v1/images/generations',
+        operation: 'image_generation',
+        request_params: { model: 'gpt-image-2', image_count: 1 },
+        request_body: JSON.stringify({ prompt: '一张电影感人像海报，暖色光照，细节丰富' }),
+        status: 'pending',
+        user_id: 'user-openai-1',
+        trace_id: 'trace-openai-image-2',
+      }
+
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ id: 3 }] as any)
+        .mockResolvedValueOnce([{
+          id: 3,
+          ...logData,
+          response_body: null,
+          error_message: null,
+          duration_ms: null,
+          created_at: '2026-04-20T10:00:00Z',
+          request_params: JSON.stringify(logData.request_params),
+        }] as ExternalApiLogRow[])
+
+      const repo = new ExternalApiLogRepository(mockDb)
+      const result = await repo.create(logData)
+
+      expect(result.status).toBe('pending')
+      expect(result.service_provider).toBe('openai')
+      expect(result.user_id).toBe('user-openai-1')
+    })
+  })
+
+  describe('updateResult', () => {
+    it('updates a pending log to success summary', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([{
+        id: 3,
+        service_provider: 'openai',
+        api_endpoint: 'POST /v1/images/generations',
+        operation: 'image_generation',
+        request_params: null,
+        request_body: null,
+        response_body: JSON.stringify({ image_count: 1, usage: { total_tokens: 120 } }),
+        status: 'success',
+        error_message: null,
+        duration_ms: 1200,
+        user_id: 'user-openai-1',
+        trace_id: null,
+        created_at: '2026-04-20T10:00:00Z',
+      }] as ExternalApiLogRow[])
+
+      const repo = new ExternalApiLogRepository(mockDb)
+      const updated = await repo.updateResult('3', {
+        status: 'success',
+        duration_ms: 1200,
+        response_body: JSON.stringify({ image_count: 1, usage: { total_tokens: 120 } }),
+      })
+
+      expect(updated?.status).toBe('success')
+      expect(updated?.duration_ms).toBe(1200)
+      expect(updated?.response_body).toContain('image_count')
     })
   })
 
@@ -201,9 +264,10 @@ describe('ExternalApiLogRepository', () => {
 
       const repo = new ExternalApiLogRepository(mockDb)
       const result = await repo.queryLogs({ page: 3, limit: 25 })
+      const queryMock = vi.mocked(mockDb.query)
 
       expect(result.total).toBe(100)
-      const queryCall = mockDb.query.mock.calls[1]
+      const queryCall = queryMock.mock.calls[1]
       expect(queryCall[1]).toContain(25)
       expect(queryCall[1]).toContain(50) // offset = (3-1) * 25 = 50
     })
@@ -215,8 +279,9 @@ describe('ExternalApiLogRepository', () => {
 
       const repo = new ExternalApiLogRepository(mockDb)
       await repo.queryLogs({ sort_by: 'duration_ms', sort_order: 'asc' })
+      const queryMock = vi.mocked(mockDb.query)
 
-      const queryCall = mockDb.query.mock.calls[1]
+      const queryCall = queryMock.mock.calls[1]
       expect(queryCall[0]).toContain('ORDER BY duration_ms ASC')
     })
   })
@@ -258,6 +323,20 @@ describe('ExternalApiLogRepository', () => {
         expect.stringContaining('WHERE user_id = $1'),
         ['user-123']
       )
+    })
+
+    it('counts pending logs in stats', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '1' }] as any)
+        .mockResolvedValueOnce([{ service_provider: 'openai', count: '1' }] as any)
+        .mockResolvedValueOnce([{ status: 'pending', count: '1' }] as any)
+        .mockResolvedValueOnce([{ operation: 'image_generation', count: '1' }] as any)
+        .mockResolvedValueOnce([{ avg_duration: '0' }] as any)
+
+      const repo = new ExternalApiLogRepository(mockDb)
+      const stats = await repo.getStats('user-openai-1')
+
+      expect(stats.by_status.pending).toBeGreaterThanOrEqual(1)
     })
   })
 
