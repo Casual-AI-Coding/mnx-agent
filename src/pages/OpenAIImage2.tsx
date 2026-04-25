@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, X, Download, Image as ImageIcon } from 'lucide-react'
+import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, X, Download, Image as ImageIcon, ChevronDown, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -182,8 +182,19 @@ export default function OpenAIImage2() {
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
+  const [presetOpen, setPresetOpen] = useState(false)
+  const presetRef = useRef<HTMLDivElement>(null)
+
+  const prevBaseUrlRef = useRef(formData.baseUrl)
 
   useEffect(() => {
+    if (prevBaseUrlRef.current !== formData.baseUrl) {
+      const prevToken = formData.bearerToken
+      if (prevToken) {
+        saveTokenForUrl(prevBaseUrlRef.current, prevToken)
+      }
+      prevBaseUrlRef.current = formData.baseUrl
+    }
     const saved = getTokenForUrl(formData.baseUrl)
     setFormData(prev => ({ ...prev, bearerToken: saved }))
   }, [formData.baseUrl])
@@ -195,6 +206,17 @@ export default function OpenAIImage2() {
       }
     }
   }, [result.previewUrl])
+
+  useEffect(() => {
+    if (!presetOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (presetRef.current && !presetRef.current.contains(e.target as Node)) {
+        setPresetOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [presetOpen])
 
   const updateForm = useCallback((updates: Partial<OpenAIImage2FormData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
@@ -458,18 +480,53 @@ export default function OpenAIImage2() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">Base URL</Label>
-                    <Select value={formData.baseUrl} onValueChange={v => updateForm({ baseUrl: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {BASE_URL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      value={buildOpenAIImage2Url(formData.baseUrl)}
-                      readOnly
-                      className="text-[11px] text-muted-foreground font-mono bg-muted/50 cursor-not-allowed"
-                      tabIndex={-1}
-                    />
+                    <div ref={presetRef} className="relative flex items-center">
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setPresetOpen(!presetOpen)}
+                          disabled={isBusy}
+                          className={cn(
+                            'flex items-center justify-center h-9 w-9 shrink-0 rounded-l-md border border-r-0 border-input bg-muted/50 hover:bg-muted transition-colors',
+                            'text-muted-foreground hover:text-foreground',
+                            isBusy && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        {presetOpen && (
+                          <div className="absolute top-full left-0 z-50 mt-1 w-56 rounded-md border bg-popover text-popover-foreground shadow-md">
+                            {BASE_URL_OPTIONS.map(o => (
+                              <button
+                                key={o.value}
+                                type="button"
+                                className={cn(
+                                  'flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors',
+                                  formData.baseUrl === o.value && 'bg-accent'
+                                )}
+                                onClick={() => {
+                                  updateForm({ baseUrl: o.value })
+                                  setPresetOpen(false)
+                                }}
+                              >
+                                {formData.baseUrl === o.value && <Check className="w-3.5 h-3.5 shrink-0" />}
+                                <span className={cn('font-mono text-xs', formData.baseUrl !== o.value && 'pl-[22px]')}>{o.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Input
+                        value={formData.baseUrl}
+                        onChange={e => updateForm({ baseUrl: e.target.value })}
+                        disabled={isBusy}
+                        placeholder="https://api.example.com"
+                        className="flex-1 rounded-l-none font-mono text-sm h-9 focus-visible:ring-0"
+                      />
+                      <div className="flex items-center h-9 shrink-0 rounded-r-md border border-l-0 border-input bg-muted/50 px-3 text-xs text-muted-foreground font-mono whitespace-nowrap select-none">
+                        /v1/images/generations
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">Bearer Token</Label>
