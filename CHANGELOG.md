@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.4] - 2026-04-25
+
+### Added
+
+- **OpenAI Image-2 外部调试页面** - 直连外部 OpenAI 兼容 API 进行图像生成调试
+  - `src/pages/OpenAIImage2.tsx` - 完整的图像生成调试页面
+  - `src/lib/openai-image-2.ts` - API 调用和响应解析工具
+  - `src/components/ui/ComboboxInput.tsx` - 可搜索下拉输入组件
+  - 支持多种尺寸选项（含 1152x2048、2048x1152）
+  - 通过后端代理绕过 CORS 限制
+  - 生成结果自动保存到媒体库
+
+- **外部 API 日志增强** - 扩展日志状态和写入能力
+  - 扩展状态为 `pending`，支持创建和更新流程
+  - 新增写入路由 `POST /api/external-api-logs`
+  - 新增 `external_debug` 媒体来源类型
+
+- **外部 API 端点统一配置** - 集中管理外部 API 端点
+  - 新增 `ExternalEndpoint` 类型和设置面板
+  - 支持 OpenAI/Anthropic 协议
+  - API Key 通过后端存储，移除浏览器本地缓存
+
+- **素材管理改进** - 素材管理页面重新设计
+  - 筛选、排序、分页功能
+  - 素材卡片布局和间距优化
+  - 聚合计数显示
+
+- **UI 组件增强**
+  - 新增 `ComboboxInput` 组件，带平滑下拉动画
+  - 侧边栏「外部调试」提升为一级菜单
+
+### Fixed
+
+- 修复 MediaSource 枚举和数据库 CHECK 约束，解决上传 500 错误
+- 修复素材列表过滤参数对齐问题
+- 修复艺术家编辑器工作区渲染统一性
+- 修复素材项目所有者权限检查
+- 修复部分重排序拒绝逻辑
+- 修复 OpenAI Image-2 页面多个 bug
+
+### Changed
+
+- External proxy timeout 改用 `TIMEOUTS` 常量，与 music generation 保持一致
+
+### Docs
+
+- 新增 OpenAI Image-2 外部调试设计文档
+- Roadmap 添加 OpenAI Image-2 需求
+
 ## [2.2.3] - 2026-04-24
 
 ### Added
