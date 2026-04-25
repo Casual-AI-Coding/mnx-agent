@@ -7,7 +7,7 @@ interface ApiResponse<T> {
 }
 
 export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
-export type ExternalApiStatus = 'success' | 'failed'
+export type ExternalApiStatus = 'pending' | 'success' | 'failed'
 
 export interface ExternalApiLog {
   id: number
@@ -98,6 +98,46 @@ export async function getUniqueExternalApiOperations(): Promise<ApiResponse<stri
   try {
     const response = await internalAxios.get('/external-api-logs/operations')
     return { success: true, data: response.data.data.operations }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export interface CreateExternalApiLogInput {
+  service_provider: string
+  api_endpoint: string
+  operation: string
+  request_params?: Record<string, unknown> | null
+  request_body?: string | null
+  response_body?: string | null
+  status?: ExternalApiStatus
+  error_message?: string | null
+  duration_ms?: number | null
+  trace_id?: string | null
+}
+
+export interface UpdateExternalApiLogInput {
+  response_body?: string
+  status?: ExternalApiStatus
+  error_message?: string
+  duration_ms?: number
+}
+
+export async function createExternalApiLog(input: CreateExternalApiLogInput): Promise<ApiResponse<ExternalApiLog>> {
+  try {
+    const response = await internalAxios.post('/external-api-logs', input)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export async function updateExternalApiLog(id: number, input: UpdateExternalApiLogInput): Promise<ApiResponse<ExternalApiLog>> {
+  try {
+    const response = await internalAxios.patch(`/external-api-logs/${id}`, input)
+    return { success: true, data: response.data.data }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }

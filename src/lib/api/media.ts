@@ -161,13 +161,17 @@ export async function uploadMedia(
   blob: Blob,
   filename: string,
   type: MediaType,
-  source?: MediaSource
+  source?: MediaSource,
+  metadata?: Record<string, unknown>
 ): Promise<{ success: boolean; data: MediaRecord }> {
   const formData = new FormData()
   formData.append('file', blob, filename)
   formData.append('type', type)
   if (source) {
     formData.append('source', source)
+  }
+  if (metadata) {
+    formData.append('metadata', JSON.stringify(metadata))
   }
 
   const response = await client.post('/media/upload', formData, {

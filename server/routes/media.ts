@@ -444,6 +444,18 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const source = req.body.source as string
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
+  let metadata: Record<string, unknown> | undefined
+  if (req.body.metadata) {
+    try {
+      metadata = typeof req.body.metadata === 'string'
+        ? JSON.parse(req.body.metadata)
+        : req.body.metadata
+    } catch {
+      errorResponse(res, 'Invalid metadata JSON', 400)
+      return
+    }
+  }
+
   const { filepath, filename, size_bytes } = await saveMediaFile(
     req.file.buffer,
     req.file.originalname,
@@ -458,6 +470,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     mime_type: req.file.mimetype,
     size_bytes,
     source: source as MediaSource,
+    metadata: metadata ?? undefined,
   }, ownerId)
 
   createdResponse(res, record)

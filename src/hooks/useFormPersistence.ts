@@ -42,4 +42,5 @@ export const DEBUG_FORM_KEYS = {
   VOICE_SYNC: 'voice-sync',
   VOICE_ASYNC: 'voice-async',
   LYRICS_GENERATION: 'lyrics-generation',
+  OPENAI_IMAGE_2: 'openai-image-2',
 } as const

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Globe, RefreshCw, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Copy, Check, ArrowUpDown, ChevronUp, SlidersHorizontal, Zap } from 'lucide-react'
+import { Globe, RefreshCw, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Copy, Check, ArrowUpDown, ChevronUp, SlidersHorizontal, Zap, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -30,6 +30,7 @@ function getProviderColor(provider: string) {
 const STATUS_CONFIG: Record<ExternalApiStatus, { color: string; icon: typeof CheckCircle2; label: string }> = {
   success: { color: cn(status.success.bgSubtle, status.success.icon, status.success.border), icon: CheckCircle2, label: '成功' },
   failed: { color: cn(status.error.bgSubtle, status.error.icon, status.error.border), icon: AlertCircle, label: '失败' },
+  pending: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Loader2, label: '进行中' },
 }
 
 export default function ExternalApiLogs() {
