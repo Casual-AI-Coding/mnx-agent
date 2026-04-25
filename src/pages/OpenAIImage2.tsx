@@ -433,11 +433,11 @@ export default function OpenAIImage2() {
       prompt: formData.prompt || 'your prompt here',
       n: formData.n,
       size: formData.size,
+      quality: formData.quality,
+      background: formData.background,
+      output_format: formData.outputFormat,
+      moderation: formData.moderation,
     }
-    if (formData.quality !== 'auto') body.quality = formData.quality
-    if (formData.background !== 'auto') body.background = formData.background
-    if (formData.outputFormat !== 'png') body.output_format = formData.outputFormat
-    if (formData.moderation !== 'auto') body.moderation = formData.moderation
 
     return `curl -X POST "${buildOpenAIImage2Url(formData.baseUrl)}" \\
   -H "Content-Type: application/json" \\
