@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import OpenAIImage2 from '../OpenAIImage2'
+import { createExternalApiLog, updateExternalApiLog, type ExternalApiLog } from '@/lib/api/external-api-logs'
+import { uploadMedia } from '@/lib/api/media'
 
 vi.mock('@/lib/api/external-api-logs', () => ({
   createExternalApiLog: vi.fn(),
@@ -67,5 +69,133 @@ describe('OpenAIImage2 Component', () => {
   it('should display the generate button', () => {
     render(<OpenAIImage2 />)
     expect(screen.getByText('生成图像')).toBeTruthy()
+  })
+
+  it('should display CORS error message on network failure', async () => {
+    const mockCreate = vi.mocked(createExternalApiLog)
+    const mockUpdate = vi.mocked(updateExternalApiLog)
+    mockCreate.mockResolvedValue({ success: true, data: { id: 42 } as never })
+    mockUpdate.mockResolvedValue({ success: false, error: 'fail' })
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(<OpenAIImage2 />)
+
+    const promptInput = screen.getByPlaceholderText('描述你想生成的图像...')
+    fireEvent.change(promptInput, { target: { value: 'test prompt' } })
+
+    const tokenInput = screen.getByPlaceholderText('sk-...')
+    fireEvent.change(tokenInput, { target: { value: 'sk-test-token' } })
+
+    const generateButton = screen.getByText('生成图像')
+    fireEvent.click(generateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/CORS 跨域限制/)).toBeTruthy()
+    })
+
+    fetchSpy.mockRestore()
+  })
+
+  it('should display generate button disabled when prompt is empty', () => {
+    render(<OpenAIImage2 />)
+    const generateButton = screen.getByText('生成图像')
+    expect(generateButton.closest('button')).toBeDisabled()
+  })
+
+  it('should enable generate button when prompt and token are filled', () => {
+    render(<OpenAIImage2 />)
+
+    const promptInput = screen.getByPlaceholderText('描述你想生成的图像...')
+    fireEvent.change(promptInput, { target: { value: 'test prompt' } })
+
+    const tokenInput = screen.getByPlaceholderText('sk-...')
+    fireEvent.change(tokenInput, { target: { value: 'sk-test-token' } })
+
+    const generateButton = screen.getByText('生成图像')
+    expect(generateButton.closest('button')).not.toBeDisabled()
+  })
+
+  it('should call createExternalApiLog with request_body on generate', async () => {
+    const mockCreate = vi.mocked(createExternalApiLog)
+    mockCreate.mockResolvedValue({ success: true, data: { id: 1 } as never })
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy.mockRejectedValue(new Error('stop'))
+
+    render(<OpenAIImage2 />)
+
+    const promptInput = screen.getByPlaceholderText('描述你想生成的图像...')
+    fireEvent.change(promptInput, { target: { value: 'a cat' } })
+
+    const tokenInput = screen.getByPlaceholderText('sk-...')
+    fireEvent.change(tokenInput, { target: { value: 'sk-test' } })
+
+    const generateButton = screen.getByText('生成图像')
+    fireEvent.click(generateButton)
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalled()
+      const callArgs = mockCreate.mock.calls[0][0]
+      expect(callArgs.service_provider).toBe('openai')
+      expect(callArgs.status).toBe('pending')
+      expect(callArgs.request_body).toBeDefined()
+      expect(callArgs.request_body).toContain('"prompt":"a cat"')
+    })
+
+    fetchSpy.mockRestore()
+  })
+
+  it('should use chatgpt-image-2 as default model', () => {
+    render(<OpenAIImage2 />)
+    const stored = localStorage.getItem('openai-image-2')
+    if (stored) {
+      const data = JSON.parse(stored)
+      expect(data.model).toBe('chatgpt-image-2')
+    }
+    expect(screen.getByText('Model')).toBeTruthy()
+  })
+
+  it('should call uploadMedia with source external_debug', async () => {
+    const mockCreate = vi.mocked(createExternalApiLog)
+    const mockUpdate = vi.mocked(updateExternalApiLog)
+    const mockUpload = vi.mocked(uploadMedia)
+
+    mockCreate.mockResolvedValue({ success: true, data: { id: 1 } as never })
+    mockUpdate.mockResolvedValue({ success: true, data: {} as never })
+    mockUpload.mockResolvedValue({ success: true, data: { id: 'media-1' } as never })
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const fakeBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        created: 123,
+        data: [{ b64_json: fakeBase64 }],
+        model: 'chatgpt-image-2',
+        size: '1024x1024',
+        usage: { total_tokens: 100 },
+      }),
+    } as Response)
+
+    render(<OpenAIImage2 />)
+
+    const promptInput = screen.getByPlaceholderText('描述你想生成的图像...')
+    fireEvent.change(promptInput, { target: { value: 'a cat' } })
+
+    const tokenInput = screen.getByPlaceholderText('sk-...')
+    fireEvent.change(tokenInput, { target: { value: 'sk-test' } })
+
+    const generateButton = screen.getByText('生成图像')
+    fireEvent.click(generateButton)
+
+    await waitFor(() => {
+      expect(mockUpload).toHaveBeenCalled()
+      const callArgs = mockUpload.mock.calls[0]
+      expect(callArgs[3]).toBe('external_debug')
+    })
+
+    fetchSpy.mockRestore()
   })
 })

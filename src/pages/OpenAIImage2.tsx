@@ -25,6 +25,13 @@ import {
 
 const TOKEN_STORAGE_KEY = 'mnx-openai-image-2-token'
 
+function formatExternalApiError(err: unknown): string {
+  if (err instanceof TypeError && err.message.includes('fetch')) {
+    return '请求失败（可能是 CORS 跨域限制）。请确认目标 API 支持跨域请求，或使用支持 CORS 的代理地址。'
+  }
+  return err instanceof Error ? err.message : '外部 API 调用失败'
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -90,8 +97,8 @@ const STATUS_COLORS: Record<ResultStatus, string> = {
 }
 
 const MODEL_OPTIONS = [
-  { value: 'dall-e-3', label: 'DALL·E 3' },
-  { value: 'gpt-image-1', label: 'GPT Image 1' },
+  { value: 'chatgpt-image-2', label: 'ChatGPT Image 2' },
+  { value: 'gpt-image-2', label: 'GPT Image 2' },
 ]
 
 const SIZE_OPTIONS = [
@@ -129,7 +136,7 @@ export default function OpenAIImage2() {
       baseUrl: 'https://mikuapi.org',
       bearerToken: '',
       prompt: '',
-      model: 'gpt-image-1',
+      model: 'chatgpt-image-2',
       n: 1,
       size: '1024x1024',
       quality: 'auto',
@@ -143,6 +150,7 @@ export default function OpenAIImage2() {
   const [result, setResult] = useState<OpenAIImage2Result>({ status: 'idle' })
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
+  const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem(TOKEN_STORAGE_KEY)
@@ -204,6 +212,7 @@ export default function OpenAIImage2() {
         api_endpoint: 'POST /v1/images/generations',
         operation: 'image_generation',
         request_params: createOpenAIImage2RequestSummary(body),
+        request_body: JSON.stringify(body),
         status: 'pending',
       })
       if (!logResult.success || !logResult.data) {
@@ -243,8 +252,9 @@ export default function OpenAIImage2() {
 
       const json = await response.json()
       parsed = parseOpenAIImage2Response(json)
+      setLastParsedResponse(parsed)
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '外部 API 调用失败'
+      const errorMsg = formatExternalApiError(err)
       await updateExternalApiLog(logId, {
         status: 'failed',
         error_message: errorMsg,
@@ -301,9 +311,8 @@ export default function OpenAIImage2() {
         blob,
         filename,
         'image',
-        undefined,
+        'external_debug',
         {
-          source: 'external_debug',
           service_provider: 'openai',
           operation: 'image_generation',
           external_api_log_id: logId,
@@ -334,7 +343,7 @@ export default function OpenAIImage2() {
   }, [formData, result.previewUrl, saveTokenToCache])
 
   const retryMediaSave = useCallback(async () => {
-    if (!result.blob || !formData.imageTitle) return
+    if (!result.blob) return
     setMediaSaveFailed(false)
     try {
       const filename = (formData.imageTitle.trim() || `openai-image-${Date.now()}`) + `.${formData.outputFormat}`
@@ -342,9 +351,8 @@ export default function OpenAIImage2() {
         result.blob,
         filename,
         'image',
-        undefined,
+        'external_debug',
         {
-          source: 'external_debug',
           service_provider: 'openai',
           operation: 'image_generation',
           external_api_log_id: result.externalApiLogId,
@@ -367,21 +375,19 @@ export default function OpenAIImage2() {
   }, [result.blob, result.externalApiLogId, result.usage, formData])
 
   const retryLogUpdate = useCallback(async () => {
-    if (!result.externalApiLogId || !result.durationMs || !result.usage) return
+    if (!result.externalApiLogId || !result.durationMs || !lastParsedResponse) return
     setLogUpdateFailed(false)
     try {
       await updateExternalApiLog(result.externalApiLogId, {
         status: 'success',
         duration_ms: result.durationMs,
-        response_body: JSON.stringify(createOpenAIImage2ResponseSummary({
-          usage: result.usage,
-        })),
+        response_body: JSON.stringify(createOpenAIImage2ResponseSummary(lastParsedResponse)),
       })
       setLogUpdateFailed(false)
     } catch {
       setLogUpdateFailed(true)
     }
-  }, [result.externalApiLogId, result.durationMs, result.usage])
+  }, [result.externalApiLogId, result.durationMs, lastParsedResponse])
 
   const resetResult = useCallback(() => {
     if (result.previewUrl) {
@@ -390,6 +396,7 @@ export default function OpenAIImage2() {
     setResult({ status: 'idle' })
     setLogUpdateFailed(false)
     setMediaSaveFailed(false)
+    setLastParsedResponse(null)
   }, [result.previewUrl])
 
   const isBusy = result.status !== 'idle' && result.status !== 'success' && result.status !== 'failed'
