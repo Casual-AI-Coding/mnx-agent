@@ -451,24 +451,6 @@ export default function OpenAIImage2() {
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Settings2 className="w-4 h-4 text-indigo-500" />
-                    提示词
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={formData.prompt}
-                    onChange={e => updateForm({ prompt: e.target.value })}
-                    placeholder="描述你想生成的图像..."
-                    rows={4}
-                    disabled={isBusy}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
                     <Globe className="w-4 h-4 text-indigo-500" />
                     连接配置
                   </CardTitle>
@@ -482,9 +464,12 @@ export default function OpenAIImage2() {
                         {BASE_URL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <p className="text-[11px] text-muted-foreground">
-                      固定拼接 <code className="bg-muted px-1 rounded text-[10px]">/v1/images/generations</code>
-                    </p>
+                    <Input
+                      value={buildOpenAIImage2Url(formData.baseUrl)}
+                      readOnly
+                      className="text-[11px] text-muted-foreground font-mono bg-muted/50 cursor-not-allowed"
+                      tabIndex={-1}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">Bearer Token</Label>
@@ -530,6 +515,16 @@ export default function OpenAIImage2() {
                       value={formData.imageTitle}
                       onChange={e => updateForm({ imageTitle: e.target.value })}
                       placeholder="用于保存媒体记录的名称"
+                      disabled={isBusy}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">提示词</Label>
+                    <Textarea
+                      value={formData.prompt}
+                      onChange={e => updateForm({ prompt: e.target.value })}
+                      placeholder="描述你想生成的图像..."
+                      rows={3}
                       disabled={isBusy}
                     />
                   </div>
