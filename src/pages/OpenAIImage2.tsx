@@ -23,7 +23,38 @@ import {
   type OpenAIImage2ResponseBody,
 } from '@/lib/openai-image-2'
 
-const TOKEN_STORAGE_KEY = 'mnx-openai-image-2-token'
+const TOKENS_STORAGE_KEY = 'mnx-openai-image-2-tokens'
+
+const BASE_URL_OPTIONS = [
+  { value: 'https://mikuapi.org', label: 'mikuapi.org' },
+  { value: 'https://api.pptoken.org', label: 'pptoken.org' },
+  { value: 'https://code.azsheen.top', label: 'azsheen.top' },
+]
+
+function loadTokensMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(TOKENS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveTokenForUrl(url: string, token: string) {
+  const map = loadTokensMap()
+  map[url] = token
+  localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(map))
+}
+
+function removeTokenForUrl(url: string) {
+  const map = loadTokensMap()
+  delete map[url]
+  localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(map))
+}
+
+function getTokenForUrl(url: string): string {
+  return loadTokensMap()[url] || ''
+}
 
 function formatExternalApiError(err: unknown): string {
   if (err instanceof TypeError && err.message.includes('fetch')) {
@@ -153,11 +184,9 @@ export default function OpenAIImage2() {
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem(TOKEN_STORAGE_KEY)
-    if (saved) {
-      setFormData(prev => ({ ...prev, bearerToken: saved }))
-    }
-  }, [])
+    const saved = getTokenForUrl(formData.baseUrl)
+    setFormData(prev => ({ ...prev, bearerToken: saved }))
+  }, [formData.baseUrl])
 
   useEffect(() => {
     return () => {
@@ -172,13 +201,13 @@ export default function OpenAIImage2() {
   }, [setFormData])
 
   const clearToken = useCallback(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    removeTokenForUrl(formData.baseUrl)
     updateForm({ bearerToken: '' })
-  }, [updateForm])
+  }, [formData.baseUrl, updateForm])
 
   const saveTokenToCache = useCallback((token: string) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token)
-  }, [])
+    saveTokenForUrl(formData.baseUrl, token)
+  }, [formData.baseUrl])
 
   const handleGenerate = useCallback(async () => {
     const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle } = formData
@@ -402,14 +431,12 @@ export default function OpenAIImage2() {
   const isBusy = result.status !== 'idle' && result.status !== 'success' && result.status !== 'failed'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="space-y-8"
-        >
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="space-y-6"
+    >
           <motion.div variants={itemVariants}>
             <PageHeader
               icon={<Globe className="w-5 h-5" />}
@@ -424,6 +451,24 @@ export default function OpenAIImage2() {
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-base">
+                    <Settings2 className="w-4 h-4 text-indigo-500" />
+                    提示词
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={formData.prompt}
+                    onChange={e => updateForm({ prompt: e.target.value })}
+                    placeholder="描述你想生成的图像..."
+                    rows={4}
+                    disabled={isBusy}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <Globe className="w-4 h-4 text-indigo-500" />
                     连接配置
                   </CardTitle>
@@ -431,12 +476,12 @@ export default function OpenAIImage2() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">Base URL</Label>
-                    <Input
-                      value={formData.baseUrl}
-                      onChange={e => updateForm({ baseUrl: e.target.value })}
-                      placeholder="https://mikuapi.org"
-                      disabled={isBusy}
-                    />
+                    <Select value={formData.baseUrl} onValueChange={v => updateForm({ baseUrl: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {BASE_URL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                     <p className="text-[11px] text-muted-foreground">
                       固定拼接 <code className="bg-muted px-1 rounded text-[10px]">/v1/images/generations</code>
                     </p>
@@ -479,16 +524,6 @@ export default function OpenAIImage2() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Prompt</Label>
-                    <Textarea
-                      value={formData.prompt}
-                      onChange={e => updateForm({ prompt: e.target.value })}
-                      placeholder="描述你想生成的图像..."
-                      rows={4}
-                      disabled={isBusy}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">图片标题（可选）</Label>
                     <Input
@@ -760,7 +795,5 @@ export default function OpenAIImage2() {
             </motion.div>
           </div>
         </motion.div>
-      </div>
-    </div>
   )
 }

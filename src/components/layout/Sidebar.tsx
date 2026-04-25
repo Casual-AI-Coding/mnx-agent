@@ -226,6 +226,10 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
     { path: '/video-agent', label: t('sidebar.videoAgent'), icon: Film },
   ]
 
+  const externalDebugItems = [
+    { path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image },
+  ]
+
   const menuSections = [
     {
       id: 'resources',
@@ -251,15 +255,6 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
         { path: '/audit', label: t('sidebar.audit', '内部审计日志'), icon: Shield },
         { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
-      ],
-    },
-    {
-      id: 'externalDebug',
-      label: '外部调试',
-      icon: Globe,
-      minRole: 'admin' as UserRole,
-      items: [
-        { path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image },
       ],
     },
       {
@@ -427,6 +422,12 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         {isCollapsed ? (
           <div className="py-1">
             {debugItems.map(renderNavItem)}
+            {userRoleLevel >= roleHierarchy['admin'] && (
+              <>
+                <div className="mx-2 my-1 border-t border-border/30" />
+                {externalDebugItems.map(renderNavItem)}
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -447,12 +448,41 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
             <div
               className={cn(
                 'overflow-hidden transition-all duration-200',
-                expandedSections['debug'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                expandedSections['debug'] ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'
               )}
             >
               <div className="pl-4 mt-1 space-y-0.5">
                 {debugItems.map(renderNavItem)}
               </div>
+
+              {userRoleLevel >= roleHierarchy['admin'] && externalDebugItems.length > 0 && (
+                <>
+                  <div className="mx-3 my-1 border-t border-border/30" />
+                  <button
+                    onClick={() => toggleSection('externalDebug')}
+                    className="w-full flex items-center gap-2 px-7 py-1.5 text-muted-foreground/70 hover:text-foreground transition-colors"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium flex-1 text-left">外部调试</span>
+                    <ChevronRight
+                      className={cn(
+                        'w-3 h-3 transition-transform duration-200',
+                        expandedSections['externalDebug'] && 'rotate-90'
+                      )}
+                    />
+                  </button>
+                  <div
+                    className={cn(
+                      'overflow-hidden transition-all duration-200',
+                      expandedSections['externalDebug'] ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                    )}
+                  >
+                    <div className="pl-4 mt-0.5 space-y-0.5">
+                      {externalDebugItems.map(renderNavItem)}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

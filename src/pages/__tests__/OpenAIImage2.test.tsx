@@ -60,10 +60,9 @@ describe('OpenAIImage2 Component', () => {
     expect(textarea).toBeTruthy()
   })
 
-  it('should display the base URL input', () => {
+  it('should display the base URL select', () => {
     render(<OpenAIImage2 />)
-    const input = screen.getByPlaceholderText('https://mikuapi.org')
-    expect(input).toBeTruthy()
+    expect(screen.getByText('Base URL')).toBeTruthy()
   })
 
   it('should display the generate button', () => {
