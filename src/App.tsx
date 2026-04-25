@@ -42,6 +42,7 @@ const WorkflowMarketplace = lazy(() => import('@/pages/WorkflowMarketplace'))
 const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
 const MaterialManagement = lazy(() => import('@/pages/MaterialManagement'))
 const ArtistMaterialEditor = lazy(() => import('@/pages/ArtistMaterialEditor'))
+const OpenAIImage2 = lazy(() => import('@/pages/OpenAIImage2'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -380,6 +381,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="素材编辑器">
               <ArtistMaterialEditor />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="external-debug/openai-image-2"
+          element={
+            <RouteWithErrorBoundary pageName="OpenAI Image-2 外部调试">
+              <OpenAIImage2 />
             </RouteWithErrorBoundary>
           }
         />

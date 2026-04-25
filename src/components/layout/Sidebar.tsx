@@ -253,6 +253,15 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
       ],
     },
+    {
+      id: 'externalDebug',
+      label: '外部调试',
+      icon: Globe,
+      minRole: 'admin' as UserRole,
+      items: [
+        { path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image },
+      ],
+    },
       {
         id: 'automation',
         label: '自动化',
