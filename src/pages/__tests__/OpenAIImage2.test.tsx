@@ -146,12 +146,12 @@ describe('OpenAIImage2 Component', () => {
     fetchSpy.mockRestore()
   })
 
-  it('should use chatgpt-image-2 as default model', () => {
+  it('should use gpt-image-2 as default model', () => {
     render(<OpenAIImage2 />)
     const stored = localStorage.getItem('openai-image-2')
     if (stored) {
       const data = JSON.parse(stored)
-      expect(data.model).toBe('chatgpt-image-2')
+      expect(data.model).toBe('gpt-image-2')
     }
     expect(screen.getByText('Model')).toBeTruthy()
   })

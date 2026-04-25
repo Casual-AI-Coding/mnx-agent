@@ -129,7 +129,6 @@ const STATUS_COLORS: Record<ResultStatus, string> = {
 }
 
 const MODEL_OPTIONS = [
-  { value: 'chatgpt-image-2', label: 'ChatGPT Image 2' },
   { value: 'gpt-image-2', label: 'GPT Image 2' },
 ]
 
@@ -168,13 +167,13 @@ export default function OpenAIImage2() {
       baseUrl: 'https://mikuapi.org',
       bearerToken: '',
       prompt: '',
-      model: 'chatgpt-image-2',
+      model: 'gpt-image-2',
       n: 1,
       size: '1536x2048',
-      quality: 'auto',
+      quality: 'high',
       background: 'auto',
       outputFormat: 'png',
-      moderation: 'auto',
+      moderation: 'low',
       imageTitle: '',
     },
   })
