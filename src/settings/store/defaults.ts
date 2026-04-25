@@ -19,6 +19,11 @@ export const DEFAULT_SETTINGS: AllSettings = {
     timeout: TIMEOUTS.API_REQUEST,
     retryAttempts: 3,
     retryDelay: 1000,
+    externalEndpoints: [
+      { id: 'mikuapi', name: 'mikuapi.org', url: 'https://mikuapi.org', protocol: 'openai', apiKey: '' },
+      { id: 'pptoken', name: 'pptoken.org', url: 'https://api.pptoken.org', protocol: 'openai', apiKey: '' },
+      { id: 'azsheen', name: 'azsheen.top', url: 'https://code.azsheen.top', protocol: 'openai', apiKey: '' },
+    ],
   },
   ui: {
     theme: 'system',

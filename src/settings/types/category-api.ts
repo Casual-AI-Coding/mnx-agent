@@ -1,3 +1,5 @@
+import type { ExternalEndpoint } from './category-external-api'
+
 export interface ApiSettings {
   minimaxKey: string
   region: 'cn' | 'intl'
@@ -5,4 +7,5 @@ export interface ApiSettings {
   timeout: number
   retryAttempts: number
   retryDelay: number
+  externalEndpoints: ExternalEndpoint[]
 }

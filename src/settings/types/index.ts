@@ -1,5 +1,6 @@
 export type { AccountSettings } from './category-account'
 export type { ApiSettings } from './category-api'
+export type { ExternalEndpoint, ExternalProtocol } from './category-external-api'
 export type { UISettings, ThemeSetting, ToastPosition, UIDensity, FontSize } from './category-ui'
 export type {
   GenerationSettings,

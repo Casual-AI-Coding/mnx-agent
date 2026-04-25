@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, X, Download, Image as ImageIcon } from 'lucide-react'
+import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -13,7 +13,9 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { createExternalApiLog, updateExternalApiLog } from '@/lib/api/external-api-logs'
+import { internalAxios } from '@/lib/api/client'
 import { uploadMedia } from '@/lib/api/media'
+import { useSettingsStore } from '@/settings/store'
 import {
   parseOpenAIImage2Response,
   buildOpenAIImage2Url,
@@ -24,39 +26,6 @@ import {
   type OpenAIImage2RequestBody,
   type OpenAIImage2ResponseBody,
 } from '@/lib/openai-image-2'
-
-const TOKENS_STORAGE_KEY = 'mnx-openai-image-2-tokens'
-
-const BASE_URL_OPTIONS = [
-  { value: 'https://mikuapi.org', label: 'mikuapi.org' },
-  { value: 'https://api.pptoken.org', label: 'pptoken.org' },
-  { value: 'https://code.azsheen.top', label: 'azsheen.top' },
-]
-
-function loadTokensMap(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(TOKENS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveTokenForUrl(url: string, token: string) {
-  const map = loadTokensMap()
-  map[url] = token
-  localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(map))
-}
-
-function removeTokenForUrl(url: string) {
-  const map = loadTokensMap()
-  delete map[url]
-  localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(map))
-}
-
-function getTokenForUrl(url: string): string {
-  return loadTokensMap()[url] || ''
-}
 
 function formatExternalApiError(err: unknown): string {
   if (err instanceof TypeError && err.message.includes('fetch')) {
@@ -162,10 +131,24 @@ const MODERATION_OPTIONS = [
 ]
 
 export default function OpenAIImage2() {
+  const settingsEndpoints = useSettingsStore(s => s.settings.api.externalEndpoints ?? [])
+  const openaiEndpoints = useMemo(
+    () => settingsEndpoints.filter(ep => ep.protocol === 'openai'),
+    [settingsEndpoints]
+  )
+  const baseUrlOptions = useMemo(
+    () => openaiEndpoints.map(ep => ({ value: ep.url, label: ep.name })),
+    [openaiEndpoints]
+  )
+  const endpointByUrl = useMemo(
+    () => new Map(openaiEndpoints.map(ep => [ep.url, ep])),
+    [openaiEndpoints]
+  )
+
   const [formData, setFormData] = useFormPersistence<OpenAIImage2FormData>({
     storageKey: DEBUG_FORM_KEYS.OPENAI_IMAGE_2,
     defaultValue: {
-      baseUrl: 'https://mikuapi.org',
+      baseUrl: openaiEndpoints[0]?.url ?? 'https://mikuapi.org',
       bearerToken: '',
       prompt: '',
       model: 'gpt-image-2',
@@ -183,19 +166,17 @@ export default function OpenAIImage2() {
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
-  const prevBaseUrlRef = useRef(formData.baseUrl)
+
+  const lastAutoFillRef = useRef<string>('')
 
   useEffect(() => {
-    if (prevBaseUrlRef.current !== formData.baseUrl) {
-      const prevToken = formData.bearerToken
-      if (prevToken) {
-        saveTokenForUrl(prevBaseUrlRef.current, prevToken)
-      }
-      prevBaseUrlRef.current = formData.baseUrl
+    if (lastAutoFillRef.current === formData.baseUrl) return
+    lastAutoFillRef.current = formData.baseUrl
+    const endpoint = endpointByUrl.get(formData.baseUrl)
+    if (endpoint?.apiKey) {
+      setFormData(prev => ({ ...prev, bearerToken: endpoint.apiKey }))
     }
-    const saved = getTokenForUrl(formData.baseUrl)
-    setFormData(prev => ({ ...prev, bearerToken: saved }))
-  }, [formData.baseUrl])
+  }, [formData.baseUrl, endpointByUrl, setFormData])
 
   useEffect(() => {
     return () => {
@@ -209,15 +190,6 @@ export default function OpenAIImage2() {
     setFormData(prev => ({ ...prev, ...updates }))
   }, [setFormData])
 
-  const clearToken = useCallback(() => {
-    removeTokenForUrl(formData.baseUrl)
-    updateForm({ bearerToken: '' })
-  }, [formData.baseUrl, updateForm])
-
-  const saveTokenToCache = useCallback((token: string) => {
-    saveTokenForUrl(formData.baseUrl, token)
-  }, [formData.baseUrl])
-
   const handleGenerate = useCallback(async () => {
     const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle } = formData
     if (!prompt.trim() || !bearerToken.trim()) return
@@ -229,8 +201,6 @@ export default function OpenAIImage2() {
     setResult({ status: 'creating-log' })
     setLogUpdateFailed(false)
     setMediaSaveFailed(false)
-
-    saveTokenToCache(bearerToken)
 
     const body: OpenAIImage2RequestBody = {
       model,
@@ -273,22 +243,17 @@ export default function OpenAIImage2() {
     try {
       const startTime = performance.now()
       const url = buildOpenAIImage2Url(baseUrl)
-      const proxyResponse = await fetch('/api/external-proxy', {
+      const proxyResult = await internalAxios.post('/external-proxy', {
+        url,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${bearerToken}`,
-            'Content-Type': 'application/json',
-          },
-          body,
-        }),
-      })
+        headers: {
+          'Authorization': `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      }, { timeout: 300_000 }).then(r => r.data)
       durationMs = Math.round(performance.now() - startTime)
 
-      const proxyResult = await proxyResponse.json()
       if (!proxyResult.success) {
         throw new Error(proxyResult.error || '代理请求失败')
       }
@@ -390,7 +355,7 @@ export default function OpenAIImage2() {
       setMediaSaveFailed(true)
       setResult(prev => ({ ...prev, status: 'success' }))
     }
-  }, [formData, result.previewUrl, saveTokenToCache])
+  }, [formData, result.previewUrl])
 
   const retryMediaSave = useCallback(async () => {
     if (!result.blob) return
@@ -469,7 +434,7 @@ export default function OpenAIImage2() {
 
   const clearAll = useCallback(() => {
     setFormData({
-      baseUrl: 'https://mikuapi.org',
+      baseUrl: openaiEndpoints[0]?.url ?? '',
       bearerToken: '',
       prompt: '',
       model: 'gpt-image-2',
@@ -482,21 +447,21 @@ export default function OpenAIImage2() {
       imageTitle: '',
     })
     resetResult()
-  }, [setFormData, resetResult])
+  }, [setFormData, resetResult, openaiEndpoints])
 
   const helpTips = (
     <div className="space-y-3 text-sm">
       <div>
         <p className="font-medium text-foreground">连接配置</p>
-        <p className="text-muted-foreground">填写外部 OpenAI 兼容 API 的 Base URL 和 Bearer Token。支持多个预设地址，Token 按地址独立缓存。</p>
+        <p className="text-muted-foreground">Base URL 从设置中的外部 API 端点读取，切换端点时自动填充对应的 API Key。页面也可临时修改。</p>
       </div>
       <div>
         <p className="font-medium text-foreground">图像生成</p>
         <p className="text-muted-foreground">填写提示词后点击「生成图像」，页面会直连外部 API 进行生成，生成结果自动保存到媒体库。</p>
       </div>
       <div>
-        <p className="font-medium text-foreground">注意事项</p>
-        <p className="text-muted-foreground">外部 API 可能存在 CORS 限制，如遇网络错误请确认 API 地址可访问。每次生成的请求和响应都会记录到外部 API 日志中。</p>
+        <p className="font-medium text-foreground">配置管理</p>
+        <p className="text-muted-foreground">外部 API 端点和密钥在「设置 → API 配置 → 外部 API 配置」中统一管理。API Key 通过后端存储，不在浏览器本地缓存。</p>
       </div>
     </div>
   )
@@ -543,7 +508,7 @@ export default function OpenAIImage2() {
                     <ComboboxInput
                       value={formData.baseUrl}
                       onChange={v => updateForm({ baseUrl: v })}
-                      options={BASE_URL_OPTIONS}
+                      options={baseUrlOptions}
                       suffix="/v1/images/generations"
                       placeholder="https://api.example.com"
                       disabled={isBusy}
@@ -562,19 +527,9 @@ export default function OpenAIImage2() {
                       />
                       <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] text-muted-foreground">本地缓存，刷新后保留</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[11px] text-destructive hover:text-destructive"
-                        onClick={clearToken}
-                        disabled={isBusy || !formData.bearerToken}
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        清除密钥
-                      </Button>
-                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      从设置中的外部 API 端点自动填充，也可临时修改
+                    </p>
                   </div>
                 </CardContent>
               </Card>

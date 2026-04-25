@@ -56,13 +56,19 @@ router.post(
       }
     }
 
+    const PROXY_TIMEOUT_MS = 300_000
+
     const startTime = performance.now()
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS)
       const response = await fetch(url, {
         method,
         headers: forwardHeaders,
         body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
       const durationMs = Math.round(performance.now() - startTime)
 
       const responseText = await response.text()
