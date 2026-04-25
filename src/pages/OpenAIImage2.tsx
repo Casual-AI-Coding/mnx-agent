@@ -14,6 +14,7 @@ import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { createExternalApiLog, updateExternalApiLog } from '@/lib/api/external-api-logs'
 import { internalAxios } from '@/lib/api/client'
+import { TIMEOUTS } from '@/lib/config/constants'
 import { uploadMedia } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
 import {
@@ -251,7 +252,7 @@ export default function OpenAIImage2() {
           'Content-Type': 'application/json',
         },
         body,
-      }, { timeout: 300_000 }).then(r => r.data)
+      }, { timeout: TIMEOUTS.EXTERNAL_PROXY }).then(r => r.data)
       durationMs = Math.round(performance.now() - startTime)
 
       if (!proxyResult.success) {

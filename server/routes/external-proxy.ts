@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { getLogger } from '../lib/logger'
+import { EXTERNAL_PROXY_TIMEOUTS } from '../config/timeouts'
 
 const logger = getLogger()
 
@@ -56,12 +57,10 @@ router.post(
       }
     }
 
-    const PROXY_TIMEOUT_MS = 300_000
-
     const startTime = performance.now()
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS)
+      const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_PROXY_TIMEOUTS.PROXY_REQUEST_MS)
       const response = await fetch(url, {
         method,
         headers: forwardHeaders,
