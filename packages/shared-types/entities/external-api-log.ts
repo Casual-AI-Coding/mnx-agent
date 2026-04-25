@@ -3,7 +3,7 @@
  */
 
 export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
-export type ExternalApiStatus = 'success' | 'failed'
+export type ExternalApiStatus = 'pending' | 'success' | 'failed'
 
 export interface ExternalApiLog {
   id: number
@@ -51,6 +51,13 @@ export interface CreateExternalApiLog {
   trace_id?: string | null
 }
 
+export interface UpdateExternalApiLog {
+  response_body?: string
+  status?: ExternalApiStatus
+  error_message?: string
+  duration_ms?: number
+}
+
 export interface ExternalApiLogQuery {
   service_provider?: ServiceProvider
   status?: ExternalApiStatus
@@ -67,7 +74,7 @@ export interface ExternalApiLogQuery {
 export interface ExternalApiLogStats {
   total_logs: number
   by_service_provider: Record<string, number>
-  by_status: Record<string, number>
+  by_status: Record<ExternalApiStatus, number>
   by_operation: Record<string, number>
   avg_duration_ms: number
 }
