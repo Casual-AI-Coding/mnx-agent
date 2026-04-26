@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ComboboxInput } from '@/components/ui/ComboboxInput'
+import { SizePopup } from '@/components/ui/SizePopup'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
@@ -104,9 +105,7 @@ const MODEL_OPTIONS = [
   { value: 'gpt-image-2', label: 'GPT Image 2' },
 ]
 
-const SIZE_OPTIONS = [
-  '1024x1024', '1536x1024', '1024x1536', '1536x2048', '2048x1152', '2048x1536', '1152x2048', '2048x2048', 'auto',
-]
+
 
 const QUALITY_OPTIONS = [
   { value: 'low', label: 'Low' },
@@ -169,6 +168,7 @@ export default function OpenAIImage2() {
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
   const [fullscreenPreview, setFullscreenPreview] = useState(false)
+  const [sizePopupOpen, setSizePopupOpen] = useState(false)
 
   const lastAutoFillRef = useRef<string>('')
 
@@ -595,14 +595,24 @@ export default function OpenAIImage2() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
+                    <div className="relative space-y-2">
                       <Label className="text-xs font-medium text-muted-foreground">Size</Label>
-                      <Select value={formData.size} onValueChange={v => updateForm({ size: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {SIZE_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => setSizePopupOpen(true)}
+                        className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <span className="line-clamp-1">{formData.size}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 opacity-50 shrink-0">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </button>
+                      <SizePopup
+                        open={sizePopupOpen}
+                        onClose={() => setSizePopupOpen(false)}
+                        value={formData.size}
+                        onChange={v => updateForm({ size: v })}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-muted-foreground">Quality</Label>
