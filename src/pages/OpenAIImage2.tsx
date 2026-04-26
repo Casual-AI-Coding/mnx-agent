@@ -569,8 +569,7 @@ export default function OpenAIImage2() {
                       className="flex-1"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">提示词</Label>
+                  <div>
                     <Textarea
                       value={formData.prompt}
                       onChange={e => updateForm({ prompt: e.target.value })}
@@ -618,59 +617,59 @@ export default function OpenAIImage2() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">数量</Label>
-                      <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                   </div>
+                   <div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
+                     <div className="space-y-2">
+                       <Label className="text-xs font-medium text-muted-foreground">Background</Label>
+                       <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
+                         <SelectTrigger><SelectValue /></SelectTrigger>
+                         <SelectContent>
+                           {BACKGROUND_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="text-xs font-medium text-muted-foreground">Format</Label>
+                       <Select value={formData.outputFormat} onValueChange={v => updateForm({ outputFormat: v })}>
+                         <SelectTrigger><SelectValue /></SelectTrigger>
+                         <SelectContent>
+                           {OUTPUT_FORMAT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                     </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
+                        <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {MODERATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">数量</Label>
+                        <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Background</Label>
-                      <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {BACKGROUND_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Format</Label>
-                      <Select value={formData.outputFormat} onValueChange={v => updateForm({ outputFormat: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {OUTPUT_FORMAT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
-                      <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {MODERATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        className="w-full h-11 text-base font-medium bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-lg shadow-indigo-500/25"
-                        onClick={handleGenerate}
-                        disabled={isBusy || !formData.prompt.trim() || !formData.bearerToken.trim()}
-                      >
-                        {isBusy ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-4 h-4 mr-1.5" />
-                        )}
-                        {isBusy ? STATUS_LABELS[result.status] : '生成'}
-                      </Button>
-                    </div>
-                  </div>
+                   <div className="flex items-end">
+                     <Button
+                       className="w-full h-11 text-base font-medium bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-lg shadow-indigo-500/25"
+                       onClick={handleGenerate}
+                       disabled={isBusy || !formData.prompt.trim() || !formData.bearerToken.trim()}
+                     >
+                       {isBusy ? (
+                         <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                       ) : (
+                         <Wand2 className="w-4 h-4 mr-1.5" />
+                       )}
+                       {isBusy ? STATUS_LABELS[result.status] : '生成'}
+                     </Button>
+                   </div>
                 </CardContent>
               </Card>
             </motion.div>
