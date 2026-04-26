@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X, HelpCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Textarea } from '@/components/ui/Textarea'
+
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
@@ -580,7 +581,7 @@ export default function OpenAIImage2() {
                     />
                   </div>
                   <div className="flex gap-3 flex-wrap">
-                    <div className="space-y-2 flex-1 min-w-[140px]">
+                    <div className="space-y-1 flex-1 min-w-[140px]">
                       <Label className="text-xs font-medium text-muted-foreground">Model</Label>
                       <Select value={formData.model} onValueChange={v => updateForm({ model: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -589,7 +590,7 @@ export default function OpenAIImage2() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="relative space-y-2 flex-1 min-w-[140px]">
+                    <div className="relative space-y-1 flex-1 min-w-[140px]">
                       <Label className="text-xs font-medium text-muted-foreground">Size</Label>
                       <button
                         type="button"
@@ -608,7 +609,7 @@ export default function OpenAIImage2() {
                         onChange={v => updateForm({ size: v })}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground">Quality</Label>
                       <Select value={formData.quality} onValueChange={v => updateForm({ quality: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -618,8 +619,8 @@ export default function OpenAIImage2() {
                       </Select>
                     </div>
                    </div>
-                   <div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
-                     <div className="space-y-2">
+<div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
+                      <div className="space-y-1">
                        <Label className="text-xs font-medium text-muted-foreground">Background</Label>
                        <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
                          <SelectTrigger><SelectValue /></SelectTrigger>
@@ -628,7 +629,7 @@ export default function OpenAIImage2() {
                          </SelectContent>
                        </Select>
                      </div>
-                     <div className="space-y-2">
+                     <div className="space-y-1">
                        <Label className="text-xs font-medium text-muted-foreground">Format</Label>
                        <Select value={formData.outputFormat} onValueChange={v => updateForm({ outputFormat: v })}>
                          <SelectTrigger><SelectValue /></SelectTrigger>
@@ -637,7 +638,7 @@ export default function OpenAIImage2() {
                          </SelectContent>
                        </Select>
                      </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
                         <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -646,7 +647,7 @@ export default function OpenAIImage2() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Label className="text-xs font-medium text-muted-foreground">数量</Label>
                         <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -834,7 +835,7 @@ export default function OpenAIImage2() {
                         </div>
 
                         {(logUpdateFailed || mediaSaveFailed) && (
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             {logUpdateFailed && (
                               <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 text-amber-600 text-xs">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
