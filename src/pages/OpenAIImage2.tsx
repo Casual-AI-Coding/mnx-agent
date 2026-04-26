@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X } from 'lucide-react'
+import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X, HelpCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ComboboxInput } from '@/components/ui/ComboboxInput'
 import { SizePopup } from '@/components/ui/SizePopup'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
@@ -516,8 +517,8 @@ export default function OpenAIImage2() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Base URL</Label>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">Base URL</Label>
                     <ComboboxInput
                       value={formData.baseUrl}
                       onChange={v => updateForm({ baseUrl: v })}
@@ -525,11 +526,17 @@ export default function OpenAIImage2() {
                       suffix="/v1/images/generations"
                       placeholder="https://api.example.com"
                       disabled={isBusy}
+                      className="flex-1"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Bearer Token</Label>
-                    <div className="relative">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Bearer Token</Label>
+                      <Tooltip content="从设置中的外部 API 端点自动填充，也可临时修改" side="top">
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </Tooltip>
+                    </div>
+                    <div className="relative flex-1">
                       <Input
                         type="password"
                         value={formData.bearerToken}
@@ -540,9 +547,6 @@ export default function OpenAIImage2() {
                       />
                       <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      从设置中的外部 API 端点自动填充，也可临时修改
-                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -555,13 +559,14 @@ export default function OpenAIImage2() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">图片标题（可选）</Label>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">图片标题</Label>
                     <Input
                       value={formData.imageTitle}
                       onChange={e => updateForm({ imageTitle: e.target.value })}
-                      placeholder="用于保存媒体记录的名称"
+                      placeholder="可选，用于保存媒体记录的名称"
                       disabled={isBusy}
+                      className="flex-1"
                     />
                   </div>
                   <div className="space-y-2">
@@ -570,12 +575,13 @@ export default function OpenAIImage2() {
                       value={formData.prompt}
                       onChange={e => updateForm({ prompt: e.target.value })}
                       placeholder="描述你想生成的图像..."
-                      rows={3}
+                      rows={12}
                       disabled={isBusy}
+                      className="text-xs"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
+                  <div className="flex gap-3 flex-wrap">
+                    <div className="space-y-2 flex-1 min-w-[140px]">
                       <Label className="text-xs font-medium text-muted-foreground">Model</Label>
                       <Select value={formData.model} onValueChange={v => updateForm({ model: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -584,23 +590,12 @@ export default function OpenAIImage2() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">数量</Label>
-                      <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative space-y-2">
+                    <div className="relative space-y-2 flex-1 min-w-[140px]">
                       <Label className="text-xs font-medium text-muted-foreground">Size</Label>
                       <button
                         type="button"
                         onClick={() => setSizePopupOpen(true)}
-                        className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 overflow-hidden"
                       >
                         <span className="line-clamp-1">{formData.size}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 opacity-50 shrink-0">
@@ -623,8 +618,17 @@ export default function OpenAIImage2() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground">数量</Label>
+                      <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-muted-foreground">Background</Label>
                       <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
@@ -635,7 +639,7 @@ export default function OpenAIImage2() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Output Format</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Format</Label>
                       <Select value={formData.outputFormat} onValueChange={v => updateForm({ outputFormat: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -643,35 +647,36 @@ export default function OpenAIImage2() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
-                    <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {MODERATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
+                      <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {MODERATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        className="w-full h-11 text-base font-medium bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-lg shadow-indigo-500/25"
+                        onClick={handleGenerate}
+                        disabled={isBusy || !formData.prompt.trim() || !formData.bearerToken.trim()}
+                      >
+                        {isBusy ? (
+                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-4 h-4 mr-1.5" />
+                        )}
+                        {isBusy ? STATUS_LABELS[result.status] : '生成'}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-
-              <Button
-                className="w-full h-11 text-base font-medium bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-lg shadow-indigo-500/25"
-                onClick={handleGenerate}
-                disabled={isBusy || !formData.prompt.trim() || !formData.bearerToken.trim()}
-              >
-                {isBusy ? (
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Wand2 className="w-5 h-5 mr-2" />
-                )}
-                {isBusy ? STATUS_LABELS[result.status] : '生成图像'}
-              </Button>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="xl:col-span-7 space-y-6">
-              <Card className="min-h-[500px]">
+            <motion.div variants={itemVariants} className="xl:col-span-7 space-y-6 flex flex-col">
+              <Card className="flex-1 flex flex-col min-h-[500px]">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -699,7 +704,8 @@ export default function OpenAIImage2() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col">
                   <AnimatePresence mode="wait">
                     {result.status === 'idle' && (
                       <motion.div
@@ -707,7 +713,7 @@ export default function OpenAIImage2() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="flex flex-col items-center justify-center py-20 text-muted-foreground"
+                        className="flex-1 flex flex-col items-center justify-center py-20 text-muted-foreground"
                       >
                         <Globe className="w-16 h-16 mb-4 opacity-20" />
                         <p className="text-sm">填写参数后点击「生成图像」</p>
@@ -721,7 +727,7 @@ export default function OpenAIImage2() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="flex flex-col items-center justify-center py-20"
+                        className="flex-1 flex flex-col items-center justify-center py-20"
                       >
                         <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
                         <p className="text-sm font-medium text-foreground">{STATUS_LABELS[result.status]}</p>
@@ -747,7 +753,7 @@ export default function OpenAIImage2() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex flex-col items-center justify-center py-20"
+                        className="flex-1 flex flex-col items-center justify-center py-20"
                       >
                         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                           <AlertCircle className="w-8 h-8 text-red-500" />
@@ -855,6 +861,7 @@ export default function OpenAIImage2() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

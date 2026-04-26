@@ -12,17 +12,21 @@ export const IMAGE_SIZE_OPTIONS = [
   '2048x1536',
   '1152x2048',
   '2048x2048',
-  'auto',
+  '2880x2880',
+  '3264x2448',
+  '2448x3264',
+  '2880x2160',
+  '2160x2880',
 ] as const
 
 const dropdownAnimation: React.CSSProperties = {
-  animation: 'size-popup-slide-down 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+  animation: 'size-popup-slide-right 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
 }
 
 const styleTag = `
-@keyframes size-popup-slide-down {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes size-popup-slide-right {
+  from { opacity: 0; transform: translateX(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
 }
 `
 
@@ -61,12 +65,12 @@ export function SizePopup({ open, onClose, value, onChange }: SizePopupProps) {
   if (!open) return null
 
   return (
-    <div ref={containerRef} className="absolute top-full left-0 z-50 mt-1 w-full">
+    <div ref={containerRef} className="absolute top-0 left-full z-50 ml-1 min-w-[340px]">
       <div
         style={dropdownAnimation}
-        className="rounded-lg bg-popover text-popover-foreground shadow-lg shadow-black/10 ring-1 ring-black/5 p-2"
+        className="rounded-lg bg-popover text-popover-foreground shadow-lg shadow-black/10 ring-1 ring-black/5 p-3"
       >
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-2">
           {IMAGE_SIZE_OPTIONS.map((size) => (
             <button
               key={size}
@@ -76,7 +80,7 @@ export function SizePopup({ open, onClose, value, onChange }: SizePopupProps) {
                 onClose()
               }}
               className={cn(
-                'flex items-center justify-center px-2 py-1.5 rounded-md text-xs font-mono transition-colors',
+                'flex items-center justify-center px-2.5 py-2 rounded-md text-xs font-mono transition-colors',
                 'hover:bg-accent hover:text-accent-foreground',
                 value === size
                   ? 'bg-accent text-accent-foreground ring-1 ring-ring'
