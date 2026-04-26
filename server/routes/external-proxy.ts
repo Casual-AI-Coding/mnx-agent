@@ -13,6 +13,8 @@ const ALLOWED_HOSTS = [
   'mikuapi.org',
   'api.pptoken.org',
   'code.azsheen.top',
+  'api.tokenfty.net',
+  'gpt.hslife.fun',
 ]
 
 const proxyRequestSchema = z.object({

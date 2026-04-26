@@ -184,16 +184,22 @@
 
 ## 2026-04-25
 
-**汇总**: 1 个需求 | 已完成: 0 | 待办: 1
+**汇总**: 2 个需求 | 已完成: 0 | 待办: 2
 
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
 | R-024 | OpenAI Image-2 外部调试 | DevTools | P1 | v2.3 | 待办 |
+| R-025 | 补充完善系统配置功能 | Admin | P2 | v2.5 | 待办 |
 
 ### R-024 - OpenAI Image-2 外部调试
 - **描述**: 增加外部供应商 OpenAI，接入 chatgpt-image-2 / gpt-image-2 模型的图片生成调试功能，用于直接验证外部图片生成 API 参数、响应和媒体保存链路
 - **现状**: 调试台目前以 MiniMax 能力为主，缺少外部供应商调试入口，也缺少 OpenAI Image-2 图片生成调试页面
 - **范围**: 调试台新增一级菜单「外部调试」和二级菜单「OpenAI Image-2」；参考现有 MiniMax 图片、音乐生成调试页实现可调参数表单、响应预览和浏览器本地缓存；前端浏览器直接调用 `https://mikuapi.org/v1/images/generations`，不经过后端代理；后端提供外部调用日志的创建和更新能力，发起时记录请求元数据，响应返回后更新状态、耗时、错误和 token 用量等摘要信息，避免回传大体积 base64；前端将 image-2 返回的 base64 解码为 png 展示，并按 MiniMax 图片生成类似流程上传图片文件、保存媒体记录
+
+### R-025 - 补充完善系统配置功能
+- **描述**: 将代理域名白名单从硬编码迁移到 `system_config` 动态配置，支持 super 用户在 SystemConfig 页面动态管理允许访问的域名；同时完善 system_config 的 CRUD 体验（如批量更新、配置校验、默认值重置等）
+- **现状**: `external-proxy.ts` 中 `ALLOWED_HOSTS` 为硬编码数组，新增域名需改代码重启服务；`system_config` 表已存在且 SystemConfig.tsx 页面可用，但尚未接入代理白名单场景
+- **范围**: `server/routes/external-proxy.ts` 改为从 `system_config` 读取 `proxy.allowed_hosts`（逗号分隔域名），缓存并支持刷新；`server/database/schema-pg.ts` 初始数据预填现有域名；可选：为 SystemConfig 页面添加专用代理白名单管理面板
 
 ---
 
