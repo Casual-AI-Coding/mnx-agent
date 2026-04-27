@@ -71,8 +71,8 @@ export const RETRY_TIMEOUTS = {
  * External proxy timeouts (in milliseconds)
  */
 export const EXTERNAL_PROXY_TIMEOUTS = {
-  /** Proxy request timeout (5 minutes) */
-  PROXY_REQUEST_MS: 5 * 60 * 1000,
+  /** Proxy request timeout (6 minutes) */
+  PROXY_REQUEST_MS: 6 * 60 * 1000,
 } as const
 
 /**
