@@ -18,6 +18,34 @@ export const SIZE_GROUPS: SizeGroupConfig[] = [
   { key: '9:16', label: '9:16' },
 ]
 
+type TabGroup = '1:1' | '4:3' | '16:9' | '3:2'
+type Orientation = 'landscape' | 'portrait'
+
+interface TabConfig {
+  key: TabGroup
+  label: string
+  landscape: SizeGroup
+  portrait: SizeGroup
+  paired: boolean
+}
+
+const TAB_CONFIGS: TabConfig[] = [
+  { key: '1:1', label: '1:1', landscape: '1:1', portrait: '1:1', paired: false },
+  { key: '4:3', label: '4:3 ⟷ 3:4', landscape: '4:3', portrait: '3:4', paired: true },
+  { key: '16:9', label: '16:9 ⟷ 9:16', landscape: '16:9', portrait: '9:16', paired: true },
+  { key: '3:2', label: '3:2 ⟷ 2:3', landscape: '3:2', portrait: '2:3', paired: true },
+]
+
+function getTabGroup(sizeGroup: SizeGroup): TabGroup {
+  switch (sizeGroup) {
+    case '1:1': return '1:1'
+    case '4:3': case '3:4': return '4:3'
+    case '16:9': case '9:16': return '16:9'
+    case '3:2': case '2:3': return '3:2'
+    default: return '1:1'
+  }
+}
+
 function gcd(a: number, b: number): number {
   let x = Math.abs(a)
   let y = Math.abs(b)
@@ -49,18 +77,35 @@ export function getSizeGroup(size: string): SizeGroup | null {
 
 export const IMAGE_SIZE_OPTIONS = [
   '1024x1024',
-  '1024x1536',
-  '1536x1024',
-  '2048x1536',
-  '2048x1152',
+  '1500x1500',
   '2048x2048',
   '2880x2880',
-  '3264x2448',
-  '2448x3264',
+  '2048x1536',
+  '2560x1920',
   '2880x2160',
+  '3200x2400',
+  '3264x2448',
+  '1536x2048',
+  '1920x2560',
   '2160x2880',
+  '2400x3200',
+  '2448x3264',
+  '1920x1080',
+  '2048x1152',
   '2560x1440',
+  '3200x1800',
+  '3840x2160',
+  '1080x1920',
+  '1152x2048',
   '1440x2560',
+  '1800x3200',
+  '2160x3840',
+  '1536x1024',
+  '2160x1440',
+  '2880x1920',
+  '1024x1536',
+  '1440x2160',
+  '1920x2880',
 ] as const
 
 export const GROUPED_SIZES: Record<SizeGroup, string[]> = {
@@ -80,13 +125,13 @@ for (const size of IMAGE_SIZE_OPTIONS) {
   }
 }
 
-const dropdownAnimation: React.CSSProperties = {
-  animation: 'size-popup-slide-right 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+const popupAnimation: React.CSSProperties = {
+  animation: 'size-popup-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
 }
 
 const styleTag = `
-@keyframes size-popup-slide-right {
-  from { opacity: 0; transform: translateX(-6px) scale(0.97); }
+@keyframes size-popup-enter {
+  from { opacity: 0; transform: translateX(-8px) scale(0.96); }
   to   { opacity: 1; transform: translateX(0) scale(1); }
 }
 `
@@ -107,9 +152,52 @@ interface SizePopupProps {
   onChange: (value: string) => void
 }
 
+function AspectPreview({ width, height, active }: { width: number; height: number; active: boolean }) {
+  const maxW = 28
+  const maxH = 20
+  const scale = Math.min(maxW / width, maxH / height)
+  const w = Math.round(width * scale)
+  const h = Math.round(height * scale)
+  return (
+    <div className="flex items-center justify-center h-5 mb-1.5">
+      <div
+        className={cn(
+          'rounded-sm transition-colors duration-150',
+          active ? 'bg-foreground' : 'bg-muted-foreground/40'
+        )}
+        style={{ width: w, height: h }}
+      />
+    </div>
+  )
+}
+
+const SwapIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="10"
+    height="10"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 1l4 4-4 4" />
+    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+    <path d="M7 23l-4-4 4-4" />
+    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+  </svg>
+)
+
 export function SizePopup({ open, onClose, value, onChange }: SizePopupProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [activeGroup, setActiveGroup] = useState<SizeGroup>(() => getSizeGroup(value) ?? '1:1')
+  const [activeTab, setActiveTab] = useState<TabGroup>(() => getTabGroup(getSizeGroup(value) ?? '1:1'))
+  const [orientation, setOrientation] = useState<Orientation>(() => {
+    const sg = getSizeGroup(value) ?? '1:1'
+    const config = TAB_CONFIGS.find((t) => t.key === getTabGroup(sg))
+    return sg === config?.portrait ? 'portrait' : 'landscape'
+  })
 
   useEffect(() => { ensureStyle() }, [])
 
@@ -124,45 +212,64 @@ export function SizePopup({ open, onClose, value, onChange }: SizePopupProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open, onClose])
 
-  // 当外部value变化时，同步activeGroup
   useEffect(() => {
     if (open) {
-      setActiveGroup(getSizeGroup(value) ?? '1:1')
+      const sg = getSizeGroup(value) ?? '1:1'
+      const tab = getTabGroup(sg)
+      const config = TAB_CONFIGS.find((t) => t.key === tab)
+      setActiveTab(tab)
+      setOrientation(sg === config?.portrait ? 'portrait' : 'landscape')
     }
   }, [value, open])
 
   if (!open) return null
 
-  const currentSizes = GROUPED_SIZES[activeGroup]
+  const currentConfig = TAB_CONFIGS.find((t) => t.key === activeTab) ?? TAB_CONFIGS[0]
+  const currentSizeGroup = orientation === 'portrait' ? currentConfig.portrait : currentConfig.landscape
+  const currentSizes = GROUPED_SIZES[currentSizeGroup]
 
   return (
-    <div ref={containerRef} className="absolute top-0 left-full z-50 ml-1 min-w-[340px]">
+    <div ref={containerRef} className="absolute top-0 left-full z-50 ml-2">
       <div
-        style={dropdownAnimation}
-        className="rounded-lg bg-popover text-popover-foreground shadow-lg shadow-black/10 ring-1 ring-black/5 p-3"
+        style={popupAnimation}
+        className="w-[420px] rounded-lg bg-popover text-popover-foreground shadow-lg shadow-black/10 ring-1 ring-black/5 p-2.5"
       >
-        <div className="mb-3 flex flex-wrap gap-1 rounded-md bg-muted p-1">
-          {SIZE_GROUPS.map((group) => (
+        <div className="flex gap-0.5 mb-2.5 p-1 bg-muted rounded-lg">
+          {TAB_CONFIGS.map((tab) => (
             <button
-              key={group.key}
+              key={tab.key}
               type="button"
-              onClick={() => setActiveGroup(group.key)}
+              onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'inline-flex items-center justify-center rounded-full px-2 py-1 text-[11px] font-medium leading-none transition-colors',
-                'hover:bg-background/80 hover:text-foreground',
-                activeGroup === group.key
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground'
+                'flex items-center gap-1 flex-1 justify-center px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors',
+                activeTab === tab.key
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
               )}
             >
-              {group.label}
+              <span>{tab.paired ? (orientation === 'portrait' ? tab.portrait : tab.landscape) : tab.label}</span>
+              {tab.paired && (
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  title="切换方向"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setOrientation((prev) => (prev === 'landscape' ? 'portrait' : 'landscape'))
+                  }}
+                  className="inline-flex items-center justify-center rounded p-0.5 hover:bg-foreground/10 cursor-pointer"
+                >
+                  <SwapIcon />
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {currentSizes.map((size) => {
             const [width, height] = size.split('x').map(Number)
+            const isSelected = value === size
             return (
               <button
                 key={size}
@@ -172,17 +279,15 @@ export function SizePopup({ open, onClose, value, onChange }: SizePopupProps) {
                   onClose()
                 }}
                 className={cn(
-                  'flex flex-col items-center justify-center px-2 py-2 rounded-md text-xs transition-colors',
+                  'flex flex-col items-center px-3 py-2.5 rounded-md text-xs transition-colors cursor-pointer',
                   'hover:bg-accent hover:text-accent-foreground',
-                  value === size
-                    ? 'bg-accent text-accent-foreground ring-1 ring-ring'
+                  isSelected
+                    ? 'bg-accent text-accent-foreground font-medium'
                     : 'text-foreground'
                 )}
               >
-                <span className="font-mono text-xs">{size}</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">
-                  {width}×{height}
-                </span>
+                <AspectPreview width={width} height={height} active={isSelected} />
+                <span className="font-mono text-[11px] leading-tight">{size}</span>
               </button>
             )
           })}
