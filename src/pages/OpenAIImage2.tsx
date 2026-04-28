@@ -58,6 +58,7 @@ const itemVariants = {
 
 interface OpenAIImage2FormData {
   baseUrl: string
+  endpointId: string
   bearerToken: string
   prompt: string
   model: string
@@ -140,11 +141,11 @@ export default function OpenAIImage2() {
     [settingsEndpoints]
   )
   const baseUrlOptions = useMemo(
-    () => openaiEndpoints.map(ep => ({ value: ep.url, label: ep.name })),
+    () => openaiEndpoints.map(ep => ({ value: ep.url, label: ep.name, id: ep.id })),
     [openaiEndpoints]
   )
-  const endpointByUrl = useMemo(
-    () => new Map(openaiEndpoints.map(ep => [ep.url, ep])),
+  const endpointById = useMemo(
+    () => new Map(openaiEndpoints.map(ep => [ep.id, ep])),
     [openaiEndpoints]
   )
 
@@ -152,6 +153,7 @@ export default function OpenAIImage2() {
     storageKey: DEBUG_FORM_KEYS.OPENAI_IMAGE_2,
     defaultValue: {
       baseUrl: openaiEndpoints[0]?.url ?? 'https://mikuapi.org',
+      endpointId: openaiEndpoints[0]?.id ?? '',
       bearerToken: '',
       prompt: '',
       model: 'gpt-image-2',
@@ -177,11 +179,11 @@ export default function OpenAIImage2() {
   useEffect(() => {
     if (lastAutoFillRef.current === formData.baseUrl) return
     lastAutoFillRef.current = formData.baseUrl
-    const endpoint = endpointByUrl.get(formData.baseUrl)
+    const endpoint = endpointById.get(formData.endpointId)
     if (endpoint?.apiKey) {
       setFormData(prev => ({ ...prev, bearerToken: endpoint.apiKey }))
     }
-  }, [formData.baseUrl, endpointByUrl, setFormData])
+  }, [formData.baseUrl, formData.endpointId, endpointById, setFormData])
 
   useEffect(() => {
     return () => {
@@ -449,6 +451,7 @@ export default function OpenAIImage2() {
   const clearAll = useCallback(() => {
     setFormData({
       baseUrl: openaiEndpoints[0]?.url ?? '',
+      endpointId: openaiEndpoints[0]?.id ?? '',
       bearerToken: '',
       prompt: '',
       model: 'gpt-image-2',
@@ -522,7 +525,8 @@ export default function OpenAIImage2() {
                     <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">Base URL</Label>
                     <ComboboxInput
                       value={formData.baseUrl}
-                      onChange={v => updateForm({ baseUrl: v })}
+                      selectedId={formData.endpointId}
+                      onChange={(v, id) => updateForm({ baseUrl: v, endpointId: id ?? '' })}
                       options={baseUrlOptions}
                       suffix="/v1/images/generations"
                       placeholder="https://api.example.com"

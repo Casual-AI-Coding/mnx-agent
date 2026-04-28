@@ -5,11 +5,13 @@ import { cn } from '@/lib/utils'
 export interface ComboboxOption {
   value: string
   label: string
+  id?: string
 }
 
 interface ComboboxInputProps {
   value: string
-  onChange: (value: string) => void
+  selectedId?: string
+  onChange: (value: string, id?: string) => void
   options: ComboboxOption[]
   suffix?: string
   placeholder?: string
@@ -40,6 +42,7 @@ function ensureStyle() {
 
 export function ComboboxInput({
   value,
+  selectedId,
   onChange,
   options,
   suffix,
@@ -64,10 +67,17 @@ export function ComboboxInput({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  const handleSelect = useCallback((val: string) => {
-    onChange(val)
+  const handleSelect = useCallback((val: string, id?: string) => {
+    onChange(val, id)
     setOpen(false)
   }, [onChange])
+
+  const isOptionSelected = useCallback((o: ComboboxOption) => {
+    if (selectedId && o.id) {
+      return selectedId === o.id
+    }
+    return value === o.value
+  }, [selectedId, value])
 
   return (
     <div ref={containerRef} className={cn('relative w-full', className)}>
@@ -116,16 +126,16 @@ export function ComboboxInput({
             >
               {options.map(o => (
                 <button
-                  key={o.value}
+                  key={o.id ?? o.value}
                   type="button"
                   className={cn(
                     'flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors text-left',
-                    value === o.value && 'bg-accent'
+                    isOptionSelected(o) && 'bg-accent'
                   )}
-                  onClick={() => handleSelect(o.value)}
+                  onClick={() => handleSelect(o.value, o.id)}
                 >
                   <span className="w-4 shrink-0">
-                    {value === o.value && <Check className="w-3.5 h-3.5" />}
+                    {isOptionSelected(o) && <Check className="w-3.5 h-3.5" />}
                   </span>
                   <span className="font-mono text-xs">{o.label}</span>
                 </button>
