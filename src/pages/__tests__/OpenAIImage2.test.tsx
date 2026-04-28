@@ -67,7 +67,7 @@ describe('OpenAIImage2 Component', () => {
 
   it('should display the generate button', () => {
     render(<OpenAIImage2 />)
-    expect(screen.getByText('生成图像')).toBeTruthy()
+    expect(screen.getByText('生成')).toBeTruthy()
   })
 
   it('should display CORS error message on network failure', async () => {
@@ -87,7 +87,7 @@ describe('OpenAIImage2 Component', () => {
     const tokenInput = screen.getByPlaceholderText('sk-...')
     fireEvent.change(tokenInput, { target: { value: 'sk-test-token' } })
 
-    const generateButton = screen.getByText('生成图像')
+    const generateButton = screen.getByText('生成')
     fireEvent.click(generateButton)
 
     await waitFor(() => {
@@ -99,7 +99,7 @@ describe('OpenAIImage2 Component', () => {
 
   it('should display generate button disabled when prompt is empty', () => {
     render(<OpenAIImage2 />)
-    const generateButton = screen.getByText('生成图像')
+    const generateButton = screen.getByText('生成')
     expect(generateButton.closest('button')).toBeDisabled()
   })
 
@@ -112,7 +112,7 @@ describe('OpenAIImage2 Component', () => {
     const tokenInput = screen.getByPlaceholderText('sk-...')
     fireEvent.change(tokenInput, { target: { value: 'sk-test-token' } })
 
-    const generateButton = screen.getByText('生成图像')
+    const generateButton = screen.getByText('生成')
     expect(generateButton.closest('button')).not.toBeDisabled()
   })
 
@@ -131,7 +131,7 @@ describe('OpenAIImage2 Component', () => {
     const tokenInput = screen.getByPlaceholderText('sk-...')
     fireEvent.change(tokenInput, { target: { value: 'sk-test' } })
 
-    const generateButton = screen.getByText('生成图像')
+    const generateButton = screen.getByText('生成')
     fireEvent.click(generateButton)
 
     await waitFor(() => {
@@ -191,7 +191,7 @@ describe('OpenAIImage2 Component', () => {
     const tokenInput = screen.getByPlaceholderText('sk-...')
     fireEvent.change(tokenInput, { target: { value: 'sk-test' } })
 
-    const generateButton = screen.getByText('生成图像')
+    const generateButton = screen.getByText('生成')
     fireEvent.click(generateButton)
 
     await waitFor(() => {

@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.5] - 2026-04-28
+
+### Added
+
+- **SizePopup 尺寸选择弹窗组件** - 全新的图片尺寸选择器
+  - `src/components/ui/SizePopup.tsx` (+298) - 支持按比例分组（1:1、4:3、3:4、16:9、9:16、3:2、2:3）
+  - Tab 切换横屏/竖屏方向，弹窗面板式交互
+  - 导出 `getSizeGroup()` 工具函数和 `IMAGE_SIZE_OPTIONS` 完整尺寸列表
+
+### Fixed
+
+- **OpenAI Image-2 运行时错误** - 恢复 Textarea 导入，修复运行时崩溃
+  - `src/pages/OpenAIImage2.tsx` - 修复缺失的 Textarea 导入
+
+### Changed
+
+- **OpenAI Image-2 表单布局优化** - UI 体验全面改进
+  - `src/pages/OpenAIImage2.tsx` (+106/-89) - 表单布局从纵向改为横向，增加空间利用率
+  - Bearer Token 说明文字替换为 Tooltip 气泡提示
+  - 提示词 Textarea 从 3 行扩展到 12 行
+  - Background / Format / Moderation / 数量改为 4 列 grid 布局
+  - 生成按钮移入参数卡片内部
+  - Size 选择器从 Select 下拉改为 SizePopup 弹窗面板
+
+- **仅保留支持的尺寸比例** - 移除不支持的尺寸选项
+  - `src/pages/OpenAIImage2.tsx` - 移除 SIZE_OPTIONS 硬编码数组中的 `auto` 及不支持尺寸
+
+- **外部接口超时时间增加** - 从 5 分钟增至 6 分钟
+  - `server/config/timeouts.ts` - `PROXY_REQUEST_MS` 从 300s 增至 360s
+  - `src/lib/config/constants.ts` - `EXTERNAL_PROXY` 从 300000ms 增至 360000ms
+
+- **代理白名单扩展** - 新增两个代理域名
+  - `server/routes/external-proxy.ts` - 新增 `api.tokenfty.net` 和 `gpt.hslife.fun`
+
+### Docs
+
+- **路线图更新** - 需求版本调整
+  - R-019（Prompt模板版本管理）从 v2.3 调整到 v2.4
+  - 新增 R-025（补充完善系统配置功能），排入 v2.5
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ SizePopup 为增量 UI 组件，不影响现有功能
+- ✅ 超时时间增加为向后兼容配置变更
+- ✅ 代理白名单扩展为增量变更
+
 ## [2.2.4] - 2026-04-25
 
 ### Added
