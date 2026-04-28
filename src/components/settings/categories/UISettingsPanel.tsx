@@ -37,12 +37,7 @@ export function UISettingsPanel() {
           <CardDescription>选择您喜欢的界面主题</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">主题</label>
-              <ThemePicker />
-            </div>
-          </div>
+          <ThemePicker />
         </CardContent>
       </Card>
 
