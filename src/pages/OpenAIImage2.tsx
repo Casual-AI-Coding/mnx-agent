@@ -220,6 +220,12 @@ export default function OpenAIImage2() {
     setFormData(prev => ({ ...prev, ...updates }))
   }, [setFormData])
 
+  useEffect(() => {
+    if (formData.retryCount === undefined || formData.retryCount === null) {
+      updateForm({ retryCount: 0 })
+    }
+  }, [formData.retryCount, updateForm])
+
   const executeGenerationAttempt = useCallback(async (
     body: OpenAIImage2RequestBody
   ): Promise<{ success: boolean; error?: string; durationMs?: number; previewUrl?: string; blob?: Blob; usage?: Record<string, unknown> }> => {
@@ -858,7 +864,71 @@ export default function OpenAIImage2() {
                       </motion.div>
                     )}
 
-                    {result.status === 'failed' && (
+                    {(result.status === 'success' || result.status === 'failed') && retryHistory.length > 1 && retryHistory[currentRetryIndex]?.status === 'failed' && (
+                      <motion.div
+                        key={`failed-${currentRetryIndex}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 flex flex-col items-center justify-center py-20"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                          <AlertCircle className="w-8 h-8 text-red-500" />
+                        </div>
+                        <p className="text-sm font-medium text-red-500 mb-1">第 {retryHistory[currentRetryIndex].attempt} 次尝试失败</p>
+                        <p className="text-xs text-muted-foreground max-w-md text-center">{retryHistory[currentRetryIndex].error}</p>
+                        {retryHistory[currentRetryIndex].durationMs && (
+                          <p className="text-xs text-muted-foreground mt-2">耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s</p>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {(result.status === 'success' || result.status === 'failed') && retryHistory.length > 1 && retryHistory[currentRetryIndex]?.status === 'success' && retryHistory[currentRetryIndex].previewUrl && (
+                      <motion.div
+                        key={`success-${currentRetryIndex}`}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-4"
+                      >
+                        <div className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/10 group">
+                          <img
+                            src={retryHistory[currentRetryIndex].previewUrl}
+                            alt="Generated image"
+                            className="w-full h-auto max-h-[500px] object-contain"
+                          />
+                          <button
+                            onClick={() => setFullscreenPreview(true)}
+                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-foreground/10 backdrop-blur-[1px]"
+                          >
+                            <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-background transition-colors">
+                              <Maximize2 className="w-5 h-5 text-foreground" />
+                            </div>
+                          </button>
+                          <a
+                            href={retryHistory[currentRetryIndex].previewUrl}
+                            download={`openai-image-${retryHistory[currentRetryIndex].attempt}.${formData.outputFormat}`}
+                            className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {retryHistory[currentRetryIndex].durationMs && (
+                            <span className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
+                              耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s
+                            </span>
+                          )}
+                          <span className="text-xs px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600">
+                            <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                            第 {retryHistory[currentRetryIndex].attempt} 次尝试成功
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {result.status === 'failed' && retryHistory.length <= 1 && (
                       <motion.div
                         key="failed"
                         initial={{ opacity: 0, y: 10 }}
@@ -869,20 +939,8 @@ export default function OpenAIImage2() {
                         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                           <AlertCircle className="w-8 h-8 text-red-500" />
                         </div>
-                        {retryHistory.length > 1 && retryHistory[currentRetryIndex] ? (
-                          <>
-                            <p className="text-sm font-medium text-red-500 mb-1">第 {retryHistory[currentRetryIndex].attempt} 次尝试失败</p>
-                            <p className="text-xs text-muted-foreground max-w-md text-center">{retryHistory[currentRetryIndex].error}</p>
-                            {retryHistory[currentRetryIndex].durationMs && (
-                              <p className="text-xs text-muted-foreground mt-2">耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s</p>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm font-medium text-red-500 mb-1">生成失败</p>
-                            <p className="text-xs text-muted-foreground max-w-md text-center">{result.error}</p>
-                          </>
-                        )}
+                        <p className="text-sm font-medium text-red-500 mb-1">生成失败</p>
+                        <p className="text-xs text-muted-foreground max-w-md text-center">{result.error}</p>
                         <Button
                           variant="outline"
                           size="sm"
@@ -895,7 +953,7 @@ export default function OpenAIImage2() {
                       </motion.div>
                     )}
 
-                    {result.status === 'success' && (
+                    {result.status === 'success' && retryHistory.length <= 1 && (
                       <motion.div
                         key="success"
                         initial={{ opacity: 0, scale: 0.95 }}
