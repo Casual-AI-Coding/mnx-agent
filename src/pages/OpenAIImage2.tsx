@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X, HelpCircle } from 'lucide-react'
+import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { Input } from '@/components/ui/Input'
@@ -69,9 +69,20 @@ interface OpenAIImage2FormData {
   outputFormat: string
   moderation: string
   imageTitle: string
+  retryCount: number  // 重试次数（0-10），默认 0
 }
 
 type ResultStatus = 'idle' | 'creating-log' | 'generating' | 'updating-log' | 'saving-media' | 'success' | 'failed'
+
+interface RetryRecord {
+  attempt: number           // 尝试次序（1 = 首次，2 = 第一次重试，...）
+  status: 'generating' | 'success' | 'failed'
+  error?: string            // 错误信息（失败时记录）
+  durationMs?: number       // 本次耗时
+  timestamp: string         // ISO 时间戳
+  previewUrl?: string       // 成功时的图片预览 URL
+  blob?: Blob               // 成功时的图片 Blob
+}
 
 interface OpenAIImage2Result {
   status: ResultStatus
@@ -164,10 +175,13 @@ export default function OpenAIImage2() {
       outputFormat: 'png',
       moderation: 'low',
       imageTitle: '',
+      retryCount: 0,
     },
   })
 
   const [result, setResult] = useState<OpenAIImage2Result>({ status: 'idle' })
+  const [retryHistory, setRetryHistory] = useState<RetryRecord[]>([])
+  const [currentRetryIndex, setCurrentRetryIndex] = useState(0)
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
   const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
@@ -206,15 +220,67 @@ export default function OpenAIImage2() {
     setFormData(prev => ({ ...prev, ...updates }))
   }, [setFormData])
 
+  const executeGenerationAttempt = useCallback(async (
+    body: OpenAIImage2RequestBody
+  ): Promise<{ success: boolean; error?: string; durationMs?: number; previewUrl?: string; blob?: Blob; usage?: Record<string, unknown> }> => {
+    const { baseUrl, bearerToken, outputFormat } = formData
+    try {
+      const startTime = performance.now()
+      const url = buildOpenAIImage2Url(baseUrl)
+      const proxyResult = await internalAxios.post('/external-proxy', {
+        url,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      }, { timeout: TIMEOUTS.EXTERNAL_PROXY }).then(r => r.data)
+      const durationMs = Math.round(performance.now() - startTime)
+
+      if (!proxyResult.success) {
+        throw new Error(proxyResult.error || '代理请求失败')
+      }
+
+      const { status: upstreamStatus, body: upstreamBody } = proxyResult.data
+      if (upstreamStatus >= 400) {
+        const errorText = typeof upstreamBody === 'string'
+          ? upstreamBody.slice(0, 200)
+          : JSON.stringify(upstreamBody).slice(0, 200)
+        throw new Error(`外部 API 响应 ${upstreamStatus}: ${errorText}`)
+      }
+
+      const parsed = parseOpenAIImage2Response(upstreamBody)
+      setLastParsedResponse(parsed)
+
+      const base64List = extractImageBase64List(parsed)
+      if (base64List.length === 0) {
+        throw new Error('外部 API 未返回图片数据')
+      }
+
+      const blob = base64ToBlob(base64List[0], `image/${outputFormat}`)
+      const previewUrl = URL.createObjectURL(blob)
+      return { success: true, durationMs, previewUrl, blob, usage: parsed.usage }
+    } catch (err) {
+      const error = formatExternalApiError(err)
+      return { success: false, error, durationMs: 0 }
+    }
+  }, [formData])
+
   const handleGenerate = useCallback(async () => {
-    const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle } = formData
+    const { bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle, retryCount } = formData
     if (!prompt.trim() || !bearerToken.trim()) return
 
     if (result.previewUrl) {
       URL.revokeObjectURL(result.previewUrl)
     }
+    retryHistory.forEach(r => {
+      if (r.previewUrl) URL.revokeObjectURL(r.previewUrl)
+    })
 
     setResult({ status: 'creating-log' })
+    setRetryHistory([])
+    setCurrentRetryIndex(0)
     setLogUpdateFailed(false)
     setMediaSaveFailed(false)
 
@@ -252,126 +318,109 @@ export default function OpenAIImage2() {
       return
     }
 
-    setResult(prev => ({ ...prev, status: 'generating', externalApiLogId: logId }))
+    const maxAttempts = retryCount + 1
 
-    let parsed: OpenAIImage2ResponseBody
-    let durationMs: number
-    try {
-      const startTime = performance.now()
-      const url = buildOpenAIImage2Url(baseUrl)
-      const proxyResult = await internalAxios.post('/external-proxy', {
-        url,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
-        body,
-      }, { timeout: TIMEOUTS.EXTERNAL_PROXY }).then(r => r.data)
-      durationMs = Math.round(performance.now() - startTime)
-
-      if (!proxyResult.success) {
-        throw new Error(proxyResult.error || '代理请求失败')
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const attemptRecord: RetryRecord = {
+        attempt,
+        status: 'generating',
+        timestamp: new Date().toISOString(),
       }
+      setRetryHistory(prev => [...prev, attemptRecord])
+      setCurrentRetryIndex(attempt - 1)
+      setResult(prev => ({ ...prev, status: 'generating', externalApiLogId: logId }))
 
-      const { status: upstreamStatus, body: upstreamBody } = proxyResult.data
-      if (upstreamStatus >= 400) {
-        const errorText = typeof upstreamBody === 'string'
-          ? upstreamBody.slice(0, 200)
-          : JSON.stringify(upstreamBody).slice(0, 200)
-        throw new Error(`外部 API 响应 ${upstreamStatus}: ${errorText}`)
-      }
+      const attemptResult = await executeGenerationAttempt(body)
 
-      parsed = parseOpenAIImage2Response(upstreamBody)
-      setLastParsedResponse(parsed)
-    } catch (err) {
-      const errorMsg = formatExternalApiError(err)
-      await updateExternalApiLog(logId, {
-        status: 'failed',
-        error_message: errorMsg,
-        duration_ms: 0,
-      }).catch(() => {})
-      setResult({
-        status: 'failed',
-        externalApiLogId: logId,
-        error: errorMsg,
-      })
-      return
-    }
-
-    setResult(prev => ({ ...prev, status: 'updating-log' }))
-
-    try {
-      await updateExternalApiLog(logId, {
-        status: 'success',
-        duration_ms: durationMs,
-        response_body: JSON.stringify(createOpenAIImage2ResponseSummary(parsed)),
-      })
-    } catch {
-      setLogUpdateFailed(true)
-    }
-
-    const base64List = extractImageBase64List(parsed)
-    if (base64List.length === 0) {
-      setResult({
-        status: 'failed',
-        externalApiLogId: logId,
-        durationMs,
-        usage: parsed.usage,
-        error: '外部 API 未返回图片数据',
-      })
-      return
-    }
-
-    const firstBase64 = base64List[0]
-    const blob = base64ToBlob(firstBase64, `image/${outputFormat}`)
-    const previewUrl = URL.createObjectURL(blob)
-
-    setResult(prev => ({
-      ...prev,
-      status: 'saving-media',
-      previewUrl,
-      blob,
-      durationMs,
-      usage: parsed.usage,
-    }))
-
-    try {
-      const filename = (imageTitle.trim() || `openai-image-${Date.now()}`) + `.${outputFormat}`
-      const mediaResult = await uploadMedia(
-        blob,
-        filename,
-        'image',
-        'external_debug',
-        {
-          service_provider: 'openai',
-          operation: 'image_generation',
-          external_api_log_id: logId,
-          model,
-          prompt_summary: prompt.trim().slice(0, 100),
-          size,
-          quality,
-          background,
-          output_format: outputFormat,
-          created: parsed.created,
-          usage: parsed.usage,
+      setRetryHistory(prev => {
+        const updated = [...prev]
+        updated[attempt - 1] = {
+          ...updated[attempt - 1],
+          status: attemptResult.success ? 'success' : 'failed',
+          error: attemptResult.error,
+          durationMs: attemptResult.durationMs,
+          previewUrl: attemptResult.success ? attemptResult.previewUrl : undefined,
+          blob: attemptResult.success ? attemptResult.blob : undefined,
         }
-      )
-      if (mediaResult.success && mediaResult.data) {
+        return updated
+      })
+
+      if (attemptResult.success && attemptResult.previewUrl && attemptResult.blob) {
+        setResult(prev => ({ ...prev, status: 'updating-log' }))
+        try {
+          await updateExternalApiLog(logId, {
+            status: 'success',
+            duration_ms: attemptResult.durationMs!,
+            response_body: JSON.stringify(createOpenAIImage2ResponseSummary(lastParsedResponse!)),
+          })
+        } catch {
+          setLogUpdateFailed(true)
+        }
+
         setResult(prev => ({
           ...prev,
-          status: 'success',
-          mediaRecordId: mediaResult.data.id,
+          status: 'saving-media',
+          previewUrl: attemptResult.previewUrl,
+          blob: attemptResult.blob,
+          durationMs: attemptResult.durationMs,
+          usage: attemptResult.usage,
         }))
-      } else {
-        setMediaSaveFailed(true)
-        setResult(prev => ({ ...prev, status: 'success' }))
+
+        try {
+          const filename = (imageTitle.trim() || `openai-image-${Date.now()}`) + `.${outputFormat}`
+          const mediaResult = await uploadMedia(
+            attemptResult.blob,
+            filename,
+            'image',
+            'external_debug',
+            {
+              service_provider: 'openai',
+              operation: 'image_generation',
+              external_api_log_id: logId,
+              model,
+              prompt_summary: prompt.trim().slice(0, 100),
+              size,
+              quality,
+              background,
+              output_format: outputFormat,
+              created: lastParsedResponse?.created,
+              usage: attemptResult.usage,
+            }
+          )
+          if (mediaResult.success && mediaResult.data) {
+            setResult(prev => ({
+              ...prev,
+              status: 'success',
+              mediaRecordId: mediaResult.data!.id,
+            }))
+          } else {
+            setMediaSaveFailed(true)
+            setResult(prev => ({ ...prev, status: 'success' }))
+          }
+        } catch {
+          setMediaSaveFailed(true)
+          setResult(prev => ({ ...prev, status: 'success' }))
+        }
+        break
       }
-    } catch {
-      setMediaSaveFailed(true)
-      setResult(prev => ({ ...prev, status: 'success' }))
+
+      await updateExternalApiLog(logId, {
+        status: 'failed',
+        error_message: attemptResult.error!,
+        duration_ms: attemptResult.durationMs ?? 0,
+      }).catch(() => {})
+
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      } else {
+        setResult({
+          status: 'failed',
+          externalApiLogId: logId,
+          error: attemptResult.error!,
+        })
+      }
     }
-  }, [formData, result.previewUrl])
+  }, [formData, result.previewUrl, retryHistory, executeGenerationAttempt, lastParsedResponse])
 
   const retryMediaSave = useCallback(async () => {
     if (!result.blob) return
@@ -442,11 +491,16 @@ export default function OpenAIImage2() {
     if (result.previewUrl) {
       URL.revokeObjectURL(result.previewUrl)
     }
+    retryHistory.forEach(r => {
+      if (r.previewUrl) URL.revokeObjectURL(r.previewUrl)
+    })
     setResult({ status: 'idle' })
+    setRetryHistory([])
+    setCurrentRetryIndex(0)
     setLogUpdateFailed(false)
     setMediaSaveFailed(false)
     setLastParsedResponse(null)
-  }, [result.previewUrl])
+  }, [result.previewUrl, retryHistory])
 
   const clearAll = useCallback(() => {
     setFormData({
@@ -462,6 +516,7 @@ export default function OpenAIImage2() {
       outputFormat: 'png',
       moderation: 'low',
       imageTitle: '',
+      retryCount: 0,
     })
     resetResult()
   }, [setFormData, resetResult, openaiEndpoints])
@@ -623,7 +678,7 @@ export default function OpenAIImage2() {
                       </Select>
                     </div>
                    </div>
-<div className="grid grid-cols-4 gap-3 [&>*]:min-w-0">
+<div className="grid grid-cols-5 gap-3 [&>*]:min-w-0">
                       <div className="space-y-1">
                        <Label className="text-xs font-medium text-muted-foreground">Background</Label>
                        <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
@@ -657,6 +712,15 @@ export default function OpenAIImage2() {
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-muted-foreground">重试次数</Label>
+                        <Select value={String(formData.retryCount)} onValueChange={v => updateForm({ retryCount: Number(v) })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -699,6 +763,49 @@ export default function OpenAIImage2() {
                           {STATUS_LABELS[result.status]}
                         </motion.span>
                       </AnimatePresence>
+                      {retryHistory.length > 1 && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setCurrentRetryIndex(Math.max(0, currentRetryIndex - 1))}
+                            disabled={currentRetryIndex === 0}
+                            className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {retryHistory.map((record, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setCurrentRetryIndex(idx)}
+                                className={cn(
+                                  "w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all",
+                                  idx === currentRetryIndex && record.status === 'generating' && "ring-[2px] ring-blue-500 bg-blue-500/20 text-blue-500",
+                                  idx === currentRetryIndex && record.status === 'success' && "ring-[2px] ring-emerald-500 bg-emerald-500/20 text-emerald-600",
+                                  idx === currentRetryIndex && record.status === 'failed' && "ring-[2px] ring-red-500 bg-red-500/20 text-red-600",
+                                  idx !== currentRetryIndex && record.status === 'generating' && "bg-blue-500/20 text-blue-500 animate-pulse",
+                                  idx !== currentRetryIndex && record.status === 'success' && "bg-emerald-500/20 text-emerald-600",
+                                  idx !== currentRetryIndex && record.status === 'failed' && "bg-red-500/20 text-red-600"
+                                )}
+                              >
+                                {record.status === 'generating' ? (
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                ) : record.status === 'failed' ? (
+                                  <X className="w-2.5 h-2.5" />
+                                ) : (
+                                  idx + 1
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setCurrentRetryIndex(Math.min(retryHistory.length - 1, currentRetryIndex + 1))}
+                            disabled={currentRetryIndex === retryHistory.length - 1}
+                            className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                       {(result.status === 'success' || result.status === 'failed') && (
                         <Button variant="outline" size="sm" onClick={resetResult}>
                           <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -762,8 +869,20 @@ export default function OpenAIImage2() {
                         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                           <AlertCircle className="w-8 h-8 text-red-500" />
                         </div>
-                        <p className="text-sm font-medium text-red-500 mb-1">生成失败</p>
-                        <p className="text-xs text-muted-foreground max-w-md text-center">{result.error}</p>
+                        {retryHistory.length > 1 && retryHistory[currentRetryIndex] ? (
+                          <>
+                            <p className="text-sm font-medium text-red-500 mb-1">第 {retryHistory[currentRetryIndex].attempt} 次尝试失败</p>
+                            <p className="text-xs text-muted-foreground max-w-md text-center">{retryHistory[currentRetryIndex].error}</p>
+                            {retryHistory[currentRetryIndex].durationMs && (
+                              <p className="text-xs text-muted-foreground mt-2">耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s</p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-red-500 mb-1">生成失败</p>
+                            <p className="text-xs text-muted-foreground max-w-md text-center">{result.error}</p>
+                          </>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
