@@ -159,6 +159,13 @@ router.post(
     const conn = await getConnection()
     const repo = new ExternalApiLogRepository(conn)
 
+    const maxConcurrentTasks = 3
+    const activeTaskCount = await repo.getActiveTaskCount(req.user?.userId ?? '')
+    if (activeTaskCount >= maxConcurrentTasks) {
+      errorResponse(res, `当前有 ${activeTaskCount} 个任务进行中，请稍后再试`, 429)
+      return
+    }
+
     const log = await repo.create({
       service_provider,
       api_endpoint: url,

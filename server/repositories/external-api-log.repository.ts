@@ -274,4 +274,13 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     )
     return rows.map(row => row.service_provider).filter(Boolean)
   }
+
+  async getActiveTaskCount(userId: string): Promise<number> {
+    const rows = await this.conn.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM external_api_logs 
+       WHERE user_id = $1 AND task_status = 'pending' AND status = 'pending'`,
+      [userId]
+    )
+    return parseInt(rows[0]?.count ?? '0', 10)
+  }
 }

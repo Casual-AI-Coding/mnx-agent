@@ -286,8 +286,12 @@ export default function OpenAIImage2() {
         let errorMessage: string | null = null
         const startTime = performance.now()
 
-        while (taskStatus === 'pending') {
-          await new Promise(resolve => setTimeout(resolve, 2000))
+        const maxPollAttempts = 60
+        const pollIntervalMs = 10000
+        let pollAttempts = 0
+
+        while (taskStatus === 'pending' && pollAttempts < maxPollAttempts) {
+          await new Promise(resolve => setTimeout(resolve, pollIntervalMs))
           const statusResult = await getTaskStatus(taskId)
 
           if (!statusResult.success || !statusResult.data) {
@@ -298,6 +302,11 @@ export default function OpenAIImage2() {
           resultData = statusResult.data.result_data
           resultMediaId = statusResult.data.result_media_id
           errorMessage = statusResult.data.error_message
+          pollAttempts++
+        }
+
+        if (pollAttempts >= maxPollAttempts && taskStatus === 'pending') {
+          throw new Error('任务超时，请稍后重试')
         }
 
         const durationMs = Math.round(performance.now() - startTime)
