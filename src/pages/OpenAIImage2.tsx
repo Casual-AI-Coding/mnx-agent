@@ -290,7 +290,7 @@ export default function OpenAIImage2() {
         const pollIntervalMs = 10000
         let pollAttempts = 0
 
-        while (taskStatus === 'pending' && pollAttempts < maxPollAttempts) {
+        while ((taskStatus === 'pending' || taskStatus === 'processing') && pollAttempts < maxPollAttempts) {
           await new Promise(resolve => setTimeout(resolve, pollIntervalMs))
           const statusResult = await getTaskStatus(taskId)
 
@@ -305,7 +305,7 @@ export default function OpenAIImage2() {
           pollAttempts++
         }
 
-        if (pollAttempts >= maxPollAttempts && taskStatus === 'pending') {
+        if (pollAttempts >= maxPollAttempts && (taskStatus === 'pending' || taskStatus === 'processing')) {
           throw new Error('任务超时，请稍后重试')
         }
 

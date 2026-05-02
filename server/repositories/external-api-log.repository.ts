@@ -21,7 +21,7 @@ function rowToExternalApiLog(row: ExternalApiLogRow): ExternalApiLog {
   const status = row.status === 'pending' || row.status === 'success' || row.status === 'failed'
     ? row.status
     : 'failed'
-  const taskStatus = row.task_status === 'sync' || row.task_status === 'pending' || row.task_status === 'completed' || row.task_status === 'failed'
+  const taskStatus = row.task_status === 'sync' || row.task_status === 'pending' || row.task_status === 'processing' || row.task_status === 'completed' || row.task_status === 'failed'
     ? row.task_status
     : 'sync'
   const resultData = row.result_data
@@ -278,7 +278,7 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
   async getActiveTaskCount(userId: string): Promise<number> {
     const rows = await this.conn.query<{ count: string }>(
       `SELECT COUNT(*) as count FROM external_api_logs 
-       WHERE user_id = $1 AND task_status = 'pending' AND status = 'pending'`,
+       WHERE user_id = $1 AND (task_status = 'pending' OR task_status = 'processing') AND status = 'pending'`,
       [userId]
     )
     return parseInt(rows[0]?.count ?? '0', 10)

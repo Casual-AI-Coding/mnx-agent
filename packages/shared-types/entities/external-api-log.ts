@@ -4,7 +4,7 @@
 
 export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
 export type ExternalApiStatus = 'pending' | 'success' | 'failed'
-export type AsyncTaskStatus = 'sync' | 'pending' | 'completed' | 'failed'
+export type AsyncTaskStatus = 'sync' | 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface ExternalApiLog {
   id: number

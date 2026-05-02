@@ -248,6 +248,10 @@ async function executeAsyncTask(
   })
 
   try {
+    await repo.updateResult(String(logId), {
+      task_status: 'processing',
+    })
+
     const forwardHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
     }
