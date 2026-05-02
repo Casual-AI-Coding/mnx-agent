@@ -311,11 +311,11 @@ export default function OpenAIImage2() {
 
         const durationMs = Math.round(performance.now() - startTime)
 
-        if (taskStatus === 'completed' && resultData && resultMediaId) {
+        if (taskStatus === 'completed' && resultData) {
           const parsed = parseOpenAIImage2Response(resultData)
           setLastParsedResponse(parsed)
 
-          const previewUrl = `/api/media/${resultMediaId}/token`
+          const previewUrl = resultMediaId ? `/api/media/${resultMediaId}/token` : undefined
           setResult(prev => ({
             ...prev,
             status: 'success',
@@ -323,7 +323,7 @@ export default function OpenAIImage2() {
             durationMs,
             usage: parsed.usage,
             externalApiLogId: taskId,
-            mediaRecordId: resultMediaId,
+            mediaRecordId: resultMediaId ?? undefined,
           }))
 
           setRetryHistory(prev => {
