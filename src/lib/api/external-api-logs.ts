@@ -8,6 +8,7 @@ interface ApiResponse<T> {
 
 export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
 export type ExternalApiStatus = 'pending' | 'success' | 'failed'
+export type AsyncTaskStatus = 'sync' | 'pending' | 'completed' | 'failed'
 
 export interface ExternalApiLog {
   id: number
@@ -23,6 +24,9 @@ export interface ExternalApiLog {
   user_id: string | null
   trace_id: string | null
   created_at: string
+  task_status: AsyncTaskStatus
+  result_media_id: string | null
+  result_data: Record<string, unknown> | null
 }
 
 interface BackendExternalApiLogStats {
@@ -115,6 +119,9 @@ export interface CreateExternalApiLogInput {
   error_message?: string | null
   duration_ms?: number | null
   trace_id?: string | null
+  task_status?: AsyncTaskStatus
+  result_media_id?: string | null
+  result_data?: Record<string, unknown> | null
 }
 
 export interface UpdateExternalApiLogInput {
@@ -122,6 +129,9 @@ export interface UpdateExternalApiLogInput {
   status?: ExternalApiStatus
   error_message?: string
   duration_ms?: number
+  task_status?: AsyncTaskStatus
+  result_media_id?: string | null
+  result_data?: Record<string, unknown> | null
 }
 
 export async function createExternalApiLog(input: CreateExternalApiLogInput): Promise<ApiResponse<ExternalApiLog>> {
@@ -148,6 +158,52 @@ export async function getUniqueExternalApiProviders(): Promise<ApiResponse<strin
   try {
     const response = await internalAxios.get('/external-api-logs/providers')
     return { success: true, data: response.data.data.providers }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export interface SubmitTaskInput {
+  url: string
+  method?: string
+  headers?: Record<string, string>
+  body?: unknown
+  service_provider: string
+  operation: string
+  media_type?: 'image' | 'video' | 'audio' | 'music'
+}
+
+export interface SubmitTaskResponse {
+  taskId: number
+  status: string
+  message: string
+}
+
+export interface TaskStatusResponse {
+  taskId: number
+  task_status: AsyncTaskStatus
+  status: ExternalApiStatus
+  result_media_id: string | null
+  result_data: Record<string, unknown> | null
+  error_message: string | null
+  created_at: string
+}
+
+export async function submitTask(input: SubmitTaskInput): Promise<ApiResponse<SubmitTaskResponse>> {
+  try {
+    const response = await internalAxios.post('/external-proxy/submit', input)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export async function getTaskStatus(taskId: number): Promise<ApiResponse<TaskStatusResponse>> {
+  try {
+    const response = await internalAxios.get(`/external-proxy/status/${taskId}`)
+    return { success: true, data: response.data.data }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return { success: false, error: message }

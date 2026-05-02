@@ -21,11 +21,19 @@ function rowToExternalApiLog(row: ExternalApiLogRow): ExternalApiLog {
   const status = row.status === 'pending' || row.status === 'success' || row.status === 'failed'
     ? row.status
     : 'failed'
+  const taskStatus = row.task_status === 'sync' || row.task_status === 'pending' || row.task_status === 'completed' || row.task_status === 'failed'
+    ? row.task_status
+    : 'sync'
+  const resultData = row.result_data
+    ? (typeof row.result_data === 'string' ? JSON.parse(row.result_data) : row.result_data)
+    : null
 
   return {
     ...row,
     status,
+    task_status: taskStatus,
     request_params: requestParams,
+    result_data: resultData,
   }
 }
 
@@ -49,8 +57,9 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     const result = await this.conn.query<{ id: number }>(
       `INSERT INTO external_api_logs (
         service_provider, api_endpoint, operation, request_params, request_body, response_body,
-        status, error_message, duration_ms, user_id, trace_id, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        status, error_message, duration_ms, user_id, trace_id, created_at,
+        task_status, result_media_id, result_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id`,
       [
         data.service_provider,
@@ -65,6 +74,9 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
         data.user_id ?? null,
         data.trace_id ?? null,
         now,
+        data.task_status ?? 'sync',
+        data.result_media_id ?? null,
+        data.result_data ? JSON.stringify(data.result_data) : null,
       ]
     )
     const id = result[0]?.id
@@ -95,6 +107,9 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     if (data.status !== undefined) addField('status', data.status)
     if (data.error_message !== undefined) addField('error_message', data.error_message)
     if (data.duration_ms !== undefined) addField('duration_ms', data.duration_ms)
+    if (data.task_status !== undefined) addField('task_status', data.task_status)
+    if (data.result_media_id !== undefined) addField('result_media_id', data.result_media_id)
+    if (data.result_data !== undefined) addField('result_data', data.result_data ? JSON.stringify(data.result_data) : null)
 
     if (fields.length === 0) {
       return this.getById(id)

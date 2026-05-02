@@ -4,6 +4,7 @@
 
 export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
 export type ExternalApiStatus = 'pending' | 'success' | 'failed'
+export type AsyncTaskStatus = 'sync' | 'pending' | 'completed' | 'failed'
 
 export interface ExternalApiLog {
   id: number
@@ -19,6 +20,9 @@ export interface ExternalApiLog {
   user_id: string | null
   trace_id: string | null
   created_at: string
+  task_status: AsyncTaskStatus
+  result_media_id: string | null
+  result_data: Record<string, unknown> | null
 }
 
 export interface ExternalApiLogRow {
@@ -35,6 +39,9 @@ export interface ExternalApiLogRow {
   user_id: string | null
   trace_id: string | null
   created_at: string
+  task_status: string
+  result_media_id: string | null
+  result_data: string | null
 }
 
 export interface CreateExternalApiLog {
@@ -49,6 +56,9 @@ export interface CreateExternalApiLog {
   duration_ms?: number | null
   user_id?: string | null
   trace_id?: string | null
+  task_status?: AsyncTaskStatus
+  result_media_id?: string | null
+  result_data?: Record<string, unknown> | null
 }
 
 export interface UpdateExternalApiLog {
@@ -56,6 +66,9 @@ export interface UpdateExternalApiLog {
   status?: ExternalApiStatus
   error_message?: string
   duration_ms?: number
+  task_status?: AsyncTaskStatus
+  result_media_id?: string | null
+  result_data?: Record<string, unknown> | null
 }
 
 export interface ExternalApiLogQuery {

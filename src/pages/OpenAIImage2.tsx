@@ -16,10 +16,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
-import { createExternalApiLog, updateExternalApiLog } from '@/lib/api/external-api-logs'
-import { internalAxios } from '@/lib/api/client'
-import { TIMEOUTS } from '@/lib/config/constants'
-import { uploadMedia } from '@/lib/api/media'
+import { createExternalApiLog, updateExternalApiLog, submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
 import { useSettingsStore } from '@/settings/store'
 import {
   parseOpenAIImage2Response,
@@ -87,7 +84,6 @@ interface RetryRecord {
 interface OpenAIImage2Result {
   status: ResultStatus
   previewUrl?: string
-  blob?: Blob
   mediaRecordId?: string
   externalApiLogId?: number
   usage?: Record<string, unknown>
@@ -183,7 +179,6 @@ export default function OpenAIImage2() {
   const [retryHistory, setRetryHistory] = useState<RetryRecord[]>([])
   const [currentRetryIndex, setCurrentRetryIndex] = useState(0)
   const [logUpdateFailed, setLogUpdateFailed] = useState(false)
-  const [mediaSaveFailed, setMediaSaveFailed] = useState(false)
   const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
   const [fullscreenPreview, setFullscreenPreview] = useState(false)
   const [sizePopupOpen, setSizePopupOpen] = useState(false)
@@ -226,55 +221,8 @@ export default function OpenAIImage2() {
     }
   }, [formData.retryCount, updateForm])
 
-  const executeGenerationAttempt = useCallback(async (
-    body: OpenAIImage2RequestBody
-  ): Promise<{ success: boolean; error?: string; durationMs?: number; previewUrl?: string; blob?: Blob; usage?: Record<string, unknown> }> => {
-    const { baseUrl, bearerToken, outputFormat } = formData
-    try {
-      const startTime = performance.now()
-      const url = buildOpenAIImage2Url(baseUrl)
-      const proxyResult = await internalAxios.post('/external-proxy', {
-        url,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
-        body,
-      }, { timeout: TIMEOUTS.EXTERNAL_PROXY }).then(r => r.data)
-      const durationMs = Math.round(performance.now() - startTime)
-
-      if (!proxyResult.success) {
-        throw new Error(proxyResult.error || '代理请求失败')
-      }
-
-      const { status: upstreamStatus, body: upstreamBody } = proxyResult.data
-      if (upstreamStatus >= 400) {
-        const errorText = typeof upstreamBody === 'string'
-          ? upstreamBody.slice(0, 200)
-          : JSON.stringify(upstreamBody).slice(0, 200)
-        throw new Error(`外部 API 响应 ${upstreamStatus}: ${errorText}`)
-      }
-
-      const parsed = parseOpenAIImage2Response(upstreamBody)
-      setLastParsedResponse(parsed)
-
-      const base64List = extractImageBase64List(parsed)
-      if (base64List.length === 0) {
-        throw new Error('外部 API 未返回图片数据')
-      }
-
-      const blob = base64ToBlob(base64List[0], `image/${outputFormat}`)
-      const previewUrl = URL.createObjectURL(blob)
-      return { success: true, durationMs, previewUrl, blob, usage: parsed.usage }
-    } catch (err) {
-      const error = formatExternalApiError(err)
-      return { success: false, error, durationMs: 0 }
-    }
-  }, [formData])
-
   const handleGenerate = useCallback(async () => {
-    const { bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle, retryCount } = formData
+    const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle, retryCount } = formData
     if (!prompt.trim() || !bearerToken.trim()) return
 
     if (result.previewUrl) {
@@ -288,7 +236,6 @@ export default function OpenAIImage2() {
     setRetryHistory([])
     setCurrentRetryIndex(0)
     setLogUpdateFailed(false)
-    setMediaSaveFailed(false)
 
     const body: OpenAIImage2RequestBody = {
       model,
@@ -301,29 +248,6 @@ export default function OpenAIImage2() {
       moderation,
     }
 
-    let logId: number | undefined
-    try {
-      const logResult = await createExternalApiLog({
-        service_provider: 'openai',
-        api_endpoint: 'POST /v1/images/generations',
-        operation: 'image_generation',
-        request_params: createOpenAIImage2RequestSummary(body),
-        request_body: JSON.stringify(body),
-        status: 'pending',
-      })
-      if (!logResult.success || !logResult.data) {
-        throw new Error(`创建日志失败: ${logResult.error}`)
-      }
-      logId = logResult.data.id
-    } catch (err) {
-      setResult({
-        status: 'failed',
-        externalApiLogId: logId,
-        error: err instanceof Error ? err.message : '创建调用日志失败',
-      })
-      return
-    }
-
     const maxAttempts = retryCount + 1
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -334,131 +258,102 @@ export default function OpenAIImage2() {
       }
       setRetryHistory(prev => [...prev, attemptRecord])
       setCurrentRetryIndex(attempt - 1)
-      setResult(prev => ({ ...prev, status: 'generating', externalApiLogId: logId }))
+      setResult(prev => ({ ...prev, status: 'generating' }))
 
-      const attemptResult = await executeGenerationAttempt(body)
-
-      setRetryHistory(prev => {
-        const updated = [...prev]
-        updated[attempt - 1] = {
-          ...updated[attempt - 1],
-          status: attemptResult.success ? 'success' : 'failed',
-          error: attemptResult.error,
-          durationMs: attemptResult.durationMs,
-          previewUrl: attemptResult.success ? attemptResult.previewUrl : undefined,
-          blob: attemptResult.success ? attemptResult.blob : undefined,
-        }
-        return updated
-      })
-
-      if (attemptResult.success && attemptResult.previewUrl && attemptResult.blob) {
-        setResult(prev => ({ ...prev, status: 'updating-log' }))
-        try {
-          await updateExternalApiLog(logId, {
-            status: 'success',
-            duration_ms: attemptResult.durationMs!,
-            response_body: JSON.stringify(createOpenAIImage2ResponseSummary(lastParsedResponse!)),
-          })
-        } catch {
-          setLogUpdateFailed(true)
-        }
-
-        setResult(prev => ({
-          ...prev,
-          status: 'saving-media',
-          previewUrl: attemptResult.previewUrl,
-          blob: attemptResult.blob,
-          durationMs: attemptResult.durationMs,
-          usage: attemptResult.usage,
-        }))
-
-        try {
-          const filename = (imageTitle.trim() || `openai-image-${Date.now()}`) + `.${outputFormat}`
-          const mediaResult = await uploadMedia(
-            attemptResult.blob,
-            filename,
-            'image',
-            'external_debug',
-            {
-              service_provider: 'openai',
-              operation: 'image_generation',
-              external_api_log_id: logId,
-              model,
-              prompt_summary: prompt.trim().slice(0, 100),
-              size,
-              quality,
-              background,
-              output_format: outputFormat,
-              created: lastParsedResponse?.created,
-              usage: attemptResult.usage,
-            }
-          )
-          if (mediaResult.success && mediaResult.data) {
-            setResult(prev => ({
-              ...prev,
-              status: 'success',
-              mediaRecordId: mediaResult.data!.id,
-            }))
-          } else {
-            setMediaSaveFailed(true)
-            setResult(prev => ({ ...prev, status: 'success' }))
-          }
-        } catch {
-          setMediaSaveFailed(true)
-          setResult(prev => ({ ...prev, status: 'success' }))
-        }
-        break
-      }
-
-      await updateExternalApiLog(logId, {
-        status: 'failed',
-        error_message: attemptResult.error!,
-        duration_ms: attemptResult.durationMs ?? 0,
-      }).catch(() => {})
-
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      } else {
-        setResult({
-          status: 'failed',
-          externalApiLogId: logId,
-          error: attemptResult.error!,
-        })
-      }
-    }
-  }, [formData, result.previewUrl, retryHistory, executeGenerationAttempt, lastParsedResponse])
-
-  const retryMediaSave = useCallback(async () => {
-    if (!result.blob) return
-    setMediaSaveFailed(false)
-    try {
-      const filename = (formData.imageTitle.trim() || `openai-image-${Date.now()}`) + `.${formData.outputFormat}`
-      const mediaResult = await uploadMedia(
-        result.blob,
-        filename,
-        'image',
-        'external_debug',
-        {
+      try {
+        const url = buildOpenAIImage2Url(baseUrl)
+        const submitResult = await submitTask({
+          url,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${bearerToken}`,
+            'Content-Type': 'application/json',
+          },
+          body,
           service_provider: 'openai',
           operation: 'image_generation',
-          external_api_log_id: result.externalApiLogId,
-          model: formData.model,
-          prompt_summary: formData.prompt.trim().slice(0, 100),
-          size: formData.size,
-          quality: formData.quality,
-          background: formData.background,
-          output_format: formData.outputFormat,
-          usage: result.usage,
+          media_type: 'image',
+        })
+
+        if (!submitResult.success || !submitResult.data) {
+          throw new Error(`任务提交失败: ${submitResult.error}`)
         }
-      )
-      if (mediaResult.success && mediaResult.data) {
-        setResult(prev => ({ ...prev, mediaRecordId: mediaResult.data.id }))
-        setMediaSaveFailed(false)
+
+        const taskId = submitResult.data.taskId
+        let taskStatus: string = 'pending'
+        let resultData: Record<string, unknown> | null = null
+        let resultMediaId: string | null = null
+        let errorMessage: string | null = null
+        const startTime = performance.now()
+
+        while (taskStatus === 'pending') {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          const statusResult = await getTaskStatus(taskId)
+
+          if (!statusResult.success || !statusResult.data) {
+            throw new Error(`状态查询失败: ${statusResult.error}`)
+          }
+
+          taskStatus = statusResult.data.task_status
+          resultData = statusResult.data.result_data
+          resultMediaId = statusResult.data.result_media_id
+          errorMessage = statusResult.data.error_message
+        }
+
+        const durationMs = Math.round(performance.now() - startTime)
+
+        if (taskStatus === 'completed' && resultData && resultMediaId) {
+          const parsed = parseOpenAIImage2Response(resultData)
+          setLastParsedResponse(parsed)
+
+          const previewUrl = `/api/media/${resultMediaId}/token`
+          setResult(prev => ({
+            ...prev,
+            status: 'success',
+            previewUrl,
+            durationMs,
+            usage: parsed.usage,
+            externalApiLogId: taskId,
+            mediaRecordId: resultMediaId,
+          }))
+
+          setRetryHistory(prev => {
+            const updated = [...prev]
+            updated[attempt - 1] = {
+              ...updated[attempt - 1],
+              status: 'success',
+              durationMs,
+              previewUrl,
+            }
+            return updated
+          })
+          break
+        } else {
+          throw new Error(errorMessage || '任务执行失败')
+        }
+      } catch (err) {
+        const error = formatExternalApiError(err)
+        setRetryHistory(prev => {
+          const updated = [...prev]
+          updated[attempt - 1] = {
+            ...updated[attempt - 1],
+            status: 'failed',
+            error,
+          }
+          return updated
+        })
+
+        if (attempt >= maxAttempts) {
+          setResult({
+            status: 'failed',
+            error,
+          })
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
       }
-    } catch {
-      setMediaSaveFailed(true)
     }
-  }, [result.blob, result.externalApiLogId, result.usage, formData])
+  }, [formData, result.previewUrl, retryHistory])
 
   const retryLogUpdate = useCallback(async () => {
     if (!result.externalApiLogId || !result.durationMs || !lastParsedResponse) return
@@ -504,7 +399,6 @@ export default function OpenAIImage2() {
     setRetryHistory([])
     setCurrentRetryIndex(0)
     setLogUpdateFailed(false)
-    setMediaSaveFailed(false)
     setLastParsedResponse(null)
   }, [result.previewUrl, retryHistory])
 
@@ -1015,26 +909,13 @@ export default function OpenAIImage2() {
                           ))}
                         </div>
 
-                        {(logUpdateFailed || mediaSaveFailed) && (
-                          <div className="space-y-1">
-                            {logUpdateFailed && (
-                              <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 text-amber-600 text-xs">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                <span>日志回写失败</span>
-                                <Button variant="ghost" size="sm" className="h-5 px-1.5 ml-auto text-amber-600" onClick={retryLogUpdate}>
-                                  <RefreshCw className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            )}
-                            {mediaSaveFailed && (
-                              <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 text-amber-600 text-xs">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                <span>媒体保存失败</span>
-                                <Button variant="ghost" size="sm" className="h-5 px-1.5 ml-auto text-amber-600" onClick={retryMediaSave}>
-                                  <RefreshCw className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            )}
+                        {logUpdateFailed && (
+                          <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 text-amber-600 text-xs">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>日志回写失败</span>
+                            <Button variant="ghost" size="sm" className="h-5 px-1.5 ml-auto text-amber-600" onClick={retryLogUpdate}>
+                              <RefreshCw className="w-3 h-3" />
+                            </Button>
                           </div>
                         )}
 

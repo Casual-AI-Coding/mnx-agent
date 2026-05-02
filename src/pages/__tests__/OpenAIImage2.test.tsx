@@ -1,16 +1,11 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import OpenAIImage2 from '../OpenAIImage2'
-import { createExternalApiLog, updateExternalApiLog, type ExternalApiLog } from '@/lib/api/external-api-logs'
-import { uploadMedia } from '@/lib/api/media'
+import { submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
 
 vi.mock('@/lib/api/external-api-logs', () => ({
-  createExternalApiLog: vi.fn(),
-  updateExternalApiLog: vi.fn(),
-}))
-
-vi.mock('@/lib/api/media', () => ({
-  uploadMedia: vi.fn(),
+  submitTask: vi.fn(),
+  getTaskStatus: vi.fn(),
 }))
 
 vi.mock('framer-motion', () => {
@@ -71,13 +66,8 @@ describe('OpenAIImage2 Component', () => {
   })
 
   it('should display CORS error message on network failure', async () => {
-    const mockCreate = vi.mocked(createExternalApiLog)
-    const mockUpdate = vi.mocked(updateExternalApiLog)
-    mockCreate.mockResolvedValue({ success: true, data: { id: 42 } as never })
-    mockUpdate.mockResolvedValue({ success: false, error: 'fail' })
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    fetchSpy.mockRejectedValue(new TypeError('Failed to fetch'))
+    const mockSubmit = vi.mocked(submitTask)
+    mockSubmit.mockResolvedValue({ success: false, error: '请求失败（可能是 CORS 跨域限制）。请确认目标 API 支持跨域请求，或使用支持 CORS 的代理地址。' })
 
     render(<OpenAIImage2 />)
 
@@ -93,8 +83,6 @@ describe('OpenAIImage2 Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/CORS 跨域限制/)).toBeTruthy()
     })
-
-    fetchSpy.mockRestore()
   })
 
   it('should display generate button disabled when prompt is empty', () => {
@@ -116,12 +104,29 @@ describe('OpenAIImage2 Component', () => {
     expect(generateButton.closest('button')).not.toBeDisabled()
   })
 
-  it('should call createExternalApiLog with request_body on generate', async () => {
-    const mockCreate = vi.mocked(createExternalApiLog)
-    mockCreate.mockResolvedValue({ success: true, data: { id: 1 } as never })
+  it('should call submitTask with request_body on generate', async () => {
+    const mockSubmit = vi.mocked(submitTask)
+    mockSubmit.mockResolvedValue({ success: true, data: { taskId: 1, status: 'pending', message: '任务已提交' } })
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    fetchSpy.mockRejectedValue(new Error('stop'))
+    const mockStatus = vi.mocked(getTaskStatus)
+    mockStatus.mockResolvedValue({
+      success: true,
+      data: {
+        taskId: 1,
+        task_status: 'completed',
+        status: 'success',
+        result_media_id: 'media-1',
+        result_data: {
+          created: 123,
+          data: [{ url: 'https://example.com/image.png' }],
+          model: 'chatgpt-image-2',
+          size: '1024x1024',
+          usage: { total_tokens: 100 },
+        },
+        error_message: null,
+        created_at: '2026-05-03T00:00:00',
+      },
+    })
 
     render(<OpenAIImage2 />)
 
@@ -135,15 +140,13 @@ describe('OpenAIImage2 Component', () => {
     fireEvent.click(generateButton)
 
     await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalled()
-      const callArgs = mockCreate.mock.calls[0][0]
+      expect(mockSubmit).toHaveBeenCalled()
+      const callArgs = mockSubmit.mock.calls[0][0]
       expect(callArgs.service_provider).toBe('openai')
-      expect(callArgs.status).toBe('pending')
-      expect(callArgs.request_body).toBeDefined()
-      expect(callArgs.request_body).toContain('"prompt":"a cat"')
+      expect(callArgs.operation).toBe('image_generation')
+      expect(callArgs.body).toBeDefined()
+      expect(JSON.stringify(callArgs.body)).toContain('"prompt":"a cat"')
     })
-
-    fetchSpy.mockRestore()
   })
 
   it('should use gpt-image-2 as default model', () => {
@@ -154,52 +157,5 @@ describe('OpenAIImage2 Component', () => {
       expect(data.model).toBe('gpt-image-2')
     }
     expect(screen.getByText('Model')).toBeTruthy()
-  })
-
-  it('should call uploadMedia with source external_debug', async () => {
-    const mockCreate = vi.mocked(createExternalApiLog)
-    const mockUpdate = vi.mocked(updateExternalApiLog)
-    const mockUpload = vi.mocked(uploadMedia)
-
-    mockCreate.mockResolvedValue({ success: true, data: { id: 1 } as never })
-    mockUpdate.mockResolvedValue({ success: true, data: {} as never })
-    mockUpload.mockResolvedValue({ success: true, data: { id: 'media-1' } as never })
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    const fakeBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-    fetchSpy.mockResolvedValue({
-      json: async () => ({
-        success: true,
-        data: {
-          status: 200,
-          body: {
-            created: 123,
-            data: [{ b64_json: fakeBase64 }],
-            model: 'chatgpt-image-2',
-            size: '1024x1024',
-            usage: { total_tokens: 100 },
-          },
-        },
-      }),
-    } as Response)
-
-    render(<OpenAIImage2 />)
-
-    const promptInput = screen.getByPlaceholderText('描述你想生成的图像...')
-    fireEvent.change(promptInput, { target: { value: 'a cat' } })
-
-    const tokenInput = screen.getByPlaceholderText('sk-...')
-    fireEvent.change(tokenInput, { target: { value: 'sk-test' } })
-
-    const generateButton = screen.getByText('生成')
-    fireEvent.click(generateButton)
-
-    await waitFor(() => {
-      expect(mockUpload).toHaveBeenCalled()
-      const callArgs = mockUpload.mock.calls[0]
-      expect(callArgs[3]).toBe('external_debug')
-    })
-
-    fetchSpy.mockRestore()
   })
 })
