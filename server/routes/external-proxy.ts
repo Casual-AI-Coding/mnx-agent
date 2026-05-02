@@ -240,6 +240,13 @@ async function executeAsyncTask(
   const repo = new ExternalApiLogRepository(conn)
   const startTime = performance.now()
 
+  logger.info({
+    msg: 'Async task started',
+    logId,
+    url,
+    method,
+  })
+
   try {
     const forwardHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -326,12 +333,20 @@ async function executeAsyncTask(
     const durationMs = Math.round(performance.now() - startTime)
     const message = err instanceof Error ? err.message : '代理请求失败'
 
-    await repo.updateResult(String(logId), {
-      status: 'failed',
-      error_message: message,
-      duration_ms: durationMs,
-      task_status: 'failed',
-    })
+    try {
+      await repo.updateResult(String(logId), {
+        status: 'failed',
+        error_message: message,
+        duration_ms: durationMs,
+        task_status: 'failed',
+      })
+    } catch (updateErr) {
+      logger.error({
+        msg: 'Failed to update task status',
+        logId,
+        error: updateErr instanceof Error ? updateErr.message : 'Unknown error',
+      })
+    }
 
     logger.error({
       msg: 'Async task failed',
