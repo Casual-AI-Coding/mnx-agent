@@ -287,11 +287,29 @@ async function executeAsyncTask(
     if (isSuccess && mediaType && responseBody && typeof responseBody === 'object') {
       const data = responseBody as Record<string, unknown>
       const imageUrl = extractImageUrl(data)
+      const imageBase64 = extractImageBase64(data)
+
+      let imageBuffer: Buffer | null = null
+
       if (imageUrl) {
         try {
           const arrayBuffer = await fetch(imageUrl).then(r => r.arrayBuffer())
+          imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
+        } catch (fetchErr) {
+          logger.error({
+            msg: 'Failed to fetch image from URL',
+            logId,
+            error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
+          })
+        }
+      } else if (imageBase64) {
+        imageBuffer = Buffer.from(imageBase64, 'base64')
+      }
+
+      if (imageBuffer) {
+        try {
           const result = await saveMediaFile(
-            Buffer.from(new Uint8Array(arrayBuffer)),
+            imageBuffer,
             `openai-image-${logId}.png`,
             mediaType as MediaType
           )
@@ -308,7 +326,7 @@ async function executeAsyncTask(
           resultMediaId = mediaRecord.id
         } catch (saveErr) {
           logger.error({
-            msg: 'Failed to save media from URL',
+            msg: 'Failed to save media',
             logId,
             error: saveErr instanceof Error ? saveErr.message : 'Unknown error',
           })
@@ -366,8 +384,15 @@ function extractImageUrl(data: Record<string, unknown>): string | null {
     if (typeof firstItem.url === 'string') {
       return firstItem.url
     }
+  }
+  return null
+}
+
+function extractImageBase64(data: Record<string, unknown>): string | null {
+  if (Array.isArray(data.data) && data.data.length > 0) {
+    const firstItem = data.data[0] as Record<string, unknown>
     if (typeof firstItem.b64_json === 'string') {
-      return null
+      return firstItem.b64_json
     }
   }
   return null
