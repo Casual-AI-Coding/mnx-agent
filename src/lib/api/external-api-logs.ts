@@ -185,7 +185,6 @@ export interface TaskStatusResponse {
   task_status: AsyncTaskStatus
   status: ExternalApiStatus
   result_media_id: string | null
-  result_data: Record<string, unknown> | null
   error_message: string | null
   created_at: string
 }

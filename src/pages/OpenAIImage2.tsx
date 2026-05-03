@@ -19,7 +19,6 @@ import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { createExternalApiLog, updateExternalApiLog, submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
 import { useSettingsStore } from '@/settings/store'
 import {
-  parseOpenAIImage2Response,
   buildOpenAIImage2Url,
   base64ToBlob,
   extractImageBase64List,
@@ -281,7 +280,6 @@ export default function OpenAIImage2() {
 
         const taskId = submitResult.data.taskId
         let taskStatus: string = 'pending'
-        let resultData: Record<string, unknown> | null = null
         let resultMediaId: string | null = null
         let errorMessage: string | null = null
         const startTime = performance.now()
@@ -299,7 +297,6 @@ export default function OpenAIImage2() {
           }
 
           taskStatus = statusResult.data.task_status
-          resultData = statusResult.data.result_data
           resultMediaId = statusResult.data.result_media_id
           errorMessage = statusResult.data.error_message
           pollAttempts++
@@ -311,19 +308,15 @@ export default function OpenAIImage2() {
 
         const durationMs = Math.round(performance.now() - startTime)
 
-        if (taskStatus === 'completed' && resultData) {
-          const parsed = parseOpenAIImage2Response(resultData)
-          setLastParsedResponse(parsed)
-
-          const previewUrl = resultMediaId ? `/api/media/${resultMediaId}/token` : undefined
+        if (taskStatus === 'completed' && resultMediaId) {
+          const previewUrl = `/api/media/${resultMediaId}/token`
           setResult(prev => ({
             ...prev,
             status: 'success',
             previewUrl,
             durationMs,
-            usage: parsed.usage,
             externalApiLogId: taskId,
-            mediaRecordId: resultMediaId ?? undefined,
+            mediaRecordId: resultMediaId,
           }))
 
           setRetryHistory(prev => {

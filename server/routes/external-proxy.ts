@@ -221,7 +221,6 @@ router.get(
       task_status: log.task_status,
       status: log.status,
       result_media_id: log.result_media_id,
-      result_data: log.result_data,
       error_message: log.error_message,
       created_at: log.created_at,
     })
