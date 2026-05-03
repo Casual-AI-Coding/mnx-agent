@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { createExternalApiLog, updateExternalApiLog, submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
+import { getMediaToken } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
 import {
   buildOpenAIImage2Url,
@@ -309,7 +310,17 @@ export default function OpenAIImage2() {
         const durationMs = Math.round(performance.now() - startTime)
 
         if (taskStatus === 'completed') {
-          const previewUrl = resultMediaId ? `/api/media/${resultMediaId}/token` : undefined
+          let previewUrl: string | undefined
+          if (resultMediaId) {
+            try {
+              const tokenResult = await getMediaToken(resultMediaId)
+              if (tokenResult.success && tokenResult.data) {
+                previewUrl = tokenResult.data.downloadUrl
+              }
+            } catch {
+              previewUrl = undefined
+            }
+          }
           setResult(prev => ({
             ...prev,
             status: 'success',

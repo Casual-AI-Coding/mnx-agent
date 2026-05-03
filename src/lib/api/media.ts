@@ -254,3 +254,11 @@ export async function recoverMedia(logId: number, resourceUrl?: string): Promise
   const response = await client.post(`/media/recover/${logId}`, { resource_url: resourceUrl })
   return response.data
 }
+
+export async function getMediaToken(mediaId: string): Promise<{
+  success: boolean
+  data: { downloadUrl: string; token: string }
+}> {
+  const response = await client.get(`/media/${mediaId}/token`)
+  return response.data
+}
