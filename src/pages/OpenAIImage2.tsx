@@ -308,15 +308,15 @@ export default function OpenAIImage2() {
 
         const durationMs = Math.round(performance.now() - startTime)
 
-        if (taskStatus === 'completed' && resultMediaId) {
-          const previewUrl = `/api/media/${resultMediaId}/token`
+        if (taskStatus === 'completed') {
+          const previewUrl = resultMediaId ? `/api/media/${resultMediaId}/token` : undefined
           setResult(prev => ({
             ...prev,
             status: 'success',
             previewUrl,
             durationMs,
             externalApiLogId: taskId,
-            mediaRecordId: resultMediaId,
+            mediaRecordId: resultMediaId ?? undefined,
           }))
 
           setRetryHistory(prev => {
