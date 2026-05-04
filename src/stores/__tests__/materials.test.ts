@@ -59,7 +59,12 @@ describe('useMaterialsStore', () => {
       await result.current.fetchMaterials()
 
       expect(listMaterials).toHaveBeenCalled()
-      expect(listMaterials).toHaveBeenCalledWith({ material_type: 'artist' })
+      expect(listMaterials).toHaveBeenCalledWith({
+        limit: 8,
+        offset: 0,
+        sort_by: 'updated_at',
+        sort_order: 'desc',
+      })
       expect(result.current.materials).toHaveLength(1)
       expect(result.current.materials[0].id).toBe('material-1')
       expect(result.current.isLoading).toBe(false)
@@ -100,6 +105,10 @@ describe('useMaterialsStore', () => {
 
   describe('addMaterial', () => {
     it('should create material via API and prepend to list', async () => {
+      ;(listMaterials as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { records: [mockMaterial], pagination: { total: 1, totalPages: 1 } },
+      })
       ;(createMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         data: mockMaterial,
@@ -148,6 +157,10 @@ describe('useMaterialsStore', () => {
       ;(deleteMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         data: { deleted: true },
+      })
+      ;(listMaterials as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: { records: [], pagination: { total: 0, totalPages: 0 } },
       })
 
       const { result } = renderHook(() => useMaterialsStore())

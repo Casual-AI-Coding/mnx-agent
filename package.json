@@ -37,6 +37,7 @@
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.14.0",
     "framer-motion": "^11.0.8",
+    "helmet": "^8.1.0",
     "i18next": "^26.0.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.344.0",

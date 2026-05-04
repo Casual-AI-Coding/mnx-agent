@@ -7,6 +7,9 @@
 import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodePermission } from '../database/types.js'
 import { ROLE_HIERARCHY } from '../types/workflow.js'
+import { getLogger } from '../lib/logger.js'
+
+const logger = getLogger()
 
 export interface ServiceMethodMeta {
   name: string
@@ -33,7 +36,7 @@ export class ServiceNodeRegistry {
   async register(config: ServiceConfig): Promise<void> {
     this.services.set(config.serviceName, config.instance)
     this.methodMetas.set(config.serviceName, config.methods)
-    console.log(`[ServiceNodeRegistry] Registered service: ${config.serviceName} with ${config.methods.length} methods`)
+    logger.info(`[ServiceNodeRegistry] Registered service: ${config.serviceName} with ${config.methods.length} methods`)
 
     for (const method of config.methods) {
       try {
@@ -46,7 +49,7 @@ export class ServiceNodeRegistry {
           is_enabled: true,
         })
       } catch (error) {
-        console.error(`[ServiceNodeRegistry] Failed to sync ${config.serviceName}.${method.name} to database:`, error)
+        logger.error(error, `[ServiceNodeRegistry] Failed to sync ${config.serviceName}.${method.name} to database`)
       }
     }
   }
@@ -82,12 +85,12 @@ export class ServiceNodeRegistry {
   }
 
   async getAvailableNodes(userRole: string): Promise<ServiceNodePermission[]> {
-    const userLevel = ROLE_HIERARCHY[userRole] ?? 0
+    const userLevel = ROLE_HIERARCHY[userRole as keyof typeof ROLE_HIERARCHY] ?? 0
     const allNodes = await this.db.getAllServiceNodePermissions()
     
     return allNodes.filter(node => {
       if (!node.is_enabled) return false
-      const nodeLevel = ROLE_HIERARCHY[node.min_role] ?? 0
+      const nodeLevel = ROLE_HIERARCHY[node.min_role as keyof typeof ROLE_HIERARCHY] ?? 0
       return nodeLevel <= userLevel
     })
   }

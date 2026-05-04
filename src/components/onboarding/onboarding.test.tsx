@@ -55,7 +55,7 @@ describe('WelcomeModal', () => {
       </MemoryRouter>
     )
 
-    const closeButton = screen.getByText('关闭')
+    const closeButton = screen.getAllByRole('button', { name: '关闭' })[0]
     fireEvent.click(closeButton)
 
     expect(mockOnClose).toHaveBeenCalledTimes(1)

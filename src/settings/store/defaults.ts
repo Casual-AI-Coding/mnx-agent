@@ -2,12 +2,13 @@
 import type { AllSettings, SettingsCategory } from '@/settings/types'
 import { TIMEOUTS } from '@/lib/config'
 import { DEFAULT_MODELS } from '@/models'
+import { UserRole } from '@mnx/shared-types'
 
 export const DEFAULT_SETTINGS: AllSettings = {
   account: {
     username: '',
     email: null,
-    role: 'user',
+    role: UserRole.USER,
     locale: 'zh-CN',
     timezone: 'Asia/Shanghai',
     sessionTimeout: 30,

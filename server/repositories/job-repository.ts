@@ -11,6 +11,9 @@ import type {
 import { BaseRepository } from './base-repository.js'
 
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { getLogger } from '../lib/logger.js'
+
+const logger = getLogger()
 
 function rowToCronJob(row: CronJobRow): CronJob {
   return {
@@ -215,7 +218,7 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
       )
 
       if (result.changes === 0) {
-        console.warn(`[JobRepository] updateRunStats: No job found with id=${id} and owner_id=${ownerId}`)
+        logger.warn(`[JobRepository] updateRunStats: No job found with id=${id} and owner_id=${ownerId}`)
         return null
       }
     } else {

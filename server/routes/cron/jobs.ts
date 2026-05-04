@@ -19,8 +19,10 @@ import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-iso
 import { formatDuration } from './utils'
 import { withEntityNotFound } from '../../utils/index.js'
 import { toLocalISODateString } from '../../lib/date-utils.js'
+import { getLogger } from '../../lib/logger.js'
 
 const router = Router()
+const logger = getLogger()
 
 router.get('/jobs', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
@@ -115,7 +117,7 @@ router.post('/jobs/:id/run', validateParams(cronJobIdParamsSchema), asyncHandler
     await scheduler.executeJobTick(job)
     successResponse(res, { message: 'Job triggered successfully' })
   } catch (error) {
-    console.error('Manual trigger failed:', error)
+    logger.error(error, 'Manual trigger failed')
     errorResponse(res, `Failed to execute job: ${(error as Error).message}`, 500)
   }
 }))

@@ -58,7 +58,7 @@ describe('CreateTemplateModal', () => {
     const user = userEvent.setup()
     render(<CreateTemplateModal open={true} onClose={mockOnClose} />)
     
-    const closeButton = screen.getByRole('button', { name: 'Close' })
+    const closeButton = screen.getByRole('button', { name: '关闭' })
     await user.click(closeButton)
     
     expect(mockOnClose).toHaveBeenCalledTimes(1)
@@ -171,7 +171,7 @@ describe('CreateTemplateModal', () => {
     })
     
     // Find the X icon button (it's inside the variable tag)
-    const removeButton = screen.getByRole('button', { name: 'Close' })
+    const removeButton = screen.getByRole('button', { name: '关闭' })
     await user.click(removeButton)
     
     await waitFor(() => {

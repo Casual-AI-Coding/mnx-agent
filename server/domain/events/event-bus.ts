@@ -1,7 +1,10 @@
 import type { DomainEvent, EventHandler } from './event-handler'
+import { getLogger } from '../../lib/logger.js'
 
 export { type DomainEvent, type EventHandler } from './event-handler'
 export type { JobCreatedEvent, JobExecutedEvent, TaskQueuedEvent, AllDomainEvents } from './event-handler'
+
+const logger = getLogger()
 
 export class DomainEventBus {
   private handlers = new Map<string, EventHandler[]>()
@@ -26,7 +29,7 @@ export class DomainEventBus {
         try {
           await handler(event)
         } catch (error) {
-          console.error(`Event handler error for '${event.type}':`, error)
+          logger.error(error, `Event handler error for '${event.type}'`)
         }
       })
     )

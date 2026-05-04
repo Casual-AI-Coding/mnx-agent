@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import { config } from 'dotenv'
 import { errorHandler } from './middleware/errorHandler'
@@ -69,6 +70,10 @@ app.use(cors({
     'https://mnx.ogslp.top',
   ],
   credentials: true,
+}))
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
 }))
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
@@ -304,8 +309,7 @@ async function startServer() {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'))
     
   } catch (error) {
-    logger.error({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
-    console.error('Full error:', error)
+    logger.fatal({ msg: 'Service initialization failed', error: (error as Error).message, stack: (error as Error).stack })
     process.exit(1)
   }
 }

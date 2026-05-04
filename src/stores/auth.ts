@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { UserRole } from '@mnx/shared-types'
 
-export type UserRole = 'super' | 'admin' | 'pro' | 'user'
+export { UserRole }
 
 export interface AuthUser {
   id: string

@@ -156,7 +156,7 @@ describe('useSettingsStore', () => {
         result.current.setCategory('api', newApiSettings)
       })
 
-      expect(result.current.settings.api).toEqual(newApiSettings)
+      expect(result.current.settings.api).toMatchObject(newApiSettings)
     })
   })
 

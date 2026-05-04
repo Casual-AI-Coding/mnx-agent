@@ -14,6 +14,7 @@ import {
 } from '../validation/media-schemas'
 import { saveMediaFile, readMediaFile, deleteMediaFile, saveFromUrl } from '../lib/media-storage'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
+import type { ExternalApiLog } from '../../packages/shared-types/entities/external-api-log.js'
 import { getConnection } from '../database/connection.js'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token.js'
 import multer from 'multer'
@@ -108,7 +109,7 @@ router.get('/recoverable', asyncHandler(async (req, res) => {
 
   const mediaLogs = logs.filter(log => MEDIA_OPERATIONS.includes(log.operation))
 
-  type LogWithUrls = { log: any; resourceUrls: string[]; opConfig: typeof OPERATION_MEDIA_MAP[string] }
+  type LogWithUrls = { log: ExternalApiLog; resourceUrls: string[]; opConfig: typeof OPERATION_MEDIA_MAP[string] }
   const logsWithUrls: LogWithUrls[] = []
   for (const log of mediaLogs) {
     if (!log.response_body) continue
@@ -607,7 +608,7 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
       const filename = record.original_name || record.filename
       archive.append(buffer, { name: filename })
     } catch (error) {
-      console.error(`Failed to add file ${record.filename} to zip:`, error)
+      logger.error(error, `Failed to add file ${record.filename} to zip`)
     }
   }
 

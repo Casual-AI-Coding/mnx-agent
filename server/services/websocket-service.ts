@@ -252,8 +252,8 @@ export function initCronWebSocket(server: Server): WebSocketServer {
       return
     }
 
-    ;(ws as any).userId = payload.userId
-    ;(ws as any).userRole = payload.role
+    ;(ws as WebSocket & { userId?: string; userRole?: string }).userId = payload.userId
+    ;(ws as WebSocket & { userId?: string; userRole?: string }).userRole = payload.role
 
     const client: WebSocketClient = {
       ws,

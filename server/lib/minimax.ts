@@ -3,6 +3,7 @@ import { retryWithBackoff } from './retry.js'
 import { toLocalISODateString } from './date-utils.js'
 import { withExternalApiAudit, withExternalApiLog } from '../services/external-api-audit.service.js'
 import { getLogger } from './logger.js'
+const logger = getLogger()
 
 const API_HOSTS = {
   domestic: 'https://api.minimaxi.com',
@@ -262,10 +263,7 @@ export class MiniMaxClient {
       'music_generation',
       body,
       async () => {
-        console.log('[MiniMax] Music Generation Request:', {
-          body,
-          timestamp: toLocalISODateString()
-        })
+        logger.debug({ body, timestamp: toLocalISODateString() }, '[MiniMax] Music Generation Request')
         
         return retryWithBackoff(async () => {
           try {
@@ -610,7 +608,7 @@ export function getMiniMaxClient(): MiniMaxClient {
   if (!clientInstance) {
     const apiKey = process.env.MINIMAX_API_KEY
     if (!apiKey) {
-      console.warn('[MiniMaxClient] MINIMAX_API_KEY not configured, using mock client that will fail on API calls')
+      logger.warn('[MiniMaxClient] MINIMAX_API_KEY not configured, using mock client that will fail on API calls')
       clientInstance = new MockMiniMaxClient()
     } else {
       const envRegion = process.env.MINIMAX_REGION

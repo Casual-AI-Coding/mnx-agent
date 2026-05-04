@@ -425,8 +425,9 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       try {
         await this.insertFavorite(userId, mediaId)
         return { isFavorite: true, action: 'added' }
-      } catch (error: any) {
-        if (error.code === '23505') {
+      } catch (error: unknown) {
+        const pgError = error as { code?: unknown }
+        if (pgError.code === '23505') {
           const raceExisting = await this.findFavorite(userId, mediaId)
           if (raceExisting) {
             if (raceExisting.is_deleted) {

@@ -33,7 +33,7 @@ export async function validateWorkflowNodePermissions(
   res: Response
 ): Promise<boolean> {
   const actionNodes = (nodesJson.nodes || []).filter(n => n.type === 'action')
-  const userLevel = ROLE_HIERARCHY[userRole] ?? 0
+  const userLevel = ROLE_HIERARCHY[userRole as keyof typeof ROLE_HIERARCHY] ?? 0
 
   for (const node of actionNodes) {
     const config = node.data?.config || {}
@@ -59,7 +59,7 @@ export async function validateWorkflowNodePermissions(
       return false
     }
 
-    const nodeLevel = ROLE_HIERARCHY[permission.min_role] ?? 0
+    const nodeLevel = ROLE_HIERARCHY[permission.min_role as keyof typeof ROLE_HIERARCHY] ?? 0
     if (nodeLevel > userLevel) {
       res.status(403).json({
         success: false,

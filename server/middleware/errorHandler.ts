@@ -1,4 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
+import { getLogger } from '../lib/logger'
+
+const logger = getLogger()
 
 export const errorHandler = (
   err: Error,
@@ -6,7 +9,7 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
-  console.error('Error:', err.message)
+  logger.error({ msg: 'Error:', error: err.message })
 
   const statusCode = res.statusCode !== 200 ? res.statusCode : 500
 

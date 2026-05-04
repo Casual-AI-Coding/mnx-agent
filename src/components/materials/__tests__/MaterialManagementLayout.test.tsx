@@ -46,17 +46,33 @@ const renderWithProviders = (ui: ReactNode) => {
 }
 
 describe('MaterialManagementLayout', () => {
+  const createDefaultMock = (overrides = {}) => ({
+    materials: [],
+    isLoading: false,
+    error: null,
+    total: 0,
+    page: 1,
+    limit: 8,
+    totalPages: 0,
+    typeFilter: 'all' as const,
+    sortField: 'updated_at' as const,
+    sortOrder: 'desc' as const,
+    fetchMaterials: vi.fn(),
+    addMaterial: vi.fn(),
+    removeMaterial: vi.fn(),
+    clearError: vi.fn(),
+    setPage: vi.fn(),
+    setLimit: vi.fn(),
+    setTypeFilter: vi.fn(),
+    setSortField: vi.fn(),
+    setSortOrder: vi.fn(),
+    toggleSort: vi.fn(),
+    ...overrides,
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [],
-      isLoading: false,
-      error: null,
-      fetchMaterials: vi.fn(),
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock())
     vi.mocked(useAuthStore).mockReturnValue({ isHydrated: true })
   })
 
@@ -78,44 +94,20 @@ describe('MaterialManagementLayout', () => {
   })
 
   it('should show loading state when isLoading is true', () => {
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [],
-      isLoading: true,
-      error: null,
-      fetchMaterials: vi.fn(),
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock({ isLoading: true }))
     renderWithProviders(<MaterialManagementLayout />)
     expect(screen.getByText('加载中...')).toBeInTheDocument()
   })
 
   it('should show empty state when no materials', () => {
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [],
-      isLoading: false,
-      error: null,
-      fetchMaterials: vi.fn(),
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock())
     renderWithProviders(<MaterialManagementLayout />)
     expect(screen.getByText(/暂无素材/i)).toBeInTheDocument()
   })
 
   it('should filter materials based on search query', async () => {
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock({ materials: [mockMaterial] }))
     const { user } = renderWithProviders(<MaterialManagementLayout />)
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [mockMaterial],
-      isLoading: false,
-      error: null,
-      fetchMaterials: vi.fn(),
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
 
     const searchInput = screen.getByPlaceholderText('搜索素材...')
     await user.type(searchInput, 'Artist')
@@ -123,42 +115,25 @@ describe('MaterialManagementLayout', () => {
 
   it('should call fetchMaterials on mount only once', () => {
     const fetchMaterials = vi.fn()
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [],
-      isLoading: false,
-      error: null,
-      fetchMaterials,
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock({ fetchMaterials }))
     renderWithProviders(<MaterialManagementLayout />)
     expect(fetchMaterials).toHaveBeenCalledTimes(1)
   })
 
   it('should render material type and updated time in the list', () => {
-    vi.mocked(useMaterialsStore).mockReturnValue({
-      materials: [
-        {
-          ...mockMaterial,
-          updated_at: '2024-02-03T00:00:00Z',
-        },
-      ],
-      isLoading: false,
-      error: null,
-      fetchMaterials: vi.fn(),
-      addMaterial: vi.fn(),
-      removeMaterial: vi.fn(),
-      clearError: vi.fn(),
-    })
+    vi.mocked(useMaterialsStore).mockReturnValue(createDefaultMock({
+      materials: [{ ...mockMaterial, updated_at: '2024-02-03T00:00:00Z' }],
+      total: 1,
+      totalPages: 1,
+    }))
 
     renderWithProviders(<MaterialManagementLayout />)
 
     expect(screen.getByText('Test Artist')).toBeInTheDocument()
     expect(screen.getByText('艺术家')).toBeInTheDocument()
     expect(screen.getByText(/\d{4}年\d+月\d+日/)).toBeInTheDocument()
-    expect(screen.getByText('歌曲 3')).toBeInTheDocument()
-    expect(screen.getByText('变体 2')).toBeInTheDocument()
+    expect(screen.getByText(/3\s*歌曲/)).toBeInTheDocument()
+    expect(screen.getByText(/2\s*变体/)).toBeInTheDocument()
   })
 
   it('should use generic create dialog copy instead of artist-only copy', async () => {

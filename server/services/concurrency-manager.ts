@@ -1,6 +1,9 @@
 // server/services/concurrency-manager.ts
 
 import type { IConcurrencyManager } from './interfaces/concurrency-manager.interface.js'
+import { getLogger } from '../lib/logger.js'
+
+const logger = getLogger()
 
 export interface ConcurrencyManagerOptions {
   maxConcurrent?: number
@@ -43,12 +46,12 @@ export class ConcurrencyManager implements IConcurrencyManager {
 
   async acquireSlot(jobId: string): Promise<boolean> {
     if (this.shuttingDown) {
-      console.warn(`[ConcurrencyManager] System shutting down, skipping job ${jobId}`)
+      logger.warn(`[ConcurrencyManager] System shutting down, skipping job ${jobId}`)
       return false
     }
 
     if (this.runningJobs.size >= this.maxConcurrent) {
-      console.warn(`[ConcurrencyManager] Max concurrent jobs (${this.maxConcurrent}) reached, skipping job ${jobId}`)
+      logger.warn(`[ConcurrencyManager] Max concurrent jobs (${this.maxConcurrent}) reached, skipping job ${jobId}`)
       return false
     }
 

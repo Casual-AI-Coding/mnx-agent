@@ -195,6 +195,7 @@ describe('MaterialService', () => {
         name: 'Song A',
       }
       mockDb.createMaterialItem.mockResolvedValue(mockMaterialItem)
+      mockDb.getMaterialById.mockResolvedValue(mockMaterial)
 
       const result = await service.createMaterialItem(createData, 'owner-1')
 
