@@ -180,7 +180,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
             placeholder="例如：流行风格"
             value={newPromptName}
             onChange={(e) => setNewPromptName(e.target.value)}
-            className="h-10"
+            className="h-10 border-border/40 focus:border-violet-400/50 focus:ring-1 focus:ring-violet-400/10 transition-all"
           />
         </div>
         <div>
@@ -191,15 +191,15 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
             value={newPromptContent}
             onChange={(e) => setNewPromptContent(e.target.value)}
             rows={4}
-            className="font-mono text-sm"
+            className="font-mono text-sm border-border/40 focus:border-violet-400/50 focus:ring-1 focus:ring-violet-400/10 transition-all"
           />
         </div>
       </div>
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/50">
-        <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5">
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/40">
+        <Button variant="outline" onClick={() => setIsCreating(false)} className="px-5 rounded-lg">
           取消
         </Button>
-        <Button onClick={handleCreatePrompt} disabled={isSaving} className="px-5 gap-1.5">
+        <Button onClick={handleCreatePrompt} disabled={isSaving} className="px-5 gap-1.5 rounded-lg bg-violet-500 hover:bg-violet-500/90 transition-all">
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           创建提示词
         </Button>
@@ -210,33 +210,37 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
   if (prompts.length === 0) {
     return (
       <>
-        <Card className="h-full overflow-hidden border border-dashed border-fuchsia-500/30 bg-gradient-to-br from-card via-card to-fuchsia-500/10 shadow-xl shadow-black/10">
-          <CardHeader className="border-b border-border/40 pb-4">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-fuchsia-200/90">
-                <Star className="h-3.5 w-3.5" />
-                Artist Prompt Board
+        <Card className="h-full overflow-hidden border border-dashed border-border/40 bg-card/80 shadow-sm">
+          <CardHeader className="border-b border-border/30 pb-5">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
+                  <Star className="h-3.5 w-3.5 text-violet-400" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-violet-400/80">
+                  Artist Prompt Board
+                </span>
               </div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Star className="w-4 h-4 text-fuchsia-300" />
+              <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
                 音乐人风格 Prompt
               </CardTitle>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 先定义人物全局风格，再让歌曲候选围绕这一组创作母板持续扩张。
               </p>
             </div>
           </CardHeader>
           <CardContent className="pt-5">
-            <div className="rounded-[24px] border border-dashed border-fuchsia-500/20 bg-background/50 p-3">
+            <div className="rounded-xl border border-dashed border-border/30 bg-background/40 p-4">
               <EmptyState
                 title="暂无提示词"
                 description="先建立第一条人物风格母板，后续歌曲风格和歌词表达才会更稳定。"
                 action={
                   <Button
                     onClick={() => setIsCreating(true)}
-                    className="gap-1.5 rounded-xl px-5 shadow-lg shadow-fuchsia-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-fuchsia-500/25"
+                    size="sm"
+                    className="gap-1.5 rounded-lg bg-violet-500 px-4 text-xs font-medium text-white hover:bg-violet-500/90 hover:shadow-md hover:shadow-violet-500/10 transition-all"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
                     新建提示词
                   </Button>
                 }
@@ -251,20 +255,23 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
 
   return (
     <>
-      <Card className="h-full overflow-hidden border-fuchsia-500/15 bg-gradient-to-br from-card via-card to-fuchsia-500/5 shadow-xl shadow-black/10">
-        <CardHeader className="border-b border-border/50 pb-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-fuchsia-200/90">
-                <Star className="h-3.5 w-3.5" />
-                Artist Prompt Board
+      <Card className="h-full overflow-hidden border border-border/40 bg-card/80 shadow-sm">
+        <CardHeader className="border-b border-border/30 pb-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
+                  <Star className="h-3.5 w-3.5 text-violet-400" />
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-violet-400/80">
+                  Artist Prompt Board
+                </span>
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Star className="w-4 h-4 text-fuchsia-300" />
+                <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
                   音乐人风格 Prompt
                 </CardTitle>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                   这里保存人物级的全局风格候选。默认项应该像创作母板一样，能统领后续歌曲表达。
                 </p>
               </div>
@@ -273,32 +280,31 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
             <Button
               size="sm"
               onClick={() => setIsCreating(true)}
-              className="gap-1.5 rounded-xl px-4 shadow-lg shadow-fuchsia-500/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-fuchsia-500/20"
+              className="shrink-0 gap-1.5 rounded-lg bg-violet-500 px-3.5 text-xs font-medium text-white whitespace-nowrap transition-all hover:bg-violet-500/90 hover:shadow-md hover:shadow-violet-500/10"
             >
               <Plus className="w-3.5 h-3.5" />
-              音乐人风格 Prompt
               新建提示词
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4 pt-5">
+        <CardContent className="space-y-4 pt-4">
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="flex h-auto flex-wrap gap-1 rounded-2xl border border-border/40 bg-background/60 p-1 shadow-inner shadow-black/5">
+            <TabsList className="flex h-auto flex-wrap gap-1 rounded-lg border border-border/30 bg-muted/30 p-1">
               {prompts.map((prompt) => (
                 <TabsTrigger
                   key={prompt.id}
                   value={prompt.id}
-                  className="gap-1.5 text-xs transition-all duration-200 data-[state=active]:bg-fuchsia-500/90 data-[state=active]:text-white data-[state=active]:shadow-md"
+                  className="gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-all data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  {prompt.is_default && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />}
+                  {prompt.is_default && <Star className="w-3 h-3 fill-amber-400 text-amber-400" />}
                   {prompt.name}
                 </TabsTrigger>
               ))}
             </TabsList>
             {prompts.map((prompt, index) => (
-              <TabsContent key={prompt.id} value={prompt.id} className="space-y-4 mt-4">
-                <div className="flex items-center gap-2 rounded-2xl border border-border/50 bg-background/50 p-3 shadow-sm">
+              <TabsContent key={prompt.id} value={prompt.id} className="space-y-3 mt-3">
+                <div className="flex items-center gap-2 rounded-lg border border-border/30 bg-muted/20 p-2.5">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -306,7 +312,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     disabled={index === 0 || isSaving}
                     title="向上移动"
                     aria-label={`向上移动 ${prompt.name}`}
-                    className="h-8 w-8 rounded-xl p-0 transition-all duration-200 hover:bg-fuchsia-500/10 hover:text-fuchsia-300"
+                    className="h-7 w-7 rounded-md p-0 transition-colors hover:bg-violet-500/10 hover:text-violet-400"
                   >
                     <ArrowUp className="w-3 h-3" />
                   </Button>
@@ -317,15 +323,16 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                     disabled={index === prompts.length - 1 || isSaving}
                     title="向下移动"
                     aria-label={`向下移动 ${prompt.name}`}
-                    className="h-8 w-8 rounded-xl p-0 transition-all duration-200 hover:bg-fuchsia-500/10 hover:text-fuchsia-300"
+                    className="h-7 w-7 rounded-md p-0 transition-colors hover:bg-violet-500/10 hover:text-violet-400"
                   >
                     <ArrowDown className="w-3 h-3" />
                   </Button>
-                  <span className="text-xs text-muted-foreground ml-2 font-medium">
+                  <span className="text-xs text-muted-foreground/70 ml-1 font-medium">
                     {index + 1} / {prompts.length}
                   </span>
                   {prompt.is_default && (
-                    <span className="ml-auto rounded-full bg-fuchsia-500/10 px-2.5 py-1 text-xs font-medium text-fuchsia-200">
+                    <span className="ml-auto flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-300">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                       默认
                     </span>
                   )}
@@ -335,14 +342,14 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                   onChange={(e) => setEditingContent(e.target.value)}
                   placeholder="输入提示词内容..."
                   rows={6}
-                  className="min-h-[160px] rounded-2xl border-border/50 bg-background/80 font-mono text-sm shadow-sm transition-all duration-200 focus:border-fuchsia-400/60 focus:ring-2 focus:ring-fuchsia-400/15"
+                  className="min-h-[140px] rounded-lg border-border/40 bg-background/60 font-mono text-sm transition-colors focus:border-violet-400/50 focus:ring-1 focus:ring-violet-400/10"
                 />
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={handleUpdateContent}
                     disabled={isSaving || editingContent === prompt.content}
-                    className="rounded-xl shadow-lg shadow-fuchsia-500/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-fuchsia-500/20"
+                    className="rounded-lg bg-violet-500 text-xs font-medium text-white transition-all hover:bg-violet-500/90 hover:shadow-md hover:shadow-violet-500/10 disabled:opacity-50"
                   >
                     保存
                   </Button>
@@ -351,7 +358,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                       size="sm"
                       variant="outline"
                       onClick={() => handleSetDefault(prompt.id)}
-                      className="gap-1 rounded-xl border-fuchsia-500/20 bg-background/70 transition-all duration-200 hover:border-fuchsia-400/40 hover:text-fuchsia-200"
+                      className="gap-1 rounded-lg border-violet-400/20 text-xs transition-colors hover:border-violet-400/40 hover:text-violet-300 hover:bg-violet-500/5"
                     >
                       <Star className="w-3 h-3" />
                       设为默认
@@ -360,7 +367,7 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="ml-auto rounded-xl text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive"
+                    className="ml-auto rounded-md text-destructive/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setDeleteConfirm(prompt)}
                     aria-label={`删除 ${prompt.name}`}
                   >
@@ -380,10 +387,10 @@ export function ArtistPromptPanel({ prompts, targetId, onPromptsChange }: Artist
         description={`确定要删除提示词 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
       >
         <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5">
+          <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="px-5 rounded-lg">
             取消
           </Button>
-          <Button variant="destructive" onClick={handleDeletePrompt} className="px-5 gap-1.5">
+          <Button variant="destructive" onClick={handleDeletePrompt} className="px-5 gap-1.5 rounded-lg">
             <Trash2 className="w-4 h-4" />
             删除
           </Button>

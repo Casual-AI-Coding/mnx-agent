@@ -151,37 +151,37 @@ export function ArtistWorkspace({ materialId, initialDetail }: ArtistWorkspacePr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <div className="rounded-[28px] border border-border/60 bg-gradient-to-r from-background via-background to-sky-500/5 p-5 shadow-lg shadow-black/10">
-          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-muted-foreground">Artist Workspace</p>
-          <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div className="rounded-xl border border-border/40 bg-gradient-to-r from-background via-background to-indigo-500/[0.03] p-5 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">Artist Workspace</p>
+          <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[0.01em] text-foreground">{detail.material.name}</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                左侧维护人物档案和全局风格母板，右侧负责歌曲编目与当前歌曲的风格工作区。布局保持稳定，信息层次更清晰。
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">{detail.material.name}</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                左侧维护人物档案和全局风格母板，右侧负责歌曲编目与当前歌曲的风格工作区。
               </p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/70 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
-              当前选中歌曲：
+            <div className="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              当前选中：
               <span className="font-medium text-foreground">{selectedSong?.name || '未选择'}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="space-y-5">
-        <ArtistBasicInfoPanel
-          material={detail.material}
-          onMaterialChange={updateMaterial}
-        />
-        <ArtistPromptPanel
-          prompts={detail.materialPrompts}
-          targetId={detail.material.id}
-          onPromptsChange={updateMaterialPrompts}
-        />
-      </div>
+          <ArtistBasicInfoPanel
+            material={detail.material}
+            onMaterialChange={updateMaterial}
+          />
+          <ArtistPromptPanel
+            prompts={detail.materialPrompts}
+            targetId={detail.material.id}
+            onPromptsChange={updateMaterialPrompts}
+          />
+        </div>
         <div className="space-y-5">
           <SongLibraryPanel
             songs={detail.items}
