@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send, Trash2, Sparkles, User, Copy, Check, RefreshCw, Zap, ZapOff, MessageSquare, Terminal, Sparkle, Bot } from 'lucide-react'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
@@ -16,7 +16,10 @@ import { RetryableError } from '@/components/shared/RetryableError'
 import { useRetry } from '@/hooks/useRetry'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
+
+const MarkdownRenderer = React.lazy(() =>
+  import('@/components/ui/MarkdownRenderer').then(m => ({ default: m.MarkdownRenderer }))
+)
 
 interface Message {
   id: string
@@ -400,10 +403,12 @@ export default function TextGeneration() {
                     </span>
                   </div>
                   {message.role === 'assistant' ? (
-                    <MarkdownRenderer 
-                      content={message.content} 
-                      className="text-[15px] leading-relaxed"
-                    />
+                    <Suspense fallback={<div className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>}>
+                      <MarkdownRenderer 
+                        content={message.content} 
+                        className="text-[15px] leading-relaxed"
+                      />
+                    </Suspense>
                   ) : (
                     <div className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>
                   )}
