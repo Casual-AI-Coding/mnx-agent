@@ -2,6 +2,7 @@ import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { switchLanguage } from '@/i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
@@ -84,7 +85,7 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   const newLang = currentLang === 'zh' ? 'en' : 'zh'
-                  i18n.changeLanguage(newLang)
+                  switchLanguage(newLang)
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all border border-transparent hover:border-border/50"
                 title={t('header.language')}

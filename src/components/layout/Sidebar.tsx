@@ -216,14 +216,14 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
   }
 
   const debugItems = [
-    { path: '/text', label: t('sidebar.textGeneration'), icon: MessageSquare },
-    { path: '/voice', label: t('sidebar.voiceSync'), icon: Mic },
-    { path: '/voice-async', label: t('sidebar.voiceAsync'), icon: MicOff },
-    { path: '/image', label: t('sidebar.imageGeneration'), icon: Image },
-    { path: '/music', label: t('sidebar.musicGeneration'), icon: Music },
-    { path: '/lyrics', label: t('sidebar.lyricsGeneration'), icon: FileText },
-    { path: '/video', label: t('sidebar.videoGeneration'), icon: Video },
-    { path: '/video-agent', label: t('sidebar.videoAgent'), icon: Film },
+    { path: '/text', label: t('sidebar.textGeneration', '文本生成'), icon: MessageSquare },
+    { path: '/voice', label: t('sidebar.voiceSync', '同步语音'), icon: Mic },
+    { path: '/voice-async', label: t('sidebar.voiceAsync', '异步语音'), icon: MicOff },
+    { path: '/image', label: t('sidebar.imageGeneration', '图片生成'), icon: Image },
+    { path: '/music', label: t('sidebar.musicGeneration', '音乐生成'), icon: Music },
+    { path: '/lyrics', label: t('sidebar.lyricsGeneration', '歌词生成'), icon: FileText },
+    { path: '/video', label: t('sidebar.videoGeneration', '视频生成'), icon: Video },
+    { path: '/video-agent', label: t('sidebar.videoAgent', '视频Agent'), icon: Film },
   ]
 
   const externalDebugItems = [
@@ -244,9 +244,9 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
       icon: FolderCog,
       minRole: 'pro' as UserRole,
       items: [
-        { path: '/voice-mgmt', label: t('sidebar.voiceManagement'), icon: User },
-        { path: '/files', label: t('sidebar.fileManagement'), icon: FolderOpen },
-        { path: '/media', label: t('sidebar.mediaManagement'), icon: HardDrive },
+    { path: '/voice-mgmt', label: t('sidebar.voiceManagement', '音色管理'), icon: User },
+    { path: '/files', label: t('sidebar.fileManagement', '文件管理'), icon: FolderOpen },
+    { path: '/media', label: t('sidebar.mediaManagement', '媒体管理'), icon: HardDrive },
         { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
         { path: '/materials', label: t('sidebar.materials', '素材管理'), icon: FolderCog },
       ],
@@ -258,7 +258,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
       minRole: 'pro' as UserRole,
       items: [
         { path: '/token', label: t('sidebar.tokenMonitor', '用量监控'), icon: Coins },
-        { path: '/capacity', label: t('sidebar.capacityMonitor'), icon: Gauge },
+        { path: '/capacity', label: t('sidebar.capacityMonitor', '用量配额'), icon: Gauge },
         { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
         { path: '/audit', label: t('sidebar.audit', '内部审计日志'), icon: Shield },
         { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
@@ -270,10 +270,10 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         icon: Cog,
         minRole: 'pro' as UserRole,
         items: [
-          { path: '/workflow-builder', label: t('sidebar.workflowBuilder'), icon: GitBranch },
+          { path: '/workflow-builder', label: t('sidebar.workflowBuilder', '工作流编排'), icon: GitBranch },
           { path: '/workflow-marketplace', label: '模板市场', icon: Store },
           { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
-          { path: '/cron', label: t('sidebar.cronManagement'), icon: Clock },
+          { path: '/cron', label: t('sidebar.cronManagement', '定时任务'), icon: Clock },
           { path: '/webhooks', label: 'Webhooks', icon: Webhook },
           { path: '/dead-letter-queue', label: t('sidebar.deadLetterQueue', '死信队列'), icon: AlertTriangle },
         ],
@@ -437,7 +437,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
               className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground/70 hover:text-foreground transition-colors"
             >
               <Terminal className="w-4 h-4" />
-              <span className="text-sm font-medium flex-1 text-left">{t('sidebar.debugConsole')}</span>
+              <span className="text-sm font-medium flex-1 text-left">{t('sidebar.debugConsole', '调试台')}</span>
               <ChevronRight
                 className={cn(
                   'w-4 h-4 transition-transform duration-200',
@@ -497,7 +497,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
               <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
 <span className="text-primary-foreground font-bold text-[10px]">M</span>
               </div>
-              <span className="text-xs">{t('sidebar.createdBy')}</span>
+              <span className="text-xs">{t('sidebar.createdBy', 'Created by oGsLP')}</span>
             </div>
             <div className="flex items-center gap-2">
               <button

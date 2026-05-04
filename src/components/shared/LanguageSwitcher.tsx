@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { switchLanguage } from '@/i18n'
 import { Globe, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
@@ -14,7 +15,7 @@ export default function LanguageSwitcher() {
   ]
 
   const handleLanguageChange = (lang: string) => {
-    i18n.changeLanguage(lang)
+    switchLanguage(lang)
     setIsOpen(false)
   }
 
