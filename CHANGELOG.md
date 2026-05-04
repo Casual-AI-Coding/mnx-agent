@@ -2,6 +2,87 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.6] - 2026-05-04
+
+### Added
+
+- **OpenAI Image-2 异步任务模式 (R-024)** — 重构为异步任务模式，解决 Cloudflare 超时和上传大小限制
+  - `server/routes/external-proxy.ts` (+327) — 新增 `/api/external-proxy/submit` 异步任务提交端点
+  - 任务状态流转：`pending → processing → completed/failed`
+  - 轮询超时处理 + 并发任务限制（最多 3 个）
+  - 后端直传保存图片，绕过 Cloudflare 413 上传限制
+  - `server/database/migrations/032_external_api_async_task.ts` (+16) — 扩展 `external_api_logs` 表，新增 `task_status`、`result_media_id`、`processing_at` 等字段
+  - `packages/shared-types/entities/external-api-log.ts` (+13) — 异步任务相关类型扩展
+
+- **自动重试功能** — 外部 API 调用失败后自动重试
+  - `server/routes/external-proxy.ts` — 指数退避重试策略
+
+- **processing 状态补充** — 更精确的任务状态反馈
+  - `feat(async-task): 补充 processing 状态`
+
+### Fixed
+
+- **OpenAI Image-2 多个运行时 Bug 修复**
+  - 预览图片 401 认证问题 — `src/pages/openai-image-2/ResultPreview.tsx` 添加认证头
+  - 任务完成但 `resultMediaId` 为 null 时的判断逻辑
+  - 只要 `task_status=completed` 就算成功，不依赖其他状态
+  - `retryCount` 默认值 undefined 修复
+  - endpoint 下拉选择通过 id 精确区分同名地址
+  - 任务卡在 pending 问题 — 添加日志和错误处理
+
+- **异步任务系统修复**
+  - 支持 base64 格式的图片保存（兼容不同 API 返回格式）
+  - 状态查询接口不再返回 `result_data`
+  - `COMMENT ON` 语句移除，解决数据库权限问题
+  - 注册 migration_032 到迁移系统
+
+### Changed
+
+- **OpenAI Image-2 组件拆分与重构** — 代码审查驱动的架构优化
+  - `src/pages/OpenAIImage2.tsx` (934→586 行, -348) — 大型页面拆分为独立组件
+  - `src/pages/openai-image-2/ConnectionConfigCard.tsx` (+67) — 连接配置卡片
+  - `src/pages/openai-image-2/GenerationParamsCard.tsx` (+152) — 生成参数卡片
+  - `src/pages/openai-image-2/ResultPreview.tsx` (+321) — 多图结果预览组件
+  - `src/pages/openai-image-2/FullscreenPreview.tsx` (+29) — 全屏预览组件
+  - `src/pages/openai-image-2/types.ts` (+108) — 独立类型定义
+  - 死代码清理：移除旧的 `src/lib/openai-image-2.ts`、`src/lib/__tests__/openai-image-2.test.ts`
+
+- **外部 API 配置页面交互优化**
+  - `src/components/settings/categories/ApiSettingsPanel.tsx` (+277/-XX) — 交互全面优化
+  - `src/components/settings/categories/UISettingsPanel.tsx` (+7) — UI 设置微调
+
+- **外部代理路由增强** — 新增异步任务路由体系
+  - `server/routes/external-proxy.ts` — POST `/submit`、GET `/status/:id` 路由
+
+### Docs
+
+- **ADR-0002 架构决策** — 记录异步任务+轮询模式的架构决策
+  - `docs/decisions/0002-async-task-polling-pattern.md` (+79) — 长耗时请求和大文件上传改为异步任务+轮询模式
+  - 包含文件上传限制更新
+
+- **OpenAI Image-2 设计规格**
+  - `docs/specs/2026-05-03-openai-image2-async-redesign.md` (+354) — 异步重构设计文档
+  - `docs/specs/2026-05-02-openai-image2-retry-design.md` (+417) — 自动重试设计文档
+
+### Performance
+
+**Code Quality Metrics**
+- **22 files changed** (+2436 insertions, -926 deletions)
+- **新增组件**: 4 个 (ConnectionConfigCard, GenerationParamsCard, ResultPreview, FullscreenPreview)
+- **新增路由**: 2 个 (submit, status)
+- **新增数据库迁移**: 1 个 (032_external_api_async_task)
+- **新增设计文档**: 2 个 (async-redesign, retry-design)
+- **新增 ADR**: 1 个 (0002-async-task-polling-pattern)
+- **移除死代码**: 2 个文件 (openai-image-2.ts, openai-image-2.test.ts)
+
+### Backward Compatibility
+
+- ✅ 所有现有 API 端点保持不变（新增异步端点）
+- ✅ 新增数据库迁移向后兼容
+- ✅ 外部代理路由扩展为增量变更，旧同步路由仍可用
+- ✅ 组件拆分为内部重构，不影响功能逻辑
+- ✅ 文档更新不影响功能代码
+
 ## [2.2.5] - 2026-04-28
 
 ### Added
