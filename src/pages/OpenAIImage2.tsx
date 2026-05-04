@@ -1,145 +1,28 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
-import { Globe, Settings2, Loader2, Wand2, RefreshCw, Key, AlertCircle, CheckCircle2, Download, Image as ImageIcon, Maximize2, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Globe } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
-import { Button } from '@/components/ui/Button'
-import { Label } from '@/components/ui/Label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { ComboboxInput } from '@/components/ui/ComboboxInput'
-import { SizePopup } from '@/components/ui/SizePopup'
-import { Tooltip } from '@/components/ui/Tooltip'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
-import { createExternalApiLog, updateExternalApiLog, submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
+import { submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
 import { getMediaToken } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
+import { buildOpenAIImage2Url, type OpenAIImage2RequestBody } from '@/lib/openai-image-2'
+
+import { ConnectionConfigCard } from './openai-image-2/ConnectionConfigCard'
+import { GenerationParamsCard } from './openai-image-2/GenerationParamsCard'
+import { ResultPreview } from './openai-image-2/ResultPreview'
+import { FullscreenPreview } from './openai-image-2/FullscreenPreview'
 import {
-  buildOpenAIImage2Url,
-  base64ToBlob,
-  extractImageBase64List,
-  createOpenAIImage2RequestSummary,
-  createOpenAIImage2ResponseSummary,
-  type OpenAIImage2RequestBody,
-  type OpenAIImage2ResponseBody,
-} from '@/lib/openai-image-2'
-
-function formatExternalApiError(err: unknown): string {
-  if (err instanceof TypeError && err.message.includes('fetch')) {
-    return '请求失败（可能是 CORS 跨域限制）。请确认目标 API 支持跨域请求，或使用支持 CORS 的代理地址。'
-  }
-  return err instanceof Error ? err.message : '外部 API 调用失败'
-}
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-  },
-}
-
-interface OpenAIImage2FormData {
-  baseUrl: string
-  endpointId: string
-  bearerToken: string
-  prompt: string
-  model: string
-  n: number
-  size: string
-  quality: string
-  background: string
-  outputFormat: string
-  moderation: string
-  imageTitle: string
-  retryCount: number  // 重试次数（0-10），默认 0
-}
-
-type ResultStatus = 'idle' | 'creating-log' | 'generating' | 'updating-log' | 'saving-media' | 'success' | 'failed'
-
-interface RetryRecord {
-  attempt: number           // 尝试次序（1 = 首次，2 = 第一次重试，...）
-  status: 'generating' | 'success' | 'failed'
-  error?: string            // 错误信息（失败时记录）
-  durationMs?: number       // 本次耗时
-  timestamp: string         // ISO 时间戳
-  previewUrl?: string       // 成功时的图片预览 URL
-  blob?: Blob               // 成功时的图片 Blob
-}
-
-interface OpenAIImage2Result {
-  status: ResultStatus
-  previewUrl?: string
-  mediaRecordId?: string
-  externalApiLogId?: number
-  usage?: Record<string, unknown>
-  durationMs?: number
-  error?: string
-}
-
-const STATUS_LABELS: Record<ResultStatus, string> = {
-  idle: '等待生成',
-  'creating-log': '创建调用日志...',
-  generating: '正在调用外部 API...',
-  'updating-log': '更新调用日志...',
-  'saving-media': '保存媒体记录...',
-  success: '生成成功',
-  failed: '生成失败',
-}
-
-const STATUS_COLORS: Record<ResultStatus, string> = {
-  idle: 'text-muted-foreground',
-  'creating-log': 'text-blue-500',
-  generating: 'text-indigo-500',
-  'updating-log': 'text-blue-500',
-  'saving-media': 'text-blue-500',
-  success: 'text-emerald-500',
-  failed: 'text-red-500',
-}
-
-const MODEL_OPTIONS = [
-  { value: 'gpt-image-2', label: 'GPT Image 2' },
-]
-
-
-
-const QUALITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'auto', label: 'Auto' },
-]
-
-const BACKGROUND_OPTIONS = [
-  { value: 'transparent', label: '透明' },
-  { value: 'opaque', label: '不透明' },
-  { value: 'auto', label: 'Auto' },
-]
-
-const OUTPUT_FORMAT_OPTIONS = [
-  { value: 'png', label: 'PNG' },
-  { value: 'jpeg', label: 'JPEG' },
-  { value: 'webp', label: 'WebP' },
-]
-
-const MODERATION_OPTIONS = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'low', label: 'Low' },
-]
+  type OpenAIImage2FormData,
+  type RetryRecord,
+  type OpenAIImage2Result,
+  formatExternalApiError,
+  containerVariants,
+  itemVariants,
+} from './openai-image-2/types'
 
 export default function OpenAIImage2() {
   const settingsEndpoints = useSettingsStore(s => s.settings.api.externalEndpoints ?? [])
@@ -170,7 +53,6 @@ export default function OpenAIImage2() {
       background: 'auto',
       outputFormat: 'png',
       moderation: 'low',
-      imageTitle: '',
       retryCount: 0,
     },
   })
@@ -178,10 +60,7 @@ export default function OpenAIImage2() {
   const [result, setResult] = useState<OpenAIImage2Result>({ status: 'idle' })
   const [retryHistory, setRetryHistory] = useState<RetryRecord[]>([])
   const [currentRetryIndex, setCurrentRetryIndex] = useState(0)
-  const [logUpdateFailed, setLogUpdateFailed] = useState(false)
-  const [lastParsedResponse, setLastParsedResponse] = useState<OpenAIImage2ResponseBody | null>(null)
   const [fullscreenPreview, setFullscreenPreview] = useState(false)
-  const [sizePopupOpen, setSizePopupOpen] = useState(false)
 
   const lastAutoFillRef = useRef<string>('')
 
@@ -215,14 +94,8 @@ export default function OpenAIImage2() {
     setFormData(prev => ({ ...prev, ...updates }))
   }, [setFormData])
 
-  useEffect(() => {
-    if (formData.retryCount === undefined || formData.retryCount === null) {
-      updateForm({ retryCount: 0 })
-    }
-  }, [formData.retryCount, updateForm])
-
   const handleGenerate = useCallback(async () => {
-    const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, imageTitle, retryCount } = formData
+    const { baseUrl, bearerToken, prompt, model, n, size, quality, background, outputFormat, moderation, retryCount } = formData
     if (!prompt.trim() || !bearerToken.trim()) return
 
     if (result.previewUrl) {
@@ -235,7 +108,6 @@ export default function OpenAIImage2() {
     setResult({ status: 'creating-log' })
     setRetryHistory([])
     setCurrentRetryIndex(0)
-    setLogUpdateFailed(false)
 
     const body: OpenAIImage2RequestBody = {
       model,
@@ -368,21 +240,6 @@ export default function OpenAIImage2() {
     }
   }, [formData, result.previewUrl, retryHistory])
 
-  const retryLogUpdate = useCallback(async () => {
-    if (!result.externalApiLogId || !result.durationMs || !lastParsedResponse) return
-    setLogUpdateFailed(false)
-    try {
-      await updateExternalApiLog(result.externalApiLogId, {
-        status: 'success',
-        duration_ms: result.durationMs,
-        response_body: JSON.stringify(createOpenAIImage2ResponseSummary(lastParsedResponse)),
-      })
-      setLogUpdateFailed(false)
-    } catch {
-      setLogUpdateFailed(true)
-    }
-  }, [result.externalApiLogId, result.durationMs, lastParsedResponse])
-
   const generateCurl = useCallback(() => {
     const body: Record<string, unknown> = {
       model: formData.model,
@@ -411,8 +268,6 @@ export default function OpenAIImage2() {
     setResult({ status: 'idle' })
     setRetryHistory([])
     setCurrentRetryIndex(0)
-    setLogUpdateFailed(false)
-    setLastParsedResponse(null)
   }, [result.previewUrl, retryHistory])
 
   const clearAll = useCallback(() => {
@@ -428,7 +283,6 @@ export default function OpenAIImage2() {
       background: 'auto',
       outputFormat: 'png',
       moderation: 'low',
-      imageTitle: '',
       retryCount: 0,
     })
     resetResult()
@@ -453,513 +307,74 @@ export default function OpenAIImage2() {
 
   const isBusy = result.status !== 'idle' && result.status !== 'success' && result.status !== 'failed'
 
+  const currentPreviewUrl = useMemo(() => {
+    if (retryHistory.length > 1 && retryHistory[currentRetryIndex]?.previewUrl) {
+      return retryHistory[currentRetryIndex].previewUrl
+    }
+    return result.previewUrl
+  }, [retryHistory, currentRetryIndex, result.previewUrl])
+
   return (
     <>
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="space-y-6"
-    >
-          <motion.div variants={itemVariants}>
-            <PageHeader
-              icon={<Globe className="w-5 h-5" />}
-              title="OpenAI Image-2"
-              description="直连外部 OpenAI 兼容 API 进行图像生成调试"
-              gradient="indigo-violet"
-              actions={
-                <WorkbenchActions
-                  helpTitle="OpenAI Image-2 使用帮助"
-                  helpTips={helpTips}
-                  generateCurl={generateCurl}
-                  onClear={clearAll}
-                  clearLabel="清空"
-                />
-              }
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className="space-y-6"
+      >
+        <motion.div variants={itemVariants}>
+          <PageHeader
+            icon={<Globe className="w-5 h-5" />}
+            title="OpenAI Image-2"
+            description="直连外部 OpenAI 兼容 API 进行图像生成调试"
+            gradient="indigo-violet"
+            actions={
+              <WorkbenchActions
+                helpTitle="OpenAI Image-2 使用帮助"
+                helpTips={helpTips}
+                generateCurl={generateCurl}
+                onClear={clearAll}
+                clearLabel="清空"
+              />
+            }
+          />
+        </motion.div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <motion.div variants={itemVariants} className="xl:col-span-5 space-y-6">
+            <ConnectionConfigCard
+              formData={formData}
+              updateForm={updateForm}
+              isBusy={isBusy}
+              baseUrlOptions={baseUrlOptions}
+            />
+            <GenerationParamsCard
+              formData={formData}
+              updateForm={updateForm}
+              isBusy={isBusy}
+              resultStatus={result.status}
+              onGenerate={handleGenerate}
             />
           </motion.div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <motion.div variants={itemVariants} className="xl:col-span-5 space-y-6">
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Globe className="w-4 h-4 text-indigo-500" />
-                    连接配置
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">Base URL</Label>
-                    <ComboboxInput
-                      value={formData.baseUrl}
-                      selectedId={formData.endpointId}
-                      onChange={(v, id) => updateForm({ baseUrl: v, endpointId: id ?? '' })}
-                      options={baseUrlOptions}
-                      suffix="/v1/images/generations"
-                      placeholder="https://api.example.com"
-                      disabled={isBusy}
-                      className="flex-1"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Bearer Token</Label>
-                      <Tooltip content="从设置中的外部 API 端点自动填充，也可临时修改" side="top">
-                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                      </Tooltip>
-                    </div>
-                    <div className="relative flex-1">
-                      <Input
-                        type="password"
-                        value={formData.bearerToken}
-                        onChange={e => updateForm({ bearerToken: e.target.value })}
-                        placeholder="sk-..."
-                        disabled={isBusy}
-                        className="pr-10"
-                      />
-                      <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Settings2 className="w-4 h-4 text-indigo-500" />
-                    生成参数
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">图片标题</Label>
-                    <Input
-                      value={formData.imageTitle}
-                      onChange={e => updateForm({ imageTitle: e.target.value })}
-                      placeholder="可选，用于保存媒体记录的名称"
-                      disabled={isBusy}
-                      className="flex-1"
-                    />
-                  </div>
-                  <div>
-                    <Textarea
-                      value={formData.prompt}
-                      onChange={e => updateForm({ prompt: e.target.value })}
-                      placeholder="描述你想生成的图像..."
-                      rows={12}
-                      disabled={isBusy}
-                      className="text-xs"
-                    />
-                  </div>
-                  <div className="flex gap-3 flex-wrap">
-                    <div className="space-y-1 flex-1 min-w-[140px]">
-                      <Label className="text-xs font-medium text-muted-foreground">Model</Label>
-                      <Select value={formData.model} onValueChange={v => updateForm({ model: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {MODEL_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="relative space-y-1 flex-1 min-w-[140px]">
-                      <Label className="text-xs font-medium text-muted-foreground">Size</Label>
-                      <button
-                        type="button"
-                        onClick={() => setSizePopupOpen(true)}
-                        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 overflow-hidden"
-                      >
-                        <span className="line-clamp-1">{formData.size}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 opacity-50 shrink-0">
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      </button>
-                      <SizePopup
-                        open={sizePopupOpen}
-                        onClose={() => setSizePopupOpen(false)}
-                        value={formData.size}
-                        onChange={v => updateForm({ size: v })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-muted-foreground">Quality</Label>
-                      <Select value={formData.quality} onValueChange={v => updateForm({ quality: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {QUALITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                   </div>
-<div className="grid grid-cols-5 gap-3 [&>*]:min-w-0">
-                      <div className="space-y-1">
-                       <Label className="text-xs font-medium text-muted-foreground">Background</Label>
-                       <Select value={formData.background} onValueChange={v => updateForm({ background: v })}>
-                         <SelectTrigger><SelectValue /></SelectTrigger>
-                         <SelectContent>
-                           {BACKGROUND_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <div className="space-y-1">
-                       <Label className="text-xs font-medium text-muted-foreground">Format</Label>
-                       <Select value={formData.outputFormat} onValueChange={v => updateForm({ outputFormat: v })}>
-                         <SelectTrigger><SelectValue /></SelectTrigger>
-                         <SelectContent>
-                           {OUTPUT_FORMAT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                         </SelectContent>
-                       </Select>
-                     </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-muted-foreground">Moderation</Label>
-                        <Select value={formData.moderation} onValueChange={v => updateForm({ moderation: v })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {MODERATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-muted-foreground">数量</Label>
-                        <Select value={String(formData.n)} onValueChange={v => updateForm({ n: Number(v) })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-muted-foreground">重试次数</Label>
-                        <Select value={String(formData.retryCount)} onValueChange={v => updateForm({ retryCount: Number(v) })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                   <div className="flex items-end">
-                     <Button
-                       className="w-full h-11 text-base font-medium bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-lg shadow-indigo-500/25"
-                       onClick={handleGenerate}
-                       disabled={isBusy || !formData.prompt.trim() || !formData.bearerToken.trim()}
-                     >
-                       {isBusy ? (
-                         <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                       ) : (
-                         <Wand2 className="w-4 h-4 mr-1.5" />
-                       )}
-                       {isBusy ? STATUS_LABELS[result.status] : '生成'}
-                     </Button>
-                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="xl:col-span-7 space-y-6 flex flex-col">
-              <Card className="flex-1 flex flex-col min-h-[500px]">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <ImageIcon className="w-4 h-4 text-indigo-500" />
-                      结果预览
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={result.status}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className={cn('text-xs font-medium', STATUS_COLORS[result.status])}
-                        >
-                          {STATUS_LABELS[result.status]}
-                        </motion.span>
-                      </AnimatePresence>
-                      {retryHistory.length > 1 && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setCurrentRetryIndex(Math.max(0, currentRetryIndex - 1))}
-                            disabled={currentRetryIndex === 0}
-                            className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
-                          >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                          </button>
-                          <div className="flex items-center gap-1">
-                            {retryHistory.map((record, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => setCurrentRetryIndex(idx)}
-                                className={cn(
-                                  "w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all",
-                                  idx === currentRetryIndex && record.status === 'generating' && "ring-[2px] ring-blue-500 bg-blue-500/20 text-blue-500",
-                                  idx === currentRetryIndex && record.status === 'success' && "ring-[2px] ring-emerald-500 bg-emerald-500/20 text-emerald-600",
-                                  idx === currentRetryIndex && record.status === 'failed' && "ring-[2px] ring-red-500 bg-red-500/20 text-red-600",
-                                  idx !== currentRetryIndex && record.status === 'generating' && "bg-blue-500/20 text-blue-500 animate-pulse",
-                                  idx !== currentRetryIndex && record.status === 'success' && "bg-emerald-500/20 text-emerald-600",
-                                  idx !== currentRetryIndex && record.status === 'failed' && "bg-red-500/20 text-red-600"
-                                )}
-                              >
-                                {record.status === 'generating' ? (
-                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                ) : record.status === 'failed' ? (
-                                  <X className="w-2.5 h-2.5" />
-                                ) : (
-                                  idx + 1
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => setCurrentRetryIndex(Math.min(retryHistory.length - 1, currentRetryIndex + 1))}
-                            disabled={currentRetryIndex === retryHistory.length - 1}
-                            className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
-                          >
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                      {(result.status === 'success' || result.status === 'failed') && (
-                        <Button variant="outline" size="sm" onClick={resetResult}>
-                          <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                          重新生成
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <div className="flex-1 flex flex-col">
-                  <AnimatePresence mode="wait">
-                    {result.status === 'idle' && (
-                      <motion.div
-                        key="idle"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex-1 flex flex-col items-center justify-center py-20 text-muted-foreground"
-                      >
-                        <Globe className="w-16 h-16 mb-4 opacity-20" />
-                        <p className="text-sm">填写参数后点击「生成图像」</p>
-                        <p className="text-xs mt-1">前端直连外部 API，后端仅记录调用日志</p>
-                      </motion.div>
-                    )}
-
-                    {(result.status === 'creating-log' || result.status === 'generating' || result.status === 'updating-log' || result.status === 'saving-media') && (
-                      <motion.div
-                        key="loading"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex-1 flex flex-col items-center justify-center py-20"
-                      >
-                        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-                        <p className="text-sm font-medium text-foreground">{STATUS_LABELS[result.status]}</p>
-                        <div className="flex items-center gap-1.5 mt-3">
-                          {(['creating-log', 'generating', 'updating-log', 'saving-media'] as const).map((step, i) => (
-                            <div
-                              key={step}
-                              className={cn(
-                                'h-1.5 rounded-full transition-all duration-300',
-                                ['creating-log', 'generating', 'updating-log', 'saving-media'].indexOf(result.status) >= i
-                                  ? 'w-8 bg-indigo-500'
-                                  : 'w-4 bg-muted'
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {(result.status === 'success' || result.status === 'failed') && retryHistory.length > 1 && retryHistory[currentRetryIndex]?.status === 'failed' && (
-                      <motion.div
-                        key={`failed-${currentRetryIndex}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex-1 flex flex-col items-center justify-center py-20"
-                      >
-                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                          <AlertCircle className="w-8 h-8 text-red-500" />
-                        </div>
-                        <p className="text-sm font-medium text-red-500 mb-1">第 {retryHistory[currentRetryIndex].attempt} 次尝试失败</p>
-                        <p className="text-xs text-muted-foreground max-w-md text-center">{retryHistory[currentRetryIndex].error}</p>
-                        {retryHistory[currentRetryIndex].durationMs && (
-                          <p className="text-xs text-muted-foreground mt-2">耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s</p>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {(result.status === 'success' || result.status === 'failed') && retryHistory.length > 1 && retryHistory[currentRetryIndex]?.status === 'success' && retryHistory[currentRetryIndex].previewUrl && (
-                      <motion.div
-                        key={`success-${currentRetryIndex}`}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="space-y-4"
-                      >
-                        <div className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/10 group">
-                          <img
-                            src={retryHistory[currentRetryIndex].previewUrl}
-                            alt="Generated image"
-                            className="w-full h-auto max-h-[500px] object-contain"
-                          />
-                          <button
-                            onClick={() => setFullscreenPreview(true)}
-                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-foreground/10 backdrop-blur-[1px]"
-                          >
-                            <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-background transition-colors">
-                              <Maximize2 className="w-5 h-5 text-foreground" />
-                            </div>
-                          </button>
-                          <a
-                            href={retryHistory[currentRetryIndex].previewUrl}
-                            download={`openai-image-${retryHistory[currentRetryIndex].attempt}.${formData.outputFormat}`}
-                            className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          {retryHistory[currentRetryIndex].durationMs && (
-                            <span className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                              耗时 {(retryHistory[currentRetryIndex].durationMs / 1000).toFixed(2)}s
-                            </span>
-                          )}
-                          <span className="text-xs px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600">
-                            <CheckCircle2 className="w-3 h-3 inline mr-1" />
-                            第 {retryHistory[currentRetryIndex].attempt} 次尝试成功
-                          </span>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {result.status === 'failed' && retryHistory.length <= 1 && (
-                      <motion.div
-                        key="failed"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex-1 flex flex-col items-center justify-center py-20"
-                      >
-                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                          <AlertCircle className="w-8 h-8 text-red-500" />
-                        </div>
-                        <p className="text-sm font-medium text-red-500 mb-1">生成失败</p>
-                        <p className="text-xs text-muted-foreground max-w-md text-center">{result.error}</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-4"
-                          onClick={resetResult}
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                          重试
-                        </Button>
-                      </motion.div>
-                    )}
-
-                    {result.status === 'success' && retryHistory.length <= 1 && (
-                      <motion.div
-                        key="success"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="space-y-4"
-                      >
-                        <div className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/10 group">
-                          {result.previewUrl && (
-                            <img
-                              src={result.previewUrl}
-                              alt="Generated image"
-                              className="w-full h-auto max-h-[500px] object-contain"
-                            />
-                          )}
-                          {result.previewUrl && (
-                            <>
-                              <button
-                                onClick={() => setFullscreenPreview(true)}
-                                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-foreground/10 backdrop-blur-[1px]"
-                              >
-                                <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-background transition-colors">
-                                  <Maximize2 className="w-5 h-5 text-foreground" />
-                                </div>
-                              </button>
-                              <a
-                                href={result.previewUrl}
-                                download={`openai-image-${Date.now()}.${formData.outputFormat}`}
-                                className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-colors"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                          {result.durationMs && (
-                            <span className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                              耗时 {(result.durationMs / 1000).toFixed(2)}s
-                            </span>
-                          )}
-                          {result.externalApiLogId && (
-                            <span className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                              日志 #{result.externalApiLogId}
-                            </span>
-                          )}
-                          {result.mediaRecordId && (
-                            <span className="text-xs px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600">
-                              <CheckCircle2 className="w-3 h-3 inline mr-1" />
-                              媒体 #{result.mediaRecordId}
-                            </span>
-                          )}
-                          {result.usage && Object.entries(result.usage).map(([k, v]) => (
-                            <span key={k} className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                              {k}: {String(v)}
-                            </span>
-                          ))}
-                        </div>
-
-                        {logUpdateFailed && (
-                          <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 text-amber-600 text-xs">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>日志回写失败</span>
-                            <Button variant="ghost" size="sm" className="h-5 px-1.5 ml-auto text-amber-600" onClick={retryLogUpdate}>
-                              <RefreshCw className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-
-
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {fullscreenPreview && result.previewUrl && createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setFullscreenPreview(false)}>
-            <button
-              onClick={() => setFullscreenPreview(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
-            >
-              <X className="w-5 h-5 text-white" />
-            </button>
-            <img
-              src={result.previewUrl}
-              alt="Fullscreen preview"
-              className="max-w-[90vw] max-h-[90vh] object-contain"
-              onClick={e => e.stopPropagation()}
+          <motion.div variants={itemVariants} className="xl:col-span-7 space-y-6 flex flex-col">
+            <ResultPreview
+              result={result}
+              retryHistory={retryHistory}
+              currentRetryIndex={currentRetryIndex}
+              setCurrentRetryIndex={setCurrentRetryIndex}
+              onReset={resetResult}
+              outputFormat={formData.outputFormat}
+              onFullscreen={() => setFullscreenPreview(true)}
             />
-          </div>,
-          document.body
-        )}
-      </>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <FullscreenPreview
+        previewUrl={fullscreenPreview ? currentPreviewUrl : undefined}
+        onClose={() => setFullscreenPreview(false)}
+      />
+    </>
   )
 }

@@ -66,16 +66,6 @@ export function buildOpenAIImage2Url(baseUrl: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/v1/images/generations`
 }
 
-export function base64ToBlob(base64: string, mimeType: string): Blob {
-  const cleanBase64 = base64.includes(',') ? base64.split(',').at(-1) ?? '' : base64
-  const binary = window.atob(cleanBase64)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-  return new Blob([bytes], { type: mimeType })
-}
-
 export function extractImageBase64List(response: OpenAIImage2ResponseBody): string[] {
   return (response.data ?? [])
     .map((item) => item.b64_json ?? item.base64)

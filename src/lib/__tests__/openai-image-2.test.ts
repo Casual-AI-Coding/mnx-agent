@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   parseOpenAIImage2Response,
   buildOpenAIImage2Url,
-  base64ToBlob,
   extractImageBase64List,
   createOpenAIImage2RequestSummary,
   createOpenAIImage2ResponseSummary,
@@ -90,29 +89,6 @@ describe('buildOpenAIImage2Url', () => {
 
   it('支持自定义 base URL', () => {
     expect(buildOpenAIImage2Url('https://custom.api.com')).toBe('https://custom.api.com/v1/images/generations')
-  })
-})
-
-describe('base64ToBlob', () => {
-  it('转换纯 base64 字符串', () => {
-    const base64 = window.btoa('hello world')
-    const blob = base64ToBlob(base64, 'text/plain')
-    expect(blob).toBeInstanceOf(Blob)
-    expect(blob.type).toBe('text/plain')
-    expect(blob.size).toBeGreaterThan(0)
-  })
-
-  it('转换带 data URI 前缀的 base64', () => {
-    const dataUri = 'data:image/png;base64,iVBORw0KGgo='
-    const blob = base64ToBlob(dataUri, 'image/png')
-    expect(blob).toBeInstanceOf(Blob)
-    expect(blob.type).toBe('image/png')
-  })
-
-  it('空字符串返回空 Blob', () => {
-    const blob = base64ToBlob('', 'image/png')
-    expect(blob).toBeInstanceOf(Blob)
-    expect(blob.size).toBe(0)
   })
 })
 

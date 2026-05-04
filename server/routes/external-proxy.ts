@@ -177,7 +177,7 @@ router.post(
       user_id: req.user?.userId,
     })
 
-    executeAsyncTask(log.id, url, method, headers, body, media_type).catch(err => {
+    executeAsyncTask(log.id, url, method, headers, body, media_type, req.user?.userId).catch(err => {
       logger.error({
         msg: 'Async task execution failed',
         taskId: log.id,
@@ -233,7 +233,8 @@ async function executeAsyncTask(
   method: string,
   headers?: Record<string, string>,
   body?: unknown,
-  mediaType?: string
+  mediaType?: string,
+  userId?: string
 ): Promise<void> {
   const conn = await getConnection()
   const repo = new ExternalApiLogRepository(conn)
@@ -286,58 +287,72 @@ async function executeAsyncTask(
     let resultMediaId: string | null = null
     if (isSuccess && mediaType && responseBody && typeof responseBody === 'object') {
       const data = responseBody as Record<string, unknown>
-      const imageUrl = extractImageUrl(data)
-      const imageBase64 = extractImageBase64(data)
+      const images = extractAllImages(data)
 
-      let imageBuffer: Buffer | null = null
+      let firstMediaId: string | null = null
+      for (const [index, imageInfo] of images.entries()) {
+        let imageBuffer: Buffer | null = null
 
-      if (imageUrl) {
-        try {
-          const arrayBuffer = await fetch(imageUrl).then(r => r.arrayBuffer())
-          imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
-        } catch (fetchErr) {
-          logger.error({
-            msg: 'Failed to fetch image from URL',
-            logId,
-            error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
-          })
+        if (imageInfo.url) {
+          try {
+            const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
+            imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
+          } catch (fetchErr) {
+            logger.error({
+              msg: 'Failed to fetch image from URL',
+              logId,
+              index,
+              error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
+            })
+          }
+        } else if (imageInfo.base64) {
+          imageBuffer = Buffer.from(imageInfo.base64, 'base64')
         }
-      } else if (imageBase64) {
-        imageBuffer = Buffer.from(imageBase64, 'base64')
-      }
 
-      if (imageBuffer) {
-        try {
-          const result = await saveMediaFile(
-            imageBuffer,
-            `openai-image-${logId}.png`,
-            mediaType as MediaType
-          )
-          const mediaRepo = new MediaRepository(conn)
-          const mediaRecord = await mediaRepo.create({
-            filename: result.filename,
-            original_name: `openai-image-${logId}.png`,
-            filepath: result.filepath,
-            type: mediaType as MediaType,
-            mime_type: 'image/png',
-            size_bytes: result.size_bytes,
-            source: 'external_debug',
-          })
-          resultMediaId = mediaRecord.id
-        } catch (saveErr) {
-          logger.error({
-            msg: 'Failed to save media',
-            logId,
-            error: saveErr instanceof Error ? saveErr.message : 'Unknown error',
-          })
+        if (imageBuffer) {
+          try {
+            const ext = detectImageExtension(imageBuffer)
+            const filename = images.length > 1
+              ? `openai-image-${logId}-${index + 1}.${ext}`
+              : `openai-image-${logId}.${ext}`
+            const result = await saveMediaFile(imageBuffer, filename, mediaType as MediaType)
+            const mediaRepo = new MediaRepository(conn)
+            const mediaRecord = await mediaRepo.create(
+              {
+                filename: result.filename,
+                original_name: filename,
+                filepath: result.filepath,
+                type: mediaType as MediaType,
+                mime_type: `image/${ext}`,
+                size_bytes: result.size_bytes,
+                source: 'external_debug',
+              },
+              userId
+            )
+            if (firstMediaId === null) {
+              firstMediaId = mediaRecord.id
+            }
+          } catch (saveErr) {
+            logger.error({
+              msg: 'Failed to save media',
+              logId,
+              index,
+              error: saveErr instanceof Error ? saveErr.message : 'Unknown error',
+            })
+          }
         }
       }
+      resultMediaId = firstMediaId
     }
+
+    const errorMessage = isSuccess
+      ? undefined
+      : extractErrorMessage(responseBody, response.status)
 
     await repo.updateResult(String(logId), {
       response_body: JSON.stringify(responseBody),
       status: isSuccess ? 'success' : 'failed',
-      error_message: isSuccess ? undefined : `HTTP ${response.status}`,
+      error_message: errorMessage,
       duration_ms: durationMs,
       task_status: isSuccess ? 'completed' : 'failed',
       result_media_id: resultMediaId,
@@ -378,24 +393,55 @@ async function executeAsyncTask(
   }
 }
 
-function extractImageUrl(data: Record<string, unknown>): string | null {
-  if (Array.isArray(data.data) && data.data.length > 0) {
-    const firstItem = data.data[0] as Record<string, unknown>
-    if (typeof firstItem.url === 'string') {
-      return firstItem.url
+function extractAllImages(data: Record<string, unknown>): Array<{ url?: string; base64?: string }> {
+  const images: Array<{ url?: string; base64?: string }> = []
+  if (Array.isArray(data.data)) {
+    for (const item of data.data) {
+      if (item && typeof item === 'object') {
+        const record = item as Record<string, unknown>
+        const url = typeof record.url === 'string' ? record.url : undefined
+        const base64 = typeof record.b64_json === 'string' ? record.b64_json : undefined
+        if (url || base64) {
+          images.push({ url, base64 })
+        }
+      }
     }
   }
-  return null
+  return images
 }
 
-function extractImageBase64(data: Record<string, unknown>): string | null {
-  if (Array.isArray(data.data) && data.data.length > 0) {
-    const firstItem = data.data[0] as Record<string, unknown>
-    if (typeof firstItem.b64_json === 'string') {
-      return firstItem.b64_json
-    }
+function detectImageExtension(buffer: Buffer): string {
+  if (buffer.length >= 4) {
+    // PNG: 89 50 4E 47
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'png'
+    // JPEG: FF D8 FF
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'jpeg'
+    // WebP: RIFF....WEBP
+    if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'webp'
   }
-  return null
+  return 'png'
+}
+
+function extractErrorMessage(responseBody: unknown, httpStatus: number): string {
+  if (responseBody && typeof responseBody === 'object') {
+    const body = responseBody as Record<string, unknown>
+    // OpenAI 格式: { error: { message: "...", type: "..." } }
+    if (body.error && typeof body.error === 'object') {
+      const error = body.error as Record<string, unknown>
+      if (typeof error.message === 'string') return error.message
+    }
+    // MiniMax 格式: { base_resp: { status_msg: "...", status_code: N } }
+    if (body.base_resp && typeof body.base_resp === 'object') {
+      const baseResp = body.base_resp as Record<string, unknown>
+      if (typeof baseResp.status_msg === 'string') return baseResp.status_msg
+    }
+    // 通用格式: { error: "..." }
+    if (typeof body.error === 'string') return body.error
+    // 通用格式: { message: "..." }
+    if (typeof body.message === 'string') return body.message
+  }
+  return `HTTP ${httpStatus}`
 }
 
 export default router
