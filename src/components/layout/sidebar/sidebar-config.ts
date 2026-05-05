@@ -29,14 +29,14 @@ import {
   Webhook,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
-import type { UserRole } from '@/stores/auth'
+import { UserRole } from '@/stores/auth'
 import type { SidebarNavItem } from './NavItem.js'
 
 export const roleHierarchy: Record<UserRole, number> = {
-  user: 0,
-  pro: 1,
-  admin: 2,
-  super: 3,
+  [UserRole.USER]: 0,
+  [UserRole.PRO]: 1,
+  [UserRole.ADMIN]: 2,
+  [UserRole.SUPER]: 3,
 }
 
 export interface SidebarSection {
@@ -66,14 +66,14 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
       id: 'externalDebug',
       label: '外部调试',
       icon: Globe,
-      minRole: 'admin',
+      minRole: UserRole.ADMIN,
       items: [{ path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image }],
     },
     {
       id: 'resources',
       label: '资源管理',
       icon: FolderCog,
-      minRole: 'pro',
+      minRole: UserRole.PRO,
       items: [
         { path: '/voice-mgmt', label: t('sidebar.voiceManagement', '音色管理'), icon: User },
         { path: '/files', label: t('sidebar.fileManagement', '文件管理'), icon: FolderOpen },
@@ -86,7 +86,7 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
       id: 'monitoring',
       label: '监控统计',
       icon: Activity,
-      minRole: 'pro',
+      minRole: UserRole.PRO,
       items: [
         { path: '/token', label: t('sidebar.tokenMonitor', '用量监控'), icon: Coins },
         { path: '/capacity', label: t('sidebar.capacityMonitor', '用量配额'), icon: Gauge },
@@ -99,7 +99,7 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
       id: 'automation',
       label: '自动化',
       icon: FolderCog,
-      minRole: 'pro',
+      minRole: UserRole.PRO,
       items: [
         { path: '/workflow-builder', label: t('sidebar.workflowBuilder', '工作流编排'), icon: GitBranch },
         { path: '/workflow-marketplace', label: '模板市场', icon: Store },
@@ -113,7 +113,7 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
       id: 'system',
       label: '系统管理',
       icon: Lock,
-      minRole: 'super',
+      minRole: UserRole.SUPER,
       items: [
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
