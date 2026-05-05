@@ -213,7 +213,7 @@ export default function AuditLogs() {
           onPageChange={setPage}
           onSelectLog={setSelectedLog}
           getActionConfig={getActionConfig}
-          formatDuration={formatDuration}
+          formatDuration={(ms: number | null | undefined) => formatDuration(ms ?? null)}
           formatTime={formatTime}
         />
       </Card>
