@@ -457,4 +457,15 @@ it('should handle multiple delete calls on same file', async () => {
         .rejects.toThrow()
     })
   })
+
+  describe('test environment guard', () => {
+    it('throws when using production mediaRoot in test environment', async () => {
+      await expect(saveMediaFile(
+        Buffer.from('hello'),
+        'test.txt',
+        'image' as MediaType,
+        './data/media', // explicitly pass production path
+      )).rejects.toThrow('CRITICAL: Tests must use TEST_MEDIA_ROOT')
+    })
+  })
 })

@@ -74,6 +74,23 @@ describe('isRetryableError', () => {
     expect(isRetryableError(error, retryableCodes)).toBe(false)
   })
 
+  it('returns false for null error', () => {
+    expect(isRetryableError(null, [500])).toBe(false)
+  })
+
+  it('returns false for undefined error', () => {
+    expect(isRetryableError(undefined, [500])).toBe(false)
+  })
+
+  it('returns false for error with null response', () => {
+    const error = { response: null }
+    expect(isRetryableError(error, [500])).toBe(false)
+  })
+
+  it('returns false for non-object error (string)', () => {
+    expect(isRetryableError('network error', [500])).toBe(false)
+  })
+
   it('supports custom retryable status codes', () => {
     const error = { code: 418 }
     const customCodes = [418, 419, 420]
