@@ -4,7 +4,7 @@ import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import { config } from 'dotenv'
 import { errorHandler } from './middleware/errorHandler'
-import { rateLimiter } from './middleware/rateLimit'
+import { rateLimiter, mediaRateLimiter, cronRateLimiter } from './middleware/rateLimit'
 import { requestLogger } from './middleware/logger-middleware'
 import { auditMiddleware } from './middleware/audit-middleware'
 import { auditContextMiddleware, updateAuditContextUserIdMiddleware } from './services/audit-context.service.js'
@@ -72,8 +72,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'", 'ws:', 'wss:', 'http://localhost:*'],
       mediaSrc: ["'self'", 'blob:'],
@@ -112,8 +112,15 @@ app.use('/api', (req, res, next) => {
 applyApiMiddlewareChain('/api/v1')
 applyApiMiddlewareChain('/api')
 
-// Protected routes - mount on both /api and /api/v1
 const API_PREFIXES = ['/api', '/api/v1']
+
+for (const prefix of API_PREFIXES) {
+  app.use(prefix + '/media', mediaRateLimiter)
+  app.use(prefix + '/files', mediaRateLimiter)
+  app.use(prefix + '/cron', cronRateLimiter)
+}
+
+// Protected routes - mount on both /api and /api/v1
 for (const prefix of API_PREFIXES) {
   app.use(prefix + '/text', textRouter)
   app.use(prefix + '/voice', voiceRouter)
