@@ -9,6 +9,7 @@ import { requestLogger } from './middleware/logger-middleware'
 import { auditMiddleware } from './middleware/audit-middleware'
 import { auditContextMiddleware, updateAuditContextUserIdMiddleware } from './services/audit-context.service.js'
 import { getLogger } from './lib/logger'
+import { getConfig } from './config/index.js'
 import textRouter from './routes/text'
 import voiceRouter from './routes/voice'
 import imageRouter from './routes/image'
@@ -64,11 +65,7 @@ const PORT = process.env.PORT || 4511
 app.set('trust proxy', 1)
 
 app.use(cors({
-  origin: [
-    'http://localhost:4411',
-    'http://localhost:5173',
-    'https://mnx.ogslp.top',
-  ],
+  origin: getConfig().server.corsOrigins,
   credentials: true,
 }))
 app.use(helmet({
