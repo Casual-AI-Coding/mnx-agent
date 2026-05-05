@@ -9,7 +9,7 @@ const dialogOverlayVariants = cva(
 )
 
 const dialogContentVariants = cva(
-  'fixed left-[50%] top-[50%] z-[81] grid w-full translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background shadow-2xl sm:rounded-2xl overflow-hidden transition-all duration-300',
+  'fixed left-[50%] top-[50%] z-[81] flex flex-col w-full max-h-[calc(100vh-4rem)] translate-x-[-50%] translate-y-[-50%] gap-0 border-0 bg-background shadow-2xl sm:rounded-2xl overflow-hidden transition-all duration-300',
   {
     variants: {
       size: {
@@ -74,7 +74,7 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
         >
           {title && (
             <div className={cn(
-              "relative flex flex-col space-y-1.5",
+              "relative flex flex-col space-y-1.5 shrink-0",
               size === 'sm' ? "px-4 pt-4 pb-2" : "-mx-6 px-6 pt-6 pb-3 border-b border-border/30"
             )}>
               <div className="pr-8">
@@ -125,7 +125,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col space-y-1.5 text-center sm:text-left',
+      'flex flex-col space-y-1.5 text-center sm:text-left shrink-0',
       className
     )}
     {...props}
@@ -139,7 +139,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 shrink-0',
       className
     )}
     {...props}

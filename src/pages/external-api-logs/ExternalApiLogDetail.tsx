@@ -32,7 +32,7 @@ export function ExternalApiLogDetail({
       <DialogHeader>
         <h2 className="text-lg font-semibold">{t('externalApiLogs.logDetail', '日志详情')}</h2>
       </DialogHeader>
-      <div className="space-y-3 text-sm">
+      <div className="flex-1 overflow-y-auto py-4 -mx-6 px-6 space-y-3 text-sm">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-muted-foreground/50">{t('externalApiLogs.provider', '服务商')}</label>
@@ -76,7 +76,7 @@ export function ExternalApiLogDetail({
         {selectedLog.request_body && (
           <div>
             <label className="text-muted-foreground/50">{t('externalApiLogs.requestBody', '请求体')}</label>
-            <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all max-h-64">
+            <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
               {(() => { try { return JSON.stringify(JSON.parse(selectedLog.request_body), null, 2) } catch { return selectedLog.request_body } })()}
             </pre>
           </div>
@@ -84,7 +84,7 @@ export function ExternalApiLogDetail({
         {selectedLog.response_body && (
           <div>
             <label className="text-muted-foreground/50">{t('externalApiLogs.responseBody', '响应体')}</label>
-            <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all max-h-64">
+            <pre className="text-muted-foreground bg-card/secondary p-2 rounded mt-1 overflow-x-auto text-xs whitespace-pre-wrap break-all">
               {(() => { try { return JSON.stringify(JSON.parse(selectedLog.response_body), null, 2) } catch { return selectedLog.response_body } })()}
             </pre>
           </div>
