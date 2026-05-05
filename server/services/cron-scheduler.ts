@@ -14,6 +14,7 @@ import {
 } from '../database/types'
 import { TASK_TIMEOUTS } from '../config/timeouts.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { getLogger } from '../lib/logger.js'
 
 export type { DatabaseService }
 
@@ -44,6 +45,7 @@ export class CronScheduler {
   private misfireHandler: IMisfireHandler | undefined
   private timezone: string
   private defaultTimeoutMs: number
+  private log = getLogger().child({ component: 'CronScheduler' })
 
   constructor(
     db: DatabaseService,
@@ -81,7 +83,7 @@ export class CronScheduler {
       try {
         await this.scheduleJob(job)
       } catch (error) {
-        console.error(`[CronScheduler] Failed to schedule job "${job.name}" (${job.id}):`, error)
+        this.log.error(error, 'Failed to schedule job: %s (%s)', job.name, job.id)
       }
     }
 
@@ -138,7 +140,7 @@ export class CronScheduler {
 
     // Check concurrent execution limit
     if (!(await this.concurrencyManager.acquireSlot(job.id))) {
-      console.warn(`[CronScheduler] Job "${job.name}" (${job.id}) skipped due to concurrency limit`)
+      this.log.warn('Job skipped due to concurrency limit: %s (%s)', job.name, job.id)
       return
     }
 
@@ -162,7 +164,7 @@ export class CronScheduler {
         jobId: job.id,
         jobName: job.name,
         timestamp: toLocalISODateString(),
-      }).catch(err => console.error('[CronScheduler] Failed to send on_start notification:', err))
+      }).catch(err => this.log.error(err, 'Failed to send on_start notification'))
 
       // Execute with timeout
       // Fetch workflow template if workflow_id is set
@@ -231,7 +233,7 @@ export class CronScheduler {
         jobName: job.name,
         duration: durationMs,
         timestamp: toLocalISODateString(),
-      }).catch(err => console.error('[CronScheduler] Failed to send on_success notification:', err))
+      }).catch(err => this.log.error(err, 'Failed to send on_success notification'))
     } catch (error) {
       const endTime = Date.now()
       durationMs = endTime - startTime
@@ -239,7 +241,7 @@ export class CronScheduler {
       const completedAt = toLocalISODateString()
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
-      console.error(`[CronScheduler] Job "${job.name}" (${job.id}) failed with error:`, errorMessage)
+      this.log.error({ error: errorMessage }, 'Job execution failed: %s (%s)', job.name, job.id)
 
       try {
         if (log) {
@@ -260,7 +262,7 @@ export class CronScheduler {
           errorSummary: errorMessage,
         }, job.owner_id ?? undefined)
       } catch (dbError) {
-        console.error(`[CronScheduler] Failed to update database after job failure:`, dbError)
+        this.log.error(dbError, 'Failed to update database after job failure')
       }
 
       // Notify on_failure
@@ -269,7 +271,7 @@ export class CronScheduler {
         jobName: job.name,
         error: errorMessage,
         timestamp: toLocalISODateString(),
-      }).catch(err => console.error('[CronScheduler] Failed to send on_failure notification:', err))
+      }).catch(err => this.log.error(err, 'Failed to send on_failure notification'))
     } finally {
       this.concurrencyManager.releaseSlot(job.id)
       this.eventBus.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
@@ -292,7 +294,7 @@ export class CronScheduler {
     const task = this.jobs.get(jobId)
     
     if (!task) {
-      console.warn(`[CronScheduler] Job ${jobId} not found in scheduler`)
+      this.log.warn('Job not found in scheduler: %s', jobId)
       return false
     }
 
@@ -301,7 +303,7 @@ export class CronScheduler {
       this.jobs.delete(jobId)
       return true
     } catch (error) {
-      console.error(`[CronScheduler] Error unscheduling job ${jobId}:`, error)
+      this.log.error(error, 'Error unscheduling job: %s', jobId)
       return false
     }
   }
@@ -312,7 +314,7 @@ export class CronScheduler {
     const job = await this.db.getCronJobById(jobId)
     
     if (!job) {
-      console.warn(`[CronScheduler] Job ${jobId} not found in database`)
+      this.log.warn('Job not found in database: %s', jobId)
       return false
     }
 
@@ -324,7 +326,7 @@ export class CronScheduler {
       await this.scheduleJob(job)
       return true
     } catch (error) {
-      console.error(`[CronScheduler] Failed to reschedule job ${jobId}:`, error)
+      this.log.error(error, 'Failed to reschedule job: %s', jobId)
       return false
     }
   }
@@ -342,7 +344,7 @@ export class CronScheduler {
       try {
         task.stop()
       } catch (error) {
-        console.error(`[CronScheduler] Error stopping job ${jobId}:`, error)
+        this.log.error(error, 'Error stopping job: %s', jobId)
       }
     }
     
@@ -360,7 +362,7 @@ export class CronScheduler {
       const remaining = timeoutMs - elapsed
       
       if (remaining <= 0) {
-        console.warn(`[CronScheduler] Graceful shutdown timed out with ${this.concurrencyManager.getRunningCount()} jobs still running`)
+        this.log.warn('Graceful shutdown timed out with %d jobs still running', this.concurrencyManager.getRunningCount())
         break
       }
       
