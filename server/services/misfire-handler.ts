@@ -3,6 +3,7 @@
 import type { IMisfireHandler, ExecuteJobCallback } from './interfaces/misfire-handler.interface.js'
 import type { CronJob } from '../database/types'
 import { MisfirePolicy } from '../database/types'
+import { getLogger } from '../lib/logger.js'
 
 /**
  * Creates a fully initialized MisfireHandler with the callback set immediately.
@@ -16,6 +17,7 @@ export function createMisfireHandler(callback: ExecuteJobCallback): MisfireHandl
 
 export class MisfireHandler implements IMisfireHandler {
   private executeJobCallback: ExecuteJobCallback | null = null
+  private log = getLogger().child({ component: 'MisfireHandler' })
 
   setExecuteJobCallback(callback: ExecuteJobCallback): void {
     this.executeJobCallback = callback
@@ -23,26 +25,26 @@ export class MisfireHandler implements IMisfireHandler {
 
   async handleMisfire(job: CronJob): Promise<void> {
     if (job.misfire_policy === MisfirePolicy.IGNORE) {
-      console.info(`[MisfireHandler] Job "${job.name}" (${job.id}) misfire ignored per policy`)
+      this.log.info('Job "%s" (%s) misfire ignored per policy', job.name, job.id)
       return
     }
 
     if (!this.executeJobCallback) {
-      console.error(`[MisfireHandler] No executeJobCallback set, cannot handle misfire for job "${job.name}" (${job.id})`)
+      this.log.error('No executeJobCallback set, cannot handle misfire for job "%s" (%s)', job.name, job.id)
       return
     }
 
-    console.info(`[MisfireHandler] Misfire detected for job "${job.name}" (${job.id}), executing catch-up...`)
+    this.log.info('Misfire detected for job "%s" (%s), executing catch-up...', job.name, job.id)
 
     try {
       await this.executeJobCallback(job)
-      console.info(`[MisfireHandler] Catch-up execution completed for job "${job.name}" (${job.id})`)
+      this.log.info('Catch-up execution completed for job "%s" (%s)', job.name, job.id)
     } catch (error) {
-      console.error(`[MisfireHandler] Catch-up execution failed for job "${job.name}" (${job.id}):`, error)
+      this.log.error(error, 'Catch-up execution failed for job "%s" (%s)', job.name, job.id)
     }
 
     if (job.misfire_policy === MisfirePolicy.FIRE_ALL) {
-      console.warn(`[MisfireHandler] Job "${job.name}" (${job.id}) has 'fire_all' policy but only single catch-up executed to prevent startup storm`)
+      this.log.warn('Job "%s" (%s) has fire_all policy but only single catch-up executed to prevent startup storm', job.name, job.id)
     }
   }
 
@@ -63,7 +65,7 @@ export class MisfireHandler implements IMisfireHandler {
       return
     }
 
-    console.info(`[MisfireHandler] Detected ${misfiredJobs.length} misfired jobs, handling asynchronously...`)
+    this.log.info('Detected %d misfired jobs, handling asynchronously...', misfiredJobs.length)
 
     const delayBetweenJobs = 500
 

@@ -280,9 +280,9 @@ const handleRetry = async (index: number) => {
           onGenerate={handleGenerate}
           onLyricsChange={(value) => updateForm('lyrics', value)}
           onModeChange={(value) => updateForm('mode', value)}
-          onParallelCountChange={(value) => updateForm('parallelCount', value)}
-          onPromptChange={(value) => updateForm('prompt', value)}
-          onTitleChange={(value) => updateForm('title', value)}
+          onParallelCountChange={(value: number) => updateForm('parallelCount', value)}
+          onPromptChange={(value: string) => updateForm('prompt', value)}
+          onTitleChange={(value: string) => updateForm('title', value)}
         />
 
         <LyricsResults

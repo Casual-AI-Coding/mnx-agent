@@ -4,6 +4,7 @@ import type { TaskResult, ITaskExecutor } from '../types/task.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
 import type { IRetryManager } from './interfaces/retry-manager.interface.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { getLogger } from '../lib/logger.js'
 
 export type { DatabaseService }
 export type { ITaskExecutor }
@@ -35,6 +36,7 @@ export class QueueProcessor {
   private capacityChecker: CapacityChecker
   private eventBus: IEventBus
   private retryManager: IRetryManager
+  private log = getLogger().child({ component: 'QueueProcessor' })
 
   constructor(
     db: DatabaseService,
@@ -214,7 +216,7 @@ export class QueueProcessor {
 
       this.eventBus.emitTaskMovedToDLQ(task, error)
     } catch (err) {
-      console.error(`[QueueProcessor] Failed to move task ${task.id} to dead letter queue:`, err)
+      this.log.error(err, 'Failed to move task %s to dead letter queue', task.id)
     }
   }
 
