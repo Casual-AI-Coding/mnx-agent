@@ -1,4 +1,4 @@
-import { MiniMaxClient } from '../lib/minimax'
+import { MiniMaxClient } from '../lib/minimax/index.js'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
 import type { DatabaseService } from '../database/service-async.js'
 import { SimpleCache } from '../lib/cache.js'

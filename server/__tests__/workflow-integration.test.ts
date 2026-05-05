@@ -4,7 +4,7 @@ import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMark
 import { getServiceNodeRegistry, resetServiceNodeRegistry } from '../services/service-node-registry'
 import { WorkflowEngine } from '../services/workflow/index'
 import { CronScheduler } from '../services/cron-scheduler'
-import { getMiniMaxClient } from '../lib/minimax'
+import { getMiniMaxClient } from '../lib/minimax/index.js'
 import { CapacityChecker } from '../services/capacity-checker'
 import { TaskExecutor } from '../services/task-executor'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from '../lib/media-storage'

@@ -1,5 +1,5 @@
 import type { DatabaseService } from '../database/service-async.js'
-import { MiniMaxClient } from '../lib/minimax'
+import { MiniMaxClient } from '../lib/minimax/index.js'
 import { TASK_TIMEOUTS, POLLING_CONFIG } from '../config/timeouts.js'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 

@@ -1,5 +1,5 @@
 import { Request } from 'express'
-import { MiniMaxClient, getMiniMaxClient, createMiniMaxClientFromHeaders } from './minimax.js'
+import { MiniMaxClient, getMiniMaxClient, createMiniMaxClientFromHeaders } from './minimax/index.js'
 import type { DatabaseService } from '../database/service-async.js'
 
 export interface MiniMaxClientOptions {

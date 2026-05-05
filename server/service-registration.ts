@@ -1,6 +1,6 @@
 import { getGlobalContainer } from './container.js'
 import { getDatabase, type DatabaseService } from './database/service-async.js'
-import { getMiniMaxClient, type MiniMaxClient } from './lib/minimax.js'
+import { getMiniMaxClient, type MiniMaxClient } from './lib/minimax/index.js'
 import { TaskExecutor } from './services/task-executor.js'
 import { CapacityChecker } from './services/capacity-checker.js'
 import { QueueProcessor } from './services/queue-processor.js'

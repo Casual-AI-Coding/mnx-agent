@@ -27,6 +27,15 @@ describe('MiniMaxClient', () => {
   })
 
   describe('constructor', () => {
+    it('should expose the same public API from the minimax barrel entry', async () => {
+      const minimaxModule = await import('../minimax/index.js')
+
+      expect(minimaxModule.MiniMaxClient).toBe(MiniMaxClient)
+      expect(minimaxModule.getMiniMaxClient).toBe(getMiniMaxClient)
+      expect(minimaxModule.resetMiniMaxClient).toBe(resetMiniMaxClient)
+      expect(minimaxModule.createMiniMaxClientFromHeaders).toBe(createMiniMaxClientFromHeaders)
+    })
+
     it('should use domestic region (api.minimaxi.com)', () => {
       const client = new MiniMaxClient('test-api-key', 'domestic')
       

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TaskExecutor } from '../services/task-executor'
 import type { DatabaseService } from '../services/task-executor'
-import type { MiniMaxClient } from '../lib/minimax'
+import type { MiniMaxClient } from '../lib/minimax/index.js'
 
 class TestableTaskExecutor extends TaskExecutor {
   public testDelay(ms: number): Promise<void> {
@@ -17,11 +17,7 @@ describe('TaskExecutor', () => {
   let executor: TestableTaskExecutor
   let mockClient: Partial<MiniMaxClient>
   let mockDb: Partial<DatabaseService>
-  let realDelayMs: number
-
   beforeEach(() => {
-    realDelayMs = 10000
-
     mockClient = {
       chatCompletion: vi.fn().mockResolvedValue({ result: 'chat response' }),
       textToAudioSync: vi.fn().mockResolvedValue({ result: 'audio response' }),

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { CapacityChecker } from '../services/capacity-checker'
 import type { DatabaseService } from '../database/service-async'
-import type { MiniMaxClient } from '../lib/minimax'
+import type { MiniMaxClient } from '../lib/minimax/index.js'
 import type { CapacityRecord } from '../database/types'
 import { SimpleCache } from '../lib/cache'
 

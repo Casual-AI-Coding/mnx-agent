@@ -50,7 +50,7 @@ import { registerServices, TOKENS, getCronSchedulerService, getDLQAutoRetrySched
 import { getGlobalContainer } from './container.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
 import type { DatabaseService } from './database/service-async.js'
-import type { MiniMaxClient } from './lib/minimax.js'
+import type { MiniMaxClient } from './lib/minimax/index.js'
 import type { TaskExecutor } from './services/task-executor.js'
 import type { CapacityChecker } from './services/capacity-checker.js'
 import type { QueueProcessor } from './services/queue-processor.js'

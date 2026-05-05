@@ -7,7 +7,7 @@ import { createMockEventBus } from './__tests__/helpers/mock-event-bus'
 import { getDatabase } from './database/service-async.js'
 import { getServiceNodeRegistry } from './services/service-node-registry.js'
 import { WorkflowEngine } from './services/workflow/engine.js'
-import { getMiniMaxClient } from './lib/minimax.js'
+import { getMiniMaxClient } from './lib/minimax/index.js'
 import { getEventBus } from './service-registration.js'
 
 async function testWorkflow() {
