@@ -4,28 +4,12 @@ import { MisfirePolicy } from '../../database/types.js'
 import type { CronJob } from '../../database/types.js'
 import type { ExecuteJobCallback } from '../interfaces/misfire-handler.interface.js'
 
-const { mockLoggerInfo, mockLoggerError, mockLoggerWarn } = vi.hoisted(() => ({
-  mockLoggerInfo: vi.fn(),
-  mockLoggerError: vi.fn(),
-  mockLoggerWarn: vi.fn(),
-}))
-
-vi.mock('../../lib/logger.js', () => ({
-  getLogger: vi.fn(() => ({
-    info: mockLoggerInfo,
-    error: mockLoggerError,
-    warn: mockLoggerWarn,
-    child: vi.fn(() => ({
-      info: mockLoggerInfo,
-      error: mockLoggerError,
-      warn: mockLoggerWarn,
-    })),
-  })),
-}))
-
 describe('MisfireHandler', () => {
   let handler: MisfireHandler
   let mockExecuteJobCallback: ExecuteJobCallback
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>
 
   const createMockJob = (overrides?: Partial<CronJob>): CronJob => ({
     id: 'job-1',
@@ -52,6 +36,9 @@ describe('MisfireHandler', () => {
     vi.useFakeTimers()
     handler = new MisfireHandler()
     mockExecuteJobCallback = vi.fn((_job: CronJob) => Promise.resolve())
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -175,7 +162,7 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('Misfire detected')
       )
     })
@@ -186,7 +173,7 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('Catch-up execution completed')
       )
     })
@@ -198,11 +185,9 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerError).toHaveBeenCalled()
-      const firstCallArgs = mockLoggerError.mock.calls[0]
-      // Pino format: error(err, message, ...args), so message is at index 1
-      const messageArg = typeof firstCallArgs[1] === 'string' ? firstCallArgs[1] : firstCallArgs[0]
-      expect(messageArg).toContain('Catch-up execution failed')
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      const firstCallArgs = consoleErrorSpy.mock.calls[0]
+      expect(firstCallArgs[0]).toContain('Catch-up execution failed')
     })
 
     it('should log info when misfire is ignored', async () => {
@@ -210,7 +195,7 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('misfire ignored')
       )
     })
@@ -221,7 +206,7 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('fire_all')
       )
     })
@@ -231,7 +216,7 @@ describe('MisfireHandler', () => {
 
       await handler.handleMisfire(job)
 
-      expect(mockLoggerError).toHaveBeenCalledWith(
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('No executeJobCallback set')
       )
     })
@@ -380,7 +365,7 @@ describe('MisfireHandler', () => {
       await vi.runAllTimersAsync()
       await result
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('Detected')
       )
     })
@@ -396,7 +381,7 @@ describe('MisfireHandler', () => {
 
       await handler.checkAndHandleMisfires(jobs)
 
-      expect(mockLoggerInfo).not.toHaveBeenCalledWith(
+      expect(consoleInfoSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('Detected')
       )
       expect(mockExecuteJobCallback).not.toHaveBeenCalled()
@@ -488,7 +473,7 @@ describe('MisfireHandler', () => {
 
       // IGNORE policy should skip execution
       expect(mockExecuteJobCallback).not.toHaveBeenCalled()
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('misfire ignored')
       )
     })
