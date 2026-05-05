@@ -349,14 +349,15 @@ async function executeAsyncTask(
       ? undefined
       : extractErrorMessage(responseBody, response.status)
 
+    const cleanedBody = stripBase64Images(responseBody)
     await repo.updateResult(String(logId), {
-      response_body: JSON.stringify(responseBody),
+      response_body: JSON.stringify(cleanedBody),
       status: isSuccess ? 'success' : 'failed',
       error_message: errorMessage,
       duration_ms: durationMs,
       task_status: isSuccess ? 'completed' : 'failed',
       result_media_id: resultMediaId,
-      result_data: responseBody as Record<string, unknown>,
+      result_data: cleanedBody as Record<string, unknown>,
     })
 
     logger.info({
@@ -408,6 +409,22 @@ function extractAllImages(data: Record<string, unknown>): Array<{ url?: string; 
     }
   }
   return images
+}
+
+function stripBase64Images(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body
+  const data = { ...(body as Record<string, unknown>) }
+  if (Array.isArray(data.data)) {
+    data.data = (data.data as unknown[]).map((item) => {
+      if (item && typeof item === 'object' && 'b64_json' in (item as Record<string, unknown>)) {
+        const cleaned = { ...(item as Record<string, unknown>) }
+        delete cleaned.b64_json
+        return cleaned
+      }
+      return item
+    })
+  }
+  return data
 }
 
 function detectImageExtension(buffer: Buffer): string {
