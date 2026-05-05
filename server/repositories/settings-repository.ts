@@ -106,4 +106,15 @@ export class SettingsRepository extends BaseRepository<UserSettingsRow, CreateUs
     )
     return result.changes > 0
   }
+
+  async getAllRawSettings(): Promise<Array<{ userId: string; category: string; settingsJson: string }>> {
+    const rows = await this.conn.query<Record<string, unknown>>(
+      'SELECT user_id, category, settings_json FROM user_settings WHERE is_deleted = false'
+    )
+    return rows.map((r: Record<string, unknown>) => ({
+      userId: String(r.user_id),
+      category: String(r.category),
+      settingsJson: String(r.settings_json),
+    }))
+  }
 }

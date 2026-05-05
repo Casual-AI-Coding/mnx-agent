@@ -274,4 +274,61 @@ describe('SettingsService', () => {
       expect(mockSettingsRepo.upsertSettings).not.toHaveBeenCalled()
     })
   })
+
+  describe('migrateEncryptExistingData', () => {
+    it('should encrypt plaintext sensitive fields in existing data', async () => {
+      const { encrypt } = await import('../../lib/crypto.js')
+      const alreadyEncrypted = encrypt('sk-already')
+
+      const mockRepo = {
+        getAllSettings: vi.fn().mockResolvedValue([]),
+        getSettings: vi.fn(),
+        upsertSettings: vi.fn(),
+        deleteSettings: vi.fn(),
+        updateSettings: vi.fn().mockResolvedValue({} as any),
+        getAllRawSettings: vi.fn().mockResolvedValue([
+          { userId: 'user-1', category: 'api', settingsJson: JSON.stringify({ minimaxKey: 'sk-plain-123', region: 'cn' }) },
+          { userId: 'user-2', category: 'notification', settingsJson: JSON.stringify({ webhookSecret: 'wh-plain-456' }) },
+          { userId: 'user-3', category: 'api', settingsJson: JSON.stringify({ minimaxKey: alreadyEncrypted, region: 'intl' }) },
+        ]),
+      } as any
+
+      vi.spyOn(service as any, 'settingsRepo', 'get').mockReturnValue(mockRepo)
+
+      await (service as any).migrateEncryptExistingData()
+
+      expect(mockRepo.updateSettings).toHaveBeenCalledTimes(2)
+      expect(mockRepo.updateSettings).toHaveBeenCalledWith(
+        'user-1', 'api',
+        { minimaxKey: expect.stringMatching(/^enc:/), region: 'cn' }
+      )
+      expect(mockRepo.updateSettings).toHaveBeenCalledWith(
+        'user-2', 'notification',
+        { webhookSecret: expect.stringMatching(/^enc:/) }
+      )
+    })
+
+    it('should skip rows where sensitive fields are already encrypted', async () => {
+      const { encrypt } = await import('../../lib/crypto.js')
+      const alreadyEncrypted = encrypt('sk-already')
+
+      const mockRepo = {
+        getAllSettings: vi.fn().mockResolvedValue([]),
+        getSettings: vi.fn(),
+        upsertSettings: vi.fn(),
+        deleteSettings: vi.fn(),
+        updateSettings: vi.fn().mockResolvedValue({} as any),
+        getAllRawSettings: vi.fn().mockResolvedValue([
+          { userId: 'user-1', category: 'api', settingsJson: JSON.stringify({ minimaxKey: alreadyEncrypted, region: 'cn' }) },
+        ]),
+      } as any
+
+      vi.spyOn(service as any, 'settingsRepo', 'get').mockReturnValue(mockRepo)
+
+      await (service as any).migrateEncryptExistingData()
+
+      // Already encrypted -> should be skipped
+      expect(mockRepo.updateSettings).not.toHaveBeenCalled()
+    })
+  })
 })

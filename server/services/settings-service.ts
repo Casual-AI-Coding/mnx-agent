@@ -287,4 +287,34 @@ export class SettingsService {
   async getSettingsHistory(userId: string, category?: SettingsCategory, page = 1, limit = 50) {
     return this.historyRepo.getHistory({ userId, category, page, limit })
   }
+
+  async migrateEncryptExistingData(): Promise<void> {
+    if (!isEncryptionAvailable()) return
+
+    const allSettings = await this.settingsRepo.getAllRawSettings()
+    for (const setting of allSettings) {
+      try {
+        const parsed: Record<string, unknown> = JSON.parse(setting.settingsJson)
+        let hasChanges = false
+
+        for (const field of ENCRYPTED_FIELDS) {
+          const value = parsed[field]
+          if (typeof value === 'string' && value.length > 0 && !value.startsWith('enc:')) {
+            parsed[field] = encrypt(value)
+            hasChanges = true
+          }
+        }
+
+        if (hasChanges) {
+          await this.settingsRepo.updateSettings(
+            setting.userId,
+            setting.category as SettingsCategory,
+            parsed
+          )
+        }
+      } catch {
+        // Skip rows that fail to parse
+      }
+    }
+  }
 }
