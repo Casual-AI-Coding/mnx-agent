@@ -2,7 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2.6] - 2026-05-04
+## [2.2.7] - 2026-05-05
+
+### Added
+
+- **AES-256-GCM 加密工具模块 (W1)** — `server/lib/crypto.ts` (+99) 提供 `encrypt`/`decrypt`/`isEncrypted` 函数，敏感字段自动加密存储
+  - SettingsService 集成加密解密 — `minimaxKey`、`webhookSecret` 等字段自动加解密
+  - 启动时明文数据自动迁移 — `migrateEncryptExistingData()` 幂等迁移已有数据
+- **CSP report-only 模式 (W3)** — helmet 启用 CSP report-only，配置完整 directives
+- **API 版本化路由 (S8)** — 添加 `/api/v1` 前缀，`/api` 保留向后兼容并添加弃用标头（`Deprecation`/`Sunset` 响应头）
+- **测试覆盖率提升** — csv-utils (100%)、retry、media-storage 测试补齐，分支覆盖 ≥ 80%
+
+### Fixed
+
+- **CORS 从环境变量读取 (S7)** — `CORS_ORIGINS` 环境变量替代硬编码 origins
+- **Body limit 降低至 1MB (W2)** — `express.json`/`urlencoded` 从 50MB 降至 1MB，文件上传走 multer 单独处理
+- **cron-scheduler console→pino 日志 (W4)** — 替换全部 13 处 `console.error/warn` 为 pino 结构化日志
+- **misfire-handler + queue-processor console→pino** — 替换 8 处 `console.*` 为 pino
+- **sidebar-config UserRole 枚举修复** — 字符串字面量改为 `UserRole.ADMIN`/`PRO`/`SUPER` 枚举值
+- **Frontend 类型错误修复** — LyricsGeneration、AuditLogs、ExternalApiLogs、MediaGrid 等多处隐式 any 修复
+
+### Changed
+
+- **14 个前端组件拆分 (S1)** — 全部分拆为子 300 行独立组件（ImageGeneration 88 行、MusicGeneration 207 行、TestRunPanel 306 行 等）
+- **minimax.ts 拆分 (S5)** — 634 行拆为 14 个文件（按 API 域：text/voice/image/music/video/files 等）
+- **service-async.ts 拆分 (S6)** — 1090 行拆为 9 个域 Service（job/task/log/media/dlq/material/system 等）
+- **Media Token 验证已有正确实现 (W5)** — media download 使用独立 token 认证，非安全漏洞
+- **动态 SQL UPDATE 使用参数化查询 (W6)** — 现有实现已安全（`$1` 占位符），非安全漏洞
 
 ### Added
 
