@@ -3,6 +3,7 @@ import { SettingsRepository, type UserSettingsRow, type CreateUserSettings } fro
 import { SettingsHistoryRepository } from '../repositories/settings-history-repository.js'
 import type { AllSettings, SettingsCategory } from '../../src/settings/types/index.js'
 import { allSettingsSchema } from '../../src/settings/validation/index.js'
+import { encrypt, decrypt, isEncryptionAvailable } from '../lib/crypto.js'
 
 export interface GetSettingsResult {
   success: true
@@ -132,6 +133,32 @@ const DEFAULT_SETTINGS: Record<SettingsCategory, Record<string, unknown>> = {
 // Encrypted database fields (flat names matching columns)
 const ENCRYPTED_FIELDS = ['minimaxKey', 'webhookSecret']
 
+function encryptSensitiveFields(
+  settings: Record<string, unknown>
+): Record<string, unknown> {
+  if (!isEncryptionAvailable()) return settings
+  const result = { ...settings }
+  for (const field of ENCRYPTED_FIELDS) {
+    if (field in result && typeof result[field] === 'string' && (result[field] as string).length > 0) {
+      result[field] = encrypt(result[field] as string)
+    }
+  }
+  return result
+}
+
+function decryptSensitiveFields(
+  settings: Record<string, unknown>
+): Record<string, unknown> {
+  if (!isEncryptionAvailable()) return settings
+  const result = { ...settings }
+  for (const field of ENCRYPTED_FIELDS) {
+    if (field in result && typeof result[field] === 'string' && (result[field] as string).length > 0) {
+      result[field] = decrypt(result[field] as string)
+    }
+  }
+  return result
+}
+
 export class SettingsService {
   private settingsRepo: SettingsRepository
   private historyRepo: SettingsHistoryRepository
@@ -150,7 +177,9 @@ export class SettingsService {
     const settings: Record<string, Record<string, unknown>> = { ...DEFAULT_SETTINGS }
     
     for (const row of rows) {
-      settings[row.category] = row.settings_json as Record<string, unknown>
+      settings[row.category] = decryptSensitiveFields(
+        row.settings_json as Record<string, unknown>
+      )
     }
 
     return { success: true, settings: settings as Partial<AllSettings> }
@@ -160,7 +189,7 @@ export class SettingsService {
   async getSettingsByCategory(userId: string, category: SettingsCategory): Promise<Record<string, unknown>> {
     const row = await this.settingsRepo.getSettings(userId, category)
     if (row) {
-      return row.settings_json as Record<string, unknown>
+      return decryptSensitiveFields(row.settings_json as Record<string, unknown>)
     }
     return DEFAULT_SETTINGS[category] || {}
   }
@@ -191,9 +220,8 @@ export class SettingsService {
       return { success: true, settings: currentSettings, changedKeys: [] }
     }
 
-    // Encrypt sensitive fields (in production, use proper encryption)
-    const processedSettings = { ...settings }
-    // TODO: Add encryption for ENCRYPTED_FIELDS
+    // Encrypt sensitive fields before storage
+    const processedSettings = encryptSensitiveFields(settings)
 
     // Upsert settings
     await this.settingsRepo.upsertSettings({
@@ -202,14 +230,15 @@ export class SettingsService {
       settings: processedSettings,
     })
 
-    // Log changes
+    // Log changes (encrypt sensitive values in history)
     for (const key of changedKeys) {
+      const isSensitive = ENCRYPTED_FIELDS.includes(key)
       await this.historyRepo.logChange({
         userId,
         category,
         settingKey: key,
-        oldValue: currentSettings[key],
-        newValue: processedSettings[key],
+        oldValue: isSensitive && currentSettings[key] ? encrypt(String(currentSettings[key])) : currentSettings[key],
+        newValue: isSensitive && processedSettings[key] ? encrypt(String(processedSettings[key])) : processedSettings[key],
         changedBy,
         source,
         ipAddress,
