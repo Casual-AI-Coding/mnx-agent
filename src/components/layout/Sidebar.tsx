@@ -1,103 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  MessageSquare,
-  Mic,
-  MicOff,
-  Image,
-  Music,
-  Video,
-  Film,
-  User,
-  FolderOpen,
-  Terminal,
-  Clock,
-  GitBranch,
-  Gauge,
-  HardDrive,
-  FileText,
-  BarChart3,
-  Shield,
-  Globe,
-  Users,
-  Key,
-  FolderCog,
-  Activity,
-  Cog,
-  Lock,
-  Github,
-  Layers,
-  AlertTriangle,
-  Webhook,
-  Store,
-  Settings,
-  ChevronRight,
-  ChevronLeft,
-  Server,
-  Coins,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ShortcutsHelpButton } from '@/components/shared/ShortcutsHelp'
-import { useAuthStore, type UserRole } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
 import { SettingsModal } from '@/components/settings/SettingsModal'
-
-const roleHierarchy: Record<UserRole, number> = {
-  user: 0,
-  pro: 1,
-  admin: 2,
-  super: 3,
-}
-
-const EXPANDED_KEY = 'sidebar-expanded-sections'
-const COLLAPSED_KEY = 'sidebar-collapsed'
-const WIDTH_KEY = 'sidebar-width'
-const DEFAULT_WIDTH = 220
-const MIN_WIDTH = 140
-const MAX_WIDTH = 400
-
-function getStoredExpanded(): Record<string, boolean> {
-  try {
-    const stored = localStorage.getItem(EXPANDED_KEY)
-    return stored ? JSON.parse(stored) : { debug: true }
-  } catch {
-    return { debug: true }
-  }
-}
-
-function setStoredExpanded(expanded: Record<string, boolean>) {
-  localStorage.setItem(EXPANDED_KEY, JSON.stringify(expanded))
-}
-
-function getStoredCollapsed(): boolean {
-  try {
-    const stored = localStorage.getItem(COLLAPSED_KEY)
-    return stored ? JSON.parse(stored) : false
-  } catch {
-    return false
-  }
-}
-
-function setStoredCollapsed(collapsed: boolean) {
-  localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed))
-}
-
-function getStoredWidth(): number {
-  try {
-    const stored = localStorage.getItem(WIDTH_KEY)
-    return stored ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Number(JSON.parse(stored)))) : DEFAULT_WIDTH
-  } catch {
-    return DEFAULT_WIDTH
-  }
-}
-
-function setStoredWidth(width: number) {
-  localStorage.setItem(WIDTH_KEY, JSON.stringify(width))
-}
-
-function getMainElement(): HTMLElement | null {
-  return document.getElementById('app-main')
-}
+import { DebugSection } from './sidebar/DebugSection.js'
+import { NavGroup } from './sidebar/NavGroup.js'
+import { UserSection } from './sidebar/UserSection.js'
+import { getDebugItems, getMenuSections, roleHierarchy } from './sidebar/sidebar-config.js'
+import { DEFAULT_WIDTH, getMainElement, getStoredCollapsed, getStoredExpanded, getStoredWidth, MAX_WIDTH, MIN_WIDTH, setStoredCollapsed, setStoredExpanded, setStoredWidth } from './sidebar/sidebar-storage.js'
 
 interface SidebarProps {
   onCollapseChange?: (collapsed: boolean) => void
@@ -106,7 +17,6 @@ interface SidebarProps {
 
 export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProps) {
   const { t } = useTranslation()
-  const location = useLocation()
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
   const [isCollapsed, setIsCollapsed] = useState(getStoredCollapsed)
@@ -215,81 +125,8 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
     setIsCollapsed(prev => !prev)
   }
 
-  const debugItems = [
-    { path: '/text', label: t('sidebar.textGeneration', '文本生成'), icon: MessageSquare },
-    { path: '/voice', label: t('sidebar.voiceSync', '同步语音'), icon: Mic },
-    { path: '/voice-async', label: t('sidebar.voiceAsync', '异步语音'), icon: MicOff },
-    { path: '/image', label: t('sidebar.imageGeneration', '图片生成'), icon: Image },
-    { path: '/music', label: t('sidebar.musicGeneration', '音乐生成'), icon: Music },
-    { path: '/lyrics', label: t('sidebar.lyricsGeneration', '歌词生成'), icon: FileText },
-    { path: '/video', label: t('sidebar.videoGeneration', '视频生成'), icon: Video },
-    { path: '/video-agent', label: t('sidebar.videoAgent', '视频Agent'), icon: Film },
-  ]
-
-  const externalDebugItems = [
-    { path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image },
-  ]
-
-  const menuSections = [
-    {
-      id: 'externalDebug',
-      label: '外部调试',
-      icon: Globe,
-      minRole: 'admin' as UserRole,
-      items: externalDebugItems,
-    },
-    {
-      id: 'resources',
-      label: '资源管理',
-      icon: FolderCog,
-      minRole: 'pro' as UserRole,
-      items: [
-    { path: '/voice-mgmt', label: t('sidebar.voiceManagement', '音色管理'), icon: User },
-    { path: '/files', label: t('sidebar.fileManagement', '文件管理'), icon: FolderOpen },
-    { path: '/media', label: t('sidebar.mediaManagement', '媒体管理'), icon: HardDrive },
-        { path: '/templates', label: t('sidebar.templates', '模板库'), icon: FileText },
-        { path: '/materials', label: t('sidebar.materials', '素材管理'), icon: FolderCog },
-      ],
-    },
-    {
-      id: 'monitoring',
-      label: '监控统计',
-      icon: Activity,
-      minRole: 'pro' as UserRole,
-      items: [
-        { path: '/token', label: t('sidebar.tokenMonitor', '用量监控'), icon: Coins },
-        { path: '/capacity', label: t('sidebar.capacityMonitor', '用量配额'), icon: Gauge },
-        { path: '/stats', label: t('sidebar.stats', '执行统计'), icon: BarChart3 },
-        { path: '/audit', label: t('sidebar.audit', '内部审计日志'), icon: Shield },
-        { path: '/external-api-logs', label: t('sidebar.externalApiLogs', '外部调用日志'), icon: Globe },
-      ],
-    },
-      {
-        id: 'automation',
-        label: '自动化',
-        icon: Cog,
-        minRole: 'pro' as UserRole,
-        items: [
-          { path: '/workflow-builder', label: t('sidebar.workflowBuilder', '工作流编排'), icon: GitBranch },
-          { path: '/workflow-marketplace', label: '模板市场', icon: Store },
-          { path: '/workflow-templates', label: t('sidebar.workflowTemplates', '流程管理'), icon: Layers },
-          { path: '/cron', label: t('sidebar.cronManagement', '定时任务'), icon: Clock },
-          { path: '/webhooks', label: 'Webhooks', icon: Webhook },
-          { path: '/dead-letter-queue', label: t('sidebar.deadLetterQueue', '死信队列'), icon: AlertTriangle },
-        ],
-      },
-    {
-      id: 'system',
-      label: '系统管理',
-      icon: Lock,
-      minRole: 'super' as UserRole,
-      items: [
-        { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
-        { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
-        { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Server },
-      ],
-    },
-  ]
+  const debugItems = getDebugItems(t)
+  const menuSections = getMenuSections(t)
 
   const visibleSections = menuSections
     .filter(section => userRoleLevel >= roleHierarchy[section.minRole])
@@ -298,86 +135,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
       items: section.items,
     }))
 
-  const renderNavItem = (item: { path: string; label: string; icon: React.ComponentType<{ className?: string }> }) => {
-    const isActive = location.pathname === item.path
-    const Icon = item.icon
-
-    if (isCollapsed) {
-      return (
-        <NavLink
-          key={item.path}
-          to={item.path}
-          title={item.label}
-          className={cn(
-            'flex items-center justify-center py-3 transition-all duration-200 border-l-2',
-            isActive
-              ? 'text-foreground bg-primary-600/20 border-l-2 border-primary-500'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/20 border-transparent'
-          )}
-        >
-          <Icon className="w-5 h-5" />
-        </NavLink>
-      )
-    }
-
-    return (
-      <NavLink
-        key={item.path}
-        to={item.path}
-        className={cn(
-          'flex items-center gap-3 px-3 py-2 text-sm transition-all duration-200 border-l-2',
-          isActive
-            ? 'text-foreground bg-primary-600/20 border-l-2 border-primary-500'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted/20 border-transparent'
-        )}
-      >
-        <Icon className="w-4 h-4" />
-        {item.label}
-      </NavLink>
-    )
-  }
-
-  const renderSection = (section: typeof menuSections[0] & { items: typeof menuSections[0]['items'] }) => {
-    const isExpanded = expandedSections[section.id]
-    const SectionIcon = section.icon
-
-    if (isCollapsed) {
-      return (
-        <div key={section.id} className="py-1 border-t border-border/30">
-          {section.items.map(renderNavItem)}
-        </div>
-      )
-    }
-
-    return (
-      <div key={section.id} className="py-2 border-t border-border/30">
-        <button
-          onClick={() => toggleSection(section.id)}
-          className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground/70 hover:text-foreground transition-colors"
-        >
-          <SectionIcon className="w-4 h-4" />
-          <span className="text-sm font-medium flex-1 text-left">{section.label}</span>
-          <ChevronRight
-            className={cn(
-              'w-4 h-4 transition-transform duration-200',
-              isExpanded && 'rotate-90'
-            )}
-          />
-        </button>
-        <div
-          className={cn(
-            'overflow-hidden transition-all duration-200',
-            isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-          )}
-        >
-          <div className="pl-4 mt-1 space-y-0.5">
-            {section.items.map(renderNavItem)}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  const debugExpanded = expandedSections['debug']
   return (
     <aside
       ref={asideRef}
@@ -426,100 +184,33 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
         'flex-1 overflow-y-auto scrollbar-hide',
         isCollapsed ? 'px-1 py-2' : 'px-2 py-2'
       )}>
-        {isCollapsed ? (
-          <div className="py-1">
-            {debugItems.map(renderNavItem)}
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={() => toggleSection('debug')}
-              className="w-full flex items-center gap-3 px-3 py-2 text-muted-foreground/70 hover:text-foreground transition-colors"
-            >
-              <Terminal className="w-4 h-4" />
-              <span className="text-sm font-medium flex-1 text-left">{t('sidebar.debugConsole', '调试台')}</span>
-              <ChevronRight
-                className={cn(
-                  'w-4 h-4 transition-transform duration-200',
-                  expandedSections['debug'] && 'rotate-90'
-                )}
-              />
-            </button>
+        <DebugSection
+          collapsed={isCollapsed}
+          expanded={Boolean(debugExpanded)}
+          items={debugItems}
+          label={t('sidebar.debugConsole', '调试台')}
+          onToggle={() => toggleSection('debug')}
+        />
 
-            <div
-              className={cn(
-                'overflow-hidden transition-all duration-200',
-                expandedSections['debug'] ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'
-              )}
-            >
-              <div className="pl-4 mt-1 space-y-0.5">
-                {debugItems.map(renderNavItem)}
-              </div>
-            </div>
-          </>
-        )}
-
-        {visibleSections.map(renderSection)}
+        {visibleSections.map((section) => (
+          <NavGroup
+            key={section.id}
+            collapsed={isCollapsed}
+            expanded={Boolean(expandedSections[section.id])}
+            icon={section.icon}
+            id={section.id}
+            items={section.items}
+            label={section.label}
+            onToggle={toggleSection}
+          />
+        ))}
       </nav>
 
       <div className={cn(
         'flex-shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-200',
         isCollapsed ? 'p-2' : 'p-4'
       )}>
-        {isCollapsed ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-7 h-7 rounded bg-primary-600 flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-[10px]">M</span>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                title="Settings"
-              >
-                <Cog className="w-4 h-4" />
-              </button>
-              <ShortcutsHelpButton collapsed />
-              <a
-                href="https://github.com/oGsLP/mnx-agent"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                title="GitHub"
-              >
-                <Github className="w-4 h-4" />
-              </a>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="w-5 h-5 rounded bg-primary-600 flex items-center justify-center">
-<span className="text-primary-foreground font-bold text-[10px]">M</span>
-              </div>
-              <span className="text-xs">{t('sidebar.createdBy', 'Created by oGsLP')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="Settings"
-              >
-                <Cog className="w-4 h-4" />
-              </button>
-              <ShortcutsHelpButton />
-              <a
-                href="https://github.com/oGsLP/mnx-agent"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="GitHub"
-              >
-                <Github className="w-4 h-4" />
-              </a>
-            </div>
-          </div>
-        )}
+        <UserSection collapsed={isCollapsed} onOpenSettings={() => setShowSettingsModal(true)} />
       </div>
 
       <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />

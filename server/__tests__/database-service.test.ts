@@ -59,6 +59,19 @@ describe('DatabaseService', () => {
       expect(connected).toBe(true)
     })
 
+    it('should expose domain services while keeping direct method compatibility', async () => {
+      const createdViaDomainService = await db.jobService.createCronJob({
+        name: 'Domain Service Job',
+        cron_expression: '0 * * * *',
+      }, fileMarker)
+
+      expect(createdViaDomainService.id).toBeDefined()
+
+      const fetchedViaDirectMethod = await db.getCronJobById(createdViaDomainService.id, fileMarker)
+      expect(fetchedViaDirectMethod).not.toBeNull()
+      expect(fetchedViaDirectMethod?.name).toBe('Domain Service Job')
+    })
+
     it('should report as PostgreSQL', () => {
       expect(db.isPostgres()).toBe(true)
     })
