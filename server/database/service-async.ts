@@ -1,85 +1,90 @@
 import { DatabaseConnection, createConnection, closeConnection, QueryResultRow } from './connection.js'
-import { TaskStatus, TriggerType, ExecutionStatus } from './types.js'
-import { toLocalISODateString } from '../lib/date-utils.js'
+import { TaskStatus } from './types.js'
 import type {
-  CronJob,
-  TaskQueueItem,
-  ExecutionLog,
-  ExecutionLogDetail,
-  CapacityRecord,
-  WorkflowTemplate,
-  WorkflowVersion,
-  CreateCronJob,
-  CreateTaskQueueItem,
-  CreateExecutionLog,
-  CreateExecutionLogDetail,
-  UpdateCronJob,
-  UpdateTaskQueueItem,
-  UpdateExecutionLog,
-  UpdateCapacityRecord,
-  UpdateWorkflowTemplate,
-  CreateWorkflowVersion,
-  UpdateWorkflowVersion,
-  RunStats,
-  MediaRecord,
-  CreateMediaRecord,
-  PromptTemplate,
-  CreatePromptTemplate,
-  UpdatePromptTemplate,
   AuditLog,
-  CreateAuditLog,
   AuditLogQuery,
   AuditStats,
-  ServiceNodePermission,
-  DeadLetterQueueItem,
+  CapacityRecord,
+  CreateAuditLog,
+  CreateCronJob,
   CreateDeadLetterQueueItem,
-  UpdateDeadLetterQueueItem,
-  JobTag,
-  JobDependency,
-  WebhookConfig,
-  WebhookDelivery,
-  CreateWebhookConfig,
-  UpdateWebhookConfig,
-  CreateWebhookDelivery,
-  WebhookEvent,
-  SystemConfig,
+  CreateExecutionLog,
+  CreateExecutionLogDetail,
+  CreateMaterial,
+  CreateMaterialItem,
+  CreateMediaRecord,
+  CreatePromptRecord,
+  CreatePromptTemplate,
   CreateSystemConfig,
-  UpdateSystemConfig,
+  CreateTaskQueueItem,
+  CreateWebhookConfig,
+  CreateWebhookDelivery,
+  CreateWorkflowVersion,
+  CronJob,
+  DeadLetterQueueItem,
+  ExecutionLog,
+  ExecutionLogDetail,
   ExternalApiLog,
   ExternalApiLogQuery,
   ExternalApiLogStats,
   Material,
-  CreateMaterial,
-  UpdateMaterial,
-  MaterialItem,
-  CreateMaterialItem,
-  UpdateMaterialItem,
-  PromptRecord,
-  CreatePromptRecord,
-  UpdatePromptRecord,
-  MaterialQueryOptions,
   MaterialDetailResult,
+  MaterialItem,
+  MaterialQueryOptions,
+  MediaRecord,
+  PromptRecord,
+  PromptTemplate,
+  RunStats,
+  ServiceNodePermission,
+  SystemConfig,
+  TaskQueueItem,
+  UpdateCapacityRecord,
+  UpdateCronJob,
+  UpdateDeadLetterQueueItem,
+  UpdateExecutionLog,
+  UpdateMaterial,
+  UpdateMaterialItem,
+  UpdatePromptRecord,
+  UpdatePromptTemplate,
+  UpdateSystemConfig,
+  UpdateTaskQueueItem,
+  UpdateWebhookConfig,
+  UpdateWorkflowTemplate,
+  WebhookConfig,
+  WebhookDelivery,
+  WorkflowTemplate,
+  WorkflowVersion,
 } from './types.js'
 import {
-  JobRepository,
-  TaskRepository,
-  LogRepository,
-  MediaRepository,
-  WebhookRepository,
-  WorkflowRepository,
   CapacityRepository,
-  UserRepository,
   DeadLetterRepository,
+  ExternalApiLogRepository,
+  JobRepository,
+  LogRepository,
+  MaterialItemRepository,
+  MaterialRepository,
+  MediaRepository,
+  PromptRepository,
   PromptTemplateRepository,
   SystemConfigRepository,
-  ExternalApiLogRepository,
-  MaterialRepository,
-  MaterialItemRepository,
-  PromptRepository,
+  TaskRepository,
+  UserRepository,
+  WebhookRepository,
+  WorkflowRepository,
 } from '../repositories/index.js'
+import {
+  DlqService,
+  JobService,
+  LogService,
+  MaterialService,
+  MediaService,
+  SystemService,
+  TaskService,
+  WorkflowService,
+} from './services/index.js'
 
 export class DatabaseService {
-  private conn: DatabaseConnection
+  private readonly conn: DatabaseConnection
 
   private _jobRepo: JobRepository | null = null
   private _taskRepo: TaskRepository | null = null
@@ -96,6 +101,15 @@ export class DatabaseService {
   private _materialRepo: MaterialRepository | null = null
   private _materialItemRepo: MaterialItemRepository | null = null
   private _promptRepo: PromptRepository | null = null
+
+  private _jobService: JobService | null = null
+  private _taskService: TaskService | null = null
+  private _logService: LogService | null = null
+  private _workflowService: WorkflowService | null = null
+  private _mediaService: MediaService | null = null
+  private _dlqService: DlqService | null = null
+  private _materialService: MaterialService | null = null
+  private _systemService: SystemService | null = null
 
   constructor(conn: DatabaseConnection) {
     this.conn = conn
@@ -176,6 +190,60 @@ export class DatabaseService {
     return this._promptRepo
   }
 
+  get jobService(): JobService {
+    if (!this._jobService) this._jobService = new JobService(this.jobRepo)
+    return this._jobService
+  }
+
+  get taskService(): TaskService {
+    if (!this._taskService) this._taskService = new TaskService(this.taskRepo)
+    return this._taskService
+  }
+
+  get logService(): LogService {
+    if (!this._logService) {
+      this._logService = new LogService(this.logRepo, this.userRepo, this.externalApiLogRepo)
+    }
+    return this._logService
+  }
+
+  get workflowService(): WorkflowService {
+    if (!this._workflowService) this._workflowService = new WorkflowService(this.workflowRepo)
+    return this._workflowService
+  }
+
+  get mediaService(): MediaService {
+    if (!this._mediaService) this._mediaService = new MediaService(this.mediaRepo)
+    return this._mediaService
+  }
+
+  get dlqService(): DlqService {
+    if (!this._dlqService) {
+      this._dlqService = new DlqService(this.deadLetterRepo, this.taskService.createTask.bind(this.taskService))
+    }
+    return this._dlqService
+  }
+
+  get materialService(): MaterialService {
+    if (!this._materialService) {
+      this._materialService = new MaterialService(this.materialRepo, this.materialItemRepo, this.promptRepo)
+    }
+    return this._materialService
+  }
+
+  get systemService(): SystemService {
+    if (!this._systemService) {
+      this._systemService = new SystemService(
+        this.systemConfigRepo,
+        this.capacityRepo,
+        this.webhookRepo,
+        this.promptTemplateRepo,
+        this.userRepo,
+      )
+    }
+    return this._systemService
+  }
+
   async init(): Promise<void> {
     const { runMigrations } = await import('./migrations-async.js')
     await runMigrations(this.conn)
@@ -209,849 +277,162 @@ export class DatabaseService {
     })
   }
 
-  async getAllCronJobs(ownerId?: string): Promise<CronJob[]> {
-    return this.jobRepo.getAll(ownerId)
-  }
-
-  async getCronJobById(id: string, ownerId?: string): Promise<CronJob | null> {
-    return this.jobRepo.getById(id, ownerId)
-  }
-
-  async createCronJob(job: CreateCronJob, ownerId?: string): Promise<CronJob> {
-    return this.jobRepo.create(job, ownerId)
-  }
-
-  async updateCronJob(id: string, updates: UpdateCronJob, ownerId?: string): Promise<CronJob | null> {
-    return this.jobRepo.update(id, updates, ownerId)
-  }
-
-  async deleteCronJob(id: string, ownerId?: string): Promise<boolean> {
-    return this.jobRepo.delete(id, ownerId)
-  }
-
-  async toggleCronJobActive(id: string, ownerId?: string): Promise<CronJob | null> {
-    return this.jobRepo.toggleActive(id, ownerId)
-  }
-
-  async updateCronJobRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
-    return this.jobRepo.updateRunStats(id, stats, ownerId)
-  }
-
-  async updateCronJobLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> {
-    return this.jobRepo.updateLastRun(id, nextRun, ownerId)
-  }
-
-  async getActiveCronJobs(ownerId?: string): Promise<CronJob[]> {
-    return this.jobRepo.getActive(ownerId)
-  }
-
-  async getAllTasks(options?: { status?: TaskStatus; ownerId?: string; jobId?: string; limit?: number; offset?: number }): Promise<{ tasks: TaskQueueItem[]; total: number }> {
-    return this.taskRepo.listTasks(options)
-  }
-
-  async getTaskById(id: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    return this.taskRepo.getById(id, ownerId)
-  }
-
-  async getTaskPayload(id: string): Promise<{ payload: string; result: string | null } | null> {
-    return this.taskRepo.getPayload(id)
-  }
-
-  async createTask(task: CreateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem> {
-    return this.taskRepo.create(task, ownerId)
-  }
-
-  async updateTask(id: string, updates: UpdateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem | null> {
-    return this.taskRepo.update(id, updates, ownerId)
-  }
-
-  async deleteTask(id: string, ownerId?: string): Promise<boolean> {
-    return this.taskRepo.delete(id, ownerId)
-  }
-
-  async getPendingTasksByJob(jobId: string | null, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> {
-    return this.taskRepo.getPendingByJob(jobId, limit, ownerId)
-  }
-
-  async getPendingTaskCount(): Promise<number> {
-    return this.taskRepo.getPendingCount()
-  }
-
-  async getPendingTasksByType(taskType: string, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> {
-    return this.taskRepo.getPendingByType(taskType, limit, ownerId)
-  }
-
-  async getRunningTaskCount(): Promise<number> {
-    return this.taskRepo.getRunningCount()
-  }
-
-  async getFailedTaskCount(): Promise<number> {
-    return this.taskRepo.getFailedCount()
-  }
-
-  async getTaskCountsByStatus(ownerId?: string): Promise<{
-    pending: number
-    running: number
-    completed: number
-    failed: number
-    cancelled: number
-    total: number
-  }> {
-    return this.taskRepo.getCountsByStatus(ownerId)
-  }
-
-  async markTaskRunning(id: string): Promise<TaskQueueItem | null> {
-    return this.taskRepo.markRunning(id)
-  }
-
-  async markTaskCompleted(id: string, result?: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    return this.taskRepo.markCompleted(id, result, ownerId)
-  }
-
-  async markTaskFailed(id: string, error: string, ownerId?: string): Promise<TaskQueueItem | null> {
-    return this.taskRepo.markFailed(id, error, ownerId)
-  }
-
-  async getTasksByJobId(jobId: string, ownerId?: string): Promise<TaskQueueItem[]> {
-    return this.taskRepo.getByJobId(jobId, ownerId)
-  }
-
-  async getAllExecutionLogs(jobId?: string, limit: number = 100, ownerId?: string): Promise<ExecutionLog[]> {
-    return this.logRepo.getAll(jobId, limit, ownerId)
-  }
-
-  async getExecutionLogsPaginated(options: {
-    limit: number
-    offset: number
-    startDate?: string
-    endDate?: string
-    ownerId?: string
-  }): Promise<{ logs: ExecutionLog[]; total: number }> {
-    return this.logRepo.getPaginated(options)
-  }
-
-  async getExecutionLogById(id: string, ownerId?: string): Promise<ExecutionLog | null> {
-    return this.logRepo.getById(id, ownerId)
-  }
-
-  async createExecutionLog(log: CreateExecutionLog, ownerId?: string): Promise<ExecutionLog> {
-    return this.logRepo.create(log, ownerId)
-  }
-
-  async updateExecutionLog(id: string, updates: UpdateExecutionLog, ownerId?: string): Promise<ExecutionLog | null> {
-    return this.logRepo.update(id, updates, ownerId)
-  }
-
-  async completeExecutionLog(id: string, stats: RunStats, ownerId?: string): Promise<ExecutionLog | null> {
-    return this.logRepo.complete(id, stats, ownerId)
-  }
-
-  async getRecentExecutionLogs(limit: number = 20, ownerId?: string): Promise<ExecutionLog[]> {
-    return this.logRepo.getRecent(limit, ownerId)
-  }
-
-  async createExecutionLogDetail(data: CreateExecutionLogDetail): Promise<string> {
-    return this.logRepo.createDetail(data)
-  }
-
-  async updateExecutionLogDetail(
-    id: string,
-    data: {
-      output_result?: string
-      error_message?: string
-      completed_at?: string
-      duration_ms?: number
-    }
-  ): Promise<void> {
-    return this.logRepo.updateDetail(id, data)
-  }
-
-  async getExecutionLogDetailsByLogId(logId: string): Promise<ExecutionLogDetail[]> {
-    return this.logRepo.getDetailsByLogId(logId)
-  }
-
-  async getAllCapacityRecords(): Promise<CapacityRecord[]> {
-    return this.capacityRepo.getAll()
-  }
-
-  async getCapacityByService(serviceType: string): Promise<CapacityRecord | null> {
-    return this.capacityRepo.getByService(serviceType)
-  }
-
-  async upsertCapacityRecord(serviceType: string, data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }): Promise<CapacityRecord> {
-    return this.capacityRepo.upsert(serviceType, data)
-  }
-
-  async getAllWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> {
-    return this.workflowRepo.getAllTemplates(ownerId)
-  }
-
-  async getWorkflowTemplatesPaginated(options: {
-    ownerId?: string
-    isTemplate?: boolean
-    limit?: number
-    offset?: number
-  }): Promise<{ templates: WorkflowTemplate[]; total: number }> {
-    return this.workflowRepo.getTemplatesPaginated(options)
-  }
-
-  async getWorkflowTemplateById(id: string, ownerId?: string): Promise<WorkflowTemplate | null> {
-    return this.workflowRepo.getTemplateById(id, ownerId)
-  }
-
-  async createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_public?: boolean }, ownerId?: string): Promise<WorkflowTemplate> {
-    return this.workflowRepo.createTemplate(template, ownerId)
-  }
-
-  async updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplate, ownerId?: string): Promise<WorkflowTemplate | null> {
-    return this.workflowRepo.updateTemplate(id, updates, ownerId)
-  }
-
-  async deleteWorkflowTemplate(id: string, ownerId?: string): Promise<boolean> {
-    return this.workflowRepo.deleteTemplate(id, ownerId)
-  }
-
-  async getMarkedWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> {
-    return this.workflowRepo.getPublicTemplates(ownerId)
-  }
-
-  async updateTaskStatus(taskId: string, status: TaskStatus, updates?: { started_at?: string | null; completed_at?: string | null; error_message?: string | null; result?: string | null }, ownerId?: string): Promise<void> {
-    return this.taskRepo.updateStatus(taskId, status, updates, ownerId)
-  }
-
-  async updateTasksStatusBatch(
-    taskIds: string[],
-    status: TaskStatus,
-    ownerId?: string
-  ): Promise<number> {
-    return this.taskRepo.updateStatusBatch(taskIds, status, ownerId)
-  }
-
-  async getCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
-    return this.capacityRepo.getByService(serviceType)
-  }
-
-  async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> {
-    return this.getPendingTasksByJob(jobId, limit)
-  }
-
-  async getQueueStats(jobId?: string): Promise<{
-    pending: number
-    running: number
-    completed: number
-    failed: number
-    cancelled: number
-    total: number
-  }> {
-    return this.taskRepo.getQueueStats(jobId)
-  }
-
-  async createTaskQueueItem(data: { job_id?: string | null; task_type: string; payload: string; priority?: number; status?: string; max_retries?: number }): Promise<string> {
-    const item = await this.createTask({
-      job_id: data.job_id ?? null,
-      task_type: data.task_type,
-      payload: data.payload,
-      priority: data.priority ?? 0,
-      status: (data.status as TaskStatus) ?? 'pending',
-      max_retries: data.max_retries ?? 3,
-    })
-    return item.id
-  }
-
-  async getCapacity(serviceType: string): Promise<{ remaining: number; total: number } | null> {
-    const record = await this.capacityRepo.getByService(serviceType)
-    if (!record) return null
-    return { remaining: record.remaining_quota, total: record.total_quota }
-  }
-
-  async updateCapacity(serviceType: string, remaining: number): Promise<void> {
-    await this.capacityRepo.updateCapacity(serviceType, remaining)
-  }
-
-  async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> {
-    return this.capacityRepo.decrementCapacity(serviceType, amount)
-  }
-
-  async getMediaRecords(options: {
-    type?: string
-    source?: string
-    search?: string
-    limit: number
-    offset: number
-    includeDeleted?: boolean
-    visibilityOwnerId?: string
-    favoriteFilter?: ('favorite' | 'non-favorite')[]
-    publicFilter?: ('private' | 'public' | 'others-public')[]
-    favoriteUserId?: string
-    role?: 'user' | 'pro' | 'admin' | 'super'
-  }): Promise<{ records: MediaRecord[]; total: number }> {
-    const result = await this.mediaRepo.list(options)
-    return { records: result.items, total: result.total }
-  }
-
-  async getMediaRecordById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
-    return this.mediaRepo.getById(id, ownerId, includePublic)
-  }
-
-  async createMediaRecord(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> {
-    return this.mediaRepo.create(data, ownerId)
-  }
-
-  async updateMediaRecord(id: string, data: { original_name?: string | null; metadata?: Record<string, unknown> | null }, ownerId?: string): Promise<MediaRecord | null> {
-    return this.mediaRepo.update(id, data, ownerId)
-  }
-
-  async softDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> {
-    return this.mediaRepo.softDelete(id, ownerId)
-  }
-
-  async hardDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> {
-    return this.mediaRepo.hardDelete(id, ownerId)
-  }
-
-  async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
-    return this.mediaRepo.toggleFavorite(userId, mediaId)
-  }
-
-  async togglePublicMediaRecord(id: string, isPublic: boolean): Promise<MediaRecord | null> {
-    return this.mediaRepo.togglePublic(id, isPublic)
-  }
-
-  async getExecutionStatsOverview(ownerId?: string): Promise<{
-    totalExecutions: number
-    successRate: number
-    avgDuration: number
-    errorCount: number
-  }> {
-    return this.logRepo.getStatsOverview(ownerId)
-  }
-
-  async getExecutionStatsTrend(period: 'day' | 'week' | 'month', ownerId?: string): Promise<{ date: string; total: number; success: number; failed: number }[]> {
-    return this.logRepo.getStatsTrend(period, ownerId)
-  }
-
-  async getExecutionStatsDistribution(ownerId?: string): Promise<{ type: string; count: number }[]> {
-    return this.logRepo.getStatsDistribution(ownerId)
-  }
-
-  async getExecutionStatsErrors(limit: number = 10, ownerId?: string): Promise<{ errorSummary: string; count: number }[]> {
-    return this.logRepo.getStatsErrors(limit, ownerId)
-  }
-
-  async getPromptTemplates(options: {
-    category?: string
-    limit: number
-    offset: number
-    ownerId?: string
-  }): Promise<{ templates: PromptTemplate[]; total: number }> {
-    const result = await this.promptTemplateRepo.list(options)
-    return { templates: result.items, total: result.total }
-  }
-
-  async getPromptTemplateById(id: string, ownerId?: string): Promise<PromptTemplate | null> {
-    return this.promptTemplateRepo.getById(id, ownerId)
-  }
-
-  async createPromptTemplate(data: CreatePromptTemplate, ownerId?: string): Promise<PromptTemplate> {
-    return this.promptTemplateRepo.create(data, ownerId)
-  }
-
-  async updatePromptTemplate(id: string, data: UpdatePromptTemplate, ownerId?: string): Promise<PromptTemplate | null> {
-    return this.promptTemplateRepo.update(id, data, ownerId)
-  }
-
-  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> {
-    return this.promptTemplateRepo.delete(id, ownerId)
-  }
-
-  async softDeleteMediaRecords(ids: string[]): Promise<{ deleted: number; failed: number }> {
-    return this.mediaRepo.softDeleteBatch(ids)
-  }
-
-  async getMediaRecordsByIds(ids: string[]): Promise<MediaRecord[]> {
-    return this.mediaRepo.getByIds(ids)
-  }
-
-  async createAuditLog(data: CreateAuditLog): Promise<AuditLog> {
-    return this.userRepo.createAuditLog(data)
-  }
-
-  async getAuditLogById(id: string): Promise<AuditLog | null> {
-    return this.userRepo.getAuditLogById(id)
-  }
-
-  async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {
-    return this.userRepo.getAuditLogs(query)
-  }
-
-  async getAuditStats(userId?: string): Promise<AuditStats> {
-    return this.userRepo.getAuditStats(userId)
-  }
-
-  async getUniqueRequestPaths(userId?: string): Promise<string[]> {
-    return this.userRepo.getUniqueRequestPaths(userId)
-  }
-
-  async getUniqueAuditUsers(userId?: string): Promise<{ id: string; username: string }[]> {
-    return this.userRepo.getUniqueAuditUsers(userId)
-  }
-
-  async getExternalApiLogById(id: number): Promise<ExternalApiLog | null> {
-    return this.externalApiLogRepo.getById(String(id))
-  }
-
-  async getExternalApiLogs(query: ExternalApiLogQuery): Promise<{ logs: ExternalApiLog[]; total: number }> {
-    return this.externalApiLogRepo.queryLogs(query)
-  }
-
-  async getExternalApiLogStats(userId?: string): Promise<ExternalApiLogStats> {
-    return this.externalApiLogRepo.getStats(userId)
-  }
-
-  async getUniqueExternalApiOperations(userId?: string): Promise<string[]> {
-    return this.externalApiLogRepo.getUniqueOperations(userId)
-  }
-
-  async getUniqueExternalApiProviders(): Promise<string[]> {
-    return this.externalApiLogRepo.getUniqueServiceProviders()
-  }
-
-  // =====================================================================
-  // Service Node Permissions
-  // =====================================================================
-
-  async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> {
-    return this.userRepo.getAllServiceNodePermissions()
-  }
-
-  async getServiceNodePermission(
-    serviceName: string,
-    methodName: string
-  ): Promise<ServiceNodePermission | null> {
-    return this.userRepo.getServiceNodePermission(serviceName, methodName)
-  }
-
-  async updateServiceNodePermission(
-    id: string,
-    data: { min_role?: string; is_enabled?: boolean }
-  ): Promise<void> {
-    return this.userRepo.updateServiceNodePermission(id, data)
-  }
-
-  async upsertServiceNodePermission(data: {
-    service_name: string
-    method_name: string
-    display_name: string
-    category: string
-    min_role?: string
-    is_enabled?: boolean
-  }): Promise<void> {
-    return this.userRepo.upsertServiceNodePermission(data)
-  }
-
-  async deleteServiceNodePermission(id: string): Promise<void> {
-    return this.userRepo.deleteServiceNodePermission(id)
-  }
-
-  async batchUpsertServiceNodePermissions(
-    nodes: Array<{
-      service_name: string
-      method_name: string
-      display_name: string
-      category: string
-      min_role?: string
-      is_enabled?: boolean
-    }>
-  ): Promise<void> {
-    return this.userRepo.batchUpsertServiceNodePermissions(nodes)
-  }
-
-  // =====================================================================
-  // Workflow Permissions
-  // =====================================================================
-
-  async createWorkflowPermission(data: {
-    workflow_id: string
-    user_id: string
-    granted_by?: string | null
-  }): Promise<void> {
-    return this.workflowRepo.createPermission(data)
-  }
-
-  async deleteWorkflowPermission(workflowId: string, userId: string): Promise<void> {
-    return this.workflowRepo.deletePermission(workflowId, userId)
-  }
-
-  async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> {
-    return this.workflowRepo.hasPermission(workflowId, userId)
-  }
-
-  async getWorkflowPermissions(workflowId: string): Promise<Array<{
-    id: string
-    workflow_id: string
-    user_id: string
-    granted_by: string | null
-    created_at: string
-    username: string
-    email: string | null
-  }>> {
-    return this.workflowRepo.getPermissions(workflowId)
-  }
-
-  async getAvailableWorkflows(userId: string): Promise<WorkflowTemplate[]> {
-    return this.workflowRepo.getAvailableWorkflows(userId)
-  }
-
-  // =====================================================================
-  // Workflow Versions
-  // =====================================================================
-
-  async createWorkflowVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> {
-    return this.workflowRepo.createVersion(data)
-  }
-
-  async getWorkflowVersionById(id: string): Promise<WorkflowVersion | undefined> {
-    return this.workflowRepo.getVersionById(id)
-  }
-
-  async getWorkflowVersionsByTemplate(templateId: string): Promise<WorkflowVersion[]> {
-    return this.workflowRepo.getVersionsByTemplate(templateId)
-  }
-
-  async getActiveWorkflowVersion(templateId: string): Promise<WorkflowVersion | undefined> {
-    return this.workflowRepo.getActiveVersion(templateId)
-  }
-
-  async getLatestVersionNumber(templateId: string): Promise<number> {
-    return this.workflowRepo.getLatestVersionNumber(templateId)
-  }
-
-  async activateWorkflowVersion(versionId: string, templateId: string): Promise<void> {
-    return this.workflowRepo.activateVersion(versionId, templateId)
-  }
-
-  async deleteWorkflowVersion(id: string): Promise<void> {
-    return this.workflowRepo.deleteVersion(id)
-  }
-
-  async saveTemplateVersion(
-    templateId: string,
-    nodesJson: string,
-    edgesJson: string,
-    changeSummary: string | null,
-    userId: string | null
-  ): Promise<WorkflowVersion> {
-    return this.workflowRepo.saveTemplateVersion(templateId, nodesJson, edgesJson, changeSummary, userId)
-  }
-
-  // =====================================================================
-  // Dead Letter Queue
-  // =====================================================================
-
-  async createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> {
-    return this.deadLetterRepo.create(data, ownerId)
-  }
-
-  async getDeadLetterQueueItems(ownerId?: string, limit: number = 50): Promise<DeadLetterQueueItem[]> {
-    return this.deadLetterRepo.listItems(ownerId, limit)
-  }
-
-  async getDeadLetterQueueItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
-    return this.deadLetterRepo.getById(id, ownerId)
-  }
-
-  async updateDeadLetterQueueItem(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null> {
-    return this.deadLetterRepo.update(id, data, ownerId)
-  }
-
-  async retryDeadLetterQueueItem(id: string, ownerId?: string): Promise<string> {
-    const item = await this.getDeadLetterQueueItemById(id, ownerId)
-    if (!item) {
-      throw new Error(`Dead letter queue item not found: ${id}`)
-    }
-
-    const payload = typeof item.payload === 'string' ? item.payload : JSON.stringify(item.payload)
-
-    const newTask = await this.createTask({
-      job_id: item.job_id ?? undefined,
-      task_type: item.task_type,
-      payload: payload,
-      max_retries: item.max_retries,
-    }, item.owner_id ?? undefined)
-
-    await this.updateDeadLetterQueueItem(id, {
-      resolved_at: toLocalISODateString(),
-      resolution: 'retried',
-    }, ownerId)
-
-    return newTask.id
-  }
-
-  // =====================================================================
-  // Job Tags
-  // =====================================================================
-
-  async addJobTag(jobId: string, tag: string): Promise<void> {
-    return this.jobRepo.addTag(jobId, tag)
-  }
-
-  async removeJobTag(jobId: string, tag: string): Promise<void> {
-    return this.jobRepo.removeTag(jobId, tag)
-  }
-
-  async getJobTags(jobId: string): Promise<string[]> {
-    return this.jobRepo.getTags(jobId)
-  }
-
-  async getJobsByTag(tag: string, ownerId?: string): Promise<CronJob[]> {
-    return this.jobRepo.getByTag(tag, ownerId)
-  }
-
-  async getAllTags(): Promise<{ tag: string; count: number }[]> {
-    return this.jobRepo.getAllTags()
-  }
-
-  // =====================================================================
-  // Job Dependencies
-  // =====================================================================
-
-  async addJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    return this.jobRepo.addDependency(jobId, dependsOnJobId)
-  }
-
-  async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    return this.jobRepo.removeDependency(jobId, dependsOnJobId)
-  }
-
-  async getJobDependencies(jobId: string): Promise<string[]> {
-    return this.jobRepo.getDependencies(jobId)
-  }
-
-  async getJobDependents(jobId: string): Promise<string[]> {
-    return this.jobRepo.getDependents(jobId)
-  }
-
-  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    return this.jobRepo.hasCircularDependency(jobId, dependsOnJobId)
-  }
-
-  // =====================================================================
-  // Webhook Configs
-  // =====================================================================
-
-  async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
-    return this.webhookRepo.createConfig(data, ownerId)
-  }
-
-  async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
-    return this.webhookRepo.getConfigById(id, ownerId)
-  }
-
-  async getWebhookConfigsByJobId(jobId: string): Promise<WebhookConfig[]> {
-    return this.webhookRepo.getConfigsByJobId(jobId)
-  }
-
-  async getWebhookConfigsByOwner(ownerId: string): Promise<WebhookConfig[]> {
-    return this.webhookRepo.getConfigsByOwner(ownerId)
-  }
-
-  async getAllWebhookConfigs(ownerId?: string): Promise<WebhookConfig[]> {
-    return this.webhookRepo.getAllConfigs(ownerId)
-  }
-
-  async updateWebhookConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> {
-    return this.webhookRepo.updateConfig(id, updates, ownerId)
-  }
-
-  async deleteWebhookConfig(id: string, ownerId?: string): Promise<boolean> {
-    return this.webhookRepo.deleteConfig(id, ownerId)
-  }
-
-  // =====================================================================
-  // Webhook Deliveries
-  // =====================================================================
-
-  async createWebhookDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> {
-    return this.webhookRepo.createDelivery(data, ownerId)
-  }
-
-  async getWebhookDeliveryById(id: string): Promise<WebhookDelivery | null> {
-    return this.webhookRepo.getDeliveryById(id)
-  }
-
-  async getWebhookDeliveriesByWebhook(webhookId: string, limit: number = 50, ownerId?: string): Promise<WebhookDelivery[]> {
-    return this.webhookRepo.getDeliveriesByWebhook(webhookId, limit, ownerId)
-  }
-
-  async getWebhookDeliveryByExecutionLog(executionLogId: string, ownerId?: string): Promise<WebhookDelivery[]> {
-    return this.webhookRepo.getDeliveriesByExecutionLog(executionLogId, ownerId)
-  }
-
-  // =====================================================================
-  // System Config
-  // =====================================================================
-
-  async getAllSystemConfigs(): Promise<SystemConfig[]> {
-    return this.systemConfigRepo.list({})
-      .then(r => r.items)
-  }
-
-  async getSystemConfigByKey(key: string): Promise<SystemConfig | null> {
-    return this.systemConfigRepo.getByKey(key)
-  }
-
-  async createSystemConfig(data: CreateSystemConfig, updatedBy?: string): Promise<SystemConfig> {
-    return this.systemConfigRepo.create(data, updatedBy)
-  }
-
-  async updateSystemConfig(key: string, updates: UpdateSystemConfig, updatedBy?: string): Promise<SystemConfig | null> {
-    return this.systemConfigRepo.update(key, updates, updatedBy)
-  }
-
-  async deleteSystemConfig(key: string): Promise<boolean> {
-    return this.systemConfigRepo.delete(key)
-  }
-
-  // =====================================================================
-  // Materials
-  // =====================================================================
-
-  async getMaterialById(id: string, ownerId?: string): Promise<Material | null> {
-    return this.materialRepo.getById(id, ownerId)
-  }
-
-  async getMaterials(options: MaterialQueryOptions): Promise<{ records: Material[]; total: number }> {
-    const result = await this.materialRepo.listWithItemCount(options)
-    return { records: result.items, total: result.total }
-  }
-
-  async createMaterial(data: CreateMaterial, ownerId?: string): Promise<Material> {
-    return this.materialRepo.create({
-      ...data,
-      ownerId: ownerId ?? '',
-    })
-  }
-
-  async updateMaterial(id: string, data: UpdateMaterial, ownerId?: string): Promise<Material | null> {
-    if (!ownerId) throw new Error('ownerId is required for updateMaterial')
-    return this.materialRepo.update(id, data, ownerId)
-  }
-
-  async softDeleteMaterial(id: string, ownerId?: string): Promise<boolean> {
-    if (!ownerId) throw new Error('ownerId is required for softDeleteMaterial')
-    return this.materialRepo.softDelete(id, ownerId)
-  }
-
-  async getMaterialDetail(id: string, ownerId?: string): Promise<MaterialDetailResult | null> {
-    const material = await this.materialRepo.getById(id, ownerId)
-    if (!material) return null
-
-    if (!ownerId) {
-      throw new Error('ownerId is required for getMaterialDetail')
-    }
-
-    const items = await this.materialItemRepo.listByMaterial(id, ownerId)
-    const materialPrompts = await this.promptRepo.listByTarget({
-      targetType: 'material-main',
-      targetId: id,
-      slotType: 'artist-style',
-      ownerId,
-    })
-
-    const itemsWithPromises = await Promise.all(
-      items.map(async (item) => {
-        const itemPrompts = await this.promptRepo.listByTarget({
-          targetType: 'material-item',
-          targetId: item.id,
-          slotType: 'song-style',
-          ownerId,
-        })
-        return { ...item, prompts: itemPrompts }
-      })
-    )
-
-    return {
-      material,
-      materialPrompts,
-      items: itemsWithPromises,
-    }
-  }
-
-  async createMaterialItem(data: CreateMaterialItem, ownerId?: string): Promise<MaterialItem> {
-    return this.materialItemRepo.create({
-      ...data,
-      ownerId: ownerId ?? '',
-    })
-  }
-
-  async updateMaterialItem(id: string, data: UpdateMaterialItem, ownerId?: string): Promise<MaterialItem | null> {
-    if (!ownerId) throw new Error('ownerId is required for updateMaterialItem')
-    return this.materialItemRepo.update(id, data, ownerId)
-  }
-
-  async softDeleteMaterialItem(id: string, ownerId?: string): Promise<boolean> {
-    if (!ownerId) throw new Error('ownerId is required for softDeleteMaterialItem')
-    return this.materialItemRepo.softDelete(id, ownerId)
-  }
-
-  async reorderMaterialItems(
-    materialId: string,
-    items: Array<{ id: string; sort_order: number }>,
-    ownerId?: string
-  ): Promise<void> {
-    if (!ownerId) throw new Error('ownerId is required for reorderMaterialItems')
-    return this.materialItemRepo.reorder(materialId, items, ownerId)
-  }
-
-  async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> {
-    return this.promptRepo.create({
-      targetType: data.target_type,
-      targetId: data.target_id,
-      slotType: data.slot_type,
-      name: data.name,
-      content: data.content,
-      ownerId: ownerId ?? '',
-      sortOrder: data.sort_order,
-      isDefault: data.is_default,
-    })
-  }
-
-  async updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null> {
-    if (!ownerId) throw new Error('ownerId is required for updatePrompt')
-    return this.promptRepo.update(id, data, ownerId)
-  }
-
-  async softDeletePrompt(id: string, ownerId?: string): Promise<boolean> {
-    if (!ownerId) throw new Error('ownerId is required for softDeletePrompt')
-    return this.promptRepo.softDelete(id, ownerId)
-  }
-
-  async setDefaultPrompt(id: string, ownerId?: string): Promise<PromptRecord | null> {
-    if (!ownerId) throw new Error('ownerId is required for setDefaultPrompt')
-    return this.promptRepo.setDefault(id, ownerId)
-  }
-
-  async reorderPrompts(
-    request: {
-      target_type: PromptRecord['target_type']
-      target_id: string
-      slot_type: PromptRecord['slot_type']
-      items: Array<{ id: string; sort_order: number }>
-    },
-    ownerId?: string
-  ): Promise<void> {
-    if (!ownerId) throw new Error('ownerId is required for reorderPrompts')
-    return this.promptRepo.reorder({
-      targetType: request.target_type,
-      targetId: request.target_id,
-      slotType: request.slot_type,
-      ownerId,
-    }, request.items)
-  }
-
-  // =====================================================================
-  // Generic SQL Helpers (for raw queries)
-  // =====================================================================
+  async getAllCronJobs(ownerId?: string): Promise<CronJob[]> { return this.jobService.getAllCronJobs(ownerId) }
+  async getCronJobById(id: string, ownerId?: string): Promise<CronJob | null> { return this.jobService.getCronJobById(id, ownerId) }
+  async createCronJob(job: CreateCronJob, ownerId?: string): Promise<CronJob> { return this.jobService.createCronJob(job, ownerId) }
+  async updateCronJob(id: string, updates: UpdateCronJob, ownerId?: string): Promise<CronJob | null> { return this.jobService.updateCronJob(id, updates, ownerId) }
+  async deleteCronJob(id: string, ownerId?: string): Promise<boolean> { return this.jobService.deleteCronJob(id, ownerId) }
+  async toggleCronJobActive(id: string, ownerId?: string): Promise<CronJob | null> { return this.jobService.toggleCronJobActive(id, ownerId) }
+  async updateCronJobRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> { return this.jobService.updateCronJobRunStats(id, stats, ownerId) }
+  async updateCronJobLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> { return this.jobService.updateCronJobLastRun(id, nextRun, ownerId) }
+  async getActiveCronJobs(ownerId?: string): Promise<CronJob[]> { return this.jobService.getActiveCronJobs(ownerId) }
+  async addJobTag(jobId: string, tag: string): Promise<void> { return this.jobService.addJobTag(jobId, tag) }
+  async removeJobTag(jobId: string, tag: string): Promise<void> { return this.jobService.removeJobTag(jobId, tag) }
+  async getJobTags(jobId: string): Promise<string[]> { return this.jobService.getJobTags(jobId) }
+  async getJobsByTag(tag: string, ownerId?: string): Promise<CronJob[]> { return this.jobService.getJobsByTag(tag, ownerId) }
+  async getAllTags(): Promise<{ tag: string; count: number }[]> { return this.jobService.getAllTags() }
+  async addJobDependency(jobId: string, dependsOnJobId: string): Promise<void> { return this.jobService.addJobDependency(jobId, dependsOnJobId) }
+  async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<void> { return this.jobService.removeJobDependency(jobId, dependsOnJobId) }
+  async getJobDependencies(jobId: string): Promise<string[]> { return this.jobService.getJobDependencies(jobId) }
+  async getJobDependents(jobId: string): Promise<string[]> { return this.jobService.getJobDependents(jobId) }
+  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> { return this.jobService.hasCircularDependency(jobId, dependsOnJobId) }
+
+  async getAllTasks(options?: { status?: TaskStatus; ownerId?: string; jobId?: string; limit?: number; offset?: number }): Promise<{ tasks: TaskQueueItem[]; total: number }> { return this.taskService.getAllTasks(options) }
+  async getTaskById(id: string, ownerId?: string): Promise<TaskQueueItem | null> { return this.taskService.getTaskById(id, ownerId) }
+  async getTaskPayload(id: string): Promise<{ payload: string; result: string | null } | null> { return this.taskService.getTaskPayload(id) }
+  async createTask(task: CreateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem> { return this.taskService.createTask(task, ownerId) }
+  async updateTask(id: string, updates: UpdateTaskQueueItem, ownerId?: string): Promise<TaskQueueItem | null> { return this.taskService.updateTask(id, updates, ownerId) }
+  async deleteTask(id: string, ownerId?: string): Promise<boolean> { return this.taskService.deleteTask(id, ownerId) }
+  async getPendingTasksByJob(jobId: string | null, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> { return this.taskService.getPendingTasksByJob(jobId, limit, ownerId) }
+  async getPendingTaskCount(): Promise<number> { return this.taskService.getPendingTaskCount() }
+  async getPendingTasksByType(taskType: string, limit: number = 10, ownerId?: string): Promise<TaskQueueItem[]> { return this.taskService.getPendingTasksByType(taskType, limit, ownerId) }
+  async getRunningTaskCount(): Promise<number> { return this.taskService.getRunningTaskCount() }
+  async getFailedTaskCount(): Promise<number> { return this.taskService.getFailedTaskCount() }
+  async getTaskCountsByStatus(ownerId?: string): Promise<{ pending: number; running: number; completed: number; failed: number; cancelled: number; total: number }> { return this.taskService.getTaskCountsByStatus(ownerId) }
+  async markTaskRunning(id: string): Promise<TaskQueueItem | null> { return this.taskService.markTaskRunning(id) }
+  async markTaskCompleted(id: string, result?: string, ownerId?: string): Promise<TaskQueueItem | null> { return this.taskService.markTaskCompleted(id, result, ownerId) }
+  async markTaskFailed(id: string, error: string, ownerId?: string): Promise<TaskQueueItem | null> { return this.taskService.markTaskFailed(id, error, ownerId) }
+  async getTasksByJobId(jobId: string, ownerId?: string): Promise<TaskQueueItem[]> { return this.taskService.getTasksByJobId(jobId, ownerId) }
+  async updateTaskStatus(taskId: string, status: TaskStatus, updates?: { started_at?: string | null; completed_at?: string | null; error_message?: string | null; result?: string | null }, ownerId?: string): Promise<void> { return this.taskService.updateTaskStatus(taskId, status, updates, ownerId) }
+  async updateTasksStatusBatch(taskIds: string[], status: TaskStatus, ownerId?: string): Promise<number> { return this.taskService.updateTasksStatusBatch(taskIds, status, ownerId) }
+  async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> { return this.taskService.getPendingTasks(jobId, limit) }
+  async getQueueStats(jobId?: string): Promise<{ pending: number; running: number; completed: number; failed: number; cancelled: number; total: number }> { return this.taskService.getQueueStats(jobId) }
+  async createTaskQueueItem(data: { job_id?: string | null; task_type: string; payload: string; priority?: number; status?: string; max_retries?: number }): Promise<string> { return this.taskService.createTaskQueueItem(data) }
+
+  async getAllExecutionLogs(jobId?: string, limit: number = 100, ownerId?: string): Promise<ExecutionLog[]> { return this.logService.getAllExecutionLogs(jobId, limit, ownerId) }
+  async getExecutionLogsPaginated(options: { limit: number; offset: number; startDate?: string; endDate?: string; ownerId?: string }): Promise<{ logs: ExecutionLog[]; total: number }> { return this.logService.getExecutionLogsPaginated(options) }
+  async getExecutionLogById(id: string, ownerId?: string): Promise<ExecutionLog | null> { return this.logService.getExecutionLogById(id, ownerId) }
+  async createExecutionLog(log: CreateExecutionLog, ownerId?: string): Promise<ExecutionLog> { return this.logService.createExecutionLog(log, ownerId) }
+  async updateExecutionLog(id: string, updates: UpdateExecutionLog, ownerId?: string): Promise<ExecutionLog | null> { return this.logService.updateExecutionLog(id, updates, ownerId) }
+  async completeExecutionLog(id: string, stats: RunStats, ownerId?: string): Promise<ExecutionLog | null> { return this.logService.completeExecutionLog(id, stats, ownerId) }
+  async getRecentExecutionLogs(limit: number = 20, ownerId?: string): Promise<ExecutionLog[]> { return this.logService.getRecentExecutionLogs(limit, ownerId) }
+  async createExecutionLogDetail(data: CreateExecutionLogDetail): Promise<string> { return this.logService.createExecutionLogDetail(data) }
+  async updateExecutionLogDetail(id: string, data: { output_result?: string; error_message?: string; completed_at?: string; duration_ms?: number }): Promise<void> { return this.logService.updateExecutionLogDetail(id, data) }
+  async getExecutionLogDetailsByLogId(logId: string): Promise<ExecutionLogDetail[]> { return this.logService.getExecutionLogDetailsByLogId(logId) }
+  async getExecutionStatsOverview(ownerId?: string): Promise<{ totalExecutions: number; successRate: number; avgDuration: number; errorCount: number }> { return this.logService.getExecutionStatsOverview(ownerId) }
+  async getExecutionStatsTrend(period: 'day' | 'week' | 'month', ownerId?: string): Promise<{ date: string; total: number; success: number; failed: number }[]> { return this.logService.getExecutionStatsTrend(period, ownerId) }
+  async getExecutionStatsDistribution(ownerId?: string): Promise<{ type: string; count: number }[]> { return this.logService.getExecutionStatsDistribution(ownerId) }
+  async getExecutionStatsErrors(limit: number = 10, ownerId?: string): Promise<{ errorSummary: string; count: number }[]> { return this.logService.getExecutionStatsErrors(limit, ownerId) }
+  async createAuditLog(data: CreateAuditLog): Promise<AuditLog> { return this.logService.createAuditLog(data) }
+  async getAuditLogById(id: string): Promise<AuditLog | null> { return this.logService.getAuditLogById(id) }
+  async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> { return this.logService.getAuditLogs(query) }
+  async getAuditStats(userId?: string): Promise<AuditStats> { return this.logService.getAuditStats(userId) }
+  async getUniqueRequestPaths(userId?: string): Promise<string[]> { return this.logService.getUniqueRequestPaths(userId) }
+  async getUniqueAuditUsers(userId?: string): Promise<{ id: string; username: string }[]> { return this.logService.getUniqueAuditUsers(userId) }
+  async getExternalApiLogById(id: number): Promise<ExternalApiLog | null> { return this.logService.getExternalApiLogById(id) }
+  async getExternalApiLogs(query: ExternalApiLogQuery): Promise<{ logs: ExternalApiLog[]; total: number }> { return this.logService.getExternalApiLogs(query) }
+  async getExternalApiLogStats(userId?: string): Promise<ExternalApiLogStats> { return this.logService.getExternalApiLogStats(userId) }
+  async getUniqueExternalApiOperations(userId?: string): Promise<string[]> { return this.logService.getUniqueExternalApiOperations(userId) }
+  async getUniqueExternalApiProviders(): Promise<string[]> { return this.logService.getUniqueExternalApiProviders() }
+
+  async getAllWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> { return this.workflowService.getAllWorkflowTemplates(ownerId) }
+  async getWorkflowTemplatesPaginated(options: { ownerId?: string; isTemplate?: boolean; limit?: number; offset?: number }): Promise<{ templates: WorkflowTemplate[]; total: number }> { return this.workflowService.getWorkflowTemplatesPaginated(options) }
+  async getWorkflowTemplateById(id: string, ownerId?: string): Promise<WorkflowTemplate | null> { return this.workflowService.getWorkflowTemplateById(id, ownerId) }
+  async createWorkflowTemplate(template: { name: string; description?: string | null; nodes_json: string; edges_json: string; is_public?: boolean }, ownerId?: string): Promise<WorkflowTemplate> { return this.workflowService.createWorkflowTemplate(template, ownerId) }
+  async updateWorkflowTemplate(id: string, updates: UpdateWorkflowTemplate, ownerId?: string): Promise<WorkflowTemplate | null> { return this.workflowService.updateWorkflowTemplate(id, updates, ownerId) }
+  async deleteWorkflowTemplate(id: string, ownerId?: string): Promise<boolean> { return this.workflowService.deleteWorkflowTemplate(id, ownerId) }
+  async getMarkedWorkflowTemplates(ownerId?: string): Promise<WorkflowTemplate[]> { return this.workflowService.getMarkedWorkflowTemplates(ownerId) }
+  async createWorkflowPermission(data: { workflow_id: string; user_id: string; granted_by?: string | null }): Promise<void> { return this.workflowService.createWorkflowPermission(data) }
+  async deleteWorkflowPermission(workflowId: string, userId: string): Promise<void> { return this.workflowService.deleteWorkflowPermission(workflowId, userId) }
+  async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> { return this.workflowService.hasWorkflowPermission(workflowId, userId) }
+  async getWorkflowPermissions(workflowId: string): Promise<Array<{ id: string; workflow_id: string; user_id: string; granted_by: string | null; created_at: string; username: string; email: string | null }>> { return this.workflowService.getWorkflowPermissions(workflowId) }
+  async getAvailableWorkflows(userId: string): Promise<WorkflowTemplate[]> { return this.workflowService.getAvailableWorkflows(userId) }
+  async createWorkflowVersion(data: CreateWorkflowVersion): Promise<WorkflowVersion> { return this.workflowService.createWorkflowVersion(data) }
+  async getWorkflowVersionById(id: string): Promise<WorkflowVersion | undefined> { return this.workflowService.getWorkflowVersionById(id) }
+  async getWorkflowVersionsByTemplate(templateId: string): Promise<WorkflowVersion[]> { return this.workflowService.getWorkflowVersionsByTemplate(templateId) }
+  async getActiveWorkflowVersion(templateId: string): Promise<WorkflowVersion | undefined> { return this.workflowService.getActiveWorkflowVersion(templateId) }
+  async getLatestVersionNumber(templateId: string): Promise<number> { return this.workflowService.getLatestVersionNumber(templateId) }
+  async activateWorkflowVersion(versionId: string, templateId: string): Promise<void> { return this.workflowService.activateWorkflowVersion(versionId, templateId) }
+  async deleteWorkflowVersion(id: string): Promise<void> { return this.workflowService.deleteWorkflowVersion(id) }
+  async saveTemplateVersion(templateId: string, nodesJson: string, edgesJson: string, changeSummary: string | null, userId: string | null): Promise<WorkflowVersion> { return this.workflowService.saveTemplateVersion(templateId, nodesJson, edgesJson, changeSummary, userId) }
+
+  async getMediaRecords(options: { type?: string; source?: string; search?: string; limit: number; offset: number; includeDeleted?: boolean; visibilityOwnerId?: string; favoriteFilter?: ('favorite' | 'non-favorite')[]; publicFilter?: ('private' | 'public' | 'others-public')[]; favoriteUserId?: string; role?: 'user' | 'pro' | 'admin' | 'super' }): Promise<{ records: MediaRecord[]; total: number }> { return this.mediaService.getMediaRecords(options) }
+  async getMediaRecordById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> { return this.mediaService.getMediaRecordById(id, ownerId, includePublic) }
+  async createMediaRecord(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> { return this.mediaService.createMediaRecord(data, ownerId) }
+  async updateMediaRecord(id: string, data: { original_name?: string | null; metadata?: Record<string, unknown> | null }, ownerId?: string): Promise<MediaRecord | null> { return this.mediaService.updateMediaRecord(id, data, ownerId) }
+  async softDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> { return this.mediaService.softDeleteMediaRecord(id, ownerId) }
+  async hardDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> { return this.mediaService.hardDeleteMediaRecord(id, ownerId) }
+  async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> { return this.mediaService.toggleFavorite(userId, mediaId) }
+  async togglePublicMediaRecord(id: string, isPublic: boolean): Promise<MediaRecord | null> { return this.mediaService.togglePublicMediaRecord(id, isPublic) }
+  async softDeleteMediaRecords(ids: string[]): Promise<{ deleted: number; failed: number }> { return this.mediaService.softDeleteMediaRecords(ids) }
+  async getMediaRecordsByIds(ids: string[]): Promise<MediaRecord[]> { return this.mediaService.getMediaRecordsByIds(ids) }
+
+  async createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> { return this.dlqService.createDeadLetterQueueItem(data, ownerId) }
+  async getDeadLetterQueueItems(ownerId?: string, limit: number = 50): Promise<DeadLetterQueueItem[]> { return this.dlqService.getDeadLetterQueueItems(ownerId, limit) }
+  async getDeadLetterQueueItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> { return this.dlqService.getDeadLetterQueueItemById(id, ownerId) }
+  async updateDeadLetterQueueItem(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null> { return this.dlqService.updateDeadLetterQueueItem(id, data, ownerId) }
+  async retryDeadLetterQueueItem(id: string, ownerId?: string): Promise<string> { return this.dlqService.retryDeadLetterQueueItem(id, ownerId) }
+
+  async getMaterialById(id: string, ownerId?: string): Promise<Material | null> { return this.materialService.getMaterialById(id, ownerId) }
+  async getMaterials(options: MaterialQueryOptions): Promise<{ records: Material[]; total: number }> { return this.materialService.getMaterials(options) }
+  async createMaterial(data: CreateMaterial, ownerId?: string): Promise<Material> { return this.materialService.createMaterial(data, ownerId) }
+  async updateMaterial(id: string, data: UpdateMaterial, ownerId?: string): Promise<Material | null> { return this.materialService.updateMaterial(id, data, ownerId) }
+  async softDeleteMaterial(id: string, ownerId?: string): Promise<boolean> { return this.materialService.softDeleteMaterial(id, ownerId) }
+  async getMaterialDetail(id: string, ownerId?: string): Promise<MaterialDetailResult | null> { return this.materialService.getMaterialDetail(id, ownerId) }
+  async createMaterialItem(data: CreateMaterialItem, ownerId?: string): Promise<MaterialItem> { return this.materialService.createMaterialItem(data, ownerId) }
+  async updateMaterialItem(id: string, data: UpdateMaterialItem, ownerId?: string): Promise<MaterialItem | null> { return this.materialService.updateMaterialItem(id, data, ownerId) }
+  async softDeleteMaterialItem(id: string, ownerId?: string): Promise<boolean> { return this.materialService.softDeleteMaterialItem(id, ownerId) }
+  async reorderMaterialItems(materialId: string, items: Array<{ id: string; sort_order: number }>, ownerId?: string): Promise<void> { return this.materialService.reorderMaterialItems(materialId, items, ownerId) }
+  async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> { return this.materialService.createPrompt(data, ownerId) }
+  async updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null> { return this.materialService.updatePrompt(id, data, ownerId) }
+  async softDeletePrompt(id: string, ownerId?: string): Promise<boolean> { return this.materialService.softDeletePrompt(id, ownerId) }
+  async setDefaultPrompt(id: string, ownerId?: string): Promise<PromptRecord | null> { return this.materialService.setDefaultPrompt(id, ownerId) }
+  async reorderPrompts(request: { target_type: PromptRecord['target_type']; target_id: string; slot_type: PromptRecord['slot_type']; items: Array<{ id: string; sort_order: number }> }, ownerId?: string): Promise<void> { return this.materialService.reorderPrompts(request, ownerId) }
+
+  async getAllCapacityRecords(): Promise<CapacityRecord[]> { return this.systemService.getAllCapacityRecords() }
+  async getCapacityByService(serviceType: string): Promise<CapacityRecord | null> { return this.systemService.getCapacityByService(serviceType) }
+  async upsertCapacityRecord(serviceType: string, data: UpdateCapacityRecord & { remaining_quota: number; total_quota: number }): Promise<CapacityRecord> { return this.systemService.upsertCapacityRecord(serviceType, data) }
+  async getCapacityRecord(serviceType: string): Promise<CapacityRecord | null> { return this.systemService.getCapacityRecord(serviceType) }
+  async getCapacity(serviceType: string): Promise<{ remaining: number; total: number } | null> { return this.systemService.getCapacity(serviceType) }
+  async updateCapacity(serviceType: string, remaining: number): Promise<void> { return this.systemService.updateCapacity(serviceType, remaining) }
+  async decrementCapacity(serviceType: string, amount: number = 1): Promise<CapacityRecord | null> { return this.systemService.decrementCapacity(serviceType, amount) }
+  async getPromptTemplates(options: { category?: string; limit: number; offset: number; ownerId?: string }): Promise<{ templates: PromptTemplate[]; total: number }> { return this.systemService.getPromptTemplates(options) }
+  async getPromptTemplateById(id: string, ownerId?: string): Promise<PromptTemplate | null> { return this.systemService.getPromptTemplateById(id, ownerId) }
+  async createPromptTemplate(data: CreatePromptTemplate, ownerId?: string): Promise<PromptTemplate> { return this.systemService.createPromptTemplate(data, ownerId) }
+  async updatePromptTemplate(id: string, data: UpdatePromptTemplate, ownerId?: string): Promise<PromptTemplate | null> { return this.systemService.updatePromptTemplate(id, data, ownerId) }
+  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> { return this.systemService.deletePromptTemplate(id, ownerId) }
+  async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> { return this.systemService.createWebhookConfig(data, ownerId) }
+  async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> { return this.systemService.getWebhookConfigById(id, ownerId) }
+  async getWebhookConfigsByJobId(jobId: string): Promise<WebhookConfig[]> { return this.systemService.getWebhookConfigsByJobId(jobId) }
+  async getWebhookConfigsByOwner(ownerId: string): Promise<WebhookConfig[]> { return this.systemService.getWebhookConfigsByOwner(ownerId) }
+  async getAllWebhookConfigs(ownerId?: string): Promise<WebhookConfig[]> { return this.systemService.getAllWebhookConfigs(ownerId) }
+  async updateWebhookConfig(id: string, updates: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig | null> { return this.systemService.updateWebhookConfig(id, updates, ownerId) }
+  async deleteWebhookConfig(id: string, ownerId?: string): Promise<boolean> { return this.systemService.deleteWebhookConfig(id, ownerId) }
+  async createWebhookDelivery(data: CreateWebhookDelivery, ownerId?: string): Promise<WebhookDelivery> { return this.systemService.createWebhookDelivery(data, ownerId) }
+  async getWebhookDeliveryById(id: string): Promise<WebhookDelivery | null> { return this.systemService.getWebhookDeliveryById(id) }
+  async getWebhookDeliveriesByWebhook(webhookId: string, limit: number = 50, ownerId?: string): Promise<WebhookDelivery[]> { return this.systemService.getWebhookDeliveriesByWebhook(webhookId, limit, ownerId) }
+  async getWebhookDeliveryByExecutionLog(executionLogId: string, ownerId?: string): Promise<WebhookDelivery[]> { return this.systemService.getWebhookDeliveryByExecutionLog(executionLogId, ownerId) }
+  async getAllSystemConfigs(): Promise<SystemConfig[]> { return this.systemService.getAllSystemConfigs() }
+  async getSystemConfigByKey(key: string): Promise<SystemConfig | null> { return this.systemService.getSystemConfigByKey(key) }
+  async createSystemConfig(data: CreateSystemConfig, updatedBy?: string): Promise<SystemConfig> { return this.systemService.createSystemConfig(data, updatedBy) }
+  async updateSystemConfig(key: string, updates: UpdateSystemConfig, updatedBy?: string): Promise<SystemConfig | null> { return this.systemService.updateSystemConfig(key, updates, updatedBy) }
+  async deleteSystemConfig(key: string): Promise<boolean> { return this.systemService.deleteSystemConfig(key) }
+  async getAllServiceNodePermissions(): Promise<ServiceNodePermission[]> { return this.systemService.getAllServiceNodePermissions() }
+  async getServiceNodePermission(serviceName: string, methodName: string): Promise<ServiceNodePermission | null> { return this.systemService.getServiceNodePermission(serviceName, methodName) }
+  async updateServiceNodePermission(id: string, data: { min_role?: string; is_enabled?: boolean }): Promise<void> { return this.systemService.updateServiceNodePermission(id, data) }
+  async upsertServiceNodePermission(data: { service_name: string; method_name: string; display_name: string; category: string; min_role?: string; is_enabled?: boolean }): Promise<void> { return this.systemService.upsertServiceNodePermission(data) }
+  async deleteServiceNodePermission(id: string): Promise<void> { return this.systemService.deleteServiceNodePermission(id) }
+  async batchUpsertServiceNodePermissions(nodes: Array<{ service_name: string; method_name: string; display_name: string; category: string; min_role?: string; is_enabled?: boolean }>): Promise<void> { return this.systemService.batchUpsertServiceNodePermissions(nodes) }
 
   async run(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
     return this.conn.execute(sql, params)
