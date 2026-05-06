@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
+import rehypeCodeHighlight from '@/lib/code-highlight'
 import { cn } from '@/lib/utils'
 
 import 'highlight.js/styles/github-dark.css'
@@ -36,7 +36,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { detect: true }]]}
+        rehypePlugins={[rehypeCodeHighlight]}
         components={{
           code({ className, children, ...props }: React.ComponentProps<'code'>) {
             const match = /language-(\w+)/.exec(className || '')

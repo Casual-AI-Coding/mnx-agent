@@ -43,6 +43,8 @@ export default defineConfig({
                     flow: ['@xyflow/react'],
                     animation: ['framer-motion'],
                     ui: ['lucide-react', 'clsx', 'tailwind-merge'],
+                    state: ['zustand'],
+                    i18n: ['i18next', 'react-i18next'],
                 },
             },
         },

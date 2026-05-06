@@ -32,12 +32,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          flow: ['@xyflow/react'],
-          animation: ['framer-motion'],
-          ui: ['lucide-react', 'clsx', 'tailwind-merge'],
-        },
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            flow: ['@xyflow/react'],
+            animation: ['framer-motion'],
+            ui: ['lucide-react', 'clsx', 'tailwind-merge'],
+            state: ['zustand'],
+            i18n: ['i18next', 'react-i18next'],
+          },
       },
     },
     chunkSizeWarningLimit: 500,
