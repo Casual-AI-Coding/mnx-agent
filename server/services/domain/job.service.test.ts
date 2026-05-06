@@ -207,6 +207,23 @@ describe('JobService', () => {
       const result = await service.toggleActive('job-1', true, 'owner-1')
       expect(result.is_active).toBe(true)
     })
+
+    it('should throw if job not found when toggling active', async () => {
+      mockDb.getCronJobById.mockResolvedValue(null)
+      await expect(service.toggleActive('nonexistent', true)).rejects.toThrow('CronJob not found: nonexistent')
+    })
+
+    it('should deactivate job without checking dependencies', async () => {
+      const jobToDeactivate = { ...mockJob, id: 'job-1', is_active: true }
+      const deactivatedJob = { ...mockJob, id: 'job-1', is_active: false }
+      
+      mockDb.getCronJobById.mockResolvedValueOnce(jobToDeactivate)
+      mockDb.toggleCronJobActive.mockResolvedValue(deactivatedJob)
+      
+      const result = await service.toggleActive('job-1', false, 'owner-1')
+      expect(result.is_active).toBe(false)
+      expect(mockDb.getJobDependencies).not.toHaveBeenCalled()
+    })
   })
 
   describe('update (business logic)', () => {

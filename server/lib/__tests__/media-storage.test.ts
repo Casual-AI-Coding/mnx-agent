@@ -7,7 +7,8 @@ import {
   deleteMediaFile, 
   readMediaFile, 
   getMediaFilePath, 
-  saveFromUrl 
+  saveFromUrl,
+  resolveMediaPath,
 } from '../media-storage'
 import type { MediaType } from '../../database/types'
 
@@ -262,6 +263,38 @@ describe('media-storage', () => {
       
       // Cleanup only test directory, not real data/media
       await fs.rm(defaultRoot, { recursive: true, force: true })
+    })
+  })
+
+  describe('resolveMediaPath', () => {
+    it('should return path as-is when it starts with mediaRoot', () => {
+      const result = resolveMediaPath('/media/root/file.wav', '/media/root')
+      expect(result).toBe('/media/root/file.wav')
+    })
+
+    it('should return path as-is when it starts with mediaRoot (relative)', () => {
+      const result = resolveMediaPath('./test-data/file.wav', './test-data')
+      expect(result).toBe('./test-data/file.wav')
+    })
+
+    it('should add ./ prefix for data/media relative paths', () => {
+      const result = resolveMediaPath('data/media/subdir/file.wav', '/custom/root')
+      expect(result).toBe('./data/media/subdir/file.wav')
+    })
+
+    it('should keep ./ prefix for ./data/media paths', () => {
+      const result = resolveMediaPath('./data/media/subdir/file.wav', '/custom/root')
+      expect(result).toBe('./data/media/subdir/file.wav')
+    })
+
+    it('should join with mediaRoot for other relative paths', () => {
+      const result = resolveMediaPath('2024-01-15/uuid.wav', '/media/root')
+      expect(result).toBe('/media/root/2024-01-15/uuid.wav')
+    })
+
+    it('should use default mediaRoot when not provided', () => {
+      const result = resolveMediaPath('some/file.wav')
+      expect(result).toContain('some/file.wav')
     })
   })
 

@@ -13,7 +13,11 @@ vi.mock('../../lib/csv-utils.js', () => ({
     const headers = options?.headers ?? Object.keys(data[0])
     const rows = [headers.join(',')]
     for (const row of data) {
-      const values = headers.map((h: string) => String(row[h] ?? ''))
+      const values = headers.map((h: string) => {
+        const formatter = options?.formatters?.[h]
+        if (formatter) return formatter(row[h])
+        return String(row[h] ?? '')
+      })
       rows.push(values.join(','))
     }
     return rows.join('\n')
@@ -699,6 +703,25 @@ describe('ExportService', () => {
 
       expect(result.data).toBeDefined()
       // The metadata should be JSON stringified and quotes escaped
+      expect(result.data).toContain('metadata')
+    })
+
+    it('should format non-object metadata as string in CSV', async () => {
+      const record: MediaRecord = {
+        ...mockMediaRecord,
+        metadata: 'plain string metadata' as unknown as Record<string, unknown>,
+      }
+      mockDb.getMediaRecords.mockResolvedValue({
+        records: [record],
+        total: 1,
+        page: 1,
+        limit: 1000,
+        totalPages: 1,
+      })
+
+      const result = await service.exportMediaRecords({ format: 'csv' })
+
+      expect(result.data).toBeDefined()
       expect(result.data).toContain('metadata')
     })
 
