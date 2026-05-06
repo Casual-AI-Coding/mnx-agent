@@ -57,7 +57,7 @@ coverage/
 .worktrees/
 
 # Database files
-data/
+/data/
 *.db
 *.db-shm
 *.db-wal
