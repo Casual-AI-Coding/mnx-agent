@@ -21,6 +21,13 @@ vi.mock('@/lib/api/prompts', () => ({
   reorderPrompts: vi.fn(),
 }))
 
+vi.mock('@/lib/toast', () => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+  toastInfo: vi.fn(),
+  toastLoading: vi.fn(),
+}))
+
 const createMockMaterialDetail = (): MaterialDetailResult => ({
   material: {
     id: 'artist-1',
@@ -612,7 +619,7 @@ it('switches song selection and updates the song prompt panel', async () => {
       lyrics: '新歌词',
     })
     expect(getMaterialDetail).not.toHaveBeenCalled()
-    expect(await screen.findByText('当前选中歌曲：')).toBeInTheDocument()
+    expect(await screen.findByText(/当前选中：/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Golden Hour当前正在编辑这首歌的风格工作区$/ })).toBeInTheDocument()
   })
 
