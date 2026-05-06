@@ -9,6 +9,7 @@ import { migration_030 } from './migrations/030_resource_management_phase_1.js'
 import { migration_031 } from './migrations/031_external_debug_source.js'
 import { migration_032 } from './migrations/032_external_api_async_task.js'
 import { migration_033 } from './migrations/033_strip_b64_json_from_logs.js'
+import { migration_034 } from './migrations/034_task_queue_composite_index.js'
 
 export interface Migration {
   id: number
@@ -544,6 +545,7 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner
   migration_031,
   migration_032,
   migration_033,
+  migration_034,
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

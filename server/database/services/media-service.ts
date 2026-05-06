@@ -49,11 +49,15 @@ export class MediaService {
     return this.mediaRepo.togglePublic(id, isPublic)
   }
 
-  async softDeleteMediaRecords(ids: string[]): Promise<{ deleted: number; failed: number }> {
-    return this.mediaRepo.softDeleteBatch(ids)
+  async softDeleteMediaRecords(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> {
+    return this.mediaRepo.softDeleteBatch(ids, ownerId)
   }
 
-  async getMediaRecordsByIds(ids: string[]): Promise<MediaRecord[]> {
-    return this.mediaRepo.getByIds(ids)
+  async getMediaRecordsByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> {
+    return this.mediaRepo.getByIds(ids, ownerId)
+  }
+
+  async batchTogglePublicMediaRecords(ids: string[], isPublic: boolean, userId?: string): Promise<number> {
+    return this.mediaRepo.batchTogglePublic(ids, isPublic, userId)
   }
 }

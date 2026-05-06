@@ -416,6 +416,7 @@ CREATE INDEX IF NOT EXISTS idx_task_queue_status ON task_queue(status);
 CREATE INDEX IF NOT EXISTS idx_task_queue_job_id ON task_queue(job_id);
 CREATE INDEX IF NOT EXISTS idx_task_queue_priority ON task_queue(priority DESC);
 CREATE INDEX IF NOT EXISTS idx_task_queue_type ON task_queue(task_type);
+CREATE INDEX IF NOT EXISTS idx_task_queue_status_owner_priority_created ON task_queue(status, owner_id, priority DESC, created_at);
 
 -- Capacity tracking indexes
 CREATE INDEX IF NOT EXISTS idx_capacity_tracking_service_type ON capacity_tracking(service_type);

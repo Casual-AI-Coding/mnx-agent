@@ -68,4 +68,12 @@ export class MediaService implements IMediaService {
   async togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null> {
     return this.db.togglePublicMediaRecord(id, isPublic)
   }
+
+  async batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number> {
+    return this.db.batchTogglePublicMediaRecords(ids, isPublic, userId)
+  }
+
+  async softDeleteBatch(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> {
+    return this.db.softDeleteMediaRecords(ids, ownerId)
+  }
 }

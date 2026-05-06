@@ -255,6 +255,29 @@ export class PromptRepository extends BaseRepository<PromptRecord> {
     return rows.map((row) => this.rowToEntity(row))
   }
 
+  async listByTargetIds(
+    targetType: string,
+    targetIds: string[],
+    slotType: string,
+    ownerId: string
+  ): Promise<PromptRecord[]> {
+    if (targetIds.length === 0) return []
+
+    const placeholders = targetIds.map((_, i) => `$${i + 1}`).join(',')
+    const params: string[] = targetIds
+    const nextIdx = targetIds.length + 1
+
+    const rows = await this.conn.query<PromptRecordRow>(
+      `SELECT * FROM prompts
+       WHERE target_type = $${nextIdx} AND target_id IN (${placeholders}) AND slot_type = $${nextIdx + 1}
+         AND owner_id = $${nextIdx + 2} AND is_deleted = false
+       ORDER BY sort_order ASC, created_at ASC`,
+      [...params, targetType, slotType, ownerId]
+    )
+
+    return rows.map((row) => this.rowToEntity(row))
+  }
+
   async update(id: string, data: UpdatePromptParams, ownerId: string): Promise<PromptRecord | null> {
     const existing = await this.getById(id, ownerId)
     if (!existing || existing.is_deleted) {

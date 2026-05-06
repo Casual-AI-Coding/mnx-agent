@@ -71,4 +71,8 @@ export interface IMediaService {
    * Toggle the public visibility of a media record
    */
   togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null>
+
+  batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number>
+
+  softDeleteBatch(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }>
 }

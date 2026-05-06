@@ -48,6 +48,11 @@ class PostgresConnection implements DatabaseConnection {
   private pool: Pool
   private consecutiveErrors: number = 0
   private readonly maxConsecutiveErrors: number = 5
+
+  private static readonly DEFAULT_POOL_MAX = 20
+  private static readonly DEFAULT_IDLE_TIMEOUT = 30000
+  private static readonly DEFAULT_CONNECTION_TIMEOUT = 5000
+  private static readonly DEFAULT_STATEMENT_TIMEOUT = '30s'
   
   constructor(config: DatabaseConfig) {
     const poolConfig: PoolConfig = {
@@ -56,15 +61,18 @@ class PostgresConnection implements DatabaseConnection {
       user: config.pgUser,
       password: config.pgPassword,
       database: config.pgDatabase,
-      max: config.pgPoolMax || 10,
-      idleTimeoutMillis: config.pgPoolIdleTimeout || 30000,
-      connectionTimeoutMillis: config.pgConnectionTimeout || 5000,
-      // KeepAlive configuration to detect stale connections
+      application_name: 'mnx-agent',
+      max: config.pgPoolMax || PostgresConnection.DEFAULT_POOL_MAX,
+      idleTimeoutMillis: config.pgPoolIdleTimeout || PostgresConnection.DEFAULT_IDLE_TIMEOUT,
+      connectionTimeoutMillis: config.pgConnectionTimeout || PostgresConnection.DEFAULT_CONNECTION_TIMEOUT,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
     }
     
     this.pool = new Pool(poolConfig)
+    this.pool.on('connect', async (client) => {
+      await client.query(`SET statement_timeout = '${PostgresConnection.DEFAULT_STATEMENT_TIMEOUT}'`)
+    })
     
     this.pool.on('error', (err) => {
       this.consecutiveErrors++

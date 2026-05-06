@@ -341,44 +341,60 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     return result.changes > 0
   }
 
-  async softDeleteBatch(ids: string[]): Promise<{ deleted: number; failed: number }> {
+  async softDeleteBatch(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> {
     if (ids.length === 0) {
       return { deleted: 0, failed: 0 }
     }
 
     const now = toLocalISODateString()
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+    let params: (string | number | boolean)[] = [...ids, true, now, now]
+    let whereClause = `WHERE id IN (${placeholders})`
+
+    if (ownerId) {
+      const idx = ids.length + 3
+      whereClause += ` AND owner_id = $${idx}`
+      params.push(ownerId)
+    }
 
     if (this.isPostgres()) {
       const result = await this.conn.execute(
-        `UPDATE media_records SET is_deleted = true, deleted_at = $${ids.length + 1}, updated_at = $${ids.length + 2} WHERE id IN (${placeholders})`,
-        [...ids, now, now]
+        `UPDATE media_records SET is_deleted = $${ids.length + 1}, deleted_at = $${ids.length + 2}, updated_at = $${ids.length + 2} ${whereClause}`,
+        params
       )
       return { deleted: result.changes, failed: ids.length - result.changes }
     } else {
       const result = await this.conn.execute(
-        `UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`,
-        [now, now, ...ids]
+        `UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? ${whereClause}`,
+        params
       )
       return { deleted: result.changes, failed: ids.length - result.changes }
     }
   }
 
-  async getByIds(ids: string[]): Promise<MediaRecord[]> {
+  async getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> {
     if (ids.length === 0) return []
 
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+    const params: string[] = [...ids]
+    let whereClause = `WHERE id IN (${placeholders}) AND is_deleted = false`
+
+    if (ownerId) {
+      const idx = ids.length + 1
+      whereClause += ` AND owner_id = $${idx}`
+      params.push(ownerId)
+    }
 
     if (this.isPostgres()) {
       const rows = await this.conn.query<MediaRecordRow>(
-        `SELECT * FROM media_records WHERE id IN (${placeholders}) AND is_deleted = false`,
-        ids
+        `SELECT * FROM media_records ${whereClause}`,
+        params
       )
       return rows.map(rowToMediaRecord)
     } else {
       const rows = await this.conn.query<MediaRecordRow>(
-        `SELECT * FROM media_records WHERE id IN (${placeholders}) AND is_deleted = 0`,
-        ids
+        `SELECT * FROM media_records ${whereClause}`,
+        params
       )
       return rows.map(rowToMediaRecord)
     }
@@ -468,6 +484,43 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         [isPublic ? 1 : 0, now, id]
       )
       return this.getById(id)
+    }
+  }
+
+  /**
+   * 批量设置公开状态 — 一次 UPDATE 替代 N+1
+   */
+  async batchTogglePublic(
+    ids: string[],
+    isPublic: boolean,
+    userId?: string
+  ): Promise<number> {
+    if (ids.length === 0) return 0
+
+    const now = toLocalISODateString()
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+    const params: (string | number | boolean)[] = [...ids, isPublic, now]
+    let whereClause = `WHERE id IN (${placeholders})`
+
+    if (userId) {
+      const idx = ids.length + 3
+      // 允许 owner 或者无 owner 的记录（super 操作）
+      whereClause += ` AND (owner_id = $${idx} OR owner_id IS NULL)`
+      params.push(userId)
+    }
+
+    if (this.isPostgres()) {
+      const result = await this.conn.execute(
+        `UPDATE media_records SET is_public = $${ids.length + 1}, updated_at = $${ids.length + 2} ${whereClause} AND is_deleted = false`,
+        params
+      )
+      return result.changes
+    } else {
+      const result = await this.conn.execute(
+        `UPDATE media_records SET is_public = ?, updated_at = ? ${whereClause} AND is_deleted = 0`,
+        params
+      )
+      return result.changes
     }
   }
 }

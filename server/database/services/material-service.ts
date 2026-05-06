@@ -62,18 +62,25 @@ export class MaterialService {
       ownerId,
     })
 
-    const itemsWithPromises = await Promise.all(
-      items.map(async (item) => {
-        const itemPrompts = await this.promptRepo.listByTarget({
-          targetType: 'material-item',
-          targetId: item.id,
-          slotType: 'song-style',
-          ownerId,
-        })
+    const itemIds = items.map(i => i.id)
+    const allItemPrompts = itemIds.length > 0
+      ? await this.promptRepo.listByTargetIds('material-item', itemIds, 'song-style', ownerId)
+      : []
 
-        return { ...item, prompts: itemPrompts }
-      })
-    )
+    const promptsByItemId = new Map<string, PromptRecord[]>()
+    for (const prompt of allItemPrompts) {
+      const list = promptsByItemId.get(prompt.target_id)
+      if (list) {
+        list.push(prompt)
+      } else {
+        promptsByItemId.set(prompt.target_id, [prompt])
+      }
+    }
+
+    const itemsWithPromises = items.map(item => ({
+      ...item,
+      prompts: promptsByItemId.get(item.id) ?? [],
+    }))
 
     return {
       material,

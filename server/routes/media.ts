@@ -367,20 +367,35 @@ router.post('/batch/public', asyncHandler(async (req, res) => {
 
   const userId = req.user?.userId
   const userRole = req.user?.role
-  const results = await Promise.all(
-    ids.map(async (id: string) => {
-      const record = await db.getById(id)
-      if (record && !record.is_deleted) {
-        const isOwner = record.owner_id === userId
-        const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
-        if (isOwner || isSuperWithNoOwner) {
-          const updated = await db.togglePublic(id, isPublic)
-          return { id, success: true, data: updated }
-        }
-      }
-      return { id, success: false, error: 'Not authorized or not found' }
-    })
-  )
+
+  // 批量取所有记录，一次查询替代 N 次 getById
+  const records = await db.getByIds(ids)
+  const recordMap = new Map(records.map(r => [r.id, r]))
+
+  const authorizedIds: string[] = []
+  const results: Array<{ id: string; success: boolean; data?: unknown; error?: string }> = []
+
+  for (const id of ids) {
+    const record = recordMap.get(id)
+    if (!record || record.is_deleted) {
+      results.push({ id, success: false, error: 'Not authorized or not found' })
+      continue
+    }
+    const isOwner = record.owner_id === userId
+    const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
+    if (isOwner || isSuperWithNoOwner) {
+      authorizedIds.push(id)
+    } else {
+      results.push({ id, success: false, error: 'Not authorized or not found' })
+    }
+  }
+
+  if (authorizedIds.length > 0) {
+    await db.batchTogglePublic(authorizedIds, isPublic, userId)
+    for (const id of authorizedIds) {
+      results.push({ id, success: true })
+    }
+  }
 
   successResponse(res, results)
 }))
@@ -390,25 +405,31 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
   const { ids } = req.body as { ids: string[] }
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const records = await Promise.all(ids.map(id => db.getById(id, ownerId)))
+  const records = await db.getByIds(ids, ownerId)
 
-  const missingRecordIndex = records.findIndex(record => !record || record.is_deleted)
-  if (missingRecordIndex !== -1) {
-    errorResponse(res, `Media record not found: ${ids[missingRecordIndex]}`, 404)
+  if (records.length !== ids.length) {
+    const foundIds = new Set(records.map(r => r.id))
+    const missingId = ids.find(id => !foundIds.has(id))
+    errorResponse(res, `Media record not found: ${missingId}`, 404)
     return
   }
 
-  const validRecords = records.filter((record): record is NonNullable<typeof record> => record !== null)
+  if (records.some(r => r.is_deleted)) {
+    const deletedId = records.find(r => r.is_deleted)?.id
+    errorResponse(res, `Media record already deleted: ${deletedId}`, 404)
+    return
+  }
 
   await Promise.all(
-    validRecords
-      .map(r => deleteMediaFile(r.filepath).catch(error => {
+    records.map(r =>
+      deleteMediaFile(r.filepath).catch(error => {
         logger.error({ filepath: r.filepath, recordId: r.id, error }, 'Failed to delete media file during batch delete')
-      }))
+      })
+    )
   )
 
-  await Promise.all(ids.map(id => db.softDelete(id, ownerId)))
-  successResponse(res, { deleted: ids.length })
+  const result = await db.softDeleteBatch(ids, ownerId)
+  successResponse(res, { deleted: result.deleted, failed: result.failed })
 }))
 
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {

@@ -133,7 +133,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
       )
     } else {
       await this.conn.execute(
-        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO workflow_templates (id, name, description, nodes_json, edges_json, created_at, is_public, owner_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
         [id, template.name, template.description ?? null, template.nodes_json, template.edges_json, now, isTemplate ? 1 : 0, ownerId ?? null]
       )
     }
@@ -208,7 +208,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
         return rows.map(rowToWorkflowTemplate)
       } else {
         const rows = await this.conn.query<WorkflowTemplateRow>(
-          'SELECT * FROM workflow_templates WHERE is_public = 1 AND owner_id = ? ORDER BY created_at DESC',
+          'SELECT * FROM workflow_templates WHERE is_public = 1 AND owner_id = $1 ORDER BY created_at DESC',
           [ownerId]
         )
         return rows.map(rowToWorkflowTemplate)
@@ -322,7 +322,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
         `INSERT INTO workflow_versions (
           id, template_id, version_number, name, description,
           nodes_json, edges_json, change_summary, created_by, created_at, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           id,
           data.template_id,
@@ -344,7 +344,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
 
   async getVersionById(id: string): Promise<WorkflowVersion | undefined> {
     const rows = await this.conn.query<WorkflowVersionRow>(
-      'SELECT * FROM workflow_versions WHERE id = ?',
+      'SELECT * FROM workflow_versions WHERE id = $1',
       [id]
     )
     return rows[0] ? rowToWorkflowVersion(rows[0]) : undefined
@@ -352,7 +352,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
 
   async getVersionsByTemplate(templateId: string): Promise<WorkflowVersion[]> {
     const rows = await this.conn.query<WorkflowVersionRow>(
-      'SELECT * FROM workflow_versions WHERE template_id = ? ORDER BY version_number DESC',
+      'SELECT * FROM workflow_versions WHERE template_id = $1 ORDER BY version_number DESC',
       [templateId]
     )
     return rows.map(rowToWorkflowVersion)
@@ -367,7 +367,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
       )
     } else {
       rows = await this.conn.query<WorkflowVersionRow>(
-        'SELECT * FROM workflow_versions WHERE template_id = ? AND is_active = 1 ORDER BY version_number DESC LIMIT 1',
+        'SELECT * FROM workflow_versions WHERE template_id = $1 AND is_active = 1 ORDER BY version_number DESC LIMIT 1',
         [templateId]
       )
     }
@@ -376,7 +376,7 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
 
   async getLatestVersionNumber(templateId: string): Promise<number> {
     const rows = await this.conn.query<{ max: number | null }>(
-      'SELECT MAX(version_number) as max FROM workflow_versions WHERE template_id = ?',
+      'SELECT MAX(version_number) as max FROM workflow_versions WHERE template_id = $1',
       [templateId]
     )
     return rows[0]?.max ?? 0
@@ -394,18 +394,18 @@ export class WorkflowRepository extends BaseRepository<WorkflowTemplate> {
       )
     } else {
       await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = 0 WHERE template_id = ?',
+        'UPDATE workflow_versions SET is_active = 0 WHERE template_id = $1',
         [templateId]
       )
       await this.conn.execute(
-        'UPDATE workflow_versions SET is_active = 1 WHERE id = ?',
+        'UPDATE workflow_versions SET is_active = 1 WHERE id = $1',
         [versionId]
       )
     }
   }
 
   async deleteVersion(id: string): Promise<void> {
-    await this.conn.execute('DELETE FROM workflow_versions WHERE id = ?', [id])
+    await this.conn.execute('DELETE FROM workflow_versions WHERE id = $1', [id])
   }
 
   async saveTemplateVersion(

@@ -374,8 +374,9 @@ export class DatabaseService {
   async hardDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean> { return this.mediaService.hardDeleteMediaRecord(id, ownerId) }
   async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> { return this.mediaService.toggleFavorite(userId, mediaId) }
   async togglePublicMediaRecord(id: string, isPublic: boolean): Promise<MediaRecord | null> { return this.mediaService.togglePublicMediaRecord(id, isPublic) }
-  async softDeleteMediaRecords(ids: string[]): Promise<{ deleted: number; failed: number }> { return this.mediaService.softDeleteMediaRecords(ids) }
-  async getMediaRecordsByIds(ids: string[]): Promise<MediaRecord[]> { return this.mediaService.getMediaRecordsByIds(ids) }
+  async softDeleteMediaRecords(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> { return this.mediaService.softDeleteMediaRecords(ids, ownerId) }
+  async getMediaRecordsByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> { return this.mediaService.getMediaRecordsByIds(ids, ownerId) }
+  async batchTogglePublicMediaRecords(ids: string[], isPublic: boolean, userId?: string): Promise<number> { return this.mediaService.batchTogglePublicMediaRecords(ids, isPublic, userId) }
 
   async createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem> { return this.dlqService.createDeadLetterQueueItem(data, ownerId) }
   async getDeadLetterQueueItems(ownerId?: string, limit: number = 50): Promise<DeadLetterQueueItem[]> { return this.dlqService.getDeadLetterQueueItems(ownerId, limit) }
