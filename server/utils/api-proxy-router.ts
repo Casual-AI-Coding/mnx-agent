@@ -36,13 +36,13 @@ export function createApiProxyRouter(config: ApiProxyConfig): Router {
       }
       const requestBody = config.buildRequestBody(req)
 
-      const method = (client as any)[config.clientMethod]
+      const method = (client as Record<string, Function>)[config.clientMethod]
       if (typeof method !== 'function') {
         throw new Error(`Invalid client method: ${config.clientMethod}`)
       }
 
       const result = await method.call(client, requestBody)
-      const data = config.extractData ? config.extractData(result) : (result as any)?.data
+      const data = config.extractData ? config.extractData(result) : (result as Record<string, unknown>)?.data
       successResponse(res, data)
     })
   )

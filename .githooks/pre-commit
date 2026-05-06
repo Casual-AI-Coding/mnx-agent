@@ -1,0 +1,19 @@
+#!/bin/sh
+# Pre-commit hook: prevent .env from being committed
+# Installed via: git config core.hooksPath .githooks
+
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  if git diff --cached --name-only | grep -q '^\.env$'; then
+    echo "ERROR: .env is staged for commit!"
+    echo "The .env file contains only template values."
+    echo "If you need to change real secrets, edit .env.local instead."
+    echo ""
+    echo "To commit .env changes (ONLY template updates):"
+    echo "  git add -p .env  # Review and stage specific changes"
+    echo "  git commit -m '...'"
+    echo ""
+    echo "Aborting commit. Remove .env from staging:"
+    echo "  git reset HEAD .env"
+    exit 1
+  fi
+fi

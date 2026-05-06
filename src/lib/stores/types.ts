@@ -4,14 +4,14 @@ export interface AsyncState {
 }
 
 export interface AsyncActionConfig<TParams, TData> {
-  preCheck?: (params: TParams, state: any) => boolean | string
+  preCheck?: (params: TParams, state: unknown) => boolean | string
   apiCall: (params: TParams) => Promise<{ success: boolean; data?: TData; error?: string }>
-  onSuccess?: (state: any, data: TData | undefined, params: TParams) => void
-  onError?: (state: any, error: string) => void
+  onSuccess?: (state: unknown, data: TData | undefined, params: TParams) => void
+  onError?: (state: unknown, error: string) => void
 }
 
 export interface CreateAsyncStoreConfig<TState extends AsyncState, TActions> {
   name: string
   initialState: TState
-  actions: Record<keyof TActions, AsyncActionConfig<any, any>>
+  actions: Record<keyof TActions, AsyncActionConfig<unknown, unknown>>
 }

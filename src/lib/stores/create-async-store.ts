@@ -8,7 +8,7 @@ export function createAsyncStore<
 >(config: CreateAsyncStoreConfig<TState, TActions>) {
 
   type StoreState = TState & {
-    [K in keyof TActions]: (params?: any) => Promise<any>
+    [K in keyof TActions]: (params?: unknown) => Promise<unknown>
   }
 
   const storeCreator: StateCreator<StoreState> = (set, get) => {
@@ -17,8 +17,8 @@ export function createAsyncStore<
     // Generate action methods from config
     const actions = Object.fromEntries(
       Object.entries(config.actions).map(([actionName, actionConfig]) => {
-        const cfg = actionConfig as AsyncActionConfig<any, any>
-        return [actionName, async (params?: any) => {
+        const cfg = actionConfig as AsyncActionConfig<unknown, unknown>
+        return [actionName, async (params?: unknown) => {
           if (cfg.preCheck) {
             const checkResult = cfg.preCheck(params, get())
             if (checkResult === false) return
