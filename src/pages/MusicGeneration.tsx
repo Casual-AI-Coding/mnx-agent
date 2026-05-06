@@ -13,9 +13,9 @@ import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type Mu
 import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
-import { LyricsEditorCard } from './music-generation/LyricsEditorCard.js'
-import { StylePromptCard } from './music-generation/StylePromptCard.js'
-import { MusicSettingsCard } from './music-generation/MusicSettingsCard.js'
+import { LyricsEditorCard } from './MusicGeneration/LyricsEditorCard.js'
+import { StylePromptCard } from './MusicGeneration/StylePromptCard.js'
+import { MusicSettingsCard } from './MusicGeneration/MusicSettingsCard.js'
 
 type MusicFormData = {
   lyrics: string; songTitle: string; stylePrompt: string; model: MusicModel; optimizeLyrics: boolean; parallelCount: number; instrumental: boolean

@@ -9,8 +9,8 @@ import { VIDEO_AGENT_TEMPLATES, type VideoAgentTemplate } from '@/types'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
-import { VideoHistoryList, type AgentTask, type TaskStatus } from './video-agent/VideoHistoryList.js'
-import { VideoInputForm, type VideoFormField } from './video-agent/VideoInputForm.js'
+import { VideoHistoryList, type AgentTask, type TaskStatus } from './VideoAgent/VideoHistoryList.js'
+import { VideoInputForm, type VideoFormField } from './VideoAgent/VideoInputForm.js'
 
 interface VideoAgentFormData {
   selectedTemplateId: string | null

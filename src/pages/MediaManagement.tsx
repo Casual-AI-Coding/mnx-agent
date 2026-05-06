@@ -11,8 +11,8 @@ import { MEDIA_TABS } from '@/lib/constants/media'
 import { useAuthStore } from '@/stores/auth'
 import { getRecoverableMedia, recoverMedia, type RecoverableMediaRecord } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
-import { MediaGrid } from './media-management/MediaGrid.js'
-import { MediaUploader } from './media-management/MediaUploader.js'
+import { MediaGrid } from './MediaManagement/MediaGrid.js'
+import { MediaUploader } from './MediaManagement/MediaUploader.js'
 
 export default function MediaManagement() {
   const currentUser = useAuthStore((state) => state.user)

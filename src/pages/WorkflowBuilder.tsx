@@ -14,13 +14,13 @@ import {
   resumeExecution,
   cancelExecution,
 } from '@/lib/api/cron'
-import { Toolbar } from './workflow-builder/Toolbar.js'
-import { CanvasPanel } from './workflow-builder/CanvasPanel.js'
-import { ConfigPanel } from './workflow-builder/ConfigPanel.js'
-import { parseWorkflowTemplate, serializeWorkflow } from './workflow-builder/workflow-io.js'
-import { WorkflowDialogs } from './workflow-builder/WorkflowDialogs.js'
-import { WorkflowBuilderContent } from './workflow-builder/WorkflowBuilderContent.js'
-import type { WorkflowTemplate } from './workflow-builder/types.js'
+import { Toolbar } from './WorkflowBuilder/Toolbar.js'
+import { CanvasPanel } from './WorkflowBuilder/CanvasPanel.js'
+import { ConfigPanel } from './WorkflowBuilder/ConfigPanel.js'
+import { parseWorkflowTemplate, serializeWorkflow } from './WorkflowBuilder/workflow-io.js'
+import { WorkflowDialogs } from './WorkflowBuilder/WorkflowDialogs.js'
+import { WorkflowBuilderContent } from './WorkflowBuilder/WorkflowBuilderContent.js'
+import type { WorkflowTemplate } from './WorkflowBuilder/types.js'
 
 // Main Workflow Builder Component
 function WorkflowBuilderInner() {

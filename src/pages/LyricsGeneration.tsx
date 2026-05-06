@@ -8,8 +8,8 @@ import { toastSuccess, toastError } from '@/lib/toast'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
-import { LyricsGenerationForm } from './lyrics-generation/LyricsGenerationForm.js'
-import { LyricsGenerationResults } from './lyrics-generation/LyricsGenerationResults.js'
+import { LyricsGenerationForm } from './LyricsGeneration/LyricsGenerationForm.js'
+import { LyricsGenerationResults } from './LyricsGeneration/LyricsGenerationResults.js'
 
 type LyricsFormData = {
   mode: LyricsMode

@@ -11,10 +11,10 @@ import { getMediaToken } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
 import { buildOpenAIImage2Url, type OpenAIImage2RequestBody } from '@/lib/openai-image-2'
 
-import { ConnectionConfigCard } from './openai-image-2/ConnectionConfigCard'
-import { GenerationParamsCard } from './openai-image-2/GenerationParamsCard'
-import { ResultPreview } from './openai-image-2/ResultPreview'
-import { FullscreenPreview } from './openai-image-2/FullscreenPreview'
+import { ConnectionConfigCard } from './OpenAIImage2/ConnectionConfigCard'
+import { GenerationParamsCard } from './OpenAIImage2/GenerationParamsCard'
+import { ResultPreview } from './OpenAIImage2/ResultPreview'
+import { FullscreenPreview } from './OpenAIImage2/FullscreenPreview'
 import {
   type OpenAIImage2FormData,
   type RetryRecord,
@@ -22,7 +22,7 @@ import {
   formatExternalApiError,
   containerVariants,
   itemVariants,
-} from './openai-image-2/types'
+} from './OpenAIImage2/types'
 
 export default function OpenAIImage2() {
   const settingsEndpoints = useSettingsStore(s => s.settings.api.externalEndpoints ?? [])

@@ -10,8 +10,8 @@ import { useSettingsStore } from '@/settings/store'
 import { SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { useRetry } from '@/hooks/useRetry'
 import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
-import { PromptInput } from './text-generation/PromptInput.js'
-import { TextResults, type TextMessage } from './text-generation/TextResults.js'
+import { PromptInput } from './TextGeneration/PromptInput.js'
+import { TextResults, type TextMessage } from './TextGeneration/TextResults.js'
 
 interface TextGenerationFormData {
   selectedModel: string

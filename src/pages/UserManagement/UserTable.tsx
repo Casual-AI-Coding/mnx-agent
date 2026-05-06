@@ -6,7 +6,8 @@ import { Pagination } from '@/components/shared/Pagination'
 import { cn } from '@/lib/utils'
 import { status, roles } from '@/themes/tokens/index'
 import type { User } from './types'
-import { RoleBadge, formatDate, formatFullDate } from './types'
+import { formatDate, formatFullDate } from './types'
+import { RoleBadge } from './RoleBadge'
 
 interface UserTableProps {
   users: User[]

@@ -8,10 +8,10 @@ import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { status } from '@/themes/tokens'
 import { useAuthStore } from '@/stores/auth'
-import { ExternalApiStatCard } from './external-api-logs/ExternalApiStatCard.js'
-import { ExternalApiFilterBar } from './external-api-logs/ExternalApiFilterBar.js'
-import { ExternalApiLogTable } from './external-api-logs/ExternalApiLogTable.js'
-import { ExternalApiLogDetail } from './external-api-logs/ExternalApiLogDetail.js'
+import { ExternalApiStatCard } from './ExternalApiLogs/ExternalApiStatCard.js'
+import { ExternalApiFilterBar } from './ExternalApiLogs/ExternalApiFilterBar.js'
+import { ExternalApiLogTable } from './ExternalApiLogs/ExternalApiLogTable.js'
+import { ExternalApiLogDetail } from './ExternalApiLogs/ExternalApiLogDetail.js'
 
 const PROVIDER_COLORS: Record<string, string> = {
   minimax: 'bg-blue-500/20 text-blue-400 border-blue-500/30',

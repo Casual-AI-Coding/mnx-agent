@@ -9,10 +9,10 @@ import { toastError } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { status, services } from '@/themes/tokens'
 import { useAuthStore } from '@/stores/auth'
-import { AuditFilterBar, type AuditLogFilters } from '@/pages/audit-logs/AuditFilterBar'
-import { AuditLogTable } from '@/pages/audit-logs/AuditLogTable'
-import { AuditStatCard } from '@/pages/audit-logs/AuditStatCard'
-import { AuditLogDetail } from '@/pages/audit-logs/AuditLogDetail'
+import { AuditFilterBar, type AuditLogFilters } from '@/pages/AuditLogs/AuditFilterBar'
+import { AuditLogTable } from '@/pages/AuditLogs/AuditLogTable'
+import { AuditStatCard } from '@/pages/AuditLogs/AuditStatCard'
+import { AuditLogDetail } from '@/pages/AuditLogs/AuditLogDetail'
 
 const ACTION_CONFIG: Record<AuditAction, { color: string; label: string }> = {
   create: { color: cn(status.success.bgSubtle, status.success.icon, status.success.border), label: '创建' },

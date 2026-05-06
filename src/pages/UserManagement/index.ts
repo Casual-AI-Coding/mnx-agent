@@ -7,5 +7,6 @@ export type {
   FormData,
   UseUserManagementReturn,
 } from './types'
-export { ROLE_CONFIG, formatDate, formatFullDate, RoleBadge } from './types'
+export { ROLE_CONFIG, formatDate, formatFullDate } from './types'
+export { RoleBadge } from './RoleBadge'
 export { useUserManagement } from './useUserManagement'
