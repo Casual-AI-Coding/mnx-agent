@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   mediaService: {
     getAll: vi.fn(),
     getById: vi.fn(),
+    getByIds: vi.fn(),
     create: vi.fn(),
     softDelete: vi.fn(),
   },
@@ -124,6 +125,9 @@ describe('Media Route Safety', () => {
 
         return null
       })
+      mocks.mediaService.getByIds.mockResolvedValue([
+        { id: 'owned-media', filepath: '/tmp/owned.png', is_deleted: false, owner_id: 'user-1' },
+      ])
 
       const res = await request(app)
         .delete('/api/media/batch')

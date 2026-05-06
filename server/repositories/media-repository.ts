@@ -348,22 +348,34 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
 
     const now = toLocalISODateString()
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
-    let params: (string | number | boolean)[] = [...ids, true, now, now]
-    let whereClause = `WHERE id IN (${placeholders})`
-
-    if (ownerId) {
-      const idx = ids.length + 3
-      whereClause += ` AND owner_id = $${idx}`
-      params.push(ownerId)
-    }
 
     if (this.isPostgres()) {
+      // deleted_at 和 updated_at 共享同一个参数索引 $[ids.length+2]
+      const params: (string | number | boolean)[] = [...ids, true, now]
+      let whereClause = `WHERE id IN (${placeholders})`
+
+      if (ownerId) {
+        const idx = ids.length + 3
+        whereClause += ` AND owner_id = $${idx}`
+        params.push(ownerId)
+      }
+
       const result = await this.conn.execute(
         `UPDATE media_records SET is_deleted = $${ids.length + 1}, deleted_at = $${ids.length + 2}, updated_at = $${ids.length + 2} ${whereClause}`,
         params
       )
       return { deleted: result.changes, failed: ids.length - result.changes }
     } else {
+      // SQLite: ? 按位置映射，需要 [now, now, ...ids] 的顺序
+      const sqlitePlaceholders = ids.map(() => '?').join(',')
+      const params: (string | number | boolean)[] = [now, now, ...ids]
+      let whereClause = `WHERE id IN (${sqlitePlaceholders})`
+
+      if (ownerId) {
+        whereClause += ` AND owner_id = ?`
+        params.push(ownerId)
+      }
+
       const result = await this.conn.execute(
         `UPDATE media_records SET is_deleted = 1, deleted_at = ?, updated_at = ? ${whereClause}`,
         params
