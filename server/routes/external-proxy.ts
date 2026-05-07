@@ -20,6 +20,8 @@ const ALLOWED_HOSTS = [
   'code.azsheen.top',
   'api.tokenfty.net',
   'gpt.hslife.fun',
+  'lumin-ai.tiandi.run',
+  'api.sisyphusx.com',
 ]
 
 const proxyRequestSchema = z.object({
