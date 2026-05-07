@@ -10,7 +10,11 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'mnx-agent',
 })
 
-const MEDIA_DIR = '/home/ogslp/media3'
+if (!process.env.MEDIA_DIR) {
+  throw new Error('必须设置 MEDIA_DIR 环境变量（恢复文件所在目录）')
+}
+
+const MEDIA_DIR = process.env.MEDIA_DIR
 const TARGET_DIR = './data/media'
 
 const MATCHES = [

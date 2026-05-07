@@ -1,7 +1,11 @@
 import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
 
-const RECOVERED_DIR = '/home/ogslp/media2'
+if (!process.env.RECOVERED_DIR) {
+  throw new Error('必须设置 RECOVERED_DIR 环境变量（恢复文件所在目录）')
+}
+
+const RECOVERED_DIR = process.env.RECOVERED_DIR
 const TARGET_DIR = './data/media'
 const RECORDS_FILE = '/tmp/music_records.txt'
 

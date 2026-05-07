@@ -2,7 +2,14 @@ import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
 import { createConnection, closeConnection, getConnection } from '../server/database/connection.js'
 
-const RECOVERED_DIR = '/home/ogslp/media2'
+if (!process.env.RECOVERED_DIR) {
+  throw new Error('必须设置 RECOVERED_DIR 环境变量（恢复文件所在目录）')
+}
+if (!process.env.DB_PASSWORD) {
+  throw new Error('必须设置 DB_PASSWORD 环境变量')
+}
+
+const RECOVERED_DIR = process.env.RECOVERED_DIR
 const TARGET_DIR = './data/media'
 
 async function main() {
@@ -13,7 +20,7 @@ async function main() {
     pgHost: process.env.DB_HOST || 'localhost',
     pgPort: parseInt(process.env.DB_PORT || '5432'),
     pgUser: process.env.DB_USER || 'mnx_agent_server',
-    pgPassword: process.env.DB_PASSWORD || 'mnx_agent_password',
+    pgPassword: process.env.DB_PASSWORD,
     pgDatabase: process.env.DB_NAME || 'mnx_agent',
   })
   const conn = getConnection()
