@@ -56,6 +56,7 @@ import type { CapacityChecker } from './services/capacity-checker.js'
 import type { QueueProcessor } from './services/queue-processor.js'
 
 config()
+config({ path: '.env.local', override: true })
 
 const logger = getLogger()
 
