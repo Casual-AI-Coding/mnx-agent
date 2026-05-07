@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
-export type SizeGroup = '1:1' | '3:2' | '2:3' | '4:3' | '3:4' | '16:9' | '9:16'
+export type SizeGroup = '1:1' | '3:2' | '2:3' | '4:3' | '3:4' | '16:9' | '9:16' | '其他'
 
 export interface SizeGroupConfig {
   key: SizeGroup
@@ -16,9 +16,10 @@ export const SIZE_GROUPS: SizeGroupConfig[] = [
   { key: '3:2', label: '3:2' },
   { key: '2:3', label: '2:3' },
   { key: '9:16', label: '9:16' },
+  { key: '其他', label: '其他' },
 ]
 
-type TabGroup = '1:1' | '4:3' | '16:9' | '3:2'
+type TabGroup = '1:1' | '4:3' | '16:9' | '3:2' | '其他'
 type Orientation = 'landscape' | 'portrait'
 
 interface TabConfig {
@@ -34,6 +35,7 @@ const TAB_CONFIGS: TabConfig[] = [
   { key: '4:3', label: '4:3 ⟷ 3:4', landscape: '4:3', portrait: '3:4', paired: true },
   { key: '16:9', label: '16:9 ⟷ 9:16', landscape: '16:9', portrait: '9:16', paired: true },
   { key: '3:2', label: '3:2 ⟷ 2:3', landscape: '3:2', portrait: '2:3', paired: true },
+  { key: '其他', label: '其他', landscape: '其他', portrait: '其他', paired: false },
 ]
 
 function getTabGroup(sizeGroup: SizeGroup): TabGroup {
@@ -42,7 +44,7 @@ function getTabGroup(sizeGroup: SizeGroup): TabGroup {
     case '4:3': case '3:4': return '4:3'
     case '16:9': case '9:16': return '16:9'
     case '3:2': case '2:3': return '3:2'
-    default: return '1:1'
+    default: return '其他'
   }
 }
 
@@ -57,7 +59,7 @@ function gcd(a: number, b: number): number {
   return x
 }
 
-export function getSizeGroup(size: string): SizeGroup | null {
+export function getSizeGroup(size: string): SizeGroup {
   const [width, height] = size.split('x').map(Number)
   const divisor = gcd(width, height)
   const ratio = `${width / divisor}:${height / divisor}`
@@ -71,7 +73,7 @@ export function getSizeGroup(size: string): SizeGroup | null {
     case '9:16':
       return ratio
     default:
-      return null
+      return '其他'
   }
 }
 
@@ -106,6 +108,9 @@ export const IMAGE_SIZE_OPTIONS = [
   '1024x1536',
   '1440x2160',
   '1920x2880',
+  '3520x2336',
+  '3312x2480',
+  '3840x1648',
 ] as const
 
 export const GROUPED_SIZES: Record<SizeGroup, string[]> = {
@@ -116,6 +121,7 @@ export const GROUPED_SIZES: Record<SizeGroup, string[]> = {
   '3:4': [],
   '16:9': [],
   '9:16': [],
+  '其他': [],
 }
 
 for (const size of IMAGE_SIZE_OPTIONS) {
