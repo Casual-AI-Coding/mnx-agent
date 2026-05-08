@@ -12,7 +12,7 @@ import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks'
 import { LyricsEditorCard } from './MusicGeneration/LyricsEditorCard.js'
 import { StylePromptCard } from './MusicGeneration/StylePromptCard.js'
 import { MusicSettingsCard } from './MusicGeneration/MusicSettingsCard.js'
@@ -34,7 +34,7 @@ export default function MusicGeneration() {
     lyrics: '', songTitle: '', stylePrompt: '', model: validModel ? musicSettings.model as MusicModel : DEFAULT_MODELS.music,
     optimizeLyrics: musicSettings.optimizeLyrics, parallelCount: 1, instrumental: false, sampleRate: 44100, bitrate: 256000, format: 'mp3', seed: '', outputFormat: 'url', coverMode: 'one-step', referenceAudioUrl: '', useOriginalLyrics: true,
   }
-  const [formData, setFormData] = useFormPersistence<MusicFormData>({ storageKey: DEBUG_FORM_KEYS.MUSIC_GENERATION, defaultValue })
+  const [formData, setFormData] = useFormPersistence<MusicFormData>({ storageKey: FORM_PERSISTENCE_KEYS.MUSIC_GENERATION, defaultValue })
   const updateForm = useCallback(<K extends keyof MusicFormData>(key: K, value: MusicFormData[K]) => setFormData(prev => ({ ...prev, [key]: value })), [setFormData])
   const { lyrics, songTitle, stylePrompt, model, optimizeLyrics, parallelCount, instrumental, sampleRate, bitrate, format, seed, outputFormat, coverMode, referenceAudioUrl, useOriginalLyrics } = formData
   const [error, setError] = useState<string | null>(null)

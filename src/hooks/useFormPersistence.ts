@@ -33,7 +33,7 @@ export function useFormPersistence<T>(
   return [storedValue, setValue, clearValue]
 }
 
-export const DEBUG_FORM_KEYS = {
+export const FORM_PERSISTENCE_KEYS = {
   TEXT_GENERATION: 'text-generation',
   MUSIC_GENERATION: 'music-generation',
   IMAGE_GENERATION: 'image-generation',

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { generateLyrics } from '@/lib/api/lyrics'
 import { createMedia } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 import { LyricsGenerationForm } from './LyricsGeneration/LyricsGenerationForm.js'
@@ -31,7 +31,7 @@ export default function LyricsGeneration() {
   const { t } = useTranslation()
 
   const [formData, setFormData] = useFormPersistence<LyricsFormData>({
-    storageKey: DEBUG_FORM_KEYS.LYRICS_GENERATION,
+    storageKey: FORM_PERSISTENCE_KEYS.LYRICS_GENERATION,
     defaultValue: DEFAULT_FORM,
   })
 

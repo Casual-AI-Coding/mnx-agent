@@ -8,7 +8,7 @@ import { APIReference } from '@/components/shared/APIReference'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { type ImageTask } from '@/components/image/ImageTaskCard'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { generateImage } from '@/lib/api/image'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
@@ -43,7 +43,7 @@ export default function ImageGeneration() {
   const { settings } = useSettingsStore()
   const apiKey = settings.api.minimaxKey
   const imageSettings = useSettingsStore(s => s.settings.generation.image)
-  const [formData, setFormData] = useFormPersistence<ImageGenerationFormData>({ storageKey: DEBUG_FORM_KEYS.IMAGE_GENERATION, defaultValue: { prompt: '', model: imageSettings.model as ImageModel, aspectRatioState: { type: 'preset', preset: imageSettings.aspectRatio as AspectRatio }, numImages: imageSettings.numImages ?? 9, referenceImageMode: 'upload', referenceImageUrl: '', seed: undefined, promptOptimizer: false, aigcWatermark: false, imageTitle: '', parallelCount: 1 } })
+  const [formData, setFormData] = useFormPersistence<ImageGenerationFormData>({ storageKey: FORM_PERSISTENCE_KEYS.IMAGE_GENERATION, defaultValue: { prompt: '', model: imageSettings.model as ImageModel, aspectRatioState: { type: 'preset', preset: imageSettings.aspectRatio as AspectRatio }, numImages: imageSettings.numImages ?? 9, referenceImageMode: 'upload', referenceImageUrl: '', seed: undefined, promptOptimizer: false, aigcWatermark: false, imageTitle: '', parallelCount: 1 } })
   const { prompt, model, aspectRatioState, numImages, referenceImageMode, referenceImageUrl, seed, promptOptimizer, aigcWatermark, imageTitle, parallelCount } = formData
   const [showAspectRatioPopup, setShowAspectRatioPopup] = useState(false)
   const [referenceImage, setReferenceImage] = useState<string | null>(null)

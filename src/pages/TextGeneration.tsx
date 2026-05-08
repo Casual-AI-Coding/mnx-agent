@@ -9,7 +9,7 @@ import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
 import { SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { useRetry } from '@/hooks/useRetry'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { PromptInput } from './TextGeneration/PromptInput.js'
 import { TextResults, type TextMessage } from './TextGeneration/TextResults.js'
 
@@ -24,7 +24,7 @@ export default function TextGeneration() {
   const textSettings = useSettingsStore(s => s.settings.generation.text)
   
   const [formData, setFormData] = useFormPersistence<TextGenerationFormData>({
-    storageKey: DEBUG_FORM_KEYS.TEXT_GENERATION,
+    storageKey: FORM_PERSISTENCE_KEYS.TEXT_GENERATION,
     defaultValue: {
       selectedModel: textSettings.model,
       selectedTemplate: 'general',

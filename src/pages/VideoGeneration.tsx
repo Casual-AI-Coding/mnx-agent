@@ -16,7 +16,7 @@ import { VIDEO_MODELS, CAMERA_COMMANDS, DEFAULT_MODELS, type VideoModel, type Ca
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
 import { motion } from 'framer-motion'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 
 type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -43,7 +43,7 @@ export default function VideoGeneration() {
   const videoSettings = useSettingsStore(s => s.settings.generation.video)
   
   const [formData, setFormData] = useFormPersistence<VideoGenerationFormData>({
-    storageKey: DEBUG_FORM_KEYS.VIDEO_GENERATION,
+    storageKey: FORM_PERSISTENCE_KEYS.VIDEO_GENERATION,
     defaultValue: {
       prompt: '',
       model: (videoSettings?.model as VideoModel) || DEFAULT_MODELS.video,

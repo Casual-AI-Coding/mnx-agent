@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { submitTask, getTaskStatus } from '@/lib/api/external-api-logs'
 import { getMediaToken } from '@/lib/api/media'
 import { useSettingsStore } from '@/settings/store'
@@ -40,7 +40,7 @@ export default function OpenAIImage2() {
   )
 
   const [formData, setFormData] = useFormPersistence<OpenAIImage2FormData>({
-    storageKey: DEBUG_FORM_KEYS.OPENAI_IMAGE_2,
+    storageKey: FORM_PERSISTENCE_KEYS.OPENAI_IMAGE_2,
     defaultValue: {
       baseUrl: openaiEndpoints[0]?.url ?? 'https://mikuapi.org',
       endpointId: openaiEndpoints[0]?.id ?? '',

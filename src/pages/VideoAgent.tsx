@@ -8,7 +8,7 @@ import { useUsageStore } from '@/stores/usage'
 import { VIDEO_AGENT_TEMPLATES, type VideoAgentTemplate } from '@/types'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
-import { useFormPersistence, DEBUG_FORM_KEYS } from '@/hooks/useFormPersistence'
+import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { VideoHistoryList, type AgentTask, type TaskStatus } from './VideoAgent/VideoHistoryList.js'
 import { VideoInputForm, type VideoFormField } from './VideoAgent/VideoInputForm.js'
 
@@ -41,7 +41,7 @@ const TEMPLATE_FORMS: Record<string, VideoFormField[]> = {
 
 export default function VideoAgent() {
   const [formData, setFormData] = useFormPersistence<VideoAgentFormData>({
-    storageKey: DEBUG_FORM_KEYS.VIDEO_AGENT,
+    storageKey: FORM_PERSISTENCE_KEYS.VIDEO_AGENT,
     defaultValue: {
       selectedTemplateId: null,
       inputs: {},
