@@ -147,7 +147,7 @@ for (const prefix of API_PREFIXES) {
   app.use(prefix + '/export', exportRouter)
   app.use(prefix + '/audit', auditRouter)
   app.use(prefix + '/external-api-logs', authenticateJWT, externalApiLogsRouter)
-  app.use(prefix + '/external-proxy', externalProxyRouter)
+  app.use(prefix + '/external-proxy', authenticateJWT, externalProxyRouter)
   app.use(prefix + '/users', authenticateJWT, usersRouter)
   app.use(prefix + '/invitation-codes', authenticateJWT, invitationCodesRouter)
   app.use(prefix + '/system-config', authenticateJWT, systemConfigRouter)

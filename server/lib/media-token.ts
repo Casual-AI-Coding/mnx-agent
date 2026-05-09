@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto'
+import { createHmac, randomBytes } from 'crypto'
 
 export function getMediaTokenSecret(): string {
   const secret = process.env.MEDIA_TOKEN_SECRET
@@ -35,10 +35,9 @@ export function generateMediaToken(mediaId: string, userId: string): string {
   }
   const secret = getMediaTokenSecret()
   const data = JSON.stringify(payload)
-  const signature = createHash('sha256')
-    .update(data + secret)
+  const signature = createHmac('sha256', secret)
+    .update(data)
     .digest('hex')
-    .slice(0, 32)
   
   const token = Buffer.from(data).toString('base64url')
   return `${token}.${signature}`
@@ -53,10 +52,9 @@ export function verifyMediaToken(token: string): { valid: boolean; mediaId?: str
 
     const secret = getMediaTokenSecret()
     const data = Buffer.from(dataB64, 'base64url').toString()
-    const expectedSignature = createHash('sha256')
-      .update(data + secret)
+    const expectedSignature = createHmac('sha256', secret)
+      .update(data)
       .digest('hex')
-      .slice(0, 32)
 
     if (signature !== expectedSignature) {
       return { valid: false, error: 'Invalid token signature' }

@@ -72,5 +72,23 @@ describe('media-token', () => {
       // This test would require mocking time, which is more complex
       // Basic signature verification is tested above
     })
+
+    it('should use full 256-bit HMAC-SHA256 signature (64 hex chars)', () => {
+      const token = generateMediaToken('media-123', 'user-456')
+      const [, signature] = token.split('.')
+      
+      // Full SHA256 hex digest = 64 characters (256 bits)
+      expect(signature).toHaveLength(64)
+      expect(/^[a-f0-9]{64}$/.test(signature)).toBe(true)
+    })
+
+    it('should reject token with truncated signature', () => {
+      const token = generateMediaToken('media-123', 'user-456')
+      const [dataB64] = token.split('.')
+      const truncatedToken = `${dataB64}.deadbeef`
+      
+      const result = verifyMediaToken(truncatedToken)
+      expect(result.valid).toBe(false)
+    })
   })
 })
