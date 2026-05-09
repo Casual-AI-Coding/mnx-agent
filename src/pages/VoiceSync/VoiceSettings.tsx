@@ -64,9 +64,6 @@ export function VoiceSettings({
   onGenerate,
 }: VoiceSettingsProps) {
   const { t } = useTranslation()
-  const selectedVoice = VOICE_OPTIONS.find((v) => v.id === voiceId)
-  const selectedModel = SPEECH_MODELS.find((m) => m.id === model)
-  const selectedEmotion = EMOTIONS.find((e) => e.id === emotion)
 
   return (
     <motion.div variants={itemVariants}>

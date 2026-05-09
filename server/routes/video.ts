@@ -61,6 +61,6 @@ router.get('/status/:taskId', asyncHandler(async (req: Request, res: Response) =
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 export default router

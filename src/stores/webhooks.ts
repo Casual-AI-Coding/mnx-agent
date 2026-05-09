@@ -81,7 +81,7 @@ function transformDeliveryResponse(data: WebhookDeliveryApiResponse): WebhookDel
   }
 }
 
-export const useWebhooksStore = create<WebhooksState>()((set, get) => ({
+export const useWebhooksStore = create<WebhooksState>()((set, _get) => ({
   webhooks: [],
   deliveries: [],
   loading: false,

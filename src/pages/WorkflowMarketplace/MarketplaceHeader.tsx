@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Store } from 'lucide-react'
-import type { TemplateFiltersProps } from './types'
 
 interface HeaderProps {
   searchQuery: string

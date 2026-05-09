@@ -83,6 +83,6 @@ router.post('/chat/stream', asyncHandler(async (req: Request, res: Response) => 
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 export default router

@@ -28,7 +28,7 @@ router.get('/list', asyncHandler(async (req: Request, res: Response) => {
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 // POST /upload - manual implementation (FormData upload)
 router.post('/upload', upload.single('file'), asyncHandler(async (req: Request, res: Response) => {
@@ -55,7 +55,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req: Request, 
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 // GET /retrieve - manual implementation (factory only supports POST)
 router.get('/retrieve', asyncHandler(async (req: Request, res: Response) => {
@@ -73,7 +73,7 @@ router.get('/retrieve', asyncHandler(async (req: Request, res: Response) => {
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 // POST /delete - uses factory
 router.use('/delete', createApiProxyRouter({

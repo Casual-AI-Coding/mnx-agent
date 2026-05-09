@@ -15,7 +15,6 @@ import { status } from '@/themes/tokens'
 import {
   TEMPLATE_CATEGORIES,
   type TemplateCategory,
-  type WorkflowTemplate,
 } from '@/data/workflow-templates'
 import {
   MessageSquare,

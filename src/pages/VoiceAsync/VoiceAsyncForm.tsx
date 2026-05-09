@@ -74,7 +74,7 @@ function VoiceTextInput({ text, onChange, charCount, isOverLimit }: VoiceTextInp
 function VoiceUploadSection({
   uploadError,
   uploadRetryCount,
-  pendingFile,
+  pendingFile: _pendingFile,
   fileId,
   isDragging,
   onFileUpload,

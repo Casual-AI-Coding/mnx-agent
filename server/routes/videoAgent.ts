@@ -26,7 +26,7 @@ const VIDEO_AGENT_TEMPLATES = [
 // GET /templates - manual implementation (factory only supports POST)
 router.get('/templates', asyncHandler(async (_req: Request, res: Response) => {
   successResponse(res, VIDEO_AGENT_TEMPLATES)
-})
+}))
 
 // POST /generate - uses factory
 router.use('/generate', createApiProxyRouter({
@@ -66,6 +66,6 @@ router.get('/status/:taskId', asyncHandler(async (req: Request, res: Response) =
   } catch (error) {
     handleApiError(res, error)
   }
-})
+}))
 
 export default router

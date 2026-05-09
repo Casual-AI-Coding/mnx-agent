@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { status as statusTokens, services } from '@/themes/tokens'
 import { Badge } from '@/components/ui/Badge'
-import type { Task, TaskStatus, VoiceHistoryProps, VoiceTaskCardProps } from './types'
+import type { TaskStatus, VoiceHistoryProps, VoiceTaskCardProps } from './types'
 
 const taskVariants = {
   hidden: { opacity: 0, x: -20 },
@@ -323,7 +323,7 @@ export function VoiceHistory({ tasks, onRemoveTask, onDownload }: VoiceHistoryPr
             ) : (
               <AnimatePresence mode="popLayout">
                 <div className="space-y-4">
-                  {tasks.map((task, index) => (
+                  {tasks.map((task, _index) => (
                     <VoiceTaskCard
                       key={task.taskId}
                       task={task}

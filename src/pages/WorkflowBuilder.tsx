@@ -6,19 +6,13 @@ import { toast } from 'sonner'
 
 import { useWorkflowBuilder } from '@/components/workflow/hooks/useWorkflowBuilder'
 import { useWorkflowStore } from '@/stores/workflow'
-import { cn } from '@/lib/utils'
-import { status } from '@/themes/tokens'
 import { apiClient } from '@/lib/api/client'
 import {
   pauseExecution,
   resumeExecution,
   cancelExecution,
 } from '@/lib/api/cron'
-import { Toolbar } from './WorkflowBuilder/Toolbar.js'
-import { CanvasPanel } from './WorkflowBuilder/CanvasPanel.js'
-import { ConfigPanel } from './WorkflowBuilder/ConfigPanel.js'
 import { parseWorkflowTemplate, serializeWorkflow } from './WorkflowBuilder/workflow-io.js'
-import { WorkflowDialogs } from './WorkflowBuilder/WorkflowDialogs.js'
 import { WorkflowBuilderContent } from './WorkflowBuilder/WorkflowBuilderContent.js'
 import type { WorkflowTemplate } from './WorkflowBuilder/types.js'
 

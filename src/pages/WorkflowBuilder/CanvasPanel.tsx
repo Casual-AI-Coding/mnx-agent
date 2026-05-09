@@ -1,4 +1,3 @@
-import * as React from 'react'
 import type { ComponentProps } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bug, X } from 'lucide-react'
