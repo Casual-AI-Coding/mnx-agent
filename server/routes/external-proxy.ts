@@ -50,7 +50,14 @@ router.post(
       return
     }
 
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    const hostname = targetUrl.hostname.toLowerCase()
+    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
+    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
+      errorResponse(res, '不允许访问内部地址', 403)
+      return
+    }
+
+    if (!ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) {
       errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
       return
     }
@@ -153,7 +160,14 @@ router.post(
       return
     }
 
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    const hostname = targetUrl.hostname.toLowerCase()
+    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
+    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
+      errorResponse(res, '不允许访问内部地址', 403)
+      return
+    }
+
+    if (!ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) {
       errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
       return
     }

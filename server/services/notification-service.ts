@@ -149,6 +149,15 @@ export class NotificationService {
       .digest('hex')
   }
 
+  verifySignature(payload: string, signature: string, secret: string): boolean {
+    try {
+      const expected = this.generateSignature(payload, secret)
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))
+    } catch {
+      return false
+    }
+  }
+
   private async recordDelivery(
     webhookId: string,
     executionLogId: string | null,

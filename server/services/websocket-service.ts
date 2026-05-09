@@ -173,6 +173,8 @@ interface WebSocketClient {
   subscriptions: Set<string>
   isAlive: boolean
   lastPong: number
+  userId: string
+  userRole: string
 }
 
 let wss: WebSocketServer | null = null
@@ -199,12 +201,29 @@ function handleWorkflowEvent(event: CronEvent): void {
 function sendToSubscribedClients(channel: string, event: CronEvent): void {
   const message = JSON.stringify(event)
   for (const client of clients) {
-    if (client.subscriptions.has('all') || client.subscriptions.has(channel)) {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(message)
-      }
+    if (client.ws.readyState !== WebSocket.OPEN) {
+      continue
     }
+    if (!client.subscriptions.has('all') && !client.subscriptions.has(channel)) {
+      continue
+    }
+    const eventOwnerId = extractOwnerId(event.payload)
+    if (eventOwnerId && client.userRole !== 'admin' && client.userId !== eventOwnerId) {
+      continue
+    }
+    client.ws.send(message)
   }
+}
+
+function extractOwnerId(payload: unknown): string | null {
+  if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>
+    if (typeof p.owner_id === 'string') return p.owner_id
+    if (typeof p.ownerId === 'string') return p.ownerId
+    if (typeof p.userId === 'string') return p.userId
+    if (typeof p.user_id === 'string') return p.user_id
+  }
+  return null
 }
 
 function registerEventForwarders(): void {
@@ -252,14 +271,16 @@ export function initCronWebSocket(server: Server): WebSocketServer {
       return
     }
 
-    ;(ws as WebSocket & { userId?: string; userRole?: string }).userId = payload.userId
-    ;(ws as WebSocket & { userId?: string; userRole?: string }).userRole = payload.role
+    const userId = payload.userId
+    const userRole = payload.role || 'user'
 
     const client: WebSocketClient = {
       ws,
       subscriptions: new Set(['all']),
       isAlive: true,
-      lastPong: Date.now()
+      lastPong: Date.now(),
+      userId,
+      userRole,
     }
     clients.add(client)
 
@@ -279,7 +300,13 @@ export function initCronWebSocket(server: Server): WebSocketServer {
             client.subscriptions.delete(ch)
           }
         }
-      } catch {
+      } catch (err) {
+        // Silently ignore malformed messages to prevent DoS via JSON parse attacks
+        // Log only in development for debugging
+        if (process.env.NODE_ENV === 'development') {
+          const error = err instanceof Error ? err.message : String(err)
+          ws.send(JSON.stringify({ type: 'error', message: `Invalid message format: ${error}` }))
+        }
       }
     })
 

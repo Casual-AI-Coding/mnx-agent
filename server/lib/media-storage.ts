@@ -55,7 +55,11 @@ export function resolveMediaPath(filepath: string, mediaRoot: string = DEFAULT_M
   if (filepath.startsWith('data/media') || filepath.startsWith('./data/media')) {
     return filepath.startsWith('./') ? filepath : './' + filepath
   }
-  return join(mediaRoot, filepath)
+  const resolved = join(mediaRoot, filepath)
+  if (!resolved.startsWith(mediaRoot)) {
+    throw new Error('Path traversal detected')
+  }
+  return resolved
 }
 
 export async function readMediaFile(filepath: string, mediaRoot: string = DEFAULT_MEDIA_ROOT): Promise<Buffer> {
