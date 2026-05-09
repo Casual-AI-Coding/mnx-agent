@@ -21,6 +21,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/packages ./packages
 
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
+
 EXPOSE 4311 4511
 
 CMD ["node", "server/index.js"]

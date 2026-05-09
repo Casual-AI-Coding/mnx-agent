@@ -92,8 +92,9 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
   }
 
   values.push(id)
+  values.push(req.user!.userId)
   await conn.execute(
-    `UPDATE invitation_codes SET ${fields.join(', ')} WHERE id = $${idx}`,
+    `UPDATE invitation_codes SET ${fields.join(', ')} WHERE id = $${idx} AND created_by = $${idx + 1}`,
     values
   )
 
@@ -106,8 +107,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const conn = getConnection()
 
   const result = await conn.execute(
-    'UPDATE invitation_codes SET is_active = false WHERE id = $1',
-    [id]
+    'UPDATE invitation_codes SET is_active = false WHERE id = $1 AND created_by = $2',
+    [id, req.user!.userId]
   )
 
   if (result.changes === 0) {

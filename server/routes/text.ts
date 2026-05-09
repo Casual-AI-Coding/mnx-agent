@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import { asyncHandler } from '../middleware/asyncHandler.js'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
@@ -46,7 +47,7 @@ router.use('/chat', createApiProxyRouter({
 }))
 
 // Streaming chat endpoint - manual implementation (factory doesn't support streaming)
-router.post('/chat/stream', async (req: Request, res: Response) => {
+router.post('/chat/stream', asyncHandler(async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
     

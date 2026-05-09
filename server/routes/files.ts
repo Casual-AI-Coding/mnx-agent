@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import { asyncHandler } from '../middleware/asyncHandler.js'
 import multer from 'multer'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
@@ -18,7 +19,7 @@ interface FileDeleteBody {
 }
 
 // GET /list - manual implementation (factory only supports POST)
-router.get('/list', async (req: Request, res: Response) => {
+router.get('/list', asyncHandler(async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
     const { purpose } = req.query
@@ -30,7 +31,7 @@ router.get('/list', async (req: Request, res: Response) => {
 })
 
 // POST /upload - manual implementation (FormData upload)
-router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+router.post('/upload', upload.single('file'), asyncHandler(async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
     
@@ -57,7 +58,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 })
 
 // GET /retrieve - manual implementation (factory only supports POST)
-router.get('/retrieve', async (req: Request, res: Response) => {
+router.get('/retrieve', asyncHandler(async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
     const { file_id } = req.query

@@ -131,7 +131,7 @@ router.patch('/:id', validate(updateExternalApiLogSchema), asyncHandler(async (r
     return
   }
 
-  const updated = await repository.updateResult(req.params.id, req.body)
+  const updated = await repository.updateResult(req.params.id, req.body, current.user_id)
   if (!withEntityNotFound(updated, res, 'External API log')) return
 
   successResponse(res, updated)

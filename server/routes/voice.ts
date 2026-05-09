@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express'
+import { asyncHandler } from '../middleware/asyncHandler.js'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
@@ -65,7 +66,7 @@ router.use('/async', createApiProxyRouter({
 }))
 
 // Query async result - GET /async/:taskId (factory only supports POST, so kept manual)
-router.get('/async/:taskId', async (req: Request, res: Response) => {
+router.get('/async/:taskId', asyncHandler(async (req: Request, res: Response) => {
   try {
     const client = getClientFromRequest(req)
     const { taskId } = req.params

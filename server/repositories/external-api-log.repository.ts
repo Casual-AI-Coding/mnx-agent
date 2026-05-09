@@ -94,7 +94,7 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     return rows[0] ? rowToExternalApiLog(rows[0]) : null
   }
 
-  async updateResult(id: string, data: UpdateExternalApiLog): Promise<ExternalApiLog | null> {
+  async updateResult(id: string, data: UpdateExternalApiLog, userId?: string): Promise<ExternalApiLog | null> {
     const fields: string[] = []
     const values: unknown[] = []
 
@@ -116,8 +116,13 @@ export class ExternalApiLogRepository extends BaseRepository<ExternalApiLog, Cre
     }
 
     values.push(parseInt(id, 10))
+    let whereClause = `WHERE id = $${values.length}`
+    if (userId) {
+      values.push(userId)
+      whereClause += ` AND user_id = $${values.length}`
+    }
     const rows = await this.conn.query<ExternalApiLogRow>(
-      `UPDATE external_api_logs SET ${fields.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      `UPDATE external_api_logs SET ${fields.join(', ')} ${whereClause} RETURNING *`,
       values
     )
 
