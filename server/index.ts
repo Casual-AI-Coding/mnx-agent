@@ -325,7 +325,7 @@ async function startServer() {
         })
         
         // Stop DLQ auto-retry scheduler
-        dlqScheduler.stop()
+        getDLQAutoRetryScheduler().stop()
         logger.info({ msg: 'DLQ auto-retry scheduler stopped' })
 
         // Close WebSocket server

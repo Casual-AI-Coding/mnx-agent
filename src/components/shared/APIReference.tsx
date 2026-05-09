@@ -19,8 +19,7 @@ export function APIReference({
   const [copied, setCopied] = useState(false)
 
   const generateCurlCommand = () => {
-    const baseUrl = (import.meta as Record<string, unknown>).env?.VITE_API_BASE_URL as string | undefined
-      ?? 'https://api.minimaxi.com'
+    const baseUrl = 'https://api.minimaxi.com'
     let curlCommand = `curl --request ${method} \\\n  --url '${baseUrl}${endpoint}' \\\n  --header 'Authorization: Bearer YOUR_API_KEY' \\\n  --header 'Content-Type: application/json'`
 
     if (body && method === 'POST') {
