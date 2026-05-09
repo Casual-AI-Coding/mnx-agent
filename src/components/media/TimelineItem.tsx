@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -25,7 +25,7 @@ interface TimelineItemProps {
   userRole?: string
 }
 
-export function TimelineItem({
+export const TimelineItem = memo(function TimelineItem({
   record,
   signedUrl,
   isSelected,
@@ -228,4 +228,4 @@ export function TimelineItem({
       )}
     </div>
   )
-}
+})

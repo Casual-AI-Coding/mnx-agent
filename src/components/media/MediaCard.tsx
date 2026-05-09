@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -26,7 +26,7 @@ interface MediaCardProps {
   userRole?: string
 }
 
-export function MediaCard({
+export const MediaCard = memo(function MediaCard({
   record,
   signedUrl,
   isSelected,
@@ -315,4 +315,4 @@ export function MediaCard({
       )}
     </div>
   )
-}
+})

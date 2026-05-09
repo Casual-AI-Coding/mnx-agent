@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { MediaRecord } from '@/types/media'
@@ -11,7 +11,7 @@ interface MediaCardPreviewProps {
   visible: boolean
 }
 
-export function MediaCardPreview({
+export const MediaCardPreview = memo(function MediaCardPreview({
   record,
   signedUrl,
   mousePosition,
@@ -92,4 +92,4 @@ export function MediaCardPreview({
     </AnimatePresence>,
     document.body
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -27,7 +27,7 @@ interface MediaTableViewProps {
   userRole?: string
 }
 
-export function MediaTableView({
+export const MediaTableView = memo(function MediaTableView({
   records,
   signedUrls,
   selectedIds,
@@ -298,4 +298,4 @@ export function MediaTableView({
       )}
     </div>
   )
-}
+})
