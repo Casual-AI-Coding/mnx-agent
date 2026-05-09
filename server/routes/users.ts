@@ -6,30 +6,21 @@ import { UserService } from '../services/user-service.js'
 import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
+import crypto from 'node:crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { toLocalISODateString } from '../lib/date-utils.js'
 
 const router = Router()
 
-function generateRandomPassword(length: number = 12): string {
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
-  const numbers = '0123456789'
-  const special = '!@#$%^&*'
-  const all = uppercase + lowercase + numbers + special
-
+function generateRandomPassword(length: number = 20): string {
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  const bytes = crypto.randomBytes(length)
   let password = ''
-  password += uppercase[Math.floor(Math.random() * uppercase.length)]
-  password += lowercase[Math.floor(Math.random() * lowercase.length)]
-  password += numbers[Math.floor(Math.random() * numbers.length)]
-  password += special[Math.floor(Math.random() * special.length)]
-
-  for (let i = 4; i < length; i++) {
-    password += all[Math.floor(Math.random() * all.length)]
+  for (let i = 0; i < length; i++) {
+    password += CHARS[bytes[i] % CHARS.length]
   }
-
-  return password.split('').sort(() => Math.random() - 0.5).join('')
+  return password
 }
 
 router.use(requireRole(['super']))
@@ -73,8 +64,17 @@ router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, re
     [limit, offset]
   )
 
+  // 脱敏 minimax_api_key — 仅保留后 4 位
+  const masked = rows.map((r: Record<string, unknown>) => {
+    if (!r.minimax_api_key) return r
+    return {
+      ...r,
+      minimax_api_key: `minimax_****${String(r.minimax_api_key).slice(-4)}`,
+    }
+  })
+
   successResponse(res, {
-    data: rows,
+    data: masked,
     pagination: {
       page,
       limit,
@@ -242,10 +242,7 @@ router.post('/:id/reset-password', asyncHandler(async (req, res) => {
     [passwordHash, toLocalISODateString(), id]
   )
 
-  successResponse(res, {
-    newPassword,
-    message: '密码已重置',
-  })
+  successResponse(res, { message: '密码已重置' })
 }))
 
 export default router
