@@ -22,7 +22,8 @@ export function excludeBranchNodes(startNodeId: string, edges: WorkflowEdge[], e
   const queue = [startNodeId]
 
   while (queue.length > 0) {
-    const currentId = queue.shift()!
+    const currentId = queue.shift()
+    if (!currentId) continue
 
     for (const edge of edges) {
       if (edge.source === currentId && !toExclude.has(edge.target)) {

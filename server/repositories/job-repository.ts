@@ -341,7 +341,8 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     const queue = [dependsOnJobId]
 
     while (queue.length > 0) {
-      const current = queue.shift()!
+      const current = queue.shift()
+      if (!current) continue
       if (current === jobId) {
         return true
       }

@@ -44,8 +44,14 @@ export const cronRateLimiter = rateLimit({
 
 // Stricter rate limiter for authentication endpoints to prevent brute force attacks
 // Configurable via environment variables for production flexibility
-const AUTH_RATE_LIMIT_WINDOW_MS = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000', 10) // 15 minutes default
-const AUTH_RATE_LIMIT_MAX = parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10)
+const AUTH_RATE_LIMIT_WINDOW_MS = (() => {
+  const val = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000', 10)
+  return isNaN(val) ? 900000 : val
+})()
+const AUTH_RATE_LIMIT_MAX = (() => {
+  const val = parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10)
+  return isNaN(val) ? 20 : val
+})()
 
 export const authRateLimiter = rateLimit({
   windowMs: AUTH_RATE_LIMIT_WINDOW_MS,

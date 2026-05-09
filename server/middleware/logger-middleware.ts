@@ -11,7 +11,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     type: 'request',
     requestId,
     method: req.method,
-    url: req.originalUrl,
+    url: req.path,
     ip: req.ip,
     userAgent: req.get('user-agent'),
   })
@@ -24,7 +24,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
       type: 'response',
       requestId,
       method: req.method,
-      url: req.originalUrl,
+      url: req.path,
       statusCode: res.statusCode,
       duration,
     })
@@ -40,7 +40,7 @@ export function errorLogger(err: Error, req: Request, res: Response, next: NextF
   logger.error({
     type: 'error',
     method: req.method,
-    url: req.originalUrl,
+    url: req.path,
     error: {
       name: err.name,
       message: err.message,
