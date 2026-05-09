@@ -88,7 +88,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
                 <button
                   key={item.id}
                   className="w-full p-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border transition-all text-left group"
-                  onClick={() => console.log('View history item:', item.id)}
+                  onClick={() => item.id && undefined}
                 >
                   <div className="flex items-start gap-3">
                     <div

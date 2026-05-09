@@ -1,10 +1,12 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios'
 import { API_HOSTS, getErrorMapping, MiniMaxClientError, type MiniMaxErrorResponse, type Region } from './types.js'
+import { retryWithBackoff, type RetryOptions } from '../retry.js'
 
 export class MiniMaxClient {
   protected client: AxiosInstance
+  private retryConfig: RetryOptions
 
-  constructor(apiKey: string, region: Region = 'international') {
+  constructor(apiKey: string, region: Region = 'international', retryConfig?: RetryOptions) {
     const baseURL = API_HOSTS[region]
 
     this.client = axios.create({
@@ -15,6 +17,17 @@ export class MiniMaxClient {
       },
       timeout: 60000,
     })
+
+    this.retryConfig = {
+      maxRetries: retryConfig?.maxRetries ?? 3,
+      baseDelayMs: retryConfig?.baseDelayMs ?? 1000,
+      maxDelayMs: retryConfig?.maxDelayMs ?? 30000,
+      retryableStatusCodes: retryConfig?.retryableStatusCodes ?? [429, 500, 502, 503, 504],
+    }
+  }
+
+  protected async request<T>(fn: () => Promise<T>): Promise<T> {
+    return retryWithBackoff(fn, this.retryConfig)
   }
 
   static handleError(error: AxiosError<MiniMaxErrorResponse>): never {

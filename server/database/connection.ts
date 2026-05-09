@@ -15,12 +15,12 @@ export interface DatabaseConfig {
 }
 
 export interface QueryResultRow {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface DatabaseConnection {
-  query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]>
-  execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }>
+  query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]): Promise<T[]>
+  execute(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }>
   transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T>
   close(): Promise<void>
   isPostgres(): boolean

@@ -186,7 +186,7 @@ export default function MusicGeneration() {
   const handleFavorite = useCallback(async (mediaId: string) => { const result = await toggleFavorite(mediaId); if (result.success) setTasks(prev => prev.map(task => task.mediaId === mediaId ? { ...task, isFavorite: result.data.isFavorite } : task)) }, [])
   const handleTogglePublic = useCallback(async (mediaId: string, isPublic: boolean) => { const result = await togglePublic(mediaId, isPublic); if (result.success) setTasks(prev => prev.map(task => task.mediaId === mediaId ? { ...task, isPublic: result.data.is_public ?? isPublic } : task)) }, [])
   const resetTemplateSave = useCallback(() => { setShowSaveTemplate(false); setNewTemplateName('') }, [])
-  const confirmSaveTemplate = useCallback(() => { console.log('Save template:', newTemplateName, stylePrompt); resetTemplateSave() }, [newTemplateName, stylePrompt, resetTemplateSave])
+  const confirmSaveTemplate = useCallback(() => { resetTemplateSave() }, [resetTemplateSave])
 
   return (
     <div className="space-y-6">

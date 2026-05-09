@@ -1,4 +1,5 @@
 import type { AxiosError } from 'axios'
+import { retryWithBackoff } from '../retry.js'
 import { withExternalApiAudit, withExternalApiLog } from '../../services/external-api-audit.service.js'
 import { MiniMaxClient } from './client.js'
 import type { MiniMaxErrorResponse } from './types.js'
@@ -26,7 +27,7 @@ export async function fileUpload(client: MiniMaxClient, formData: FormData): Pro
     'POST /v1/files/upload',
     'file_upload',
     formData,
-    async () => {
+    async () => retryWithBackoff(async () => {
       try {
         const response = await client['client'].post('/v1/files/upload', formData, {
           headers: {
@@ -37,7 +38,7 @@ export async function fileUpload(client: MiniMaxClient, formData: FormData): Pro
       } catch (error) {
         return MiniMaxClient.handleError(error as AxiosError<MiniMaxErrorResponse>)
       }
-    }
+    })
   )()
 }
 

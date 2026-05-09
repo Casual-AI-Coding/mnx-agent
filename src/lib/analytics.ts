@@ -79,7 +79,7 @@ function cleanupEvents(): void {
  * Log to console if debug mode is enabled
  */
 function debugLog(...args: unknown[]): void {
-  if (config.debug) {
+  if (config.debug && process.env.NODE_ENV === 'development') {
     console.log('[Analytics]', ...args)
   }
 }

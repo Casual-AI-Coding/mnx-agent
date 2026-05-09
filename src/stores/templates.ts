@@ -19,13 +19,10 @@ export interface TemplateStoreState<T> {
   currentTemplate: T | null
   isLoading: boolean
   error: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fetchTemplates: (params?: any) => Promise<void>
+  fetchTemplates: (params?: Record<string, unknown>) => Promise<void>
   fetchTemplate: (id: string) => Promise<void>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  addTemplate: (data: any) => Promise<boolean>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  editTemplate: (id: string, data: any) => Promise<boolean>
+  addTemplate: (data: Record<string, unknown>) => Promise<boolean>
+  editTemplate: (id: string, data: Record<string, unknown>) => Promise<boolean>
   removeTemplate: (id: string) => Promise<boolean>
   setCurrentTemplate: (template: T | null) => void
   clearError: () => void
@@ -33,15 +30,10 @@ export interface TemplateStoreState<T> {
 
 export interface TemplateStoreConfig<T> {
   name: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  listApi: (params?: any) => Promise<ApiResponse<Record<string, unknown>>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  listApi: (params?: Record<string, unknown>) => Promise<ApiResponse<Record<string, unknown>>>
   getApi: (id: string) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  createApi: (data: any) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  updateApi: (id: string, data: any) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createApi: (data: Record<string, unknown>) => Promise<ApiResponse<T>>
+  updateApi: (id: string, data: Record<string, unknown>) => Promise<ApiResponse<T>>
   deleteApi: (id: string) => Promise<ApiResponse<{ deleted: boolean }>>
   listKey?: string
 }
@@ -53,8 +45,7 @@ export function createTemplateStore<T>(config: TemplateStoreConfig<T>) {
     isLoading: false,
     error: null,
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchTemplates: async (params: any) => {
+    fetchTemplates: async (params: Record<string, unknown> | undefined) => {
       set({ isLoading: true, error: null })
       const result = await config.listApi(params)
       if (result.success && result.data) {
