@@ -2,6 +2,68 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.8] - 2026-05-09
+
+### Security
+
+- **P0 修复 — external-proxy JWT 认证** — 外部代理路由添加 JWT Bearer token 认证 (`server/routes/external-proxy.ts`)，防止未授权访问
+- **P0 修复 — 媒体 token 签名升级** — 媒体下载 token 从未签名升级为完整 HMAC-SHA256 签名 (`server/lib/media-token.ts`)，防止 token 伪造
+- **P1 修复 — owner 隔离** — 路由层 owner_id 过滤增强，防止跨用户数据访问 (`server/routes/*.ts`)
+- **P1 修复 — asyncHandler 包装** — 所有路由处理器统一使用 `asyncHandler` 包装错误处理
+- **P1 修复 — Docker 非 root 运行** — Dockerfile 添加非 root 用户，增强容器安全性
+- **P2/P3 修复** — rate-limit 移至正式依赖、FORM_PERSISTENCE_KEYS 重命名、脚本环境变量统一、shift 防护、错误处理脱敏、ESLint 规则强化、NaN 防护
+- **认证限流加强** — auth 接口 100→20/15min + CSP 移除 unsafe-inline + media/cron 路由限流 (`server/middleware/rateLimit.ts`)
+- **external proxy 日志 b64_json 剥离** — 移除日志中的 base64 图片数据，防止数据库膨胀 (`server/services/*.ts`)
+
+### Added
+
+- **OpenAI Image-2 尺寸扩展** — 新增 3520x2336、3312x2480、3840x1648 尺寸，并添加其他比例分组 (`src/pages/OpenAIImage2.tsx`)
+- **代理白名单扩展** — 新增 `lumin-ai.tiandi.run` 和 `api.sisyphusx.com` 到代理白名单
+- **工作流模板数据文件追踪** — `src/data/workflow-templates/` 模板数据文件纳入版本管理
+- **Pre-commit 钩子** — `.githooks/pre-commit` 添加分支保护、类型检查等预提交检查
+- **数据库迁移 033** — 清理 `external_api_logs` 旧数据中的 b64_json 字段
+- **数据库迁移 034** — `task_queue` 表添加复合索引（status + scheduled_at）
+
+### Performance
+
+- **数据库 N+1 查询消除** — `server/database/connection.ts` 连接池加固 + `server/repositories/*.ts` 批量查询优化
+- **前端代码高亮按需加载** — `src/lib/code-highlight.ts` 实现动态 import，减少首屏 bundle 体积
+- **媒体清单组件 React.memo** — `MediaCard`、`MediaTableView`、`TimelineItem` 添加 memo 优化渲染
+- **源码分包优化** — vite 手动分包配置 + 目录命名统一 + 数据文件拆分
+
+### Fixed
+
+- **asyncHandler 括号修复** — 修正路由中 asyncHandler 调用括号问题
+- **dotenv .env.local 覆盖** — 修复 `.env.local` 无法覆盖 `.env` 的问题，本地密钥现在正确加载
+- **Media 批量软删除 SQL 参数修复** — 修复参数不匹配导致的删除失败
+- **ArtistWorkspace 测试修复** — 修复测试用例失败问题
+- **misfire-handler 测试修复** — 修复 misfire 处理器的测试失败
+- **Dialog 弹窗优化** — 添加高度限制和内容滚动，防止超长内容溢出
+- **分支覆盖率补全至 80%** — `resolveMediaPath`、`toggleActive`、`metadata format` 等分支测试补充
+- **代码审查修复** — 密钥隔离、类型窄化、脚本硬编码密码/路径清理、package.json 依赖分类修正
+
+### Changed
+
+- **前端组件拆分** — `AuditLogs` 拆分为 FilterBar/Detail/Table/StatCard 子组件，`ExternalApiLogs` 同结构拆分，均控制在 300 行以内
+- **源码目录重命名** — `openai-image-2` → `OpenAIImage2`、`video-agent` → `VideoAgent`、`workflow-builder` → `WorkflowBuilder` 等目录命名统一为 PascalCase
+- **TemplateCategory 类型补全** — 补全 `TEMPLATE_CATEGORIES` 中缺失的分类条目
+- **tsconfig unusedLocals 延期** — `noUnusedLocals` 回滚，待后续清理后重新启用
+
+### Docs
+
+- **ADR-0003** — external-proxy JWT 认证强制实施决策 (`docs/decisions/0003-external-proxy-authentication-enforcement.md`)
+- **ADR-0004** — 媒体 token 签名增强（HMAC-SHA256）决策 (`docs/decisions/0004-media-token-signature-strengthening.md`)
+- **ADR-0005** — 路由业务逻辑抽取决策 (`docs/decisions/0005-route-business-logic-extraction.md`)
+- **Code Review 报告归档** — 6 份代码审查报告归档至 `docs/archive/v2.2/`（2026-05-05 ~ 2026-05-08）
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ external-proxy JWT 认证为新增安全层，向后兼容（已有 token 的客户端自动生效）
+- ✅ 媒体 token 签名升级对已生成的旧 token 无影响
+- ✅ 数据库迁移为增量变更
+- ✅ 前端重构为内部组件拆分，不影响功能逻辑
+
 ## [2.2.7] - 2026-05-05
 
 ### Added
