@@ -392,6 +392,7 @@ function AppContent() {
             </RouteWithErrorBoundary>
           }
         />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
     </TokenRefreshProvider>

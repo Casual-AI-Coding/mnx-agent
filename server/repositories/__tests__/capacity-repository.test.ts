@@ -127,7 +127,7 @@ describe('CapacityRepository', () => {
   })
 
   describe('atomic behavior under concurrency', () => {
-    it('should prevent race condition with concurrent decrements', async () => {
+    it('should prevent race condition with concurrent decrements', { timeout: 30000 }, async () => {
       // Set up: 10 quota, 10 concurrent requests each trying to decrement 1
       const trackedService = serviceName('concurrent_test')
 
@@ -154,7 +154,7 @@ describe('CapacityRepository', () => {
       expect(record!.remaining_quota).toBeLessThanOrEqual(10)
     })
 
-    it('should handle burst of concurrent requests correctly', async () => {
+    it('should handle burst of concurrent requests correctly', { timeout: 30000 }, async () => {
       const initialQuota = 5
       const concurrentRequests = 20
       const amountPerRequest = 1

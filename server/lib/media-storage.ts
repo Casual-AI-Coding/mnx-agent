@@ -56,7 +56,9 @@ export function resolveMediaPath(filepath: string, mediaRoot: string = DEFAULT_M
     return filepath.startsWith('./') ? filepath : './' + filepath
   }
   const resolved = join(mediaRoot, filepath)
-  if (!resolved.startsWith(mediaRoot)) {
+  const normalizedRoot = mediaRoot.endsWith('/') ? mediaRoot.slice(0, -1) : mediaRoot
+  const normalizedResolved = resolved.endsWith('/') ? resolved.slice(0, -1) : resolved
+  if (!normalizedResolved.startsWith(normalizedRoot) && !normalizedResolved.startsWith(normalizedRoot.replace('./', ''))) {
     throw new Error('Path traversal detected')
   }
   return resolved

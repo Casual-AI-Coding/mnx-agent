@@ -6,12 +6,15 @@ import type { IEventBus } from '../interfaces/event-bus.interface.js'
 import { 
   nodeExecutorRegistry, 
   executeNodeWithRegistry,
-  type NodeExecutionContext 
+  type NodeExecutionContext,
+  type NodeType
 } from './node-executor-registry.js'
 import { resolveNodeConfig } from './template-resolver.js'
 
 export { nodeExecutorRegistry, executeNodeWithRegistry }
 export type { NodeExecutionContext }
+
+const DEFAULT_NODE_TIMEOUT_MS = 300000
 
 export interface NodeExecutorDeps {
   db: DatabaseService
@@ -33,7 +36,7 @@ export async function executeNode(
   deps: NodeExecutorDeps
 ): Promise<TaskResult> {
   const startTime = Date.now()
-  const timeoutMs = (node.timeout as number) ?? (config.timeoutMs as number) ?? 300000
+  const timeoutMs = (node.timeout as number) ?? (config.timeoutMs as number) ?? DEFAULT_NODE_TIMEOUT_MS
   const retryPolicy = node.retryPolicy
 
   const context: NodeExecutionContext = {
@@ -51,7 +54,7 @@ export async function executeNode(
 
   const executeOnce = async (): Promise<TaskResult> => {
     try {
-      const executor = nodeExecutorRegistry.get(node.type as any)
+      const executor = nodeExecutorRegistry.get(node.type as NodeType)
       if (!executor) {
         throw new Error(`Unknown node type: ${node.type}`)
       }
