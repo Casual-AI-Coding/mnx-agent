@@ -178,6 +178,38 @@ describe('useCronJobsStore', () => {
       await expect(result.current.createJob(newJobData)).rejects.toThrow()
       expect(result.current.error).toBe('Validation failed')
     })
+
+    it('should handle thrown Error on create', async () => {
+      ;(createCronJob as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Network failure')
+      )
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const newJobData = {
+        name: 'Test Job',
+        description: 'Test description',
+        cronExpression: '0 * * * *',
+        workflowJson: '{}',
+      }
+
+      await expect(result.current.createJob(newJobData)).rejects.toThrow('Network failure')
+      expect(result.current.error).toBe('Network failure')
+    })
+
+    it('should handle non-Error thrown value on create', async () => {
+      ;(createCronJob as ReturnType<typeof vi.fn>).mockRejectedValue('unknown error')
+
+      const { result } = renderHook(() => useCronJobsStore())
+      const newJobData = {
+        name: 'Test Job',
+        description: 'Test description',
+        cronExpression: '0 * * * *',
+        workflowJson: '{}',
+      }
+
+      await expect(result.current.createJob(newJobData)).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to create job')
+    })
   })
 
   describe('updateJob', () => {
@@ -219,6 +251,34 @@ describe('useCronJobsStore', () => {
       ).rejects.toThrow()
       expect(result.current.error).toBe('Job not found')
     })
+
+    it('should handle thrown Error on update', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(updateCronJob as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Connection reset')
+      )
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(
+        result.current.updateJob('job-1', { name: 'Updated' })
+      ).rejects.toThrow('Connection reset')
+      expect(result.current.error).toBe('Connection reset')
+    })
+
+    it('should handle non-Error thrown value on update', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(updateCronJob as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(
+        result.current.updateJob('job-1', { name: 'Updated' })
+      ).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to update job')
+    })
   })
 
   describe('deleteJob', () => {
@@ -248,6 +308,30 @@ describe('useCronJobsStore', () => {
 
       await expect(result.current.deleteJob('job-1')).rejects.toThrow()
       expect(result.current.error).toBe('Cannot delete running job')
+    })
+
+    it('should handle thrown Error on delete', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(deleteCronJob as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Server unavailable')
+      )
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.deleteJob('job-1')).rejects.toThrow('Server unavailable')
+      expect(result.current.error).toBe('Server unavailable')
+    })
+
+    it('should handle non-Error thrown value on delete', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(deleteCronJob as ReturnType<typeof vi.fn>).mockRejectedValue('unknown error')
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.deleteJob('job-1')).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to delete job')
     })
   })
 
@@ -279,6 +363,30 @@ describe('useCronJobsStore', () => {
 
       await expect(result.current.toggleJob('job-1')).rejects.toThrow()
       expect(result.current.error).toBe('Toggle failed')
+    })
+
+    it('should handle thrown Error on toggle', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(toggleCronJob as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Service timeout')
+      )
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.toggleJob('job-1')).rejects.toThrow('Service timeout')
+      expect(result.current.error).toBe('Service timeout')
+    })
+
+    it('should handle non-Error thrown value on toggle', async () => {
+      useCronJobsStore.setState({ jobs: [mockBackendJob] })
+
+      ;(toggleCronJob as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.toggleJob('job-1')).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to toggle job')
     })
 
     it('should return early if job not found', async () => {
@@ -316,6 +424,26 @@ describe('useCronJobsStore', () => {
 
       await expect(result.current.runJobManually('job-1')).rejects.toThrow()
       expect(result.current.error).toBe('Cannot run disabled job')
+    })
+
+    it('should handle thrown Error on run', async () => {
+      ;(runCronJob as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Execution engine error')
+      )
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.runJobManually('job-1')).rejects.toThrow('Execution engine error')
+      expect(result.current.error).toBe('Execution engine error')
+    })
+
+    it('should handle non-Error thrown value on run', async () => {
+      ;(runCronJob as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useCronJobsStore())
+
+      await expect(result.current.runJobManually('job-1')).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to run job')
     })
   })
 

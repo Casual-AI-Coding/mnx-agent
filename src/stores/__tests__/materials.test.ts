@@ -101,6 +101,34 @@ describe('useMaterialsStore', () => {
       expect(result.current.isLoading).toBe(false)
       expect(result.current.materials).toEqual([])
     })
+
+    it('should handle thrown Error in fetchMaterials', async () => {
+      ;(listMaterials as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Network failure',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      await result.current.fetchMaterials()
+
+      expect(result.current.error).toBe('Network failure')
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.materials).toEqual([])
+    })
+
+    it('should handle non-Error thrown value in fetchMaterials', async () => {
+      ;(listMaterials as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Connection refused',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      await result.current.fetchMaterials()
+
+      expect(result.current.error).toBe('Connection refused')
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.materials).toEqual([])
+    })
   })
 
   describe('addMaterial', () => {
@@ -148,6 +176,40 @@ describe('useMaterialsStore', () => {
       expect(result.current.error).toBe('Validation failed')
       expect(result.current.isLoading).toBe(false)
     })
+
+    it('should handle thrown Error in addMaterial', async () => {
+      ;(createMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Server error',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      const success = await result.current.addMaterial({
+        material_type: 'artist',
+        name: 'Test',
+      })
+
+      expect(success).toBe(false)
+      expect(result.current.error).toBe('Server error')
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    it('should handle non-Error thrown value in addMaterial', async () => {
+      ;(createMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Unexpected failure',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      const success = await result.current.addMaterial({
+        material_type: 'artist',
+        name: 'Test',
+      })
+
+      expect(success).toBe(false)
+      expect(result.current.error).toBe('Unexpected failure')
+      expect(result.current.isLoading).toBe(false)
+    })
   })
 
   describe('removeMaterial', () => {
@@ -185,6 +247,36 @@ describe('useMaterialsStore', () => {
 
       expect(success).toBe(false)
       expect(result.current.error).toBe('Delete failed')
+    })
+
+    it('should handle thrown Error in removeMaterial', async () => {
+      useMaterialsStore.setState({ materials: [mockMaterial] })
+
+      ;(deleteMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Delete error',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      const success = await result.current.removeMaterial('material-1')
+
+      expect(success).toBe(false)
+      expect(result.current.error).toBe('Delete error')
+    })
+
+    it('should handle non-Error thrown value in removeMaterial', async () => {
+      useMaterialsStore.setState({ materials: [mockMaterial] })
+
+      ;(deleteMaterial as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: 'Delete failure',
+      })
+
+      const { result } = renderHook(() => useMaterialsStore())
+      const success = await result.current.removeMaterial('material-1')
+
+      expect(success).toBe(false)
+      expect(result.current.error).toBe('Delete failure')
     })
   })
 
