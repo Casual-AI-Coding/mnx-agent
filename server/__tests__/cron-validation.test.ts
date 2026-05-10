@@ -18,6 +18,13 @@ vi.mock('../services/workflow/index', () => ({
   WorkflowEngine: vi.fn(),
 }))
 
+vi.mock('../middleware/auth-middleware', () => ({
+  authenticateJWT: (req: any, _res: any, next: any) => {
+    req.user = { id: 'test-user', role: 'user' }
+    next()
+  },
+}))
+
 describe('Cron Job Validation', () => {
   let app: express.Application
   let mockScheduler: any

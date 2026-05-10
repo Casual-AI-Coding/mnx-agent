@@ -14,6 +14,13 @@ vi.mock('../services/service-node-registry', () => ({
   resetServiceNodeRegistry: vi.fn(),
 }))
 
+vi.mock('../middleware/auth-middleware', () => ({
+  authenticateJWT: (req: any, _res: any, next: any) => {
+    req.user = { id: 'test-user', role: 'user' }
+    next()
+  },
+}))
+
 describe('Manual Trigger Error Handling', () => {
   let app: express.Application
   let mockDb: any
