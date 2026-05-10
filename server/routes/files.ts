@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
+import { authenticateJWT } from '../middleware/auth-middleware.js'
 import multer from 'multer'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
@@ -7,6 +8,8 @@ import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
 
 const router = Router()
+
+router.use(authenticateJWT)
 
 const upload = multer({ 
   storage: multer.memoryStorage(),

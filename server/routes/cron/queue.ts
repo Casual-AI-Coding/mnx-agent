@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
+import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse, deletedResponse } from '../../middleware/api-response'
 import { getTaskService } from '../../service-registration.js'
 import {
@@ -15,6 +16,8 @@ import { parsePayload } from './utils'
 import { withEntityNotFound } from '../../utils/index.js'
 
 const router = Router()
+
+router.use(authenticateJWT)
 
 router.get('/queue', validateQuery(taskQueueQuerySchema), asyncHandler(async (req, res) => {
   const taskService = getTaskService()

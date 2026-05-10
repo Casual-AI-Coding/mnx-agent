@@ -335,26 +335,4 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     )
     return rows.map(r => r.job_id)
   }
-
-  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    const visited = new Set<string>()
-    const queue = [dependsOnJobId]
-
-    while (queue.length > 0) {
-      const current = queue.shift()
-      if (!current) continue
-      if (current === jobId) {
-        return true
-      }
-      if (visited.has(current)) {
-        continue
-      }
-      visited.add(current)
-
-      const dependencies = await this.getDependencies(current)
-      queue.push(...dependencies)
-    }
-
-    return false
-  }
 }

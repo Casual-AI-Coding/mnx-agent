@@ -34,6 +34,27 @@ export interface CronSchedulerOptions {
   defaultTimeoutMs?: number
 }
 
+interface ExecutionContext {
+  startTime: number
+  logId: string | null
+}
+
+interface ExecutionOutcome {
+  success: boolean
+  durationMs: number
+}
+
+interface WorkflowExecutionData {
+  result: WorkflowResult
+  durationMs: number
+}
+
+interface ExecutionStats {
+  tasksExecuted: number
+  tasksSucceeded: number
+  tasksFailed: number
+}
+
 export class CronScheduler {
   private jobs: Map<string, ScheduledTask> = new Map()
   private db: DatabaseService
@@ -133,149 +154,210 @@ export class CronScheduler {
   }
 
   async executeJobTick(job: CronJob): Promise<void> {
-    // Check for shutdown
     if (this.concurrencyManager.isShuttingDown()) {
       return
     }
 
-    // Check concurrent execution limit
-    if (!(await this.concurrencyManager.acquireSlot(job.id))) {
-      this.log.warn('Job skipped due to concurrency limit: %s (%s)', job.name, job.id)
+    if (!(await this.tryAcquireExecutionSlot(job))) {
       return
     }
 
-    const startTime = Date.now()
-    let log: { id: string } | null = null
-    let executionSuccess = false
-    let durationMs = 0
-    
+    const context = await this.handleExecutionStart(job)
+    let outcome: ExecutionOutcome = { success: false, durationMs: 0 }
+
     try {
-      log = await this.db.createExecutionLog({
-        job_id: job.id,
-        trigger_type: TriggerType.CRON,
-        status: ExecutionStatus.RUNNING,
-        tasks_executed: 0,
-        tasks_succeeded: 0,
-        tasks_failed: 0,
-      }, job.owner_id ?? undefined)
+      const executionData = await this.executeJobWorkflow(job, context)
+      await this.handleExecutionSuccess(job, context, executionData)
+      outcome = { success: executionData.result.success, durationMs: executionData.durationMs }
+    } catch (error) {
+      outcome = await this.handleExecutionFailure(job, context, error)
+    } finally {
+      this.finalizeExecution(job, outcome)
+    }
+  }
 
-      // Notify on_start
-      await this.notificationService?.notifyJobEvent(job.id, 'on_start', {
-        jobId: job.id,
-        jobName: job.name,
-        timestamp: toLocalISODateString(),
-      }).catch(err => this.log.error(err, 'Failed to send on_start notification'))
+  private async tryAcquireExecutionSlot(job: CronJob): Promise<boolean> {
+    if (await this.concurrencyManager.acquireSlot(job.id)) {
+      return true
+    }
 
-      // Execute with timeout
-      // Fetch workflow template if workflow_id is set
-      let workflowJson: string
-      if (job.workflow_id) {
-        const template = await this.db.getWorkflowTemplateById(job.workflow_id, job.owner_id ?? undefined)
-        if (!template) {
-          throw new Error(`Workflow template ${job.workflow_id} not found`)
-        }
-        
-        // Handle JSONB columns that may already be objects
-        const nodes = typeof template.nodes_json === 'string' 
-          ? JSON.parse(template.nodes_json) 
-          : template.nodes_json
-        const edges = typeof template.edges_json === 'string' 
-          ? JSON.parse(template.edges_json) 
-          : template.edges_json
-        
-        workflowJson = JSON.stringify({ nodes, edges })
+    this.log.warn('Job skipped due to concurrency limit: %s (%s)', job.name, job.id)
+    return false
+  }
+
+  private async handleExecutionStart(job: CronJob): Promise<ExecutionContext> {
+    const log = await this.db.createExecutionLog({
+      job_id: job.id,
+      trigger_type: TriggerType.CRON,
+      status: ExecutionStatus.RUNNING,
+      tasks_executed: 0,
+      tasks_succeeded: 0,
+      tasks_failed: 0,
+    }, job.owner_id ?? undefined)
+
+    await this.notifyJobEvent(job, 'on_start', {
+      jobId: job.id,
+      jobName: job.name,
+      timestamp: toLocalISODateString(),
+    })
+
+    return {
+      startTime: Date.now(),
+      logId: log.id,
+    }
+  }
+
+  private async executeJobWorkflow(job: CronJob, context: ExecutionContext): Promise<WorkflowExecutionData> {
+    const workflowJson = await this.getWorkflowJson(job)
+    const result = await this.executeWithTimeout(
+      () => this.workflowEngine.executeWorkflow(workflowJson, context.logId ?? undefined, this.taskExecutor || undefined),
+      job.timeout_ms || this.defaultTimeoutMs
+    )
+
+    return {
+      result,
+      durationMs: Date.now() - context.startTime,
+    }
+  }
+
+  private async getWorkflowJson(job: CronJob): Promise<string> {
+    if (!job.workflow_id) {
+      throw new Error(`Job ${job.id} has no workflow_id configured`)
+    }
+
+    const template = await this.db.getWorkflowTemplateById(job.workflow_id, job.owner_id ?? undefined)
+    if (!template) {
+      throw new Error(`Workflow template ${job.workflow_id} not found`)
+    }
+
+    const nodes = typeof template.nodes_json === 'string'
+      ? JSON.parse(template.nodes_json)
+      : template.nodes_json
+    const edges = typeof template.edges_json === 'string'
+      ? JSON.parse(template.edges_json)
+      : template.edges_json
+
+    return JSON.stringify({ nodes, edges })
+  }
+
+  private async handleExecutionSuccess(
+    job: CronJob,
+    context: ExecutionContext,
+    executionData: WorkflowExecutionData
+  ): Promise<void> {
+    const stats = this.buildExecutionStats(executionData.result)
+    const completedAt = toLocalISODateString()
+
+    await this.updateExecutionLog(context.logId, {
+      status: executionData.result.success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
+      completed_at: completedAt,
+      duration_ms: executionData.durationMs,
+      tasks_executed: stats.tasksExecuted,
+      tasks_succeeded: stats.tasksSucceeded,
+      tasks_failed: stats.tasksFailed,
+      error_summary: executionData.result.error ?? null,
+    })
+
+    await this.db.updateCronJobRunStats(job.id, {
+      success: executionData.result.success,
+      tasksExecuted: stats.tasksExecuted,
+      tasksSucceeded: stats.tasksSucceeded,
+      tasksFailed: stats.tasksFailed,
+      durationMs: executionData.durationMs,
+      errorSummary: executionData.result.error ?? undefined,
+    }, job.owner_id ?? undefined)
+
+    await this.notifyJobEvent(job, 'on_success', {
+      jobId: job.id,
+      jobName: job.name,
+      duration: executionData.durationMs,
+      timestamp: toLocalISODateString(),
+    })
+  }
+
+  private buildExecutionStats(result: WorkflowResult): ExecutionStats {
+    let tasksSucceeded = 0
+    let tasksFailed = 0
+
+    for (const nodeResult of result.nodeResults.values()) {
+      if (nodeResult.success) {
+        tasksSucceeded++
       } else {
-        throw new Error(`Job ${job.id} has no workflow_id configured`)
+        tasksFailed++
       }
-      
-      const result = await this.executeWithTimeout(
-        () => this.workflowEngine.executeWorkflow(workflowJson, log?.id, this.taskExecutor || undefined),
-        job.timeout_ms || this.defaultTimeoutMs
-      )
-      
-      const endTime = Date.now()
-      durationMs = endTime - startTime
-      executionSuccess = result.success
-      const completedAt = toLocalISODateString()
-      
-      const tasksExecuted = result.nodeResults.size
-      let tasksSucceeded = 0
-      let tasksFailed = 0
-      for (const nodeResult of result.nodeResults.values()) {
-        if (nodeResult.success) tasksSucceeded++
-        else tasksFailed++
-      }
-      
-      if (log) {
-        await this.db.updateExecutionLog(log.id, {
-          status: result.success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
-          completed_at: completedAt,
-          duration_ms: durationMs,
-          tasks_executed: tasksExecuted,
-          tasks_succeeded: tasksSucceeded,
-          tasks_failed: tasksFailed,
-          error_summary: result.error ?? null,
-        })
-      }
+    }
+
+    return {
+      tasksExecuted: result.nodeResults.size,
+      tasksSucceeded,
+      tasksFailed,
+    }
+  }
+
+  private async handleExecutionFailure(
+    job: CronJob,
+    context: ExecutionContext,
+    error: unknown
+  ): Promise<ExecutionOutcome> {
+    const durationMs = Date.now() - context.startTime
+    const completedAt = toLocalISODateString()
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    this.log.error({ error: errorMessage }, 'Job execution failed: %s (%s)', job.name, job.id)
+
+    try {
+      await this.updateExecutionLog(context.logId, {
+        status: ExecutionStatus.FAILED,
+        completed_at: completedAt,
+        duration_ms: durationMs,
+        error_summary: errorMessage,
+      })
 
       await this.db.updateCronJobRunStats(job.id, {
-        success: result.success,
-        tasksExecuted,
-        tasksSucceeded,
-        tasksFailed,
+        success: false,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
         durationMs,
-        errorSummary: result.error ?? undefined,
+        errorSummary: errorMessage,
       }, job.owner_id ?? undefined)
-
-      // Notify on_success
-      await this.notificationService?.notifyJobEvent(job.id, 'on_success', {
-        jobId: job.id,
-        jobName: job.name,
-        duration: durationMs,
-        timestamp: toLocalISODateString(),
-      }).catch(err => this.log.error(err, 'Failed to send on_success notification'))
-    } catch (error) {
-      const endTime = Date.now()
-      durationMs = endTime - startTime
-      executionSuccess = false
-      const completedAt = toLocalISODateString()
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      
-      this.log.error({ error: errorMessage }, 'Job execution failed: %s (%s)', job.name, job.id)
-
-      try {
-        if (log) {
-          await this.db.updateExecutionLog(log.id, {
-            status: ExecutionStatus.FAILED,
-            completed_at: completedAt,
-            duration_ms: durationMs,
-            error_summary: errorMessage,
-          })
-        }
-
-        await this.db.updateCronJobRunStats(job.id, {
-          success: false,
-          tasksExecuted: 0,
-          tasksSucceeded: 0,
-          tasksFailed: 0,
-          durationMs,
-          errorSummary: errorMessage,
-        }, job.owner_id ?? undefined)
-      } catch (dbError) {
-        this.log.error(dbError, 'Failed to update database after job failure')
-      }
-
-      // Notify on_failure
-      await this.notificationService?.notifyJobEvent(job.id, 'on_failure', {
-        jobId: job.id,
-        jobName: job.name,
-        error: errorMessage,
-        timestamp: toLocalISODateString(),
-      }).catch(err => this.log.error(err, 'Failed to send on_failure notification'))
-    } finally {
-      this.concurrencyManager.releaseSlot(job.id)
-      this.eventBus.emitJobExecuted(job.id, { success: executionSuccess, durationMs })
+    } catch (dbError) {
+      this.log.error(dbError, 'Failed to update database after job failure')
     }
+
+    await this.notifyJobEvent(job, 'on_failure', {
+      jobId: job.id,
+      jobName: job.name,
+      error: errorMessage,
+      timestamp: toLocalISODateString(),
+    })
+
+    return { success: false, durationMs }
+  }
+
+  private async updateExecutionLog(
+    logId: string | null,
+    update: Parameters<DatabaseService['updateExecutionLog']>[1]
+  ): Promise<void> {
+    if (!logId) {
+      return
+    }
+
+    await this.db.updateExecutionLog(logId, update)
+  }
+
+  private async notifyJobEvent(
+    job: CronJob,
+    event: 'on_start' | 'on_success' | 'on_failure',
+    payload: Record<string, string | number>
+  ): Promise<void> {
+    await this.notificationService?.notifyJobEvent(job.id, event, payload)
+      .catch(err => this.log.error(err, 'Failed to send %s notification', event))
+  }
+
+  private finalizeExecution(job: CronJob, outcome: ExecutionOutcome): void {
+    this.concurrencyManager.releaseSlot(job.id)
+    this.eventBus.emitJobExecuted(job.id, outcome)
   }
 
   private async executeWithTimeout<T>(

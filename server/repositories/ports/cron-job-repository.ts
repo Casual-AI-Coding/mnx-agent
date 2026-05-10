@@ -21,7 +21,6 @@ export interface CronJobRepositoryPort extends RepositoryWithOwner<CronJob> {
   removeDependency(jobId: string, dependsOnJobId: string): Promise<void>
   getDependencies(jobId: string): Promise<string[]>
   getDependents(jobId: string): Promise<string[]>
-  hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean>
 }
 
 export interface CreateCronJobPort {

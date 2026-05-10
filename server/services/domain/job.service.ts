@@ -117,7 +117,27 @@ export class JobService implements IJobService {
   }
 
   async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    return this.db.hasCircularDependency(jobId, dependsOnJobId)
+    const visited = new Set<string>()
+    const queue = [dependsOnJobId]
+
+    while (queue.length > 0) {
+      const current = queue.shift()
+      if (!current) continue
+      if (current === jobId) {
+        return true
+      }
+      if (visited.has(current)) {
+        continue
+      }
+      visited.add(current)
+
+      const dependencies = await this.db.getJobDependencies(current)
+      if (dependencies?.length) {
+        queue.push(...dependencies)
+      }
+    }
+
+    return false
   }
 
   async getAllTags(): Promise<{ tag: string; count: number }[]> {

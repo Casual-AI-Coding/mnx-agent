@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
+import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { getDatabaseService, getWebhookService, getNotificationServiceInstance } from '../../service-registration.js'
 import {
@@ -14,6 +15,8 @@ import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-iso
 import { withEntityNotFound } from '../../utils/index.js'
 
 const router = Router()
+
+router.use(authenticateJWT)
 
 router.get('/webhooks', asyncHandler(async (req, res) => {
   const webhookService = getWebhookService()

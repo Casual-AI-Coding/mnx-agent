@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
+import { authenticateJWT } from '../middleware/auth-middleware'
 import { getCapacityService } from '../service-registration.js'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { getLogger } from '../lib/logger'
@@ -9,6 +10,8 @@ import { successResponse, errorResponse } from '../middleware/api-response'
 const logger = getLogger()
 
 const router = Router()
+
+router.use(authenticateJWT)
 
 router.get('/', asyncHandler(async (req, res) => {
   try {

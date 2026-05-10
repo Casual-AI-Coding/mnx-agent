@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
+import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { withEntityNotFound } from '../../utils/index.js'
 import { getDatabaseService, getLogService, getTaskService, getExecutionStateManagerInstance } from '../../service-registration.js'
@@ -17,6 +18,8 @@ import { TaskQueueItem, ExecutionLog, WorkflowTemplate } from '../../database/ty
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
 
 const router = Router()
+
+router.use(authenticateJWT)
 
 router.get('/logs', validateQuery(executionLogQuerySchema), asyncHandler(async (req, res) => {
   const logService = getLogService()

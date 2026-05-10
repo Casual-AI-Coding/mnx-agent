@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validate, validateParams } from '../../middleware/validate'
 import { asyncHandler } from '../../middleware/asyncHandler'
+import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../../middleware/api-response'
 import { getCronSchedulerService, getJobService, getWorkflowService, getTaskService, getLogService } from '../../service-registration.js'
 import { CronExpressionParser } from 'cron-parser'
@@ -23,6 +24,8 @@ import { getLogger } from '../../lib/logger.js'
 
 const router = Router()
 const logger = getLogger()
+
+router.use(authenticateJWT)
 
 router.get('/jobs', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]

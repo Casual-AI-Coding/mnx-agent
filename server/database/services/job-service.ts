@@ -75,8 +75,4 @@ export class JobService {
   async getJobDependents(jobId: string): Promise<string[]> {
     return this.jobRepo.getDependents(jobId)
   }
-
-  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
-    return this.jobRepo.hasCircularDependency(jobId, dependsOnJobId)
-  }
 }

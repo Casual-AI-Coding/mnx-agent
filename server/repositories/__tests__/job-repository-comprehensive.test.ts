@@ -218,40 +218,6 @@ describe('JobRepository - Comprehensive', () => {
       )
       expect(result).toEqual(['job-4', 'job-5'])
     })
-
-    it('should detect circular dependency', async () => {
-      const getDepMock = vi.fn()
-        .mockResolvedValueOnce([{ depends_on_job_id: 'job-1' }] as any)
-        .mockResolvedValueOnce([{ depends_on_job_id: 'job-2' }] as any)
-      const testDb = { ...mockDb, query: getDepMock }
-
-      const repo = new JobRepository(testDb as any)
-      const result = await repo.hasCircularDependency('job-1', 'job-2')
-
-      expect(result).toBe(true)
-    })
-
-    it('should not detect circular dependency when none exists', async () => {
-      const getDepMock = vi.fn()
-        .mockResolvedValue([{ depends_on_job_id: 'job-4' }] as any)
-      const testDb = { ...mockDb, query: getDepMock }
-
-      const repo = new JobRepository(testDb as any)
-      const result = await repo.hasCircularDependency('job-1', 'job-3')
-
-      expect(result).toBe(false)
-    })
-
-    it('should not detect circular dependency when none exists', async () => {
-      const querySpy = vi.spyOn(mockDb, 'query')
-        .mockResolvedValueOnce([{ depends_on_job_id: 'job-3' }] as any)
-        .mockResolvedValueOnce([] as any)
-
-      const repo = new JobRepository(mockDb)
-      const result = await repo.hasCircularDependency('job-1', 'job-3')
-
-      expect(result).toBe(false)
-    })
   })
 
   describe('tags', () => {

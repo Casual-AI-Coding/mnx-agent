@@ -420,16 +420,18 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
     return
   }
 
+  const failedFiles: Array<{ id: string; filepath: string; error: string }> = []
   await Promise.all(
     records.map(r =>
       deleteMediaFile(r.filepath).catch(error => {
+        failedFiles.push({ id: r.id, filepath: r.filepath, error: String(error) })
         logger.error({ filepath: r.filepath, recordId: r.id, error }, 'Failed to delete media file during batch delete')
       })
     )
   )
 
   const result = await db.softDeleteBatch(ids, ownerId)
-  successResponse(res, { deleted: result.deleted, failed: result.failed })
+  successResponse(res, { deleted: result.deleted, failed: result.failed, failedFiles })
 }))
 
 router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
@@ -443,7 +445,9 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
     return
   }
 
+  let fileDeletionError: string | undefined
   await deleteMediaFile(record.filepath).catch(error => {
+    fileDeletionError = String(error)
     logger.error({ filepath: record.filepath, recordId: record.id, error }, 'Failed to delete media file')
   })
 
@@ -452,7 +456,7 @@ router.delete('/:id', validateParams(mediaIdParamsSchema), asyncHandler(async (r
     errorResponse(res, 'Media record not found', 404)
     return
   }
-  deletedResponse(res)
+  deletedResponse(res, fileDeletionError ? { fileDeletionError } : undefined)
 }))
 
 router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {

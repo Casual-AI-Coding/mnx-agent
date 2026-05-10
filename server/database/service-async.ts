@@ -295,7 +295,26 @@ export class DatabaseService {
   async removeJobDependency(jobId: string, dependsOnJobId: string): Promise<void> { return this.jobService.removeJobDependency(jobId, dependsOnJobId) }
   async getJobDependencies(jobId: string): Promise<string[]> { return this.jobService.getJobDependencies(jobId) }
   async getJobDependents(jobId: string): Promise<string[]> { return this.jobService.getJobDependents(jobId) }
-  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> { return this.jobService.hasCircularDependency(jobId, dependsOnJobId) }
+  async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
+    const visited = new Set<string>()
+    const queue = [dependsOnJobId]
+
+    while (queue.length > 0) {
+      const current = queue.shift()
+      if (!current) continue
+      if (current === jobId) {
+        return true
+      }
+      if (visited.has(current)) {
+        continue
+      }
+      visited.add(current)
+      const dependencies = await this.jobService.getJobDependencies(current)
+      queue.push(...dependencies)
+    }
+
+    return false
+  }
 
   async getAllTasks(options?: { status?: TaskStatus; ownerId?: string; jobId?: string; limit?: number; offset?: number }): Promise<{ tasks: TaskQueueItem[]; total: number }> { return this.taskService.getAllTasks(options) }
   async getTaskById(id: string, ownerId?: string): Promise<TaskQueueItem | null> { return this.taskService.getTaskById(id, ownerId) }

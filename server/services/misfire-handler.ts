@@ -73,7 +73,10 @@ export class MisfireHandler implements IMisfireHandler {
       misfiredJobs.map((job, index) => {
         return new Promise<void>((resolve) => {
           setTimeout(() => {
-            void this.handleMisfire(job).then(resolve).catch(() => resolve())
+            void this.handleMisfire(job).then(resolve).catch((error) => {
+              this.log.error(error, 'Misfire catch-up failed for job "%s" (%s)', job.name, job.id)
+              resolve()
+            })
           }, index * delayBetweenJobs)
         })
       })

@@ -33,8 +33,12 @@ export class NotificationService {
       this.webhookRateLimiter.set(webhookId, { count: 1, resetAt: now + WEBHOOK_RATE_LIMITS.WINDOW_MS })
       return true
     }
-    if (limiter.count >= WEBHOOK_RATE_LIMITS.PER_MINUTE) return false
+    // Increment first (atomic sync operation), then check
     limiter.count++
+    if (limiter.count > WEBHOOK_RATE_LIMITS.PER_MINUTE) {
+      limiter.count--
+      return false
+    }
     return true
   }
 
