@@ -353,7 +353,7 @@ export class DatabaseService {
   async getExecutionStatsDistribution(ownerId?: string): Promise<{ type: string; count: number }[]> { return this.logService.getExecutionStatsDistribution(ownerId) }
   async getExecutionStatsErrors(limit: number = 10, ownerId?: string): Promise<{ errorSummary: string; count: number }[]> { return this.logService.getExecutionStatsErrors(limit, ownerId) }
   async createAuditLog(data: CreateAuditLog): Promise<AuditLog> { return this.logService.createAuditLog(data) }
-  async getAuditLogById(id: string): Promise<AuditLog | null> { return this.logService.getAuditLogById(id) }
+  async getAuditLogById(id: string, ownerId?: string): Promise<AuditLog | null> { return this.logService.getAuditLogById(id, ownerId) }
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> { return this.logService.getAuditLogs(query) }
   async getAuditStats(userId?: string): Promise<AuditStats> { return this.logService.getAuditStats(userId) }
   async getUniqueRequestPaths(userId?: string): Promise<string[]> { return this.logService.getUniqueRequestPaths(userId) }

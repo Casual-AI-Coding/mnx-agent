@@ -5,6 +5,16 @@ import { UserService } from './user-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface'
 import { toLocalISODateString } from '../lib/date-utils.js'
 
+function sanitizeErrorForClient(error: unknown): string {
+  if (!error) return 'Unknown error'
+
+  const message = error instanceof Error ? error.message : String(error)
+
+  return message
+    .replace(/\/[^\s:]+(?:[^\s]*)/g, (match: string) => match.split('/').pop() ?? match)
+    .replace(/[A-Za-z]:\\[^:\s]+/g, (match: string) => match.split('\\').pop() ?? match)
+}
+
 export interface CronEvent {
   type: 'job_created' | 'job_updated' | 'job_deleted' | 'job_toggled' | 'job_executed' |
         'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
@@ -301,11 +311,10 @@ export function initCronWebSocket(server: Server): WebSocketServer {
           }
         }
       } catch (err) {
-        // Silently ignore malformed messages to prevent DoS via JSON parse attacks
-        // Log only in development for debugging
-        if (process.env.NODE_ENV === 'development') {
-          const error = err instanceof Error ? err.message : String(err)
-          ws.send(JSON.stringify({ type: 'error', message: `Invalid message format: ${error}` }))
+        const isDev = process.env.NODE_ENV !== 'production'
+        const sanitized = sanitizeErrorForClient(err)
+        if (isDev) {
+          ws.send(JSON.stringify({ type: 'error', message: `Invalid message format: ${sanitized}` }))
         }
       }
     })

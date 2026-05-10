@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera, Lightbulb } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
+import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
@@ -232,30 +233,40 @@ export default function VideoGeneration() {
   )
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={<Video className="w-5 h-5" />}
-        title="视频生成"
-        description="AI 视频内容生成"
-        gradient="orange-amber"
-        actions={
-          <WorkbenchActions
-            helpTitle="视频生成帮助"
-            helpTips={helpTips}
-            generateCurl={generateCurl}
-            onClear={clearAll}
-            clearLabel="清空表单"
-          />
-        }
-      />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative group"
-          >
+    <ErrorBoundary
+      fallback={
+        <ErrorFallback
+          title="视频生成加载失败"
+          message="视频生成页面渲染时遇到错误，请稍后重试或刷新页面。"
+          onRetry={() => window.location.reload()}
+          className="min-h-[50vh]"
+        />
+      }
+    >
+      <div className="space-y-6">
+        <PageHeader
+          icon={<Video className="w-5 h-5" />}
+          title="视频生成"
+          description="AI 视频内容生成"
+          gradient="orange-amber"
+          actions={
+            <WorkbenchActions
+              helpTitle="视频生成帮助"
+              helpTips={helpTips}
+              generateCurl={generateCurl}
+              onClear={clearAll}
+              clearLabel="清空表单"
+            />
+          }
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative group"
+            >
             <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
             <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
@@ -450,9 +461,10 @@ export default function VideoGeneration() {
                 )}
               </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }

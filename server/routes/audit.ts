@@ -102,7 +102,13 @@ router.get('/users', asyncHandler(async (req, res) => {
 
 router.get('/:id', asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const log = await db.getAuditLogById(req.params.id)
+
+  // Non-admin users can only see their own audit logs
+  const ownerId = req.user?.role === 'admin' || req.user?.role === 'super'
+    ? undefined
+    : req.user?.userId
+
+  const log = await db.getAuditLogById(req.params.id, ownerId)
   if (!withEntityNotFound(log, res, 'Audit log')) return
   successResponse(res, log)
 }))

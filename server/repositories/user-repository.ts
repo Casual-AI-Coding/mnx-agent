@@ -77,8 +77,8 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
     return (await this.getById(id))!
   }
 
-  async getAuditLogById(id: string): Promise<AuditLog | null> {
-    return this.getById(id)
+  async getAuditLogById(id: string, ownerId?: string): Promise<AuditLog | null> {
+    return this.getById(id, ownerId)
   }
 
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {

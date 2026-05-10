@@ -101,8 +101,8 @@ export class LogService {
     return this.userRepo.createAuditLog(data)
   }
 
-  async getAuditLogById(id: string): Promise<AuditLog | null> {
-    return this.userRepo.getAuditLogById(id)
+  async getAuditLogById(id: string, ownerId?: string): Promise<AuditLog | null> {
+    return this.userRepo.getAuditLogById(id, ownerId)
   }
 
   async getAuditLogs(query: AuditLogQuery): Promise<{ logs: AuditLog[]; total: number }> {

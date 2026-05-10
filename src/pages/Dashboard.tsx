@@ -10,6 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal'
+import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import { useUsageStore } from '@/stores/usage'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -137,108 +138,119 @@ export default function Dashboard() {
   }, [events, addItem])
 
   return (
-    <div className="space-y-8">
-      <WelcomeModal
-        open={showWelcomeModal}
-        onClose={handleCloseWelcomeModal}
-        onDontShowAgain={handleDontShowAgain}
-        dontShowAgain={dontShowAgain}
-      />
+    <ErrorBoundary
+      fallback={
+        <ErrorFallback
+          title="仪表盘加载失败"
+          message="仪表盘渲染时遇到错误，请稍后重试或刷新页面。"
+          onRetry={() => window.location.reload()}
+          className="min-h-[50vh]"
+        />
+      }
+    >
+      <div className="space-y-8">
+        <WelcomeModal
+          open={showWelcomeModal}
+          onClose={handleCloseWelcomeModal}
+          onDontShowAgain={handleDontShowAgain}
+          dontShowAgain={dontShowAgain}
+        />
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground/70 mt-2">{t('dashboard.subtitle')}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <p className="text-muted-foreground/70 mt-2">{t('dashboard.subtitle')}</p>
+          </div>
+          <ConnectionIndicator status={status} />
         </div>
-        <ConnectionIndicator status={status} />
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className={`p-3 rounded-lg bg-card/secondary ${stat.color}`}>
-                  <stat.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground/70">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Zap className={cn('w-5 h-5', statusTokens.warning.icon)} />
-          {t('dashboard.quickStart')}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {quickActions.map((action, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, i) => (
             <motion.div
-              key={action.path}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 + i * 0.05 }}
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
             >
-              <Link to={action.path}>
-                <Card className={`border transition-all duration-200 cursor-pointer ${action.color} hover:shadow-lg hover:shadow-primary-500/10`}>
-                  <CardContent className="p-4 flex flex-col items-center text-center gap-3">
-                    <action.icon className="w-8 h-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-sm">{action.title}</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">{action.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className={`p-3 rounded-lg bg-card/secondary ${stat.color}`}>
+                    <stat.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground/70">{stat.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           ))}
         </div>
-      </div>
 
-      <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary-400" />
-          {t('dashboard.recentActivity')}
-        </h2>
-        <Card>
-          <CardContent className="p-0">
-            {recentItems.length > 0 ? (
-              <div className="divide-y divide-border">
-                {recentItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 px-4 py-3 hover:bg-secondary/50 transition-colors">
-                    <Badge className={typeColors[item.type] || 'bg-card/secondary text-muted-foreground'}>
-                      {typeLabels[item.type] || item.type}
-                    </Badge>
-                    <span className="flex-1 text-sm text-muted-foreground truncate">
-                      {item.input || t('dashboard.noActivity')}
-                    </span>
-                    <span className="text-xs text-muted-foreground/50 whitespace-nowrap">
-                      {timeAgo(new Date(item.timestamp))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-12 text-center text-muted-foreground/70">
-                <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{t('dashboard.noActivity')}</p>
-                <p className="text-sm mt-1">{t('dashboard.noActivityDesc')}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Zap className={cn('w-5 h-5', statusTokens.warning.icon)} />
+            {t('dashboard.quickStart')}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {quickActions.map((action, i) => (
+              <motion.div
+                key={action.path}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 + i * 0.05 }}
+              >
+                <Link to={action.path}>
+                  <Card className={`border transition-all duration-200 cursor-pointer ${action.color} hover:shadow-lg hover:shadow-primary-500/10`}>
+                    <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+                      <action.icon className="w-8 h-8 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{action.title}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">{action.desc}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
 
-    </div>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary-400" />
+            {t('dashboard.recentActivity')}
+          </h2>
+          <Card>
+            <CardContent className="p-0">
+              {recentItems.length > 0 ? (
+                <div className="divide-y divide-border">
+                  {recentItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-4 px-4 py-3 hover:bg-secondary/50 transition-colors">
+                      <Badge className={typeColors[item.type] || 'bg-card/secondary text-muted-foreground'}>
+                        {typeLabels[item.type] || item.type}
+                      </Badge>
+                      <span className="flex-1 text-sm text-muted-foreground truncate">
+                        {item.input || t('dashboard.noActivity')}
+                      </span>
+                      <span className="text-xs text-muted-foreground/50 whitespace-nowrap">
+                        {timeAgo(new Date(item.timestamp))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-muted-foreground/70">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>{t('dashboard.noActivity')}</p>
+                  <p className="text-sm mt-1">{t('dashboard.noActivityDesc')}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>
+    </ErrorBoundary>
   )
 }
