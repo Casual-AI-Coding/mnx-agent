@@ -20,7 +20,10 @@ export function asyncHandler(
         statusCode,
       })
       
-      res.status(statusCode).json({ success: false, error: error.message })
+      const isProduction = process.env.NODE_ENV === 'production'
+      const errorMessage = isProduction ? 'Internal server error' : error.message
+
+      res.status(statusCode).json({ success: false, error: errorMessage })
     })
   }
 }

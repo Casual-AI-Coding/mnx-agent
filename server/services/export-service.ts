@@ -1,5 +1,4 @@
 import type { DatabaseService } from '../database/service-async.js'
-import { getDatabaseService } from '../service-registration.js'
 import { ExecutionLog } from '../database/types'
 import { MediaRecord } from '../database/types'
 import { ExportFormat } from '../validation/export-schemas'
@@ -142,16 +141,3 @@ export class ExportService {
   }
 }
 
-let exportServiceInstance: ExportService | null = null
-
-export function getExportService(db?: DatabaseService): ExportService {
-  if (!exportServiceInstance) {
-    const database = db ?? getDatabaseService()
-    exportServiceInstance = new ExportService(database)
-  }
-  return exportServiceInstance
-}
-
-export function resetExportService(): void {
-  exportServiceInstance = null
-}

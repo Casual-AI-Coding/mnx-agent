@@ -60,21 +60,15 @@ router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, re
 
   const offset = (page - 1) * limit
   const rows = await conn.query(
-    'SELECT id, username, email, minimax_api_key, minimax_region, role, is_active, last_login_at, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    `SELECT id, username, email,
+     CONCAT('minimax_', '****', SUBSTRING(minimax_api_key, -4)) AS minimax_api_key,
+     minimax_region, role, is_active, last_login_at, created_at, updated_at
+     FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
     [limit, offset]
   )
 
-  // 脱敏 minimax_api_key — 仅保留后 4 位
-  const masked = rows.map((r: Record<string, unknown>) => {
-    if (!r.minimax_api_key) return r
-    return {
-      ...r,
-      minimax_api_key: `minimax_****${String(r.minimax_api_key).slice(-4)}`,
-    }
-  })
-
   successResponse(res, {
-    data: masked,
+    data: rows,
     pagination: {
       page,
       limit,

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getExportService } from '../services/export-service'
+import { getExportService } from '../service-registration.js'
 import { getOwnerId } from '../middleware/data-isolation.js'
 import {
   executionLogsExportQuerySchema,
@@ -21,7 +21,7 @@ router.get('/execution-logs', validateQuery(executionLogsExportQuerySchema), asy
 
   const ownerId = getOwnerId(req)
 
-  const exportService = await getExportService()
+  const exportService = getExportService()
   const result = await exportService.exportExecutionLogs({
     format,
     startDate,
@@ -46,7 +46,7 @@ router.get('/media-records', validateQuery(mediaRecordsExportQuerySchema), async
 
   const ownerId = getOwnerId(req)
 
-  const exportService = await getExportService()
+  const exportService = getExportService()
   const result = await exportService.exportMediaRecords({
     format,
     type,

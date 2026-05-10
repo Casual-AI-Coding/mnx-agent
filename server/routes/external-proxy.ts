@@ -24,6 +24,24 @@ const ALLOWED_HOSTS = [
   'api.sisyphusx.com',
 ]
 
+function isUrlAllowed(urlString: string): boolean {
+  try {
+    const url = new URL(urlString)
+    const hostname = url.hostname.toLowerCase()
+
+    // Block internal addresses
+    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
+    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
+      return false
+    }
+
+    // Check against allowlist
+    return ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))
+  } catch {
+    return false
+  }
+}
+
 const proxyRequestSchema = z.object({
   url: z.string().url(),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('POST'),
@@ -310,16 +328,26 @@ async function executeAsyncTask(
         let imageBuffer: Buffer | null = null
 
         if (imageInfo.url) {
-          try {
-            const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
-            imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
-          } catch (fetchErr) {
-            logger.error({
-              msg: 'Failed to fetch image from URL',
+          if (!isUrlAllowed(imageInfo.url)) {
+            logger.warn({
+              msg: 'Rejected untrusted image URL (SSRF protection)',
               logId,
               index,
-              error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
+              url: imageInfo.url,
             })
+          } else {
+            try {
+              const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
+              imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
+            } catch (fetchErr) {
+              logger.error({
+                msg: 'Failed to fetch image from URL',
+                logId,
+                index,
+                url: imageInfo.url,
+                error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
+              })
+            }
           }
         } else if (imageInfo.base64) {
           imageBuffer = Buffer.from(imageInfo.base64, 'base64')

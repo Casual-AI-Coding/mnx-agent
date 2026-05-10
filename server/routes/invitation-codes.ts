@@ -31,8 +31,9 @@ router.get('/', asyncHandler(async (req, res) => {
     SELECT ic.*, u.username as created_by_username
     FROM invitation_codes ic
     LEFT JOIN users u ON ic.created_by = u.id
+    WHERE ic.created_by = $1
     ORDER BY ic.created_at DESC
-  `)
+  `, [req.user!.userId])
   successResponse(res, rows)
 }))
 
@@ -63,7 +64,7 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
   const updates = req.body
   const conn = getConnection()
 
-  const existing = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
+  const existing = await conn.query('SELECT * FROM invitation_codes WHERE id = $1 AND created_by = $2', [id, req.user!.userId])
   if (existing.length === 0) {
     errorResponse(res, '邀请码不存在', 404)
     return
@@ -98,7 +99,7 @@ router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (r
     values
   )
 
-  const updated = await conn.query('SELECT * FROM invitation_codes WHERE id = $1', [id])
+  const updated = await conn.query('SELECT * FROM invitation_codes WHERE id = $1 AND created_by = $2', [id, req.user!.userId])
   successResponse(res, updated[0])
 }))
 

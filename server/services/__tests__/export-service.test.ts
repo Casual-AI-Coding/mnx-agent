@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ExportService, getExportService, resetExportService, ExportOptions } from '../export-service.js'
+import { ExportService, ExportOptions } from '../export-service.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import type { ExecutionLog, MediaRecord } from '../../database/types.js'
 import * as csvUtils from '../../lib/csv-utils.js'
+import { getExportService } from '../../service-registration.js'
 
 // Mock the csv-utils module
 vi.mock('../../lib/csv-utils.js', () => ({
@@ -102,7 +102,7 @@ describe('ExportService', () => {
   })
 
   afterEach(() => {
-    resetExportService()
+    vi.clearAllMocks()
   })
 
   describe('constructor', () => {
@@ -742,105 +742,34 @@ describe('ExportService', () => {
   })
 })
 
-describe('getExportService singleton', () => {
-  beforeEach(() => {
-    resetExportService()
-    vi.clearAllMocks()
+describe('ExportService DI', () => {
+  it('should resolve ExportService from container', async () => {
+    // Test that getExportService from service-registration resolves correctly
+    const { getGlobalContainer } = await import('../../container.js')
+    const { TOKENS } = await import('../../service-registration.js')
+
+    const container = getGlobalContainer()
+    // Verify EXPORT_SERVICE token is registered
+    expect(container.has(TOKENS.EXPORT_SERVICE)).toBe(true)
+
+    const service = getExportService()
+    expect(service).toBeInstanceOf(ExportService)
   })
 
-  afterEach(() => {
-    resetExportService()
+  it('should resolve same instance from container (singleton behavior via DI)', async () => {
+    const service1 = getExportService()
+    const service2 = getExportService()
+
+    expect(service1).toBe(service2)
   })
 
-  it('should create singleton instance when called first time', async () => {
-    const { getDatabaseService } = await import('../../service-registration.js')
-    const mockDb = { getExecutionLogsPaginated: vi.fn() }
-    vi.mocked(getDatabaseService).mockReturnValue(mockDb as unknown as DatabaseService)
+  it('should create ExportService with database dependency', () => {
+    const mockDb = {
+      getExecutionLogsPaginated: vi.fn(),
+      getMediaRecords: vi.fn(),
+    } as unknown as DatabaseService
 
-    const instance1 = getExportService()
-    const instance2 = getExportService()
-
-    expect(instance1).toBe(instance2)
-    expect(getDatabaseService).toHaveBeenCalledTimes(1)
-  })
-
-  it('should use provided database instead of getDatabaseService', async () => {
-    const { getDatabaseService } = await import('../../service-registration.js')
-    const providedDb = { getExecutionLogsPaginated: vi.fn() } as unknown as DatabaseService
-
-    const instance = getExportService(providedDb)
-
-    expect(instance).toBeInstanceOf(ExportService)
-    expect(getDatabaseService).not.toHaveBeenCalled()
-  })
-
-  it('should return same instance after initialization with provided db', async () => {
-    const providedDb = { getExecutionLogsPaginated: vi.fn() } as unknown as DatabaseService
-
-    const instance1 = getExportService(providedDb)
-    const instance2 = getExportService()
-
-    expect(instance1).toBe(instance2)
-  })
-
-  it('should respect resetExportService', async () => {
-    const { getDatabaseService } = await import('../../service-registration.js')
-    const mockDb1 = { getExecutionLogsPaginated: vi.fn() }
-    const mockDb2 = { getExecutionLogsPaginated: vi.fn() }
-
-    vi.mocked(getDatabaseService).mockReturnValue(mockDb1 as unknown as DatabaseService)
-    const instance1 = getExportService()
-
-    resetExportService()
-
-    vi.mocked(getDatabaseService).mockReturnValue(mockDb2 as unknown as DatabaseService)
-    const instance2 = getExportService()
-
-    expect(instance1).not.toBe(instance2)
-    expect(getDatabaseService).toHaveBeenCalledTimes(2)
-  })
-
-  it('should allow re-initialization after reset', async () => {
-    const { getDatabaseService } = await import('../../service-registration.js')
-    const mockDb = { getExecutionLogsPaginated: vi.fn() }
-    vi.mocked(getDatabaseService).mockReturnValue(mockDb as unknown as DatabaseService)
-
-    getExportService()
-    resetExportService()
-    const newInstance = getExportService()
-
-    expect(newInstance).toBeInstanceOf(ExportService)
-  })
-})
-
-describe('resetExportService', () => {
-  beforeEach(() => {
-    resetExportService()
-  })
-
-  it('should clear singleton instance', async () => {
-    const { getDatabaseService } = await import('../../service-registration.js')
-    const mockDb = { getExecutionLogsPaginated: vi.fn() }
-    vi.mocked(getDatabaseService).mockReturnValue(mockDb as unknown as DatabaseService)
-
-    getExportService()
-    resetExportService()
-
-    // After reset, a new call should create new instance
-    vi.mocked(getDatabaseService).mockClear()
-    getExportService()
-    expect(getDatabaseService).toHaveBeenCalled()
-  })
-
-  it('should be safe to call multiple times', () => {
-    resetExportService()
-    resetExportService()
-    resetExportService()
-    // Should not throw or cause issues
-  })
-
-  it('should be safe to call when no instance exists', () => {
-    resetExportService()
-    // Should not throw
+    const service = new ExportService(mockDb)
+    expect(service).toBeInstanceOf(ExportService)
   })
 })
