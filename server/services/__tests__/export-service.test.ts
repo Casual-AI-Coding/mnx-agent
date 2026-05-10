@@ -52,9 +52,13 @@ vi.mock('../../lib/csv-utils.js', () => ({
 }))
 
 // Mock service-registration
-vi.mock('../../service-registration.js', () => ({
-  getDatabaseService: vi.fn(),
-}))
+vi.mock('../../service-registration.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../service-registration.js')>()
+  return {
+    ...actual,
+    getDatabaseService: vi.fn(),
+  }
+})
 
 describe('ExportService', () => {
   let service: ExportService

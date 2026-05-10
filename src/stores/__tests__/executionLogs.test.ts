@@ -55,6 +55,26 @@ describe('useExecutionLogsStore', () => {
       expect(result.current.loading).toBe(false)
     })
 
+    it('should handle thrown errors', async () => {
+      ;(getLogs as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Fetch failed'))
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      await result.current.fetchLogs()
+
+      expect(result.current.error).toBe('Fetch failed')
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      ;(getLogs as ReturnType<typeof vi.fn>).mockRejectedValue('unknown error')
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      await result.current.fetchLogs()
+
+      expect(result.current.error).toBe('Failed to fetch logs')
+      expect(result.current.loading).toBe(false)
+    })
+
     it('should set loading state during fetch', async () => {
       let resolve: (value: unknown) => void
       ;(getLogs as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(r => resolve = r))
@@ -116,6 +136,26 @@ describe('useExecutionLogsStore', () => {
       expect(log).toBeNull()
       expect(result.current.error).toBe('Not found')
     })
+
+    it('should handle thrown errors', async () => {
+      ;(getLogById as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      const log = await result.current.fetchLogById('123')
+
+      expect(log).toBeNull()
+      expect(result.current.error).toBe('Network error')
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      ;(getLogById as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      const log = await result.current.fetchLogById('123')
+
+      expect(log).toBeNull()
+      expect(result.current.error).toBe('Failed to fetch log')
+    })
   })
 
   describe('fetchLogDetails', () => {
@@ -154,6 +194,26 @@ describe('useExecutionLogsStore', () => {
 
       expect(details).toBeNull()
       expect(result.current.error).toBe('Failed to fetch details')
+    })
+
+    it('should handle thrown errors', async () => {
+      ;(getLogDetails as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      const details = await result.current.fetchLogDetails('log-1')
+
+      expect(details).toBeNull()
+      expect(result.current.error).toBe('Network error')
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      ;(getLogDetails as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      const details = await result.current.fetchLogDetails('log-1')
+
+      expect(details).toBeNull()
+      expect(result.current.error).toBe('Failed to fetch log details')
     })
 
     it('should track loading state for details', async () => {
@@ -211,6 +271,16 @@ describe('useExecutionLogsStore WebSocket', () => {
       const secondCallCount = mockClient.onEvent.mock.calls.length
 
       expect(secondCallCount).toBe(firstCallCount)
+    })
+
+    it('should return early when WebSocket client is null', async () => {
+      const { getWebSocketClient } = await import('@/lib/websocket-client')
+      ;(getWebSocketClient as ReturnType<typeof vi.fn>).mockReturnValue(null)
+
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      expect(mockClient.onEvent).not.toHaveBeenCalled()
     })
   })
 })
