@@ -26,7 +26,7 @@ export interface QueueResult {
 export interface CapacityChecker {
   hasCapacity(serviceType: string): Promise<boolean>
   reserveCapacity(serviceType: string): Promise<boolean>
-  decrementCapacity(serviceType: string): Promise<void>
+  decrementCapacity(serviceType: string): Promise<boolean>
   getSafeExecutionLimit(serviceType: string): Promise<number>
 }
 

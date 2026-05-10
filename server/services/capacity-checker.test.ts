@@ -11,6 +11,7 @@ type GetCapacityRecordMock = ReturnType<typeof vi.fn<(serviceType: string) => Pr
 type UpsertCapacityRecordMock = ReturnType<
   typeof vi.fn<(serviceType: string, data: unknown) => Promise<unknown>>
 >
+type DecrementCapacityMock = ReturnType<typeof vi.fn<(serviceType: string, amount?: number) => Promise<CapacityRecord | null>>>
 
 class TestableCapacityChecker extends CapacityChecker {
   public testDelay(ms: number): Promise<void> {
@@ -26,6 +27,7 @@ describe('CapacityChecker', () => {
   let mockGetCodingPlanRemains: GetCodingPlanRemainsMock
   let mockGetCapacityRecord: GetCapacityRecordMock
   let mockUpsertCapacityRecord: UpsertCapacityRecordMock
+  let mockDecrementCapacity: DecrementCapacityMock
 
   beforeEach(() => {
     mockGetBalance = vi.fn<() => Promise<unknown>>().mockResolvedValue({
@@ -42,10 +44,12 @@ describe('CapacityChecker', () => {
 
     mockGetCapacityRecord = vi.fn<(serviceType: string) => Promise<CapacityRecord | null>>().mockResolvedValue(null)
     mockUpsertCapacityRecord = vi.fn<(serviceType: string, data: unknown) => Promise<unknown>>().mockResolvedValue(undefined)
+    mockDecrementCapacity = vi.fn<(serviceType: string, amount?: number) => Promise<CapacityRecord | null>>().mockResolvedValue(null)
 
     mockDb = {
       getCapacityRecord: (serviceType: string) => mockGetCapacityRecord(serviceType),
       upsertCapacityRecord: (serviceType: string, data: unknown) => mockUpsertCapacityRecord(serviceType, data),
+      decrementCapacity: (serviceType: string, amount?: number) => mockDecrementCapacity(serviceType, amount),
     }
 
     checker = new TestableCapacityChecker(
@@ -445,54 +449,38 @@ describe('CapacityChecker', () => {
   })
 
   describe('decrementCapacity', () => {
-    it('should decrement remaining quota by 1', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+    it('should return true when capacity is successfully decremented', async () => {
+      mockDecrementCapacity.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
-        remaining_quota: 100,
+        remaining_quota: 99,
         total_quota: 500,
         reset_at: null,
         last_checked_at: new Date().toISOString(),
       } as CapacityRecord)
 
-      await checker.decrementCapacity('text')
+      const result = await checker.decrementCapacity('text')
 
-      expect(mockUpsertCapacityRecord).toHaveBeenCalledWith(
-        'text',
-        expect.objectContaining({
-          service_type: 'text',
-          remaining_quota: 99,
-          total_quota: 500,
-        })
-      )
+      expect(result).toBe(true)
+      expect(mockDecrementCapacity).toHaveBeenCalledWith('text', 1)
     })
 
-    it('should not go below zero', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
-        id: '1',
-        service_type: 'text',
-        remaining_quota: 0,
-        total_quota: 500,
-        reset_at: null,
-        last_checked_at: new Date().toISOString(),
-      } as CapacityRecord)
+    it('should return false when insufficient capacity', async () => {
+      mockDecrementCapacity.mockResolvedValueOnce(null)
 
-      await checker.decrementCapacity('text')
+      const result = await checker.decrementCapacity('text')
 
-      expect(mockUpsertCapacityRecord).toHaveBeenCalledWith(
-        'text',
-        expect.objectContaining({
-          service_type: 'text',
-          remaining_quota: 0,
-          total_quota: 500,
-        })
-      )
+      expect(result).toBe(false)
+      expect(mockDecrementCapacity).toHaveBeenCalledWith('text', 1)
     })
 
-    it('should do nothing when no capacity record exists', async () => {
-      await checker.decrementCapacity('text')
+    it('should return false when service does not exist', async () => {
+      mockDecrementCapacity.mockResolvedValueOnce(null)
 
-      expect(mockUpsertCapacityRecord).not.toHaveBeenCalled()
+      const result = await checker.decrementCapacity('non-existent-service')
+
+      expect(result).toBe(false)
+      expect(mockDecrementCapacity).toHaveBeenCalledWith('non-existent-service', 1)
     })
   })
 

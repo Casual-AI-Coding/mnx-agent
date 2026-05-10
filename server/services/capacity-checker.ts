@@ -176,19 +176,16 @@ export class CapacityChecker {
     return false
   }
 
-  async decrementCapacity(serviceType: string): Promise<void> {
-    const capacity = await this.fetchCapacityRecord(serviceType)
-    if (!capacity) {
-      return
-    }
-
-    const newRemaining = Math.max(0, capacity.remaining_quota - 1)
-    await this.saveCapacityRecord(
-      serviceType,
-      newRemaining,
-      capacity.total_quota,
-      capacity.reset_at
-    )
+  /**
+   * Atomically decrement capacity for a service type.
+   * Uses database-level atomic UPDATE with WHERE clause to prevent TOCTOU race conditions.
+   * 
+   * @param serviceType - The service type to decrement capacity for
+   * @returns true if capacity was successfully decremented, false if insufficient capacity or service not found
+   */
+  async decrementCapacity(serviceType: string): Promise<boolean> {
+    const result = await this.db.decrementCapacity(serviceType, 1)
+    return result !== null
   }
 
   private async fetchCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
