@@ -107,7 +107,6 @@ export class ServiceNodeRegistry {
  * DO NOT call it in production code.
  */
 let registryInstance: ServiceNodeRegistry | null = null
-let registryInitPromise: Promise<ServiceNodeRegistry> | null = null
 
 /**
  * Get the singleton ServiceNodeRegistry instance
@@ -121,24 +120,10 @@ let registryInitPromise: Promise<ServiceNodeRegistry> | null = null
  * const nodes = await registry.getAvailableNodes('pro')
  */
 export function getServiceNodeRegistry(db: DatabaseService): ServiceNodeRegistry {
-  if (registryInstance) {
-    return registryInstance
+  if (!registryInstance) {
+    registryInstance = new ServiceNodeRegistry(db)
   }
-
-  // Use lock to prevent concurrent initialization
-  if (!registryInitPromise) {
-    registryInitPromise = Promise.resolve().then(() => {
-      // Double-check after promise resolution
-      if (!registryInstance) {
-        registryInstance = new ServiceNodeRegistry(db)
-      }
-      return registryInstance
-    })
-  }
-
-  // Synchronously return existing instance while async init completes
-  // The promise ensures only one instance is created
-  return registryInstance!
+  return registryInstance
 }
 
 /**
