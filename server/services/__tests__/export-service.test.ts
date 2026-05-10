@@ -644,7 +644,7 @@ describe('ExportService', () => {
   })
 
   describe('executionLogsToCSV', () => {
-    it('should produce CSV with correct headers', async () => {
+    it('should generate CSV with correct headers', async () => {
       const logs = [mockExecutionLog]
       mockDb.getExecutionLogsPaginated.mockResolvedValue({
         logs,
@@ -656,13 +656,10 @@ describe('ExportService', () => {
 
       const result = await service.exportExecutionLogs({ format: 'csv' })
 
-      // Verify output contains correct headers
-      expect(result.data).toContain('id')
-      expect(result.data).toContain('job_id')
-      expect(result.data).toContain('trigger_type')
-      expect(result.data).toContain('status')
-      // Verify data row is present
-      expect(result.data).toContain(mockExecutionLog.id)
+      // Verify CSV output contains correct headers
+      expect(result.contentType).toBe('text/csv')
+      expect(result.data).toContain('id,job_id,trigger_type,status,started_at,completed_at,duration_ms,tasks_executed,tasks_succeeded,tasks_failed,error_summary')
+      expect(result.count).toBe(1)
     })
 
     it('should handle empty logs array', async () => {
@@ -682,25 +679,19 @@ describe('ExportService', () => {
   })
 
   describe('mediaRecordsToCSV', () => {
-    it('should produce CSV with correct headers', async () => {
+    it('should generate CSV with correct headers and metadata formatter', async () => {
       const records = [mockMediaRecord]
       mockDb.getMediaRecords.mockResolvedValue({
         records,
         total: 1,
-        page: 1,
-        limit: 1000,
-        totalPages: 1,
       })
 
       const result = await service.exportMediaRecords({ format: 'csv' })
 
-      // Verify output contains correct headers
-      expect(result.data).toContain('id')
-      expect(result.data).toContain('filename')
-      expect(result.data).toContain('filepath')
-      expect(result.data).toContain('type')
-      // Verify data row is present
-      expect(result.data).toContain(mockMediaRecord.filename)
+      // Verify CSV output contains correct headers
+      expect(result.contentType).toBe('text/csv')
+      expect(result.data).toContain('id,filename,original_name,filepath,type,mime_type,size_bytes,source,task_id,metadata,created_at,updated_at')
+      expect(result.count).toBe(1)
     })
 
     it('should format metadata as quoted JSON string', async () => {
