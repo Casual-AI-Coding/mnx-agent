@@ -28,7 +28,7 @@ export default defineConfig({
     isolate: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json'],
+      reporter: ['text-summary', 'json'],
       reportsDirectory: './coverage',
       include: [
         'src/stores/**/*.ts',
