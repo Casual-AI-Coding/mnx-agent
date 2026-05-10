@@ -9,7 +9,7 @@ vi.mock('@/lib/api/cron', () => ({
 }))
 
 const mockWsClient = {
-  onEvent: vi.fn(() => vi.fn()),
+  onEvent: vi.fn(),
   offEvent: vi.fn(),
 }
 vi.mock('@/lib/websocket-client', () => ({
@@ -17,15 +17,18 @@ vi.mock('@/lib/websocket-client', () => ({
 }))
 
 import { getTasks, createTask, updateTask, deleteTask } from '@/lib/api/cron'
+import { getWebSocketClient } from '@/lib/websocket-client'
 
 describe('useTaskQueueStore', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockWsClient.onEvent.mockReturnValue(vi.fn())
+    localStorage.removeItem('minimax-task-queue')
     useTaskQueueStore.setState({
       tasks: [],
       loading: false,
       error: null,
       filter: {},
+      _wsUnsubscribe: undefined,
     })
   })
 
@@ -367,7 +370,8 @@ describe('taskQueue helper functions', () => {
 
 describe('useTaskQueueStore WebSocket', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockWsClient.onEvent.mockReturnValue(vi.fn())
+    localStorage.removeItem('minimax-task-queue')
     useTaskQueueStore.setState({
       tasks: [],
       loading: false,
@@ -413,6 +417,104 @@ describe('useTaskQueueStore WebSocket', () => {
       const secondCallCount = mockWsClient.onEvent.mock.calls.length
 
       expect(secondCallCount).toBe(firstCallCount)
+    })
+
+    it('should return early when client is null', () => {
+      vi.mocked(getWebSocketClient).mockReturnValue(null as any)
+
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+
+      expect(result.current._wsUnsubscribe).toBeUndefined()
+    })
+
+    it('should handle task_created event', () => {
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+
+      expect(mockWsClient.onEvent).toHaveBeenCalled()
+      const handler = mockWsClient.onEvent.mock.calls[0][1]
+      const createdTask = {
+        id: 'new-task-1',
+        jobId: 'job-1',
+        taskType: 'text',
+        status: 'pending',
+        retryCount: 0,
+        error: null,
+      }
+
+      act(() => {
+        handler({ type: 'task_created', payload: createdTask })
+      })
+
+      expect(result.current.tasks).toHaveLength(1)
+      expect(result.current.tasks[0].id).toBe('new-task-1')
+    })
+
+    it('should handle task_updated event', () => {
+      const existingTask = {
+        id: 'task-1',
+        jobId: 'job-1',
+        taskType: 'text',
+        status: 'pending' as const,
+        payload: {},
+        priority: 5,
+        retryCount: 0,
+        maxRetries: 3,
+        errorMessage: null,
+        result: null,
+        createdAt: '2024-01-01',
+        startedAt: null,
+        completedAt: null,
+      }
+      useTaskQueueStore.setState({ tasks: [existingTask] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+
+      const handler = mockWsClient.onEvent.mock.calls[0][1]
+      const updatedTask = {
+        id: 'task-1',
+        status: 'completed',
+        result: { output: 'success' },
+      }
+
+      act(() => {
+        handler({ type: 'task_updated', payload: updatedTask })
+      })
+
+      expect(result.current.tasks[0].status).toBe('completed')
+      expect(result.current.tasks[0].result).toEqual({ output: 'success' })
+    })
+
+    it('should handle task_moved_to_dlq event (task deleted)', () => {
+      const existingTask = {
+        id: 'task-1',
+        jobId: 'job-1',
+        taskType: 'text',
+        status: 'failed' as const,
+        payload: {},
+        priority: 5,
+        retryCount: 3,
+        maxRetries: 3,
+        errorMessage: 'Max retries exceeded',
+        result: null,
+        createdAt: '2024-01-01',
+        startedAt: null,
+        completedAt: null,
+      }
+      useTaskQueueStore.setState({ tasks: [existingTask] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+      result.current.subscribeToWebSocket()
+
+      const handler = mockWsClient.onEvent.mock.calls[0][1]
+
+      act(() => {
+        handler({ type: 'task_moved_to_dlq', payload: { id: 'task-1' } })
+      })
+
+      expect(result.current.tasks).toHaveLength(0)
     })
   })
 })

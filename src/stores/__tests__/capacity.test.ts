@@ -126,6 +126,33 @@ describe('useCapacityStore', () => {
       expect(result.current.records).toEqual([])
       expect(result.current.codingPlan).toBeUndefined()
     })
+
+    it('should handle response with undefined data', async () => {
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+      })
+
+      const { result } = renderHook(() => useCapacityStore())
+      await result.current.fetchCapacity()
+
+      expect(result.current.records).toEqual([])
+      expect(result.current.codingPlan).toBeUndefined()
+    })
+
+    it('should handle response with data but no codingPlan field', async () => {
+      ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: true,
+        data: {
+          records: [{ id: '1', service_type: 'text', remaining_quota: 50, total_quota: 100 }],
+        },
+      })
+
+      const { result } = renderHook(() => useCapacityStore())
+      await result.current.fetchCapacity()
+
+      expect(result.current.records).toHaveLength(1)
+      expect(result.current.codingPlan).toBeUndefined()
+    })
   })
 
   describe('refreshCapacity', () => {

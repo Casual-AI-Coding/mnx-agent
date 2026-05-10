@@ -1,6 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useExecutionLogsStore, getRecentLogs, getFailedLogs } from '../executionLogs'
 import type { ExecutionLog } from '../types/cron'
+import { TaskStatus } from '@/types/cron'
 
 vi.mock('@/lib/api/cron', () => ({
   getLogs: vi.fn(),
@@ -10,9 +11,10 @@ vi.mock('@/lib/api/cron', () => ({
 
 const mockClient = {
   subscribe: vi.fn(() => vi.fn()),
-  onEvent: vi.fn((eventType: string, handler: (event: { type: string; payload: unknown }) => void) => {
+  onEvent: vi.fn(() => {
     return vi.fn()
   }),
+  _handler: null as ((event: { type: string; payload: unknown }) => void) | null,
 }
 vi.mock('@/lib/websocket-client', () => ({
   getWebSocketClient: vi.fn(() => mockClient),
@@ -229,14 +231,12 @@ describe('useExecutionLogsStore', () => {
       expect(result.current.detailsLoading.has('log-1')).toBe(false)
     })
   })
-
-  // WebSocket subscription tests skipped - requires complex mock setup
-  // The store's WebSocket integration is tested via integration tests
 })
 
 describe('useExecutionLogsStore WebSocket', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockClient.onEvent.mockReturnValue(vi.fn())
+    localStorage.removeItem('minimax-execution-logs')
     useExecutionLogsStore.setState({
       logs: [],
       logDetails: new Map(),
@@ -246,6 +246,18 @@ describe('useExecutionLogsStore WebSocket', () => {
       _wsUnsubscribe: undefined,
     })
   })
+
+  const triggerHandler = (event: { type: string; payload: Record<string, unknown> }) => {
+    const calls = mockClient.onEvent.mock.calls
+    if (calls.length > 0) {
+      const handler = calls[calls.length - 1][1] as (event: { type: string; payload: unknown }) => void
+      act(() => {
+        handler(event)
+      })
+    }
+  }
+
+  const getLogs = () => useExecutionLogsStore.getState().logs
 
   describe('subscribeToWebSocket', () => {
     it('should call subscribeToWebSocket and register event handler', () => {
@@ -272,15 +284,259 @@ describe('useExecutionLogsStore WebSocket', () => {
 
       expect(secondCallCount).toBe(firstCallCount)
     })
+  })
 
-    it('should return early when WebSocket client is null', async () => {
-      const { getWebSocketClient } = await import('@/lib/websocket-client')
-      ;(getWebSocketClient as ReturnType<typeof vi.fn>).mockReturnValue(null)
-
+  describe('WebSocket event handling - mapStatus switch', () => {
+    it('should map status "success" to TaskStatus.Completed', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
       const { result } = renderHook(() => useExecutionLogsStore())
       result.current.subscribeToWebSocket()
 
-      expect(mockClient.onEvent).not.toHaveBeenCalled()
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: '1', jobId: 'job-1', status: 'success', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()[0].status).toBe('completed')
+    })
+
+    it('should map status "failed" to TaskStatus.Failed', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: '2', jobId: 'job-1', status: 'failed', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()[0].status).toBe('failed')
+    })
+
+    it('should map status "running" to TaskStatus.Running', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: '3', jobId: 'job-1', status: 'running', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()[0].status).toBe('running')
+    })
+
+    it('should use default status for unknown status value', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: '4', jobId: 'job-1', status: 'unknown_status', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()[0].status).toBe('running')
+    })
+  })
+
+  describe('WebSocket event handling - event.type switch', () => {
+    it('should handle log_created event type', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: {
+          id: 'log-new-1',
+          jobId: 'job-1',
+          status: 'success',
+          executedAt: '2024-01-01T00:00:00Z',
+          tasksExecuted: 5,
+          tasksSucceeded: 4,
+          tasksFailed: 1,
+          error: 'Partial failure',
+        },
+      })
+
+      expect(getLogs()).toHaveLength(1)
+      expect(getLogs()[0].id).toBe('log-new-1')
+      expect(getLogs()[0].tasksExecuted).toBe(5)
+      expect(getLogs()[0].tasksFailed).toBe(1)
+      expect(getLogs()[0].errorSummary).toBe('Partial failure')
+    })
+
+    it('should handle log_updated event type', async () => {
+      const existingLog = {
+        id: 'existing-log',
+        jobId: 'job-1',
+        status: 'running' as const,
+        startedAt: '2024-01-01T00:00:00Z',
+        completedAt: null,
+        durationMs: null,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        errorSummary: null,
+        triggerType: 'cron' as const,
+        logDetail: null,
+      }
+      useExecutionLogsStore.setState({ logs: [existingLog] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_updated',
+        payload: {
+          id: 'existing-log',
+          status: 'failed',
+          tasksExecuted: 3,
+          tasksSucceeded: 2,
+          tasksFailed: 1,
+          error: 'Task failed',
+        },
+      })
+
+      expect(getLogs()[0].status).toBe('failed')
+      expect(getLogs()[0].tasksExecuted).toBe(3)
+      expect(getLogs()[0].tasksSucceeded).toBe(2)
+      expect(getLogs()[0].tasksFailed).toBe(1)
+      expect(getLogs()[0].errorSummary).toBe('Task failed')
+    })
+
+    it('should not duplicate log on log_created if id already exists', async () => {
+      const existingLog = {
+        id: 'duplicate-id',
+        jobId: 'job-1',
+        status: 'running' as const,
+        startedAt: '2024-01-01T00:00:00Z',
+        completedAt: null,
+        durationMs: null,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        errorSummary: null,
+        triggerType: 'cron' as const,
+        logDetail: null,
+      }
+      useExecutionLogsStore.setState({ logs: [existingLog] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: 'duplicate-id', jobId: 'job-1', status: 'success', executedAt: '2024-01-02T00:00:00Z' },
+      })
+
+      expect(getLogs()).toHaveLength(1)
+      expect(getLogs()[0].id).toBe('duplicate-id')
+    })
+  })
+
+  describe('WebSocket event handling - conditional branches', () => {
+    it('should not add log when logPayload.id is missing on log_created', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { jobId: 'job-1', status: 'success', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()).toHaveLength(0)
+    })
+
+    it('should not add log when logPayload.jobId is missing on log_created', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_created',
+        payload: { id: 'log-1', status: 'success', executedAt: '2024-01-01T00:00:00Z' },
+      })
+
+      expect(getLogs()).toHaveLength(0)
+    })
+
+    it('should not update log when logPayload.id is missing on log_updated', async () => {
+      const existingLog = {
+        id: 'existing-log',
+        jobId: 'job-1',
+        status: 'running' as const,
+        startedAt: '2024-01-01T00:00:00Z',
+        completedAt: null,
+        durationMs: null,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        errorSummary: null,
+        triggerType: 'cron' as const,
+        logDetail: null,
+      }
+      useExecutionLogsStore.setState({ logs: [existingLog] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_updated',
+        payload: { status: 'failed', tasksFailed: 1 },
+      })
+
+      expect(getLogs()[0].status).toBe('running')
+      expect(getLogs()[0].tasksFailed).toBe(0)
+    })
+
+    it('should update log_partialy when only some fields present on log_updated', async () => {
+      const existingLog = {
+        id: 'existing-log',
+        jobId: 'job-1',
+        status: 'running' as const,
+        startedAt: '2024-01-01T00:00:00Z',
+        completedAt: null,
+        durationMs: null,
+        tasksExecuted: 5,
+        tasksSucceeded: 5,
+        tasksFailed: 0,
+        errorSummary: null,
+        triggerType: 'cron' as const,
+        logDetail: null,
+      }
+      useExecutionLogsStore.setState({ logs: [existingLog] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      await triggerHandler({
+        type: 'log_updated',
+        payload: { id: 'existing-log', tasksFailed: 2 },
+      })
+
+      expect(getLogs()[0].tasksExecuted).toBe(5)
+      expect(getLogs()[0].tasksSucceeded).toBe(5)
+      expect(getLogs()[0].tasksFailed).toBe(2)
+    })
+
+    it('should limit logs to 100 entries', async () => {
+      useExecutionLogsStore.setState({ logs: [] })
+      const { result } = renderHook(() => useExecutionLogsStore())
+      result.current.subscribeToWebSocket()
+
+      for (let i = 0; i < 105; i++) {
+        await triggerHandler({
+          type: 'log_created',
+          payload: {
+            id: `log-${i}`,
+            jobId: 'job-1',
+            status: 'success',
+            executedAt: '2024-01-01T00:00:00Z',
+          },
+        })
+      }
+
+      expect(getLogs()).toHaveLength(100)
+      expect(getLogs()[0].id).toBe('log-104')
     })
   })
 })
