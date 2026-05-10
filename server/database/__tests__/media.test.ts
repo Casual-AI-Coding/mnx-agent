@@ -50,6 +50,7 @@ describe('MediaRecord Database Service', () => {
 
   beforeEach(async () => {
     const conn = getConnection()
+    await conn.execute(`DELETE FROM media_records WHERE is_public = true`)
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
     await conn.execute(`DELETE FROM media_records WHERE owner_id IN ($1, $2)`, [testOwnerId1, testOwnerId2])
     createdRecordIds.clear()
@@ -220,6 +221,8 @@ describe('MediaRecord Database Service', () => {
 
   describe('List MediaRecords', () => {
     beforeEach(async () => {
+      const conn = getConnection()
+      await conn.execute(`DELETE FROM media_records WHERE is_public = true AND owner_id IN ($1, $2, $3)`, [fileMarker, testOwnerId1, testOwnerId2])
       // Create test records
       await createAndTrack({
         filename: 'audio1.mp3',
@@ -810,6 +813,8 @@ describe('togglePublic', () => {
   describe('list visibility', () => {
     beforeEach(async () => {
       const conn = getConnection()
+      // Clean up all public records to prevent test pollution
+      await conn.execute(`DELETE FROM media_records WHERE is_public = true AND owner_id IN ($1, $2, $3)`, [fileMarker, testOwnerId1, testOwnerId2])
       await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
       await conn.execute(`DELETE FROM media_records WHERE owner_id IN ($1, $2)`, [testOwnerId1, testOwnerId2])
       createdRecordIds.clear()
