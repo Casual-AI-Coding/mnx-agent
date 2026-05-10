@@ -52,6 +52,26 @@ describe('useTaskQueueStore', () => {
       expect(result.current.loading).toBe(false)
     })
 
+    it('should handle thrown errors', async () => {
+      ;(getTasks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Fetch failed'))
+
+      const { result } = renderHook(() => useTaskQueueStore())
+      await result.current.fetchTasks()
+
+      expect(result.current.error).toBe('Fetch failed')
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      ;(getTasks as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useTaskQueueStore())
+      await result.current.fetchTasks()
+
+      expect(result.current.error).toBe('Failed to fetch tasks')
+      expect(result.current.loading).toBe(false)
+    })
+
     it('should apply filter to API call', async () => {
       ;(getTasks as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true, data: { tasks: [], total: 0 } })
 
@@ -86,6 +106,26 @@ describe('useTaskQueueStore', () => {
       expect(result.current.error).toBe('Creation failed')
     })
 
+    it('should handle thrown errors', async () => {
+      const newTask = { jobId: 'job-1', taskType: 'text', payload: {} }
+      ;(createTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.createTask(newTask)).rejects.toThrow()
+      expect(result.current.error).toBe('Network error')
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      const newTask = { jobId: 'job-1', taskType: 'text', payload: {} }
+      ;(createTask as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.createTask(newTask)).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to create task')
+    })
+
   })
 
   describe('updateTask', () => {
@@ -111,6 +151,26 @@ describe('useTaskQueueStore', () => {
       await expect(result.current.updateTask('1', { status: 'completed' })).rejects.toThrow()
       expect(result.current.error).toBe('Update failed')
     })
+
+    it('should handle thrown errors', async () => {
+      ;(updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+      useTaskQueueStore.setState({ tasks: [{ id: '1', jobId: 'job-1', taskType: 'text', status: 'pending', payload: {} }] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.updateTask('1', { status: 'completed' })).rejects.toThrow()
+      expect(result.current.error).toBe('Network error')
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      ;(updateTask as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+      useTaskQueueStore.setState({ tasks: [{ id: '1', jobId: 'job-1', taskType: 'text', status: 'pending', payload: {} }] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.updateTask('1', { status: 'completed' })).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to update task')
+    })
   })
 
   describe('deleteTask', () => {
@@ -135,6 +195,28 @@ describe('useTaskQueueStore', () => {
 
       await expect(result.current.deleteTask('1')).rejects.toThrow()
       expect(result.current.error).toBe('Delete failed')
+    })
+
+    it('should handle thrown errors', async () => {
+      const existingTask = { id: '1', jobId: 'job-1', taskType: 'text', status: 'pending', payload: {} }
+      ;(deleteTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'))
+      useTaskQueueStore.setState({ tasks: [existingTask] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.deleteTask('1')).rejects.toThrow()
+      expect(result.current.error).toBe('Network error')
+    })
+
+    it('should handle non-Error thrown values', async () => {
+      const existingTask = { id: '1', jobId: 'job-1', taskType: 'text', status: 'pending', payload: {} }
+      ;(deleteTask as ReturnType<typeof vi.fn>).mockRejectedValue('unknown')
+      useTaskQueueStore.setState({ tasks: [existingTask] })
+
+      const { result } = renderHook(() => useTaskQueueStore())
+
+      await expect(result.current.deleteTask('1')).rejects.toThrow()
+      expect(result.current.error).toBe('Failed to delete task')
     })
   })
 
