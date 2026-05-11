@@ -1,4 +1,4 @@
-import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check } from 'lucide-react'
+import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -13,9 +13,10 @@ import { cn } from '@/lib/utils'
 interface HeaderProps {
   onHistoryClick?: () => void
   onShowKeyModal?: () => void
+  onMenuClick?: () => void
 }
 
-export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) {
+export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { settings, setCategory } = useSettingsStore()
@@ -52,6 +53,13 @@ export default function Header({ onHistoryClick, onShowKeyModal }: HeaderProps) 
       <header className="fixed top-0 left-0 right-0 h-[60px] bg-card/80 backdrop-blur-xl border-b border-border/50 z-50">
         <div className="h-full flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden flex items-center justify-center w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
+              aria-label="菜单"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <svg
                 width="32"

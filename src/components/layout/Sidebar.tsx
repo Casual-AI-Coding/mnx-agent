@@ -13,9 +13,11 @@ import { DEFAULT_WIDTH, getMainElement, getStoredCollapsed, getStoredExpanded, g
 interface SidebarProps {
   onCollapseChange?: (collapsed: boolean) => void
   onWidthChange?: (width: number) => void
+  isMobile?: boolean
+  onNavItemClick?: () => void
 }
 
-export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProps) {
+export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onNavItemClick }: SidebarProps) {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(getStoredExpanded)
@@ -190,6 +192,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
           items={debugItems}
           label={t('sidebar.debugConsole', '调试台')}
           onToggle={() => toggleSection('debug')}
+          onNavItemClick={onNavItemClick}
         />
 
         {visibleSections.map((section) => (
@@ -202,6 +205,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange }: SidebarProp
             items={section.items}
             label={section.label}
             onToggle={toggleSection}
+            onNavItemClick={onNavItemClick}
           />
         ))}
       </nav>

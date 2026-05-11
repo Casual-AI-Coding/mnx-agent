@@ -8,14 +8,15 @@ interface DebugSectionProps {
   items: SidebarNavItem[]
   label: string
   onToggle: () => void
+  onNavItemClick?: () => void
 }
 
-export function DebugSection({ collapsed, expanded, items, label, onToggle }: DebugSectionProps) {
+export function DebugSection({ collapsed, expanded, items, label, onToggle, onNavItemClick }: DebugSectionProps) {
   if (collapsed) {
     return (
       <div className="py-1">
         {items.map((item) => (
-          <NavItem key={item.path} collapsed item={item} />
+          <NavItem key={item.path} collapsed item={item} onClick={onNavItemClick} />
         ))}
       </div>
     )
@@ -32,7 +33,7 @@ export function DebugSection({ collapsed, expanded, items, label, onToggle }: De
       <div className={cn('overflow-hidden transition-all duration-200', expanded ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0')}>
         <div className="pl-4 mt-1 space-y-0.5">
           {items.map((item) => (
-            <NavItem key={item.path} collapsed={false} item={item} />
+            <NavItem key={item.path} collapsed={false} item={item} onClick={onNavItemClick} />
           ))}
         </div>
       </div>

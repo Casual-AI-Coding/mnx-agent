@@ -10,9 +10,10 @@ export interface SidebarNavItem {
 interface NavItemProps {
   collapsed: boolean
   item: SidebarNavItem
+  onClick?: () => void
 }
 
-export function NavItem({ collapsed, item }: NavItemProps) {
+export function NavItem({ collapsed, item, onClick }: NavItemProps) {
   const Icon = item.icon
   const baseClassName = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -25,7 +26,7 @@ export function NavItem({ collapsed, item }: NavItemProps) {
     )
 
   return (
-    <NavLink key={item.path} to={item.path} title={collapsed ? item.label : undefined} className={baseClassName}>
+    <NavLink key={item.path} to={item.path} title={collapsed ? item.label : undefined} className={baseClassName} onClick={onClick}>
       <Icon className={collapsed ? 'w-5 h-5' : 'w-4 h-4'} />
       {!collapsed && item.label}
     </NavLink>

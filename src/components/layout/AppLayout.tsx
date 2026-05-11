@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Key, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from './Sidebar'
@@ -24,7 +24,8 @@ export default function AppLayout() {
   const [tempKey, setTempKey] = useState(apiKey)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(220)
-  
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
   const {
     currentRecord,
     playlist,
@@ -52,10 +53,50 @@ export default function AppLayout() {
     setShowKeyModal(false)
   }
 
+  const closeMobileSidebar = () => setIsMobileSidebarOpen(false)
+
   return (
     <div className="h-screen bg-background overflow-hidden">
-      <Header onHistoryClick={() => setIsHistoryOpen(true)} onShowKeyModal={handleOpenKeyModal} />
-      <Sidebar onCollapseChange={setIsSidebarCollapsed} onWidthChange={setSidebarWidth} />
+      <Header
+        onHistoryClick={() => setIsHistoryOpen(true)}
+        onShowKeyModal={handleOpenKeyModal}
+        onMenuClick={() => setIsMobileSidebarOpen(true)}
+      />
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar onCollapseChange={setIsSidebarCollapsed} onWidthChange={setSidebarWidth} />
+      </div>
+
+      {/* Mobile Sidebar Drawer */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-40 lg:hidden"
+              onClick={closeMobileSidebar}
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed left-0 top-0 bottom-0 z-50 w-[280px] max-w-[85vw] lg:hidden"
+            >
+              <Sidebar
+                onCollapseChange={setIsSidebarCollapsed}
+                onWidthChange={setSidebarWidth}
+                isMobile
+                onNavItemClick={closeMobileSidebar}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <main
         id="app-main"
         className={cn(
@@ -63,12 +104,12 @@ export default function AppLayout() {
         )}
         style={{ marginLeft: isSidebarCollapsed ? 60 : sidebarWidth }}
       >
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           <Outlet />
         </div>
       </main>
       <HistoryPanel isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
-      
+
       {currentRecord && signedUrl && (
         <AudioPlayer
           record={currentRecord}
@@ -91,7 +132,7 @@ export default function AppLayout() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] border border-border shadow-2xl"
+              className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] max-w-[95vw] border border-border shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
