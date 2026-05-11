@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.9] - 2026-05-11
+
+### 🔒 Security
+
+- **P0/P1 安全阻断修复** — 批量下载 owner 过滤增强、togglePublic owner_id 约束、cron job update/delete 鉴权完善，防止跨用户数据访问 (`server/routes/media.ts`, `server/routes/cron/jobs.ts`)
+- **媒体公开状态鉴权分支清理** — 移除 `setPublicStatus` 中不可达的鉴权分支，简化安全逻辑 (`server/routes/media.ts`)
+- **API Key 脱敏与密码安全增强** — API Key 列表接口脱敏显示（仅保留前4后4位）、密码重置移除明文日志泄漏、密码生成改用 `crypto.randomBytes` 替代 `Math.random` (`server/routes/users.ts`, `server/routes/invitation-codes.ts`, `server/services/user-service.ts`)
+- **代码审查安全修复（批次1）** — WebSocket 内存泄漏修复（清理 completed 连接引用）、DLQ graceful shutdown 完善、Webhook HMAC 签名验证修复、路径遍历防护 (`server/services/websocket-service.ts`, `server/services/cron-scheduler.ts`, `server/routes/cron/webhooks.ts`)
+
+### ✨ Added
+
+- **数据库迁移 035** — `cron_jobs` 表添加 `misfire_policy` 列（`none`/`fire_once`/`fire_all`），支持错过触发策略配置 (`server/database/migrations/035_add_misfire_policy.ts`)
+- **P2 移动端适配基线** — Sidebar 抽屉化（移动端 overlay 模式）、响应式布局断点（lg/md/sm），适配触屏交互 (`src/components/layout/Sidebar.tsx`, `src/components/layout/AppLayout.tsx`)
+- **通配路由 404 页面** — 新增 NotFound 页面，匹配所有未定义路由，提供友好导航 (`src/pages/NotFound.tsx`)
+
+### 🐛 Fixed
+
+- **CI ESLint 99 errors 修复** — 批量修复 lint 错误 + 数据库环境变量缺失导致 CI 失败 (`server/middleware/asyncHandler.ts`, `.eslintrc.cjs`)
+- **数据库迁移竞态修复** — 修复迁移 001 中 owner_id 索引早于列创建的问题，修复 schema-pg 中 media_records 索引定义 (`server/database/migrations/001_initial_schema.ts`, `server/database/schema-pg.ts`)
+- **测试并发初始化竞态修复** — 修复 vitest fileParallelism 导致的测试数据库并发竞态条件，统一使用 `getTestDbConfig` 获取数据库名 (`vitest.config.ts`, `server/__tests__/test-helpers.ts`)
+- **构建依赖修复** — 重建 package-lock.json 修复 esbuild 0.28.0 缺失 + Zod 4 类型兼容 (`package-lock.json`)
+- **移动端侧栏修复** — 修复折叠态按钮位置、内容区偏移、NavGroup chevron 旋转方向 (`src/components/layout/Sidebar.tsx`, `src/components/layout/sidebar/NavGroup.tsx`)
+- **P2 体验快修** — WebSocket toast 去重缓存增加硬上限（防止内存无限增长）、媒体加载延迟修复（移除双重 loading）、通配路由 404 处理 (`src/hooks/useMediaManagement.ts`, `src/lib/websocket-client.ts`, `src/hooks/useWebSocket.ts`)
+- **代码审查质量修复（批次2-4）** — MiniMax 客户端重试逻辑修复、any 类型窄化为具体类型、console.log 清理为 pino、魔数常量化、service-node-registry 异步模式还原 (`server/lib/minimax/client.ts`, `server/services/capacity-checker.ts`, `server/services/notification-service.ts`, `server/service-registration.ts`)
+- **Capacity 竞态修复** — 使用原子 `decrementCapacity` 防止 TOCTOU 竞态条件 (`server/services/capacity-checker.ts`)
+
+### 🔄 Changed
+
+- **移除 /api/v1 路径** — 移除未使用的 `/api/v1` 路径挂载，启用生产 CSP 强制模式（移除 report-only） (`server/index.ts`)
+- **审查回归修复** — JobRepo update 返回值规范化、media card layout 布局对齐 (`server/repositories/job-repository.ts`, `src/components/media/MediaCardPreview.tsx`)
+
+### 📝 Docs
+
+- **Release Note 规范制定** — 新增 `docs/standards/release-note-standards.md`，定义 emoji 分类体系与 GitHub Release 发布模板
+- **64 个历史版本 Release Note 回溯** — 为 v1.0.0 ~ v2.2.8 间所有版本补建 GitHub Release Note (`scripts/create-release-notes.mjs`)
+- **README 精简** — 移除 API 表格、工作流 JSON、项目树、数据库表等技术细节，聚焦产品能力描述 (`README.md`)
+- **ADR 模板中文化** — `docs/decisions/_template.md` 切换为中文模板 (`docs/decisions/_template.md`)
+- **发布流程更新** — Release Guide 新增 GitHub Release Note 创建步骤、CHANGELOG emoji 模板、Release Note 关系说明 (`docs/guides/release-guide.md`)
+- **文档归档** — roadmap/需求池同步、plans 归档至 archive/v2.2、重复归档清理、@docs/plans/ 引用断链修复
+- **设计文档** — 新增安全/体验/移动端修复设计文档 (`docs/specs/2026-05-11-security-ux-mobile-fixes-design.md`)
+
+### 🧪 Tests
+
+- **Store catch 分支测试补充** — cronJobs (+128)、materials (+92)、taskQueue (+190→190)、executionLogs (+336→336) 补充异常分支测试覆盖 (`src/stores/__tests__/`)
+- **Cron 测试修复** — mock `authenticateJWT` 中间件 + `execute` 返回 `{changes}` 对象对齐 (`server/__tests__/cron-manual-trigger.test.ts`, `server/__tests__/cron-validation.test.ts`)
+- **Export service 测试修复** — 数据隔离 + toCSV 完整 header 行验证 (`server/services/__tests__/export-service.test.ts`)
+- **前端页面测试补充** — Dashboard (+84)、VideoGeneration (+116) 测试新增 (`src/pages/__tests__/`)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 数据库迁移 035 为增量变更，向下兼容
+- ✅ 移动端适配为 Pure CSS / 响应式布局，不影响桌面端
+- ✅ `/api/v1` 路径从未在 2.x 版本使用，移除不影响现有客户端
+- ✅ 安全修复均为增强型变更，不影响合法用户访问
+
 ## [2.2.8] - 2026-05-09
 
 ### Security
