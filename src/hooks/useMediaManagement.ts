@@ -268,10 +268,13 @@ export function useMediaManagement(): UseMediaManagementReturn {
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取媒体列表失败')
     } finally {
-      const elapsed = Date.now() - startTime
-      const minDelay = 500
-      if (elapsed < minDelay) {
-        await new Promise(resolve => setTimeout(resolve, minDelay - elapsed))
+      // 仅初次加载保留最小延迟避免骨架屏闪烁，后续请求即时响应
+      if (isInitial) {
+        const elapsed = Date.now() - startTime
+        const minDelay = 300
+        if (elapsed < minDelay) {
+          await new Promise(resolve => setTimeout(resolve, minDelay - elapsed))
+        }
       }
       setIsLoading(false)
       setIsInitialLoad(false)

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, Suspense, lazy } from 'react'
 import { Toaster } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
@@ -43,6 +43,7 @@ const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
 const MaterialManagement = lazy(() => import('@/pages/MaterialManagement'))
 const ArtistMaterialEditor = lazy(() => import('@/pages/ArtistMaterialEditor'))
 const OpenAIImage2 = lazy(() => import('@/pages/OpenAIImage2'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
 
 // Route wrapper with ErrorBoundary for each page
 function RouteWithErrorBoundary({ children, pageName }: { children: React.ReactNode; pageName: string }) {
@@ -136,6 +137,14 @@ function AppContent() {
       />
       <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
         <Route index element={<RouteWithErrorBoundary pageName="仪表盘"><Dashboard /></RouteWithErrorBoundary>} />
+        <Route
+          path="dashboard"
+          element={
+            <RouteWithErrorBoundary pageName="仪表盘">
+              <Dashboard />
+            </RouteWithErrorBoundary>
+          }
+        />
         <Route
           path="text"
           element={
@@ -392,7 +401,7 @@ function AppContent() {
             </RouteWithErrorBoundary>
           }
         />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<RouteWithErrorBoundary pageName="404"><NotFound /></RouteWithErrorBoundary>} />
       </Route>
     </Routes>
     </TokenRefreshProvider>

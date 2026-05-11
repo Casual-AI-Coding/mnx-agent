@@ -32,7 +32,7 @@ const MAX_EVENTS_BUFFER = 100
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
     channels = ['all'],
-    showToasts = true,
+    showToasts = false,
     onEvent,
     url,
   } = options
