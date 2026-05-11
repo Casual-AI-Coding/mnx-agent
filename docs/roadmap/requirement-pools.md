@@ -13,7 +13,7 @@
 - 删除的需求 ID 直接移除，不保留空号
 - ID 连续编号，便于追踪和引用
 
-**当前 ID 范围**: R-001 ~ R-024（共 24 个需求）
+**当前 ID 范围**: R-001 ~ R-025（共 25 个需求）
 
 ---
 
@@ -27,7 +27,7 @@
 | R-002 | 资源管理完善 | Admin | P3 | v2.3 | 待办 |
 | R-003 | 云端备份 | Data | P1 | v2.8 | 待办 |
 | R-004 | 审计日志补充 | Security | P1 | v2.1 | 待办 |
-| R-005 | Dashboard 概览页 | UX | P2 | v3.2 | 待办 |
+| R-005 | Dashboard 运营总览 | UX | P2 | v3.2 | 待办 |
 | R-006 | 工作流/DLQ 投产验证 | QA | P1 | v4.0 | 待办 |
 | R-007 | 性能优化 | Performance | P4 | v3.1 | 待办 |
 | R-008 | 前端环境分离 | DevOps | P4 | v2.0 | 待办 |
@@ -56,10 +56,10 @@
 - **现状**: 审计日志基础字段，缺少响应时间和完整参数
 - **范围**: `server/middleware/audit-middleware.ts` + `server/database/schema.ts` 字段扩展
 
-### R-005 - Dashboard 概览页
-- **描述**: 概览页面，展示 API 使用量、配额状态、最近任务、快速操作入口
-- **现状**: 有 Dashboard.tsx 但较简陋
-- **范围**: `src/pages/Dashboard.tsx` 重构 + 新增统计 API
+### R-005 - Dashboard 运营总览
+- **描述**: 将首页从快捷入口升级为运营总览，展示 API 使用量、配额状态、失败率、平均耗时、最近失败任务、DLQ 摘要、容量风险、系统健康状态和常用操作入口
+- **现状**: 有 `Dashboard.tsx`，包含欢迎弹窗、快捷入口、本地 usage/history 与 WebSocket recent activity，但缺少真实后端统计、失败摘要、容量风险和系统健康聚合
+- **范围**: `src/pages/Dashboard.tsx` 重构 + `server/routes/stats.ts` 统计 API 扩展 + Cron/Workflow/DLQ/Capacity 摘要接口
 
 ### R-006 - 工作流/DLQ 投产验证
 - **描述**: 验证工作流引擎、定时任务、死信队列实际可用，编写使用文档
@@ -77,9 +77,9 @@
 - **范围**: `vite.config.ts` + 环境变量配置 + feature flags 服务
 
 ### R-009 - 请求回放与参数复用
-- **描述**: 从审计日志一键重新执行请求；从历史记录一键复用生成参数
-- **现状**: AuditLogs 有日志但无重放按钮；HistoryItem 无复用按钮
-- **范围**: AuditLogs 添加重放按钮 + HistoryItem 添加复用按钮 + 各生成页面参数填充
+- **描述**: 从审计日志安全回放允许的请求；从生成历史一键恢复 prompt、模型、尺寸、风格、音色等参数，支持微调后重新生成
+- **现状**: AuditLogs 有日志但无重放按钮；HistoryItem/本地历史有结果记录但缺少统一参数快照与复用入口
+- **范围**: AuditLogs 添加受限回放按钮 + HistoryItem 添加复用按钮 + 各生成页面参数填充 + 参数快照结构标准化；敏感字段、文件上传和外部副作用请求默认不可直接回放
 
 ### R-010 - 新手引导 Tour
 - **描述**: 首次登录时的功能介绍引导，帮助用户快速上手
@@ -107,7 +107,7 @@
 | R-013 | 结构化日志 + Trace ID | Monitoring | P0 | v2.5 | 待办 |
 | R-014 | 错误追踪集成 | Monitoring | P0 | v2.5 | 待办 |
 | R-015 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 待办 |
-| R-016 | 全局 Toast/通知系统 | UX | P1 | - | 待定 |
+| R-016 | 全局通知中心与 Toast 治理 | UX | P1 | v3.2 | 待办 |
 | R-017 | 资源置顶功能 | UX | P2 | v2.7 | 待办 |
 | R-018 | API Playground | DevTools | P1 | v4.1 | 待办 |
 | R-019 | Prompt模板版本管理 | Content | P3 | v2.4 | 待办 |
@@ -129,10 +129,10 @@
 - **现状**: `rate-limits.ts` 纯静态配置，无 UI
 - **范围**: `server/routes/admin/rate-limits.ts` + `src/pages/Admin/RateLimits.tsx`
 
-### R-016 - 全局 Toast/通知系统
-- **描述**: 统一的通知中心，聚合 WebSocket 推送 + API 错误 + 系统公告
-- **现状**: 已有 sonner wrapper (toast.ts)，但各页面独立调用，无统一 store
-- **范围**: `src/stores/notification.ts` + `src/components/NotificationCenter.tsx`
+### R-016 - 全局通知中心与 Toast 治理
+- **描述**: 统一通知中心，聚合 WebSocket 推送、API 错误、系统公告、DLQ、容量告警和任务失败事件；Toast 只承载高优先级即时提醒，并支持去重、节流、已读状态和点击跳转
+- **现状**: 已有 sonner wrapper (`toast.ts`)；WebSocket 事件和页面操作各自 toast，缺少统一 store、通知列表、事件分级和去重策略
+- **范围**: `src/stores/notification.ts` + `src/components/NotificationCenter.tsx` + WebSocket 事件分级/去重 + Header 通知入口 + 后续可选持久化 API
 
 ### R-017 - 资源置顶功能
 - **描述**: 用户可将常用资源（模板、工作流、媒体）置顶展示，支持快速访问
@@ -150,9 +150,9 @@
 - **范围**: `prompt_templates` 表扩展 + 版本历史 API + `src/pages/TemplateLibrary.tsx` 版本对比 UI
 
 ### R-020 - 错误码速查表
-- **描述**: 系统错误码参考文档，包含 MiniMax API 错误码、系统内部错误码、常见解决方案
-- **现状**: 无系统级错误码参考
-- **范围**: 可合并到 R-011 帮助中心，或单独 `src/pages/ErrorCodes.tsx`
+- **描述**: 系统错误码参考文档，包含 MiniMax API 错误码、系统内部错误码、外部供应商错误、常见原因和修复建议，并在失败 toast/通知/日志详情中提供跳转
+- **现状**: 无系统级错误码参考；错误信息分散在 API 响应、日志和页面提示中
+- **范围**: 可合并到 R-011 帮助中心，或单独 `src/pages/ErrorCodes.tsx`；补充错误码数据源、搜索、分类和详情锚点
 
 ### R-021 - 资源集成
 - **描述**: 将素材、Prompt模板、工作流模板集成到各生成功能中使用，支持快速引用已有资源
@@ -167,13 +167,13 @@
 
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
-| R-022 | 用量监控完善 | Monitoring | P2 | - | 待办 |
+| R-022 | 用量监控完善 | Monitoring | P2 | v3.2 | 待办 |
 | R-023 | 歌词生成 | Content | P1 | v2.2 | 已完成 |
 
 ### R-022 - 用量监控完善
-- **描述**: 用量监控页面展示 API 使用量统计、配额消耗趋势、各服务调用占比、历史用量对比
-- **现状**: `/token` 路由存在，但 `TokenMonitor.tsx` 页面内容为空
-- **范围**: `src/pages/TokenMonitor.tsx` + `server/routes/stats.ts` 统计 API 扩展
+- **描述**: 用量监控页面展示 API 使用量统计、配额消耗趋势、各服务调用占比、历史用量对比，并与 Dashboard 运营总览共享关键指标
+- **现状**: `/token` 路由和 `TokenMonitor.tsx` 已有本地 usage/history、手动余额和简易图表雏形，但未接入真实后端统计、配额趋势和服务占比
+- **范围**: `src/pages/TokenMonitor.tsx` + `server/routes/stats.ts` 统计 API 扩展 + Dashboard 指标复用
 
 ### R-023 - 歌词生成
 - **描述**: 调试台新增歌词生成功能页面，支持 AI 辅助歌词创作、歌词优化、风格建议
@@ -223,6 +223,7 @@
 | 日期 | 变更 |
 |------|------|
 | 2026-05-04 | R-024（OpenAI Image-2 外部调试）标记为已完成，版本 v2.2.6 |
+| 2026-05-11 | 更新当前 ID 范围到 R-025；完善 R-005/R-009/R-016/R-020/R-022 描述；将 R-016/R-022 分配到 v3.2 |
 | 2026-04-28 | R-019（Prompt模板版本管理）从 v2.3 调整到 v2.4 |
 | 2026-04-25 | 新增 R-024 OpenAI Image-2 外部调试需求，插入 v2.3 版本 |
 | 2026-04-23 | R-023（歌词生成）标记为已完成，v2.2 版本 |
