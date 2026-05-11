@@ -285,7 +285,7 @@ describe('MediaService', () => {
       const records = [mockMediaRecord, { ...mockMediaRecord, id: 'media-2' }]
       mockDb.getMediaRecordsByIds.mockResolvedValue(records)
       const result = await service.getByIds(['media-1', 'media-2'])
-      expect(mockDb.getMediaRecordsByIds).toHaveBeenCalledWith(['media-1', 'media-2'])
+      expect(mockDb.getMediaRecordsByIds).toHaveBeenCalledWith(['media-1', 'media-2'], undefined)
       expect(result).toHaveLength(2)
     })
 
@@ -298,7 +298,7 @@ describe('MediaService', () => {
     it('should pass ownerId to db', async () => {
       mockDb.getMediaRecordsByIds.mockResolvedValue([])
       await service.getByIds(['media-1'], 'owner-1')
-      expect(mockDb.getMediaRecordsByIds).toHaveBeenCalledWith(['media-1'])
+      expect(mockDb.getMediaRecordsByIds).toHaveBeenCalledWith(['media-1'], 'owner-1')
     })
   })
 
@@ -324,7 +324,7 @@ describe('MediaService', () => {
       const updatedRecord = { ...mockMediaRecord, is_public: true }
       mockDb.togglePublicMediaRecord.mockResolvedValue(updatedRecord)
       const result = await service.togglePublic('media-1', true)
-      expect(mockDb.togglePublicMediaRecord).toHaveBeenCalledWith('media-1', true)
+      expect(mockDb.togglePublicMediaRecord).toHaveBeenCalledWith('media-1', true, undefined)
       expect(result?.is_public).toBe(true)
     })
 
