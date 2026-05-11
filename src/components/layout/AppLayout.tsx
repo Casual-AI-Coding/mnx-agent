@@ -14,7 +14,7 @@ import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { settings, setCategory, initialize, saveSettings } = useSettingsStore()
   const { isHydrated } = useAuthStore()
   const apiKey = settings?.api?.minimaxKey ?? DEFAULT_SETTINGS.api.minimaxKey
@@ -25,6 +25,10 @@ export default function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(220)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isDesktopLayout, setIsDesktopLayout] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia('(min-width: 1024px)').matches
+  })
 
   const {
     currentRecord,
@@ -41,6 +45,15 @@ export default function AppLayout() {
       initialize()
     }
   }, [initialize, isHydrated])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const updateLayoutMode = () => setIsDesktopLayout(mediaQuery.matches)
+
+    updateLayoutMode()
+    mediaQuery.addEventListener('change', updateLayoutMode)
+    return () => mediaQuery.removeEventListener('change', updateLayoutMode)
+  }, [])
 
   const handleOpenKeyModal = () => {
     setTempKey(apiKey)
@@ -102,7 +115,7 @@ export default function AppLayout() {
         className={cn(
           'mt-[60px] h-[calc(100vh-60px)] bg-grid overflow-y-scroll custom-scrollbar transition-all duration-200'
         )}
-        style={{ marginLeft: isSidebarCollapsed ? 60 : sidebarWidth }}
+        style={{ marginLeft: isDesktopLayout ? (isSidebarCollapsed ? 60 : sidebarWidth) : 0 }}
       >
         <div className="p-4 lg:p-6">
           <Outlet />

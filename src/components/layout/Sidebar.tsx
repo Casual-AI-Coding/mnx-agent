@@ -138,6 +138,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
     }))
 
   const debugExpanded = expandedSections['debug']
+  const effectiveCollapsed = isMobile ? false : isCollapsed
   return (
     <aside
       ref={asideRef}
@@ -146,9 +147,9 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
         isMobile
           ? 'relative w-full'
           : 'fixed left-0 top-[60px] bottom-0',
-        isCollapsed && !isMobile ? 'w-[60px]' : ''
+        effectiveCollapsed ? 'w-[60px]' : ''
       )}
-      style={isMobile || isCollapsed ? undefined : { width: sidebarWidth }}
+      style={isMobile || effectiveCollapsed ? undefined : { width: sidebarWidth }}
     >
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -160,7 +161,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
         }
       `}</style>
 
-      {!isMobile && !isCollapsed && (
+      {!isMobile && !effectiveCollapsed && (
         <div
           onMouseDown={handleResizeStart}
           className={cn(
@@ -189,10 +190,10 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
 
       <nav className={cn(
         'flex-1 overflow-y-auto scrollbar-hide',
-        isCollapsed ? 'px-1 py-2' : 'px-2 py-2'
+        effectiveCollapsed ? 'px-1 py-2' : 'px-2 py-2'
       )}>
         <DebugSection
-          collapsed={isCollapsed}
+          collapsed={effectiveCollapsed}
           expanded={Boolean(debugExpanded)}
           items={debugItems}
           label={t('sidebar.debugConsole', '调试台')}
@@ -203,7 +204,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
         {visibleSections.map((section) => (
           <NavGroup
             key={section.id}
-            collapsed={isCollapsed}
+            collapsed={effectiveCollapsed}
             expanded={Boolean(expandedSections[section.id])}
             icon={section.icon}
             id={section.id}
@@ -217,9 +218,9 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
 
       <div className={cn(
         'flex-shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-200',
-        isCollapsed ? 'p-2' : 'p-4'
+        effectiveCollapsed ? 'p-2' : 'p-4'
       )}>
-        <UserSection collapsed={isCollapsed} onOpenSettings={() => setShowSettingsModal(true)} />
+        <UserSection collapsed={effectiveCollapsed} onOpenSettings={() => setShowSettingsModal(true)} />
       </div>
 
       <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
