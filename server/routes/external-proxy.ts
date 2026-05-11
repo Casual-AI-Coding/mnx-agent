@@ -29,14 +29,27 @@ function isUrlAllowed(urlString: string): boolean {
     const url = new URL(urlString)
     const hostname = url.hostname.toLowerCase()
 
-    // Block internal addresses
-    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
-    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
-      return false
+    // 阻止内部地址：
+    // - 精确匹配：localhost、0.0.0.0 仅匹配自身（localhost.evil.com 是合法外部域名）
+    // - 前缀匹配：127. 匹配所有 loopback IP；[::1]/::1 匹配 IPv6 loopback
+    const blockedInternal = [
+      { pattern: 'localhost', exact: true },
+      { pattern: '127.', exact: false },
+      { pattern: '0.0.0.0', exact: true },
+      { pattern: '[::1]', exact: true },
+      { pattern: '::1', exact: true },
+    ]
+    for (const { pattern, exact } of blockedInternal) {
+      if (exact ? hostname === pattern : hostname.startsWith(pattern)) {
+        return false
+      }
     }
 
-    // Check against allowlist
-    return ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))
+    // 白名单匹配 - 使用 wrapped-dot 防止子域名欺骗：
+    // `.sub.api.sisyphusx.com`.endsWith(`.api.sisyphusx.com`) → true  ✅
+    // `.api.sisyphusx.com.evil.com`.endsWith(`.api.sisyphusx.com`) → false ✅
+    const wrappedHostname = `.${hostname}`
+    return ALLOWED_HOSTS.some(h => wrappedHostname.endsWith(`.${h}`))
   } catch {
     return false
   }
@@ -68,14 +81,7 @@ router.post(
       return
     }
 
-    const hostname = targetUrl.hostname.toLowerCase()
-    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
-    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
-      errorResponse(res, '不允许访问内部地址', 403)
-      return
-    }
-
-    if (!ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) {
+    if (!isUrlAllowed(url)) {
       errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
       return
     }
@@ -178,14 +184,7 @@ router.post(
       return
     }
 
-    const hostname = targetUrl.hostname.toLowerCase()
-    const blockedInternal = ['localhost', '127.', '0.0.0.0', '[::1]', '::1']
-    if (blockedInternal.some(p => hostname === p || hostname.startsWith(p))) {
-      errorResponse(res, '不允许访问内部地址', 403)
-      return
-    }
-
-    if (!ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) {
+    if (!isUrlAllowed(url)) {
       errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
       return
     }

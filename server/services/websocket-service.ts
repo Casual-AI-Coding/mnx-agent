@@ -42,10 +42,10 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     } as CronEvent)
   }
 
-  emitJobDeleted(jobId: string): void {
+  emitJobDeleted(jobId: string, ownerId: string): void {
     this.emit('job_event', {
       type: 'job_deleted',
-      payload: { id: jobId },
+      payload: { id: jobId, owner_id: ownerId },
       timestamp: toLocalISODateString()
     } as CronEvent)
   }
@@ -58,10 +58,10 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
     } as CronEvent)
   }
 
-  emitJobExecuted(jobId: string, result: { success: boolean; durationMs: number }): void {
+  emitJobExecuted(jobId: string, result: { success: boolean; durationMs: number; ownerId?: string }): void {
     this.emit('job_event', {
       type: 'job_executed',
-      payload: { jobId, ...result },
+      payload: { jobId, owner_id: result.ownerId, success: result.success, durationMs: result.durationMs },
       timestamp: toLocalISODateString()
     } as CronEvent)
   }
@@ -101,7 +101,7 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
   emitTaskMovedToDLQ(task: unknown, error: string): void {
     this.emit('task_event', {
       type: 'task_moved_to_dlq',
-      payload: { task, error },
+      payload: { task, error, owner_id: (task as Record<string, unknown>).owner_id },
       timestamp: toLocalISODateString()
     } as CronEvent)
   }

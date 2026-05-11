@@ -357,7 +357,7 @@ export class CronScheduler {
 
   private finalizeExecution(job: CronJob, outcome: ExecutionOutcome): void {
     this.concurrencyManager.releaseSlot(job.id)
-    this.eventBus.emitJobExecuted(job.id, outcome)
+    this.eventBus.emitJobExecuted(job.id, { ...outcome, ownerId: job.owner_id ?? undefined })
   }
 
   private async executeWithTimeout<T>(

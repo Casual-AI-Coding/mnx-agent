@@ -17,6 +17,7 @@ import {
 } from '../../validation/cron-schemas'
 
 import { buildOwnerFilter, getOwnerIdForInsert } from '../../middleware/data-isolation.js'
+import { cronEvents } from '../../services/websocket-service.js'
 import { formatDuration } from './utils'
 import { withEntityNotFound } from '../../utils/index.js'
 import { toLocalISODateString } from '../../lib/date-utils.js'
@@ -106,6 +107,7 @@ router.delete('/jobs/:id', validateParams(cronJobIdParamsSchema), asyncHandler(a
     await taskService.delete(task.id, ownerId)
   }
   await jobService.delete(req.params.id, ownerId)
+  cronEvents.emitJobDeleted(job.id, job.owner_id ?? '')
   deletedResponse(res, { tasksDeleted: tasks.length })
 }))
 

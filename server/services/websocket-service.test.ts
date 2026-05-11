@@ -86,12 +86,12 @@ describe('WebSocketService', () => {
         const handler = vi.fn()
         cronEvents.on('job_event', handler)
 
-        cronEvents.emitJobDeleted('job-1')
+        cronEvents.emitJobDeleted('job-1', 'owner-1')
 
         expect(handler).toHaveBeenCalledTimes(1)
         const event = handler.mock.calls[0][0]
         expect(event.type).toBe('job_deleted')
-        expect(event.payload).toEqual({ id: 'job-1' })
+        expect(event.payload).toEqual({ id: 'job-1', owner_id: 'owner-1' })
       })
     })
 
@@ -118,7 +118,7 @@ describe('WebSocketService', () => {
         expect(handler).toHaveBeenCalledTimes(1)
         const event = handler.mock.calls[0][0]
         expect(event.type).toBe('job_executed')
-        expect(event.payload).toEqual({ jobId: 'job-1', success: true, durationMs: 100 })
+        expect(event.payload).toEqual({ jobId: 'job-1', owner_id: undefined, success: true, durationMs: 100 })
       })
     })
 

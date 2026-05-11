@@ -3,12 +3,13 @@ import type { CronJob, TaskQueueItem, ExecutionLog } from '../../database/types.
 export interface JobExecutionResult {
   success: boolean
   durationMs: number
+  ownerId?: string
 }
 
 export interface IEventBus {
   emitJobCreated(job: CronJob): void
   emitJobUpdated(job: CronJob): void
-  emitJobDeleted(jobId: string): void
+  emitJobDeleted(jobId: string, ownerId: string): void
   emitJobToggled(job: CronJob): void
   emitJobExecuted(jobId: string, result: JobExecutionResult): void
   emitTaskCreated(task: TaskQueueItem): void
