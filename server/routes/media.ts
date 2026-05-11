@@ -329,25 +329,21 @@ router.patch('/:id/public', validateParams(mediaIdParamsSchema), asyncHandler(as
     return
   }
 
-  const record = await db.getById(id)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const record = await db.getById(id, ownerId, true)
   if (!record || record.is_deleted) {
     errorResponse(res, 'Media record not found', 404)
     return
   }
 
-  if (record.owner_id) {
-    if (record.owner_id !== req.user?.userId) {
-      errorResponse(res, 'Only owner can toggle public status', 403)
-      return
-    }
-  } else {
-    if (req.user?.role !== 'super') {
-      errorResponse(res, 'Only super can toggle public status for records without owner', 403)
+  if (record.owner_id && record.owner_id !== req.user?.userId) {
+    const isSuperOnOrphan = !record.owner_id && req.user?.role === 'super'
+    if (!isSuperOnOrphan) {
+      errorResponse(res, 'Media record not found', 404)
       return
     }
   }
 
-  const ownerId = buildOwnerFilter(req).params[0]
   const updated = await db.togglePublic(id, isPublic, ownerId)
   successResponse(res, updated)
 }))
@@ -368,9 +364,9 @@ router.post('/batch/public', asyncHandler(async (req, res) => {
 
   const userId = req.user?.userId
   const userRole = req.user?.role
+  const ownerId = buildOwnerFilter(req).params[0]
 
-  // 批量取所有记录，一次查询替代 N 次 getById
-  const records = await db.getByIds(ids)
+  const records = await db.getByIds(ids, ownerId)
   const recordMap = new Map(records.map(r => [r.id, r]))
 
   const authorizedIds: string[] = []

@@ -187,10 +187,11 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
       values.push(ownerId)
     }
 
-    await this.conn.execute(
+    const result = await this.conn.execute(
       `UPDATE cron_jobs SET ${fields.join(', ')} WHERE ${whereClause}`,
       values
     )
+    if (result.changes === 0) return null
     return this.getById(id, ownerId)
   }
 

@@ -9,7 +9,7 @@ describe('JobRepository - Comprehensive', () => {
     vi.clearAllMocks()
     mockDb = {
       query: vi.fn(),
-      execute: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ changes: 1 }),
       transaction: vi.fn(async (fn) => {
         const txConnection = {
           query: mockDb.query,

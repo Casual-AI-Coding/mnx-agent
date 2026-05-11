@@ -435,13 +435,25 @@ function getWebSocketUrl(): string {
 }
 
 const TOAST_DEBOUNCE_MS = 5000
+const MAX_TOAST_MAP_SIZE = 200
 
 const recentToasts = new Map<string, number>()
+
+function pruneRecentToasts(now: number): void {
+  if (recentToasts.size <= MAX_TOAST_MAP_SIZE) return
+  for (const [key, timestamp] of recentToasts) {
+    if (now - timestamp > TOAST_DEBOUNCE_MS * 2) {
+      recentToasts.delete(key)
+    }
+  }
+}
 
 export function showEventToast(event: WebSocketEvent): void {
   const toastKey = buildToastKey(event)
   const now = Date.now()
   const lastTime = recentToasts.get(toastKey)
+
+  pruneRecentToasts(now)
 
   if (lastTime && now - lastTime < TOAST_DEBOUNCE_MS) {
     return

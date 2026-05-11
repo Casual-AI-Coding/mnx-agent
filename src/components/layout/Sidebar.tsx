@@ -142,10 +142,13 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
     <aside
       ref={asideRef}
       className={cn(
-        'fixed left-0 top-[60px] bottom-0 bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200',
-        isCollapsed ? 'w-[60px]' : ''
+        'bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200 h-full',
+        isMobile
+          ? 'relative w-full'
+          : 'fixed left-0 top-[60px] bottom-0',
+        isCollapsed && !isMobile ? 'w-[60px]' : ''
       )}
-      style={isCollapsed ? undefined : { width: sidebarWidth }}
+      style={isMobile || isCollapsed ? undefined : { width: sidebarWidth }}
     >
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -157,7 +160,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
         }
       `}</style>
 
-      {!isCollapsed && (
+      {!isMobile && !isCollapsed && (
         <div
           onMouseDown={handleResizeStart}
           className={cn(
@@ -167,20 +170,22 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
         />
       )}
 
-      <button
-        onClick={toggleCollapse}
-        className={cn(
-          'absolute -right-3 top-4 w-6 h-6 bg-card border border-border/50 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 z-10 group',
-          'hover:bg-primary-600 hover:border-primary-600'
-        )}
-        title={isCollapsed ? '展开侧边栏' : '收起侧边栏'}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
-        ) : (
-          <ChevronLeft className="w-3 h-3 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
-        )}
-      </button>
+      {!isMobile && (
+        <button
+          onClick={toggleCollapse}
+          className={cn(
+            'absolute -right-3 top-4 w-6 h-6 bg-card border border-border/50 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 z-10 group',
+            'hover:bg-primary-600 hover:border-primary-600'
+          )}
+          title={isCollapsed ? '展开侧边栏' : '收起侧边栏'}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+          ) : (
+            <ChevronLeft className="w-3 h-3 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+          )}
+        </button>
+      )}
 
       <nav className={cn(
         'flex-1 overflow-y-auto scrollbar-hide',
