@@ -9,7 +9,7 @@
 **Tech Stack:** React 18, TypeScript, Tailwind CSS, Zustand, i18next, framer-motion
 
 **Spec:** @docs/specs/lyrics-generation-design.md
-**Depends on:** @docs/plans/2026-04-18-01-lyrics-generation-backend.md
+**Depends on:** @docs/archive/v2.1/2026-04-18-01-lyrics-generation-backend.md
 
 ---
 

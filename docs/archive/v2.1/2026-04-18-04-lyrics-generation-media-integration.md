@@ -10,9 +10,9 @@
 
 **Spec:** @docs/specs/lyrics-generation-design.md
 **Depends on:** 
-- @docs/plans/2026-04-18-01-lyrics-generation-backend.md
-- @docs/plans/2026-04-18-02-lyrics-generation-frontend.md
-- @docs/plans/2026-04-18-03-lyrics-generation-preview.md
+- @docs/archive/v2.1/2026-04-18-01-lyrics-generation-backend.md
+- @docs/archive/v2.1/2026-04-18-02-lyrics-generation-frontend.md
+- @docs/archive/v2.1/2026-04-18-03-lyrics-generation-preview.md
 
 ---
 

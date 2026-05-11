@@ -9,7 +9,7 @@
 **Tech Stack:** React 18, TypeScript, Tailwind CSS, framer-motion, lucide-react
 
 **Spec:** @docs/specs/lyrics-generation-design.md
-**Depends on:** @docs/plans/2026-04-18-02-lyrics-generation-frontend.md
+**Depends on:** @docs/archive/v2.1/2026-04-18-02-lyrics-generation-frontend.md
 
 ---
 
