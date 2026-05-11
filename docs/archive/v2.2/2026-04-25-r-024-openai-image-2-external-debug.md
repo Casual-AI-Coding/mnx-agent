@@ -12,7 +12,7 @@
 
 ## 文件结构与职责
 
-- `docs/plans/2026-04-25-r-024-openai-image-2-external-debug.md` - 本实现计划。
+- `docs/archive/v2.2/2026-04-25-r-024-openai-image-2-external-debug.md` - 本实现计划（已从 plans/ 归档）。
 - `docs/specs/2026-04-25-r-024-openai-image-2-external-debug-design.md` - 已确认设计规格。
 - `packages/shared-types/entities/external-api-log.ts` - 扩展外部调用日志状态与创建/更新类型。
 - `server/validation/external-api-logs-schemas.ts` - 新增创建/更新日志 Zod schema，并拒绝 base64 与敏感字段进入日志。
@@ -1254,7 +1254,7 @@ Expected: PASS，后端覆盖率不低于项目硬阈值 80%。
 
 - [ ] **Step 6: 检查 git diff**
 
-Run: `git diff -- docs/specs/2026-04-25-r-024-openai-image-2-external-debug-design.md docs/plans/2026-04-25-r-024-openai-image-2-external-debug.md packages/shared-types/entities/external-api-log.ts server src`
+Run: `git diff -- docs/specs/2026-04-25-r-024-openai-image-2-external-debug-design.md docs/archive/v2.2/2026-04-25-r-024-openai-image-2-external-debug.md packages/shared-types/entities/external-api-log.ts server src`
 
 Expected: diff 只包含 R-024 相关类型、日志、媒体上传、OpenAI Image-2 页面、路由、侧边栏、测试与文档计划改动。
 
