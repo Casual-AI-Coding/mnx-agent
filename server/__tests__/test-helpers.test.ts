@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDatabase } from '../database/service-async.js'
 import { getConnection } from '../database/connection.js'
-import { getTestFileMarker, resetTestFileMarker, setupTestDatabase, globalTeardown } from './test-helpers.js'
+import { getTestFileMarker, resetTestFileMarker, setupTestDatabase, globalTeardown, getTestDbConfig } from './test-helpers.js'
 
 describe('test-helpers', () => {
   beforeEach(() => {
@@ -39,7 +39,8 @@ describe('test-helpers', () => {
     const db = await getDatabase()
     const rows = await db.getConnection().query<{ current_database: string }>('SELECT current_database() AS current_database')
 
-    expect(rows[0].current_database).toBe('mnx_agent_test')
+    const expectedDbName = getTestDbConfig().pgDatabase
+    expect(rows[0].current_database).toBe(expectedDbName)
 
     await globalTeardown()
   })
