@@ -609,6 +609,7 @@ describe('JobRepository - Comprehensive', () => {
       vi.mocked(mockDb.query)
         .mockResolvedValueOnce([activeJob] as any)
         .mockResolvedValueOnce([{ ...activeJob, is_active: false }] as any)
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 })
 
       const repo = new JobRepository(mockDb)
       const result = await repo.toggleActive('job-1')
@@ -633,6 +634,7 @@ describe('JobRepository - Comprehensive', () => {
       vi.mocked(mockDb.query)
         .mockResolvedValueOnce([inactiveJob] as any)
         .mockResolvedValueOnce([{ ...inactiveJob, is_active: true }] as any)
+      vi.mocked(mockDb.execute).mockResolvedValueOnce({ changes: 1 })
 
       const repo = new JobRepository(mockDb)
       const result = await repo.toggleActive('job-1')
@@ -666,6 +668,7 @@ describe('JobRepository - Comprehensive', () => {
       mockDb.query = vi.fn()
         .mockResolvedValueOnce([activeJob] as any)
         .mockResolvedValueOnce([{ ...activeJob, is_active: false }] as any)
+      mockDb.execute = vi.fn().mockResolvedValueOnce({ changes: 1 })
 
       const repo = new JobRepository(mockDb)
       const result = await repo.toggleActive('job-1', 'owner-1')
