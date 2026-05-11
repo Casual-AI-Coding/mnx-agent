@@ -337,11 +337,8 @@ router.patch('/:id/public', validateParams(mediaIdParamsSchema), asyncHandler(as
   }
 
   if (record.owner_id && record.owner_id !== req.user?.userId) {
-    const isSuperOnOrphan = !record.owner_id && req.user?.role === 'super'
-    if (!isSuperOnOrphan) {
-      errorResponse(res, 'Media record not found', 404)
-      return
-    }
+    errorResponse(res, 'Media record not found', 404)
+    return
   }
 
   const updated = await db.togglePublic(id, isPublic, ownerId)
