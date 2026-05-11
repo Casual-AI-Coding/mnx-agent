@@ -142,7 +142,7 @@ roadmap/
 | 分类 | Admin/UX/Monitoring/Data/Security/DevTools 等 |
 | 优先级 | P0(必须)-P4(低优先级) |
 | 版本 | 分配到的版本号，`-` 表示待定 |
-| 状态 | 待办/已完成/待收集 |
+| 状态 | 待办/进行中/部分完成/已完成/待收集 |
 
 **来源字段**（在 roadmap table 中使用）:
 | 来源 | 说明 |
@@ -263,4 +263,4 @@ vX.x 系列主题说明。需求详情见 `@requirement-pools.md`
 | 2026-04-15 | 新增 guides/ 目录规范，引用路径更新为 archive/v1.3/，添加 guides 引用示例 |
 | 2026-04-15 | 补充 roadmap 目录详细规范：requirement-pools.md 结构、字段定义、来源字段；vX-roadmap.md 结构规范 |
 | 2026-04-15 | 新增「新需求录入流程」说明 |
-| 2026-04-15 | 引用路径添加 requirement-pools.md 示例 |
+| 2026-05-11 | 状态枚举扩展: 新增 `进行中`/`部分完成`；模板中文化 |
