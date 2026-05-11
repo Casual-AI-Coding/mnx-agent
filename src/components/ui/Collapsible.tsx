@@ -80,6 +80,7 @@ const CollapsibleTrigger = React.forwardRef<HTMLButtonElement, CollapsibleTrigge
 )
 CollapsibleTrigger.displayName = 'CollapsibleTrigger'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CollapsibleContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 const CollapsibleContent = React.forwardRef<HTMLDivElement, CollapsibleContentProps>(

@@ -67,7 +67,7 @@ export default function InvitationCodes() {
   }, [isHydrated])
 
   const filteredAndSortedCodes = useMemo(() => {
-    let result = codes.filter(code => {
+    const result = codes.filter(code => {
       const matchesSearch = code.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (code.created_by_username?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
 
@@ -86,11 +86,12 @@ export default function InvitationCodes() {
         case 'created_at':
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           break
-        case 'expires_at':
+        case 'expires_at': {
           const aTime = a.expires_at ? new Date(a.expires_at).getTime() : Infinity
           const bTime = b.expires_at ? new Date(b.expires_at).getTime() : Infinity
           comparison = aTime - bTime
           break
+        }
         case 'used_count':
           comparison = a.used_count - b.used_count
           break

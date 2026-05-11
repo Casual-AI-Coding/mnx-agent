@@ -17,16 +17,6 @@ export const MediaCardPreview = memo(function MediaCardPreview({
   mousePosition,
   visible,
 }: MediaCardPreviewProps) {
-  if (record.type === 'lyrics') {
-    return (
-      <LyricsHoverPreview
-        record={record}
-        mousePosition={mousePosition}
-        visible={visible}
-      />
-    )
-  }
-
   const previewRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
 
@@ -55,6 +45,16 @@ export const MediaCardPreview = memo(function MediaCardPreview({
 
     setPosition({ x, y })
   }, [visible, mousePosition])
+
+  if (record.type === 'lyrics') {
+    return (
+      <LyricsHoverPreview
+        record={record}
+        mousePosition={mousePosition}
+        visible={visible}
+      />
+    )
+  }
 
   if (record.type !== 'image' || !signedUrl) return null
 

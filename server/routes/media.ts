@@ -120,8 +120,7 @@ router.get('/recoverable', asyncHandler(async (req, res) => {
       if (resourceUrls.length > 0) {
         logsWithUrls.push({ log, resourceUrls, opConfig })
       }
-    } catch {
-    }
+    } catch { /* skip failed items */ }
   }
 
   const mediaService = getMediaService()

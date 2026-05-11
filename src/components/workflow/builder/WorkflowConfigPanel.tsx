@@ -231,7 +231,7 @@ export function WorkflowConfigPanel({
                 onChange={(e) => {
                   try {
                     updateConfig('mapping', JSON.parse(e.target.value))
-                  } catch {}
+                  } catch { /* invalid JSON */ }
                 }}
                 rows={4}
                 className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"

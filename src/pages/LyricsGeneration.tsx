@@ -62,7 +62,7 @@ export default function LyricsGeneration() {
       const songTitle = result.song_title || taskTitle || 'Unnamed'
       let filename: string
       if (songTitle && songTitle.trim()) {
-        const sanitizedTitle = songTitle.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')
+        const sanitizedTitle = songTitle.trim().replace(/[^\w\u4e00-\u9fa5-]/g, '_')
         if (index !== undefined) {
           filename = `${sanitizedTitle} (${index + 1}).txt`
         } else {

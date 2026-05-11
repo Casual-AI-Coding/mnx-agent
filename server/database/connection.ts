@@ -14,13 +14,15 @@ export interface DatabaseConfig {
   pgConnectionTimeout?: number
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- QueryResultRow represents dynamic database result shape */
 export interface QueryResultRow {
   [key: string]: any
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export interface DatabaseConnection {
-  query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]>
-  execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }>
+  query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]): Promise<T[]>
+  execute(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }>
   transaction<T>(fn: (conn: DatabaseConnection) => Promise<T>): Promise<T>
   close(): Promise<void>
   isPostgres(): boolean
@@ -98,7 +100,7 @@ class PostgresConnection implements DatabaseConnection {
     })
   }
   
-  async query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]> {
+  async query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]): Promise<T[]> {
     const start = Date.now()
     try {
       const result: QueryResult<T> = await this.pool.query(sql, params)
@@ -115,7 +117,7 @@ class PostgresConnection implements DatabaseConnection {
     }
   }
   
-  async execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
+  async execute(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
     const result = await this.pool.query(sql, params)
     return {
       changes: result.rowCount || 0,
@@ -174,12 +176,12 @@ class PostgresTransactionConnection implements DatabaseConnection {
     this.client = client
   }
   
-  async query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: any[]): Promise<T[]> {
+  async query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]): Promise<T[]> {
     const result: QueryResult<T> = await this.client.query(sql, params)
     return result.rows
   }
   
-  async execute(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
+  async execute(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid?: string | number }> {
     const result = await this.client.query(sql, params)
     return {
       changes: result.rowCount || 0,

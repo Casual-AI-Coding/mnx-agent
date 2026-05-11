@@ -173,7 +173,7 @@ router.post('/jobs/:id/dry-run', validateParams(cronJobIdParamsSchema), asyncHan
   const scheduler = getCronSchedulerService()
   
   const nextRuns: string[] = []
-  let validation = { valid: true, errors: [] as string[] }
+  const validation = { valid: true, errors: [] as string[] }
   try {
     const interval = CronExpressionParser.parse(job.cron_expression, { tz: job.timezone || scheduler.getTimezone() })
     for (let i = 0; i < 5; i++) {

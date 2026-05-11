@@ -67,11 +67,11 @@ export default function AuditLogs() {
   }, [page, filters, sortBy, sortOrder])
 
   const loadAllPaths = async () => {
-    try { const res = await getUniqueRequestPaths(); if (res.success && res.data) setUniquePaths(res.data.sort()) } catch {}
+    try { const res = await getUniqueRequestPaths(); if (res.success && res.data) setUniquePaths(res.data.sort()) } catch { /* ignore */ }
   }
 
   const loadAllUsers = async () => {
-    try { const res = await getUniqueAuditUsers(); if (res.success && res.data) setUniqueUsers(res.data) } catch {}
+    try { const res = await getUniqueAuditUsers(); if (res.success && res.data) setUniqueUsers(res.data) } catch { /* ignore */ }
   }
 
   const loadData = async () => {

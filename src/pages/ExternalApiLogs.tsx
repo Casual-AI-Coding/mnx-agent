@@ -49,7 +49,7 @@ export default function ExternalApiLogs() {
       const [opsRes, providersRes] = await Promise.all([getUniqueExternalApiOperations(), getUniqueExternalApiProviders()])
       if (opsRes.success && opsRes.data) setUniqueOperations(opsRes.data.sort())
       if (providersRes.success && providersRes.data) setUniqueProviders(providersRes.data.sort())
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   const loadData = async () => {

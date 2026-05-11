@@ -100,6 +100,7 @@ nodeExecutorRegistry.register('loop', async (node, config, nodeOutputs, context)
     workflowNodes: context.workflowNodes,
     workflowEdges: context.workflowEdges,
     resolveNodeConfig,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ExecuteNode type mismatch in loop executor context
     executeNode: wrappedExecuteNode as any,
     eventBus: context.eventBus,
   })
@@ -147,6 +148,7 @@ nodeExecutorRegistry.register('errorBoundary', async (node, config, nodeOutputs,
     workflowNodes: context.workflowNodes,
     workflowEdges: context.workflowEdges,
     resolveNodeConfig,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ExecuteNode type mismatch in loop executor context
     executeNode: wrappedExecuteNode as any,
     eventBus: context.eventBus,
   })

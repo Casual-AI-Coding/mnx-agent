@@ -327,8 +327,11 @@ export interface ApiError {
   details?: Record<string, unknown>
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface CronJobListResponse extends PaginatedResponse<CronJob> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TaskQueueListResponse extends PaginatedResponse<TaskQueueItem> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ExecutionLogListResponse extends PaginatedResponse<ExecutionLog> {}
 
 // ============================================

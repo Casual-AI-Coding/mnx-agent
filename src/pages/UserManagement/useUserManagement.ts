@@ -99,7 +99,7 @@ export function useUserManagement(): UseUserManagementReturn {
   const inactiveUsers = useMemo(() => users.filter(u => !u.is_active).length, [users])
 
   const filteredAndSortedUsers = useMemo(() => {
-    let result = users.filter(user => {
+    const result = users.filter(user => {
       const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
       const matchesRole = roleFilter === 'all' || user.role === roleFilter
@@ -114,18 +114,20 @@ export function useUserManagement(): UseUserManagementReturn {
         case 'username':
           comparison = a.username.localeCompare(b.username)
           break
-        case 'role':
+        case 'role': {
           const roleOrder = { super: 0, admin: 1, pro: 2, user: 3 }
           comparison = roleOrder[a.role] - roleOrder[b.role]
           break
+        }
         case 'created_at':
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           break
-        case 'last_login_at':
+        case 'last_login_at': {
           const aTime = a.last_login_at ? new Date(a.last_login_at).getTime() : 0
           const bTime = b.last_login_at ? new Date(b.last_login_at).getTime() : 0
           comparison = aTime - bTime
           break
+        }
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })

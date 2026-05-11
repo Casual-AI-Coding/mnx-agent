@@ -276,7 +276,7 @@ export function AudioPlayer({
             className={`text-xs font-medium whitespace-nowrap inline-block ${isTitleOverflow ? 'animate-marquee' : ''}`}
             style={isTitleOverflow ? { animationDuration: '8s' } : undefined}
           >
-            {displayTitle}{isTitleOverflow ? `  ${displayTitle}` : ''}
+            {displayTitle}{isTitleOverflow ? `  ${displayTitle}` : ''}
           </span>
         </div>
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { DomainEventBus, DomainEvent, EventHandler } from './event-bus'
-import { JobCreatedEvent, JobExecutedEvent, TaskQueuedEvent } from './event-handler'
+import { DomainEventBus, DomainEvent, EventHandler } from '../event-bus'
+import { JobCreatedEvent, JobExecutedEvent, TaskQueuedEvent } from '../event-handler'
 
 describe('DomainEventBus', () => {
   let bus: DomainEventBus

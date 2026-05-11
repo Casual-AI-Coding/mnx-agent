@@ -71,7 +71,7 @@ export default function MusicGeneration() {
   const updateTask = useCallback((index: number, updates: Partial<MusicTask>) => setTasks(prev => prev.map((task, i) => i === index ? { ...task, ...updates } : task)), [])
   const saveMusicToMedia = useCallback(async (audioUrl: string, title?: string, index?: number): Promise<MediaRecord | null> => {
     try {
-      const filename = title?.trim() ? `${title.trim().replace(/[^\w\u4e00-\u9fa5\-]/g, '_')}${index !== undefined ? ` (${index + 1})` : ''}.mp3` : `music_${Date.now()}.mp3`
+      const filename = title?.trim() ? `${title.trim().replace(/[^\w\u4e00-\u9fa5-]/g, '_')}${index !== undefined ? ` (${index + 1})` : ''}.mp3` : `music_${Date.now()}.mp3`
       const result = await uploadMediaFromUrl(audioUrl, filename, 'music', 'music_generation', { source_url: audioUrl, saved_at: new Date().toISOString() })
       return result.success && result.data ? result.data : null
     } catch (saveError) {

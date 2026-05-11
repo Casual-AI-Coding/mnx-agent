@@ -24,6 +24,7 @@ export function getHeaders(): HeadersInit {
   }
   
   const cleanKey = apiKey?.trim() || ''
+  // eslint-disable-next-line no-control-regex
   const isAscii = /^[\x00-\x7F]*$/.test(cleanKey)
   
   if (apiMode === 'direct') {

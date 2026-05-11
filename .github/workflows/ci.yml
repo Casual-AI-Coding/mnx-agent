@@ -25,6 +25,13 @@ jobs:
         ports:
           - 5432:5432
 
+    env:
+      NODE_ENV: test
+      JWT_SECRET: test-secret
+      DB_TEST_NAME: mnx_test
+      DB_TEST_USER: test
+      DB_TEST_PASSWORD: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -48,14 +55,6 @@ jobs:
 
       - name: Test backend
         run: npm run test:server
-        env:
-          DATABASE_URL: postgres://test:test@localhost:5432/mnx_test
-          JWT_SECRET: test-secret
-          NODE_ENV: test
 
       - name: Test coverage
         run: npm run test:coverage
-        env:
-          DATABASE_URL: postgres://test:test@localhost:5432/mnx_test
-          JWT_SECRET: test-secret
-          NODE_ENV: test
