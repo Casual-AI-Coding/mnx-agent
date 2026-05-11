@@ -27,28 +27,30 @@ export function getTestDbConfig() {
   }
 }
 
-let isInitialized = false
+let initPromise: Promise<void> | null = null
 
 export async function setupTestDatabase() {
-  if (isInitialized) {
-    return
+  if (initPromise) {
+    return initPromise
   }
 
-  resetContainer()
+  initPromise = (async () => {
+    resetContainer()
+    resetConnection()
+    await createConnection(getTestDbConfig())
+    const db = new DatabaseService(getConnection())
+    await db.init()
+    await registerServices()
+  })()
 
-  resetConnection()
-  await createConnection(getTestDbConfig())
-  const db = new DatabaseService(getConnection())
-  await db.init()
-  await registerServices()
-  isInitialized = true
+  return initPromise
 }
 
 export async function teardownTestDatabase() {}
 
 export async function globalTeardown() {
   await closeConnection()
-  isInitialized = false
+  initPromise = null
 }
 
 export async function withTransaction<T>(fn: (tx: import('../database/connection.js').DatabaseConnection) => Promise<T>): Promise<T> {
