@@ -150,6 +150,7 @@ const now = toLocalISODateString()
 | 测试规范 | @docs/standards/testing-standards.md |
 | 安全规范 | @docs/standards/security-standards.md |
 | 发布流程 | @docs/guides/release-guide.md |
+| Release Note | @docs/standards/release-note-standards.md |
 | 故障排查 | @docs/guides/troubleshooting.md |
 | 架构决策 | @docs/decisions/ |
 | 文档管理 | @docs/AGENTS.md |

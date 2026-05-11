@@ -1,8 +1,10 @@
 # Release Guide
 
-> Version: 1.0.0
-> Date: 2026-04-22
+> Version: 1.1.0
+> Date: 2026-05-11
 > Status: Active
+
+> 📋 相关规范：Release Note 格式详见 @docs/standards/release-note-standards.md
 
 ## 1. 版本号规范
 
@@ -31,20 +33,29 @@
 ### 2.1 发布前
 
 1. **更新 CHANGELOG.md**
+
+   在文件顶部新增版本区块，使用 emoji 分类体系：
+
    ```markdown
-   ## [版本号] - 日期
-   
-   ### Added
-   - 新增功能说明
-   
-   ### Fixed
-   - 修复问题说明
-   
-   ### Changed
-   - 变更说明
+   ## [版本号] - YYYY-MM-DD
+
+   ### ✨ Added
+   - **功能名称** — 功能描述（涉及文件/模块）
+
+   ### 🐛 Fixed
+   - **问题描述** — 修复了什么（涉及文件/模块）
+
+   ### 🔒 Security
+   - **安全修复** — 具体描述
+
+   ### 🔄 Changed
+   - **变更描述** — 具体描述
    ```
 
+   详细分类规范参考 @docs/standards/release-note-standards.md 第 3 节。
+
 2. **更新 package.json**
+
    ```bash
    npm version 1.0.2 --no-git-tag-version
    ```
@@ -52,20 +63,40 @@
 ### 2.2 发布
 
 1. **提交**
+
    ```bash
    git add CHANGELOG.md package.json package-lock.json
    git commit -m "chore: release v1.0.2"
    ```
 
 2. **打标签**
+
    ```bash
    git tag -a v1.0.2 -m "v1.0.2: 版本说明"
    ```
 
 3. **推送**
+
    ```bash
    git push && git push --tags
    ```
+
+4. **创建 GitHub Release Note**
+
+   从 CHANGELOG.md 提取当前版本区块，格式化为 Release Note 并发布：
+
+   ```bash
+   # 方式一：使用辅助脚本（推荐）
+   node scripts/create-release-note.mjs v1.0.2
+
+   # 方式二：手动从文件创建
+   gh release create v1.0.2 \
+     --title "v1.0.2" \
+     --notes-file /tmp/release-note-v1.0.2.md \
+     --repo Casual-AI-Coding/mnx-agent
+   ```
+
+   Release Note 格式参考 @docs/standards/release-note-standards.md 第 4 节模板。
 
 ---
 
@@ -73,11 +104,24 @@
 
 发布前确认：
 
-- [ ] CHANGELOG.md 更新完整（Added/Fixed/Changed 齐全）
+- [ ] CHANGELOG.md 更新完整，分类齐全
 - [ ] `npm run build` 通过
 - [ ] `vitest run` 全部通过
 - [ ] TypeScript 无错误
 - [ ] 推送后确认 tag 存在
+- [ ] **GitHub Release Note 已创建并存档**（第 2.2 步，不可省略）
+
+---
+
+## 4. Release Note 与 CHANGELOG 关系
+
+| 维度 | CHANGELOG.md | Release Note |
+|------|-------------|-------------|
+| 位置 | 项目仓库根目录 | GitHub Releases 页面 |
+| 受众 | 开发者/维护者 | 终端用户 |
+| 粒度 | 完整技术细节 | 精简用户视角 |
+| 格式 | emoji 分类 + 文件路径 | emoji 分类 + 模块名 |
+| 维护时机 | 每次提交时更新 | 发布时创建（不可省略） |
 
 ---
 
@@ -85,4 +129,5 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-05-11 | v1.1.0 — 新增 GitHub Release Note 创建步骤；更新 CHANGELOG 模板为 emoji 分类体系；添加 Release Note 与 CHANGELOG 关系说明 |
 | 2026-04-22 | 初始版本 |
