@@ -441,10 +441,17 @@ const recentToasts = new Map<string, number>()
 
 function pruneRecentToasts(now: number): void {
   if (recentToasts.size <= MAX_TOAST_MAP_SIZE) return
+
   for (const [key, timestamp] of recentToasts) {
     if (now - timestamp > TOAST_DEBOUNCE_MS * 2) {
       recentToasts.delete(key)
     }
+  }
+
+  while (recentToasts.size > MAX_TOAST_MAP_SIZE) {
+    const oldestKey = recentToasts.keys().next().value
+    if (!oldestKey) return
+    recentToasts.delete(oldestKey)
   }
 }
 
