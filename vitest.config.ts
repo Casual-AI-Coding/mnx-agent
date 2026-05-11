@@ -23,7 +23,7 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.test.ts'],
     exclude: ['node_modules', 'dist', '.next'],
-    fileParallelism: true,
+    fileParallelism: false,
     maxWorkers: 8,
     isolate: true,
     coverage: {
