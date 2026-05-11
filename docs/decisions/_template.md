@@ -1,49 +1,49 @@
-# ADR Template
+# ADR 模板
 
-> Use this template for architecture decision records.
+> 使用此模板创建架构决策记录。
 
-## Status
+## 状态
 
-Accepted | Deprecated | Superseded by ADR-XXX
-
----
-
-## Context
-
-What is the issue that we're seeing that is motivating this decision?
-
-Describe the problem or constraint that requires an architecture decision.
+已接受 | 已废弃 | 被 ADR-XXX 取代
 
 ---
 
-## Decision
+## 背景
 
-What are the options we considered and what decision was made?
+遇到了什么问题，促使需要做出这个架构决策？
 
-Describe the alternatives considered, the decision made, and the rationale.
+描述需要做出架构决策的问题或约束条件。
 
 ---
 
-## Consequences
+## 决策
 
-What becomes easier or harder as a result of this decision?
+我们考虑了哪些方案，最终做出了什么决定？
 
-### Positive
+描述考虑过的替代方案、做出的决定以及理由。
+
+---
+
+## 后果
+
+这个决策让什么变得更容易或更困难？
+
+### 正面影响
 - ...
 
-### Negative
+### 负面影响
 - ...
 
-### Risks
+### 风险
 - ...
 
 ---
 
-## Metadata
+## 元数据
 
-| Field | Value |
-|------|------|
-| Date | YYYY-MM-DD |
-| Status | Accepted |
-| Decider | Name |
-| Reviewed by | Name |
+| 字段 | 值 |
+|------|-----|
+| 日期 | YYYY-MM-DD |
+| 状态 | 已接受 |
+| 决策者 | 姓名 |
+| 审阅者 | 姓名 |
