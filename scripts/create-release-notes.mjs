@@ -163,9 +163,7 @@ function classifyCommitMessage(msg) {
 function generateReleaseNoteFromGitLog(tag, prevTag) {
   const commits = getGitLog(prevTag, tag);
   if (commits.length === 0) {
-    return `## 🏷️ 版本摘要
-
-此版本无详细变更记录。
+    return `此版本无详细变更记录。
 
 ---
 
@@ -187,9 +185,7 @@ function generateReleaseNoteFromGitLog(tag, prevTag) {
     categorized[cat].push(cleaned);
   }
 
-  let note = `## 🏷️ 版本摘要
-
-此版本包含 ${commits.filter(c => !c.startsWith('chore: release')).length} 项变更。
+  let note = `此版本包含 ${commits.filter(c => !c.startsWith('chore: release')).length} 项变更。
 
 `;
 
@@ -310,10 +306,7 @@ function parseChangelog() {
 function formatReleaseNote(version, date, categories) {
   let note = '';
 
-  // Title
-  note += `# 🚀 ${version}\n\n`;
-
-  // Date
+  // 发布日期（无冗余标题 — GitHub Release 标题已由 --title 提供）
   if (date) {
     note += `> 📅 发布于 ${date}\n\n`;
   }
@@ -386,12 +379,19 @@ function createRelease(tag, note, dryRun) {
   }
 
   try {
-    const cmd = `gh release create v${tag} --title "v${tag}" --notes-file "${tempFile}" --repo ${REPO}`;
-    console.log(`  Creating release for v${tag}...`);
-    execSync(cmd, { stdio: 'pipe' });
-    console.log(`  ✅ v${tag} created successfully`);
+    if (releaseExists(tag)) {
+      const cmd = `gh release edit v${tag} --notes-file "${tempFile}" --repo ${REPO}`;
+      console.log(`  Updating release for v${tag}...`);
+      execSync(cmd, { stdio: 'pipe' });
+      console.log(`  ✅ v${tag} updated successfully`);
+    } else {
+      const cmd = `gh release create v${tag} --title "v${tag}" --notes-file "${tempFile}" --repo ${REPO}`;
+      console.log(`  Creating release for v${tag}...`);
+      execSync(cmd, { stdio: 'pipe' });
+      console.log(`  ✅ v${tag} created successfully`);
+    }
   } catch (err) {
-    console.error(`  ❌ Failed to create release for v${tag}: ${err.stderr?.toString() || err.message}`);
+    console.error(`  ❌ Failed to process release for v${tag}: ${err.stderr?.toString() || err.message}`);
   }
 }
 
@@ -428,17 +428,10 @@ async function main() {
 
   console.log(`▶️  待处理: ${toProcess.length} 个版本${isDryRun ? ' (DRY RUN)' : ''}\n`);
 
-  let created = 0, skipped = 0, failed = 0;
+  let updated = 0, skipped = 0, failed = 0;
 
   for (const tag of toProcess) {
     const tagName = `v${tag}`;
-
-    // Check if release already exists
-    if (!isDryRun && releaseExists(tag)) {
-      console.log(`  ⏭️  v${tag} — release 已存在，跳过`);
-      skipped++;
-      continue;
-    }
 
     let note;
     const changelogEntry = changelogMap.get(tag);
@@ -453,10 +446,10 @@ async function main() {
     }
 
     createRelease(tag, note, isDryRun);
-    created++;
+    updated++;
   }
 
-  console.log(`\n📊 统计: 创建 ${created}, 跳过 ${skipped}, 失败 ${failed}`);
+  console.log(`\n📊 统计: 处理 ${updated}, 失败 ${failed}`);
 }
 
 main().catch(err => {
