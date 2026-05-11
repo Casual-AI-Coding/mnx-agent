@@ -525,7 +525,7 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     original_name: finalFilename,
     filepath,
     type: type as MediaType,
-    mime_type: response.headers['content-type'],
+    mime_type: String(response.headers['content-type'] ?? 'application/octet-stream'),
     size_bytes,
     source: source as MediaSource,
     metadata: metadata || null,

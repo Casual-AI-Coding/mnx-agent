@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 
-export const validate = (schema: z.ZodType) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
+export const validate = (schema: z.ZodType | any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body)
-    if (!result.success) {
-      const errorMessages = result.error.issues.map((e: z.ZodIssue) => 
+    if (!result.success && result.error) {
+      const issueList = result.error.issues as Array<{ path: (string | number)[]; message: string }>
+      const errorMessages = issueList.map((e) => 
         `${e.path.join('.')}: ${e.message}`
       ).join(', ')
       res.status(400).json({ 
@@ -19,11 +21,13 @@ export const validate = (schema: z.ZodType) => {
   }
 }
 
-export const validateQuery = (schema: z.ZodType) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
+export const validateQuery = (schema: z.ZodType | any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query)
-    if (!result.success) {
-      const errorMessages = result.error.issues.map((e: z.ZodIssue) => 
+    if (!result.success && result.error) {
+      const issueList = result.error.issues as Array<{ path: (string | number)[]; message: string }>
+      const errorMessages = issueList.map((e) => 
         `${e.path.join('.')}: ${e.message}`
       ).join(', ')
       res.status(400).json({ 
@@ -37,11 +41,13 @@ export const validateQuery = (schema: z.ZodType) => {
   }
 }
 
-export const validateParams = (schema: z.ZodType) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
+export const validateParams = (schema: z.ZodType | any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.params)
-    if (!result.success) {
-      const errorMessages = result.error.issues.map((e: z.ZodIssue) => 
+    if (!result.success && result.error) {
+      const issueList = result.error.issues as Array<{ path: (string | number)[]; message: string }>
+      const errorMessages = issueList.map((e) => 
         `${e.path.join('.')}: ${e.message}`
       ).join(', ')
       res.status(400).json({ 
