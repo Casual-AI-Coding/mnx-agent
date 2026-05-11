@@ -70,7 +70,7 @@ export interface IMediaService {
   /**
    * Toggle the public visibility of a media record
    */
-  togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null>
+  togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null>
 
   batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number>
 

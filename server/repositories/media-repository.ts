@@ -573,24 +573,40 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     return { isFavorite: false, action: 'removed' }
   }
 
-  async togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null> {
-    const existing = await this.getById(id)
+  async togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {
+    const existing = await this.getById(id, ownerId)
     if (!existing) return null
 
     const now = toLocalISODateString()
 
     if (this.isPostgres()) {
+      const params: (string | boolean)[] = [isPublic, now, id]
+      let whereClause = 'WHERE id = $3 AND is_deleted = false'
+
+      if (ownerId) {
+        whereClause += ' AND owner_id = $4'
+        params.push(ownerId)
+      }
+
       const rows = await this.conn.query<MediaRecordRow>(
-        `UPDATE media_records SET is_public = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
-        [isPublic, now, id]
+        `UPDATE media_records SET is_public = $1, updated_at = $2 ${whereClause} RETURNING *`,
+        params
       )
       return rows[0] ? rowToMediaRecord(rows[0]) : null
     } else {
+      const params: (string | number)[] = [isPublic ? 1 : 0, now, id]
+      let whereClause = 'WHERE id = ? AND is_deleted = 0'
+
+      if (ownerId) {
+        whereClause += ' AND owner_id = ?'
+        params.push(ownerId)
+      }
+
       await this.conn.execute(
-        `UPDATE media_records SET is_public = ?, updated_at = ? WHERE id = ?`,
-        [isPublic ? 1 : 0, now, id]
+        `UPDATE media_records SET is_public = ?, updated_at = ? ${whereClause}`,
+        params
       )
-      return this.getById(id)
+      return this.getById(id, ownerId)
     }
   }
 

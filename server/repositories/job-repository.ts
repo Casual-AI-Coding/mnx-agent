@@ -180,11 +180,18 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     paramIndex++
     values.push(id)
 
+    let whereClause = `id = $${paramIndex}`
+    if (ownerId) {
+      paramIndex++
+      whereClause += ` AND owner_id = $${paramIndex}`
+      values.push(ownerId)
+    }
+
     await this.conn.execute(
-      `UPDATE cron_jobs SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+      `UPDATE cron_jobs SET ${fields.join(', ')} WHERE ${whereClause}`,
       values
     )
-    return this.getById(id)
+    return this.getById(id, ownerId)
   }
 
   async toggleActive(id: string, ownerId?: string): Promise<CronJob | null> {
@@ -194,18 +201,31 @@ export class JobRepository extends BaseRepository<CronJob, CreateCronJob, Update
     const newIsActive = !existing.is_active
     const now = toLocalISODateString()
 
+    let whereClause: string
+    let params: (string | number | boolean)[]
+
     if (this.isPostgres()) {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET is_active = $1, updated_at = $2 WHERE id = $3',
-        [newIsActive, now, id]
-      )
+      if (ownerId) {
+        whereClause = 'UPDATE cron_jobs SET is_active = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4'
+        params = [newIsActive, now, id, ownerId]
+      } else {
+        whereClause = 'UPDATE cron_jobs SET is_active = $1, updated_at = $2 WHERE id = $3'
+        params = [newIsActive, now, id]
+      }
+      const result = await this.conn.execute(whereClause, params)
+      if (result.changes === 0) return null
     } else {
-      await this.conn.execute(
-        'UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ?',
-        [newIsActive ? 1 : 0, now, id]
-      )
+      if (ownerId) {
+        whereClause = 'UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ? AND owner_id = ?'
+        params = [newIsActive ? 1 : 0, now, id, ownerId]
+      } else {
+        whereClause = 'UPDATE cron_jobs SET is_active = ?, updated_at = ? WHERE id = ?'
+        params = [newIsActive ? 1 : 0, now, id]
+      }
+      const result = await this.conn.execute(whereClause, params)
+      if (result.changes === 0) return null
     }
-    return this.getById(id)
+    return this.getById(id, ownerId)
   }
 
   async updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {

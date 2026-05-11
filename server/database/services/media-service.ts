@@ -45,8 +45,8 @@ export class MediaService {
     return this.mediaRepo.toggleFavorite(userId, mediaId)
   }
 
-  async togglePublicMediaRecord(id: string, isPublic: boolean): Promise<MediaRecord | null> {
-    return this.mediaRepo.togglePublic(id, isPublic)
+  async togglePublicMediaRecord(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {
+    return this.mediaRepo.togglePublic(id, isPublic, ownerId)
   }
 
   async softDeleteMediaRecords(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> {

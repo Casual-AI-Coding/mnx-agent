@@ -58,15 +58,15 @@ export class MediaService implements IMediaService {
   }
 
   async getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> {
-    return this.db.getMediaRecordsByIds(ids)
+    return this.db.getMediaRecordsByIds(ids, ownerId)
   }
 
   async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
     return this.db.toggleFavorite(userId, mediaId)
   }
 
-  async togglePublic(id: string, isPublic: boolean): Promise<MediaRecord | null> {
-    return this.db.togglePublicMediaRecord(id, isPublic)
+  async togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {
+    return this.db.togglePublicMediaRecord(id, isPublic, ownerId)
   }
 
   async batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number> {

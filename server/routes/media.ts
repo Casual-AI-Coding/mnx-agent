@@ -347,7 +347,8 @@ router.patch('/:id/public', validateParams(mediaIdParamsSchema), asyncHandler(as
     }
   }
 
-  const updated = await db.togglePublic(id, isPublic)
+  const ownerId = buildOwnerFilter(req).params[0]
+  const updated = await db.togglePublic(id, isPublic, ownerId)
   successResponse(res, updated)
 }))
 
@@ -613,11 +614,21 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
   const { ids } = req.body as { ids: string[] }
-  const records = await db.getByIds(ids)
+  // P0: 批量下载必须按当前用户 owner_id 过滤，防止跨租户读取
+  const ownerId = buildOwnerFilter(req).params[0]
+  const records = await db.getByIds(ids, ownerId)
 
   if (records.length === 0) {
     errorResponse(res, 'No valid media found', 404)
     return
+  }
+
+  // 审计记录：当请求 ID 数量与可访问记录数量不一致时静默记录
+  if (records.length !== ids.length) {
+    logger.warn(
+      { requestedCount: ids.length, accessibleCount: records.length, userId: ownerId },
+      'Batch download: some media IDs are inaccessible or do not exist'
+    )
   }
 
   const archive = archiver('zip', { zlib: { level: 9 } })
