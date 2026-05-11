@@ -1,63 +1,23 @@
 # mnx-agent
 
-基于 MiniMax AI API 的多功能工具集，支持文本对话、语音合成、图像生成、音乐创作、视频生成等功能，并内置强大的定时任务调度系统。
+基于 MiniMax AI API 的多功能工具集，提供文本对话、语音合成、图像生成、音乐创作、视频生成等 AI 能力，内置定时任务调度系统与可视化工作流引擎。
 
-## 功能特性
+## ✨ 功能特性
 
-### 🤖 AI 能力
-- **文本对话** - 支持同步/流式对话，自定义模型参数
-- **语音合成** - 同步/异步语音生成，支持多种音色
-- **语音克隆** - 自定义音色克隆与管理
-- **图像生成** - 文生图，支持多种风格
-- **音乐生成** - AI 音乐创作
-- **视频生成** - 文生视频，支持异步任务
-- **视频 Agent** - 智能视频创作助手
+- 🤖 **文本对话** — 同步/流式，多模型支持
+- 🎙️ **语音合成** — 多音色，支持语音克隆
+- 🎨 **图像生成** — 文生图，多比例/AIGC 水印/自动重试
+- 🎵 **音乐生成** — AI 音乐创作，支持歌词同步
+- 🎬 **视频生成** — 文生视频，异步任务模式
+- ⏰ **定时任务** — Cron 调度、DAG 工作流、指数退避重试、死信队列
+- 📁 **媒体管理** — 文件存储、分类筛选、缩略图预览、批量下载
+- 🔔 **实时通知** — WebSocket 推送 + Webhook（HMAC 签名）
+- 🛡️ **安全加固** — JWT 认证、AES-256-GCM 加密、限流防护
 
-### ⏰ 定时任务系统
-- **Cron 调度** - 支持标准 cron 表达式，时区配置
-- **工作流引擎** - DAG 工作流，支持条件、循环、队列节点
-- **并发控制** - 限制同时运行的任务数（默认 5）
-- **超时处理** - 同步任务 5 分钟，异步任务 10 分钟
-- **指数退避重试** - 1s → 2s → 4s → ... 最大 5 分钟
-- **任务标签** - 组织和筛选任务
-- **任务依赖** - 支持任务链式执行
-- **死信队列** - 存储和重试失败任务
+## 🛠️ 技术栈
 
-### 📁 媒体管理
-- **文件存储** - 自动保存生成的音频、图片、视频、音乐
-- **分类筛选** - 按类型、来源过滤
-- **缩略图预览** - 图片列表直接显示缩略图
-- **全屏预览** - Lightbox 图片查看
-- **批量下载** - 支持单个/批量下载
-- **文件管理** - 重命名、删除、搜索
-
-### 🔔 通知系统
-- **WebSocket** - 实时推送任务状态更新
-- **Webhook** - 任务事件通知（on_start/on_success/on_failure）
-- **HMAC 签名** - Webhook 安全验证
-
-### 📊 监控与管理
-- **健康检查** - `/cron/health` 端点
-- **容量追踪** - API 配额实时监控
-- **执行日志** - 详细的任务执行记录
-- **工作流模板** - 可复用的工作流定义
-
-## 技术栈
-
-### 后端
-- **Express** - Web 框架
-- **PostgreSQL (pg)** - 关系型数据库
-- **node-cron** - 定时任务调度
-- **cron-parser** - Cron 表达式解析
-- **WebSocket (ws)** - 实时通信
-
-### 前端
-- **React 18** - UI 框架
-- **TypeScript** - 类型安全
-- **Tailwind CSS** - 样式
-- **Zustand** - 状态管理
-- **React Flow** - 工作流可视化
-- **React Router** - 路由
+**后端**: Express + TypeScript + PostgreSQL + WebSocket  
+**前端**: React 18 + TypeScript + Tailwind CSS + Zustand
 
 ## 快速开始
 
@@ -111,202 +71,13 @@ npm run dev:full
 npm run build
 ```
 
-## API 端点
+## 📚 文档
 
-### 媒体管理
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/media` | 获取媒体列表（分页、筛选） |
-| GET | `/media/:id` | 获取单个媒体 |
-| POST | `/media` | 创建媒体记录 |
-| POST | `/media/upload` | 上传文件 |
-| POST | `/media/upload-from-url` | 从 URL 上传 |
-| GET | `/media/:id/download` | 下载文件 |
-| PUT | `/media/:id` | 更新媒体信息 |
-| DELETE | `/media/:id` | 删除媒体（软删除） |
+- [发布历史](https://github.com/Casual-AI-Coding/mnx-agent/releases) — 各版本 Release Note
+- [设计规格](docs/specs/) — 系统架构与功能设计
+- [开发指南](docs/guides/) — 环境配置、测试、发布流程
+- [版本规划](docs/roadmap/) — 需求池与路线图
 
-### Cron 任务管理
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/cron/jobs` | 获取所有任务 |
-| POST | `/cron/jobs` | 创建任务 |
-| GET | `/cron/jobs/:id` | 获取单个任务 |
-| PATCH | `/cron/jobs/:id` | 更新任务 |
-| DELETE | `/cron/jobs/:id` | 删除任务 |
-| POST | `/cron/jobs/:id/toggle` | 启用/禁用任务 |
-| POST | `/cron/jobs/:id/run` | 手动执行任务 |
-
-### 任务队列
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/cron/queue` | 获取任务队列 |
-| POST | `/cron/queue` | 创建任务 |
-| PATCH | `/cron/queue/:id` | 更新任务状态 |
-| DELETE | `/cron/queue/:id` | 删除任务 |
-| POST | `/cron/queue/:id/retry` | 重试任务 |
-
-### 执行日志
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/cron/logs` | 获取执行日志 |
-| GET | `/cron/logs/:id` | 获取单个日志详情 |
-
-### Webhook 管理
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/cron/webhooks` | 获取 Webhook 配置 |
-| POST | `/cron/webhooks` | 创建 Webhook |
-| PATCH | `/cron/webhooks/:id` | 更新 Webhook |
-| DELETE | `/cron/webhooks/:id` | 删除 Webhook |
-| POST | `/cron/webhooks/:id/test` | 测试 Webhook |
-
-### 其他
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/cron/health` | 健康检查 |
-| GET | `/cron/capacity` | 获取 API 容量 |
-| POST | `/cron/capacity/refresh` | 刷新容量数据 |
-
-### WebSocket
-连接 `/ws/cron` 接收实时事件：
-- `jobs` - 任务事件
-- `tasks` - 队列任务事件
-- `logs` - 执行日志事件
-
-## 工作流定义
-
-工作流使用 JSON 格式定义，支持以下节点类型：
-
-```json
-{
-  "nodes": [
-    {
-      "id": "node-1",
-      "type": "action",
-      "subtype": "text",
-      "config": {
-        "messages": [{"role": "user", "content": "Hello"}]
-      }
-    },
-    {
-      "id": "node-2",
-      "type": "condition",
-      "config": {
-        "condition": "{{node-1.output.success}} == true"
-      }
-    },
-    {
-      "id": "node-3",
-      "type": "transform",
-      "config": {
-        "transformType": "extract",
-        "inputNode": "node-1",
-        "inputPath": "choices[0].message.content"
-      }
-    }
-  ],
-  "edges": [
-    {"id": "edge-1", "source": "node-1", "target": "node-2"},
-    {"id": "edge-2", "source": "node-2", "target": "node-3"}
-  ]
-}
-```
-
-### 节点类型
-- **action** - 执行 API 调用（text/voice/image/music/video）
-- **condition** - 条件判断
-- **transform** - 数据转换
-- **loop** - 循环执行
-- **queue** - 队列处理
-
-## 项目结构
-
-```
-mnx-agent/
-├── server/                 # 后端代码
-│   ├── database/          # 数据库层
-│   │   ├── schema-pg.ts   # PostgreSQL 表结构定义
-│   │   ├── migrations-async.ts # 迁移脚本
-│   │   ├── service-async.ts    # 数据服务
-│   │   └── types.ts       # 类型定义
-│   ├── domain/            # 领域层
-│   │   └── events/        # 事件总线
-│   ├── repositories/      # 数据访问层
-│   ├── services/          # 业务逻辑
-│   │   ├── domain/        # 领域服务
-│   │   ├── workflow/      # 工作流引擎
-│   │   │   └── engine.ts  # DAG 执行引擎
-│   │   ├── cron-scheduler.ts      # 定时调度器
-│   │   ├── task-executor.ts       # 任务执行器
-│   │   ├── queue-processor.ts     # 队列处理器
-│   │   ├── capacity-checker.ts    # 容量检查
-│   │   ├── websocket-service.ts   # WebSocket 服务
-│   │   └── notification-service.ts # Webhook 通知
-│   ├── routes/            # API 路由
-│   ├── middleware/        # Express 中间件
-│   ├── validation/        # 请求验证
-│   └── lib/               # 工具库
-│       └── minimax.ts     # MiniMax API 客户端
-├── src/                   # 前端代码
-│   ├── components/        # React 组件
-│   ├── pages/             # 页面
-│   ├── stores/            # Zustand 状态
-│   ├── lib/               # 工具库
-│   └── types/             # 类型定义
-└── data/                  # 数据目录
-    └── media/             # 媒体文件存储
-```
-
-## 数据库表
-
-### 核心业务表
-| 表名 | 描述 |
-|------|------|
-| `users` | 用户账户 |
-| `cron_jobs` | 定时任务定义 |
-| `task_queue` | 任务队列 |
-| `execution_logs` | 执行日志 |
-| `execution_log_details` | 详细执行记录 |
-| `workflow_templates` | 工作流模板 |
-| `workflow_versions` | 工作流版本 |
-| `media_records` | 媒体文件记录 |
-
-### 辅助管理表
-| 表名 | 描述 |
-|------|------|
-| `job_tags` | 任务标签 |
-| `job_dependencies` | 任务依赖关系 |
-| `webhook_configs` | Webhook 配置 |
-| `webhook_deliveries` | Webhook 投递记录 |
-| `dead_letter_queue` | 死信队列 |
-| `capacity_tracking` | API 容量追踪 |
-| `prompt_templates` | Prompt 模板 |
-| `audit_logs` | 审计日志 |
-| `system_config` | 系统配置 |
-| `execution_states` | 执行状态快照 |
-
-### 权限管理表
-| 表名 | 描述 |
-|------|------|
-| `service_node_permissions` | 服务节点权限 |
-| `workflow_permissions` | 工作流权限 |
-| `invitation_codes` | 邀请码 |
-
-### 系统表
-| 表名 | 描述 |
-|------|------|
-| `_migrations` | 迁移记录 |
-
-## 许可证
+## 📄 许可证
 
 MIT
-
-## 文档
-
-详细设计文档见 [docs/](docs/) 目录：
-
-- [设计规格](docs/specs/) - 系统架构和功能设计
-- [开发指南](docs/guides/) - 测试环境配置等开发指南
-- [版本规划](docs/roadmap/) - 需求池和路线图
-- [事故报告](docs/incidents/) - 重大问题记录
-- [文档规范](docs/AGENTS.md) - 文档组织结构说明
