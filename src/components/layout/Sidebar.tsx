@@ -143,9 +143,9 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
     <aside
       ref={asideRef}
       className={cn(
-        'bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200 h-full',
+        'bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200',
         isMobile
-          ? 'relative w-full'
+          ? 'relative w-full h-full'
           : 'fixed left-0 top-[60px] bottom-0',
         effectiveCollapsed ? 'w-[60px]' : ''
       )}
