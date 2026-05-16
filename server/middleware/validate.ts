@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
-export const validate = (schema: z.ZodType | any) => {
+// Zod 4 $strip branding prevents direct assignability to ZodType<any, any, any>
+// Use explicit type params to preserve type safety while avoiding the branding issue
+type ZodSchema = z.ZodType<any, any, any>
+
+export const validate = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body)
     if (!result.success && result.error) {
@@ -21,8 +24,7 @@ export const validate = (schema: z.ZodType | any) => {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
-export const validateQuery = (schema: z.ZodType | any) => {
+export const validateQuery = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query)
     if (!result.success && result.error) {
@@ -41,8 +43,7 @@ export const validateQuery = (schema: z.ZodType | any) => {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 $strip branding prevents assignability to ZodType<any>
-export const validateParams = (schema: z.ZodType | any) => {
+export const validateParams = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.params)
     if (!result.success && result.error) {

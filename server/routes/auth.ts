@@ -7,6 +7,7 @@ import { UserService } from '../services/user-service.js'
 import { getConnection } from '../database/connection.js'
 import { authenticateJWT } from '../middleware/auth-middleware.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
+import { isProduction } from '../config/index.js'
 
 const router = Router()
 
@@ -53,7 +54,7 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
 
   res.cookie('refreshToken', result.refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction(),
     sameSite: 'lax',
     path: '/api/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -83,7 +84,7 @@ router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler
 
   res.cookie('refreshToken', loginResult.refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction(),
     sameSite: 'lax',
     path: '/api/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -131,7 +132,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
 
   res.cookie('refreshToken', newRefreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction(),
     sameSite: 'lax',
     path: '/api/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -143,7 +144,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
 router.post('/logout', authenticateJWT, asyncHandler(async (req: Request, res) => {
   res.cookie('refreshToken', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction(),
     sameSite: 'lax',
     path: '/api/auth',
     maxAge: 0,

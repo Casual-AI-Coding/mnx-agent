@@ -4,6 +4,7 @@ import type { Server } from 'http'
 import { UserService } from './user-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { isProduction } from '../config/index.js'
 
 function sanitizeErrorForClient(error: unknown): string {
   if (!error) return 'Unknown error'
@@ -311,9 +312,8 @@ export function initCronWebSocket(server: Server): WebSocketServer {
           }
         }
       } catch (err) {
-        const isDev = process.env.NODE_ENV !== 'production'
         const sanitized = sanitizeErrorForClient(err)
-        if (isDev) {
+        if (!isProduction()) {
           ws.send(JSON.stringify({ type: 'error', message: `Invalid message format: ${sanitized}` }))
         }
       }

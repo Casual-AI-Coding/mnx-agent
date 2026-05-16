@@ -24,7 +24,7 @@ const ALLOWED_HOSTS = [
   'api.sisyphusx.com',
 ]
 
-function isUrlAllowed(urlString: string): boolean {
+export function isUrlAllowed(urlString: string): boolean {
   try {
     const url = new URL(urlString)
     const hostname = url.hostname.toLowerCase()

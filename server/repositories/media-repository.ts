@@ -163,7 +163,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     search?: string
     flags: MediaListFilterFlags
   }): MediaListQueryState {
-    const state: MediaListQueryState = {
+    let state: MediaListQueryState = {
       selectClause: 'm.*',
       joinClause: '',
       whereConditions: [],
@@ -171,13 +171,13 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       paramIndex: 1,
     }
 
-    this.buildFavoriteClause(state, favoriteUserId, flags)
-    this.buildVisibilityClause(state, visibilityOwnerId, flags)
-    this.buildPublicFilterClause(state, publicFilter, visibilityOwnerId, flags)
-    this.buildDeletedClause(state, includeDeleted)
-    this.buildFieldFilterClause(state, 'm.type', type)
-    this.buildFieldFilterClause(state, 'm.source', source)
-    this.buildSearchClause(state, search)
+    state = this.buildFavoriteClause(state, favoriteUserId, flags)
+    state = this.buildVisibilityClause(state, visibilityOwnerId, flags)
+    state = this.buildPublicFilterClause(state, publicFilter, visibilityOwnerId, flags)
+    state = this.buildDeletedClause(state, includeDeleted)
+    state = this.buildFieldFilterClause(state, 'm.type', type)
+    state = this.buildFieldFilterClause(state, 'm.source', source)
+    state = this.buildSearchClause(state, search)
 
     return state
   }
@@ -186,39 +186,52 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     state: MediaListQueryState,
     favoriteUserId: string | undefined,
     flags: MediaListFilterFlags
-  ): void {
+  ): MediaListQueryState {
     if (!favoriteUserId) {
-      return
+      return state
     }
 
-    state.selectClause += ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
+    const newSelectClause = state.selectClause + ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
 
     if (flags.hasFavorite && !flags.hasNonFavorite) {
-      state.joinClause = `INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex} AND f.is_deleted = false`
-      state.params.push(favoriteUserId)
-      state.paramIndex++
-      return
+      return {
+        ...state,
+        selectClause: newSelectClause,
+        joinClause: `INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex} AND f.is_deleted = false`,
+        params: [...state.params, favoriteUserId],
+        paramIndex: state.paramIndex + 1,
+      }
     }
 
-    state.joinClause = `LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex}`
-    state.params.push(favoriteUserId)
-    state.paramIndex++
+    const result: MediaListQueryState = {
+      ...state,
+      selectClause: newSelectClause,
+      joinClause: `LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex}`,
+      params: [...state.params, favoriteUserId],
+      paramIndex: state.paramIndex + 1,
+    }
 
     if (!flags.hasFavorite && flags.hasNonFavorite) {
-      state.whereConditions.push('(f.id IS NULL OR f.is_deleted = true)')
+      result.whereConditions = [...result.whereConditions, '(f.id IS NULL OR f.is_deleted = true)']
     }
+
+    return result
   }
 
   private buildVisibilityClause(
     state: MediaListQueryState,
     visibilityOwnerId: string | undefined,
     flags: MediaListFilterFlags
-  ): void {
+  ): MediaListQueryState {
     if (visibilityOwnerId && !flags.isAdminOrSuper) {
-      state.whereConditions.push(`(m.owner_id = $${state.paramIndex} OR m.is_public = true)`)
-      state.params.push(visibilityOwnerId)
-      state.paramIndex++
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, `(m.owner_id = $${state.paramIndex} OR m.is_public = true)`],
+        params: [...state.params, visibilityOwnerId],
+        paramIndex: state.paramIndex + 1,
+      }
     }
+    return state
   }
 
   private buildPublicFilterClause(
@@ -226,114 +239,142 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     publicFilter: MediaListOptions['publicFilter'],
     visibilityOwnerId: string | undefined,
     flags: MediaListFilterFlags
-  ): void {
+  ): MediaListQueryState {
     if (!publicFilter || publicFilter.length === 0) {
-      return
+      return state
     }
 
     if (flags.hasPrivate && !flags.hasPublic && !flags.hasOthersPublic) {
-      if (flags.isAdminOrSuper) {
-        state.whereConditions.push(`(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false`)
-      } else {
-        state.whereConditions.push(`m.owner_id = $${state.paramIndex} AND m.is_public = false`)
+      const condition = flags.isAdminOrSuper
+        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false`
+        : `m.owner_id = $${state.paramIndex} AND m.is_public = false`
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, condition],
+        params: [...state.params, visibilityOwnerId],
+        paramIndex: state.paramIndex + 1,
       }
-      state.params.push(visibilityOwnerId)
-      state.paramIndex++
-      return
     }
 
     if (!flags.hasPrivate && flags.hasPublic && !flags.hasOthersPublic) {
-      if (flags.isAdminOrSuper) {
-        state.whereConditions.push(`(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = true`)
-      } else {
-        state.whereConditions.push(`m.owner_id = $${state.paramIndex} AND m.is_public = true`)
+      const condition = flags.isAdminOrSuper
+        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = true`
+        : `m.owner_id = $${state.paramIndex} AND m.is_public = true`
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, condition],
+        params: [...state.params, visibilityOwnerId],
+        paramIndex: state.paramIndex + 1,
       }
-      state.params.push(visibilityOwnerId)
-      state.paramIndex++
-      return
     }
 
     if (!flags.hasPrivate && !flags.hasPublic && flags.hasOthersPublic) {
       if (flags.isAdminOrSuper && visibilityOwnerId) {
-        state.whereConditions.push(`m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true`)
-        state.params.push(visibilityOwnerId)
-        state.paramIndex++
-        return
+        return {
+          ...state,
+          whereConditions: [...state.whereConditions, `m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true`],
+          params: [...state.params, visibilityOwnerId],
+          paramIndex: state.paramIndex + 1,
+        }
       }
 
       if (visibilityOwnerId) {
-        state.whereConditions.push(`(m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}) AND m.is_public = true`)
-        state.params.push(visibilityOwnerId)
-        state.paramIndex++
-        return
+        return {
+          ...state,
+          whereConditions: [...state.whereConditions, `(m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}) AND m.is_public = true`],
+          params: [...state.params, visibilityOwnerId],
+          paramIndex: state.paramIndex + 1,
+        }
       }
 
-      state.whereConditions.push('m.is_public = true')
-      return
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, 'm.is_public = true'],
+      }
     }
 
     if (flags.hasPrivate && flags.hasPublic && !flags.hasOthersPublic) {
-      if (flags.isAdminOrSuper) {
-        state.whereConditions.push(`(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL)`)
-      } else {
-        state.whereConditions.push(`m.owner_id = $${state.paramIndex}`)
+      const condition = flags.isAdminOrSuper
+        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL)`
+        : `m.owner_id = $${state.paramIndex}`
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, condition],
+        params: [...state.params, visibilityOwnerId],
+        paramIndex: state.paramIndex + 1,
       }
-      state.params.push(visibilityOwnerId)
-      state.paramIndex++
-      return
     }
 
     if (flags.hasPrivate && !flags.hasPublic && flags.hasOthersPublic) {
       if (flags.isAdminOrSuper && visibilityOwnerId) {
-        state.whereConditions.push(`((m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false OR m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true)`)
-        state.params.push(visibilityOwnerId)
-        state.paramIndex++
-        return
+        return {
+          ...state,
+          whereConditions: [...state.whereConditions, `((m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false OR m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true)`],
+          params: [...state.params, visibilityOwnerId],
+          paramIndex: state.paramIndex + 1,
+        }
       }
 
       if (visibilityOwnerId) {
-        state.whereConditions.push(`(m.owner_id = $${state.paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}))`)
-        state.params.push(visibilityOwnerId)
-        state.paramIndex++
+        return {
+          ...state,
+          whereConditions: [...state.whereConditions, `(m.owner_id = $${state.paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}))`],
+          params: [...state.params, visibilityOwnerId],
+          paramIndex: state.paramIndex + 1,
+        }
       }
-      return
+      return state
     }
 
     if (!flags.hasPrivate && flags.hasPublic && flags.hasOthersPublic) {
-      state.whereConditions.push('m.is_public = true')
+      return {
+        ...state,
+        whereConditions: [...state.whereConditions, 'm.is_public = true'],
+      }
     }
+
+    return state
   }
 
-  private buildDeletedClause(state: MediaListQueryState, includeDeleted: boolean): void {
+  private buildDeletedClause(state: MediaListQueryState, includeDeleted: boolean): MediaListQueryState {
     if (includeDeleted) {
-      return
+      return state
     }
 
-    state.whereConditions.push(this.isPostgres() ? 'm.is_deleted = false' : 'm.is_deleted = 0')
+    return {
+      ...state,
+      whereConditions: [...state.whereConditions, this.isPostgres() ? 'm.is_deleted = false' : 'm.is_deleted = 0'],
+    }
   }
 
   private buildFieldFilterClause(
     state: MediaListQueryState,
     field: 'm.type' | 'm.source',
     value: string | undefined
-  ): void {
+  ): MediaListQueryState {
     if (!value) {
-      return
+      return state
     }
 
-    state.whereConditions.push(`${field} = $${state.paramIndex}`)
-    state.params.push(value)
-    state.paramIndex++
+    return {
+      ...state,
+      whereConditions: [...state.whereConditions, `${field} = $${state.paramIndex}`],
+      params: [...state.params, value],
+      paramIndex: state.paramIndex + 1,
+    }
   }
 
-  private buildSearchClause(state: MediaListQueryState, search: string | undefined): void {
+  private buildSearchClause(state: MediaListQueryState, search: string | undefined): MediaListQueryState {
     if (!search || !search.trim()) {
-      return
+      return state
     }
 
-    state.whereConditions.push(`(m.filename LIKE $${state.paramIndex} OR m.original_name LIKE $${state.paramIndex})`)
-    state.params.push(`%${search.trim()}%`)
-    state.paramIndex++
+    return {
+      ...state,
+      whereConditions: [...state.whereConditions, `(m.filename LIKE $${state.paramIndex} OR m.original_name LIKE $${state.paramIndex})`],
+      params: [...state.params, `%${search.trim()}%`],
+      paramIndex: state.paramIndex + 1,
+    }
   }
 
   private buildWhereClause(whereConditions: string[]): string {

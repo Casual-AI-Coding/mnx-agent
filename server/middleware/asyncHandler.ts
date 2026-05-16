@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { getLogger } from '../lib/logger'
+import { isProduction } from '../config/index.js'
 
 const logger = getLogger()
 
@@ -20,8 +21,8 @@ export function asyncHandler(
         statusCode,
       })
       
-      const isProduction = process.env.NODE_ENV === 'production'
-      const errorMessage = isProduction ? 'Internal server error' : error.message
+      // 4xx 为用户错误，生产环境应保留具体信息；仅 5xx 隐藏详情
+      const errorMessage = isProduction() && statusCode >= 500 ? 'Internal server error' : error.message
 
       res.status(statusCode).json({ success: false, error: errorMessage })
     })

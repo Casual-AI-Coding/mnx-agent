@@ -212,3 +212,7 @@ export function getConfig(): AppConfig {
   }
   return cachedConfig
 }
+
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production'
+}
