@@ -47,6 +47,7 @@ describe('Media API Routes', () => {
   beforeEach(async () => {
     const conn = getConnection()
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
+    await conn.execute(`DELETE FROM media_records WHERE is_public = true`)
     createdRecordIds.clear()
   })
 
