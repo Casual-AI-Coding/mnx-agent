@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.10] - 2026-05-16
+
+### 🔒 Security
+
+- **SSRF wrapped-dot 子域名欺骗修复** — `isUrlAllowed` 改用 wrapped-dot 匹配防止子域名欺骗攻击，精确匹配内部地址避免绕过（如 `localhost.evil.com` 不再误判） (`server/routes/external-proxy.ts`)
+- **WebSocket 事件补齐 owner_id** — `emitJobExecuted`/`emitJobDeleted`/`emitTaskMovedToDLQ` 补齐 `owner_id` 字段，确保事件 payload 完整 (`server/services/websocket-service.ts`, `server/routes/cron/jobs.ts`)
+
+### 🐛 Fixed
+
+- **Desktop 侧栏底部工具栏溢出** — 移除 fixed 定位下的 `h-full`，解决 CSS 过约束导致底部工具栏不可见 (`src/components/layout/Sidebar.tsx`)
+- **4xx/5xx 错误隐藏策略区分** — asyncHandler/errorHandler 区分用户错误（4xx 保留信息）和服务器错误（5xx 生产环境隐藏详情） (`server/middleware/asyncHandler.ts`, `server/middleware/errorHandler.ts`)
+- **handleApiError 策略统一** — 非 Express 中间件路径的错误响应与 asyncHandler/errorHandler 保持相同的 4xx/5xx 差异化策略 (`server/middleware/errorHandler.ts`)
+- **Zod 类型收敛** — validate.ts 创建 `ZodSchema` 类型别名替代 `any`，消除 eslint-disable 注释 (`server/middleware/validate.ts`)
+- **SSRF guard clause** — external-proxy 拒绝后添加 `continue` guard clause 消除 fallthrough (`server/routes/external-proxy.ts`)
+- **Release Note 标题重复** — 删除正文中冗余的 `# 🚀` 标题，规范 Release Note 格式 (`scripts/create-release-notes.mjs`, `docs/standards/release-note-standards.md`)
+
+### 🔄 Changed
+
+- **media-repository builder 不可变模式** — 7 个 builder 方法改为返回新 state（非原地修改），提升可预测性 (`server/repositories/media-repository.ts`)
+- **isProduction() 统一** — 新增 `isProduction()` 函数统一 NODE_ENV 读取，auth/websocket/asyncHandler/errorHandler 复用 (`server/config/index.ts`, `server/routes/auth.ts`, `server/services/websocket-service.ts`)
+- **migration 035 注释** — 添加 DOWN 回滚注释（手工参考，系统不支持自动回滚） (`server/database/migrations/035_add_misfire_policy.ts`)
+
+### 🧪 Tests
+
+- **isUrlAllowed 单元测试** — 新增 12 条单元测试覆盖 SSRF 防护逻辑 (`server/routes/__tests__/external-proxy.test.ts`)
+- **asyncHandler/errorHandler 测试** — 新增测试覆盖 4xx/5xx 错误策略区分 (`server/middleware/__tests__/asyncHandler.test.ts`, `server/middleware/__tests__/errorHandler.test.ts`)
+
+### 📝 Docs
+
+- **Code Review 文档归档** — 2026-05-11/05-12/05-16 CR 文档归档至 `docs/scan/archive/` (`docs/scan/archive/`)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ SSRF 修复为安全增强，不影响合法请求
+- ✅ WebSocket payload 扩展向后兼容（新增字段）
+- ✅ 错误策略变更仅影响生产环境响应格式
+- ✅ builder 不可变模式为内部重构
+
 ## [2.2.9] - 2026-05-11
 
 ### 🔒 Security
