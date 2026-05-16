@@ -1,7 +1,7 @@
 # Release Guide
 
-> Version: 1.1.0
-> Date: 2026-05-11
+> Version: 1.1.1
+> Date: 2026-05-16
 > Status: Active
 
 > 📋 相关规范：Release Note 格式详见 @docs/standards/release-note-standards.md
@@ -87,7 +87,7 @@
 
    ```bash
    # 方式一：使用辅助脚本（推荐）
-   node scripts/create-release-note.mjs v1.0.2
+   node scripts/create-release-notes.mjs --tag=v1.0.2
 
    # 方式二：手动从文件创建
    gh release create v1.0.2 \
@@ -129,5 +129,6 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-05-16 | v1.1.1 — 修正脚本名称和参数格式：`create-release-note.mjs` → `create-release-notes.mjs`，参数改为 `--tag=vX.Y.Z` |
 | 2026-05-11 | v1.1.0 — 新增 GitHub Release Note 创建步骤；更新 CHANGELOG 模板为 emoji 分类体系；添加 Release Note 与 CHANGELOG 关系说明 |
 | 2026-04-22 | 初始版本 |
