@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 
-// Zod 4 $strip branding prevents direct assignability to ZodType<any, any, any>
-// Use explicit type params to preserve type safety while avoiding the branding issue
-type ZodSchema = z.ZodType<any, any, any>
+type ZodSchema = z.ZodType<unknown>
 
 export const validate = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
