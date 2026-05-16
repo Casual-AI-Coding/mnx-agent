@@ -334,19 +334,20 @@ async function executeAsyncTask(
               index,
               url: imageInfo.url,
             })
-          } else {
-            try {
-              const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
-              imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
-            } catch (fetchErr) {
-              logger.error({
-                msg: 'Failed to fetch image from URL',
-                logId,
-                index,
-                url: imageInfo.url,
-                error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
-              })
-            }
+            continue
+          }
+
+          try {
+            const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
+            imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
+          } catch (fetchErr) {
+            logger.error({
+              msg: 'Failed to fetch image from URL',
+              logId,
+              index,
+              url: imageInfo.url,
+              error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
+            })
           }
         } else if (imageInfo.base64) {
           imageBuffer = Buffer.from(imageInfo.base64, 'base64')

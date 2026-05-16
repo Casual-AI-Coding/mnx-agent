@@ -213,6 +213,12 @@ export function getConfig(): AppConfig {
   return cachedConfig
 }
 
+/**
+ * 当前是否为生产环境。
+ * 
+ * 仅在 NODE_ENV === 'production' 时返回 true。
+ * test/development 环境下返回 false（开发调试时需看到完整错误信息）。
+ */
 export function isProduction(): boolean {
   return process.env.NODE_ENV === 'production'
 }
