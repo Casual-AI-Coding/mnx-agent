@@ -16,6 +16,17 @@ export { LogService } from './log.service.js'
 
 export type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces/index.js'
 export { MediaService } from './media.service.js'
+export {
+  buildRecoverableMediaCandidates,
+  createMediaRecoveryPlan,
+} from './media-recovery.service.js'
+export type {
+  BuildRecoverableMediaCandidatesInput,
+  CreateMediaRecoveryPlanInput,
+  CreateMediaRecoveryPlanResult,
+  MediaRecoveryPlan,
+  RecoverableMediaCandidate,
+} from './media-recovery.service.js'
 
 export type { IWorkflowService } from './interfaces/index.js'
 export { WorkflowService } from './workflow.service.js'
