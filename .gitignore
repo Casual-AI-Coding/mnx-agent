@@ -52,6 +52,7 @@ coverage/
 *.tsbuildinfo
 
 # OpenCode/Sisyphus
+.omo/
 .opencode/
 .sisyphus/
 .worktrees/
