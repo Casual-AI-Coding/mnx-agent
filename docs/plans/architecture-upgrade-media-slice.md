@@ -55,3 +55,24 @@
 - 后端 media route 拆分为 `media-request-parser`、`media-application-service`、`media-response-presenter`。
 - `media-repository` 拆分 row mapper、查询构建器、写模型仓储。
 - workflow builder 和 cron 管理按同样模式切片治理超大 Hook/组件。
+
+## 第二切片计划：前端状态派生与选择逻辑收敛
+
+上一切片已经把媒体查询参数、签名 URL 合并、记录补丁更新从 `useMediaManagement` 中抽出。第二切片继续沿前端应用层边界推进，只做行为保持型重构，目标是把分页页码、批量选择、筛选集合切换这些纯状态转换移入媒体领域辅助层，进一步降低 Hook 中的重复与硬编码。
+
+### 范围
+
+- 新增/扩展 `src/hooks/media/media-management-helpers.test.ts`，先锁定分页页码、全选切换、单选切换、筛选集合切换的契约。
+- 扩展 `src/hooks/media/media-management-helpers.ts`，新增纯函数：
+  - `buildPaginationItems()`：根据当前页与总页数生成页码/省略号列表。
+  - `toggleAllSelectedIds()`：根据当前选择与可见记录切换全选/清空。
+  - `toggleSelectedId()`：切换单个媒体 ID 的选中状态。
+  - `toggleSetValueWithFallback()`：切换筛选集合，集合被清空时回退到默认全集。
+- `useMediaManagement` 仅编排 React 状态，把上述纯逻辑委托给 helper。
+
+### 验证
+
+- RED：先运行新增 helper 测试，预期因函数尚未导出失败。
+- GREEN：实现 helper 并改 Hook 调用，运行 `rtk npm run test -- src/hooks/media/media-management-helpers.test.ts src/hooks/useMediaManagement.refill.test.ts src/components/media/AnimatedMediaGrid.test.tsx src/components/media/BatchOperationsToolbar.test.tsx`。
+- Regression：运行后端媒体测试保持媒体纵向切片不回退。
+- Build：运行 `rtk npm run build`。
