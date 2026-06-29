@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.12] - 2026-06-30
+
+### 🏗️ 重构
+
+- **API 层统一响应适配器** — 新增 `withApiResponse` 工具函数，将 audit.ts、external-api-logs.ts、materials.ts 中 33 处重复 try-catch 错误处理模式收敛至统一适配器，消除约 240 行样板代码 (`src/lib/api/request.ts`, `src/lib/api/audit.ts`, `src/lib/api/external-api-logs.ts`, `src/lib/api/materials.ts`)
+- **create-api-method 类型加固** — 新增 `isApiClientResponse` 类型守卫和 `getQueryParams` 安全查询参数提取，后端响应包络校验前置到泛型层 (`src/lib/api/create-api-method.ts`)
+- **ServiceNodeRegistry 类型安全加固** — 属性标记 `Readonly`、类型守卫函数替代 `as` 断言、`minRole` 配置化（支持方法级最小角色覆盖）、`getRoleLevel` 编译时未注册角色过滤 (`server/services/service-node-registry.ts`)
+
+### 🐛 Fixed
+
+- **统一响应适配器包络校验** — `create-api-method.ts` 添加后端响应格式校验，畸形包络（缺少 `data` 字段）抛出 `Invalid API response format` 错误而非静默向下游传递畸形数据 (`src/lib/api/create-api-method.ts`)
+
+### 🧪 Tests
+
+- **withApiResponse 单元测试** — 覆盖标准成功、结果转换、ApiError 错误、畸形包络 4 条测试用例 (`src/lib/api/__tests__/request.test.ts`)
+- **create-api-method 包络校验测试** — 新增畸形后端响应测试用例 (`src/lib/api/__tests__/create-api-method.test.ts`)
+- **service-node-registry 角色过滤测试** — 覆盖 `minRole` 同步权限和未知角色自动过滤场景 (`server/services/__tests__/service-node-registry.test.ts`)
+
+### 📝 Docs
+
+- **API 与注册表架构切片计划** — 新增设计实现文档，定义统一响应适配器和服务节点注册表鉴权增强的工作范围和任务分解 (`docs/plans/2026-06-30-api-and-registry-architecture-slice.md`)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ `withApiResponse` 为内部错误处理重构，行为等价（返回 `ApiResponse` 结构）
+- ✅ ServiceNodeRegistry `minRole` 配置化向后兼容（默认值保持 `'pro'`，不改变现有行为）
+- ✅ 包络校验为错误检测增强，不影响合法响应
+
 ## [2.2.11] - 2026-06-30
 
 ### 🏗️ 重构
