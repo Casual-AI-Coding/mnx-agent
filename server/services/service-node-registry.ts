@@ -6,10 +6,28 @@
 
 import type { DatabaseService } from '../database/service-async.js'
 import type { ServiceNodePermission } from '../database/types.js'
-import { ROLE_HIERARCHY } from '../types/workflow.js'
+import { ROLE_HIERARCHY, VALID_ROLES, type UserRole } from '../types/workflow.js'
 import { getLogger } from '../lib/logger.js'
 
 const logger = getLogger()
+
+type ServiceMethod = (this: object, ...args: unknown[]) => unknown
+
+function isServiceMethod(value: unknown): value is ServiceMethod {
+  return typeof value === 'function'
+}
+
+function isUserRole(role: string): role is UserRole {
+  return VALID_ROLES.some(validRole => validRole === role)
+}
+
+function getRoleLevel(role: string): number | null {
+  if (!isUserRole(role)) {
+    return null
+  }
+
+  return ROLE_HIERARCHY[role]
+}
 
 export interface ServiceMethodMeta {
   name: string
@@ -68,12 +86,12 @@ export class ServiceNodeRegistry {
       throw new Error(`Service "${serviceName}" not registered`)
     }
 
-    const fn = (instance as Record<string, unknown>)[method]
-    if (typeof fn !== 'function') {
+    const fn: unknown = Reflect.get(instance, method)
+    if (!isServiceMethod(fn)) {
       throw new Error(`Method "${method}" not found on service "${serviceName}"`)
     }
 
-    return (fn as (...args: unknown[]) => Promise<unknown>).bind(instance)(...args)
+    return fn.call(instance, ...args)
   }
 
   getAllServices(): string[] {
@@ -85,12 +103,13 @@ export class ServiceNodeRegistry {
   }
 
   async getAvailableNodes(userRole: string): Promise<ServiceNodePermission[]> {
-    const userLevel = ROLE_HIERARCHY[userRole as keyof typeof ROLE_HIERARCHY] ?? 0
+    const userLevel = getRoleLevel(userRole) ?? 0
     const allNodes = await this.db.getAllServiceNodePermissions()
     
     return allNodes.filter(node => {
       if (!node.is_enabled) return false
-      const nodeLevel = ROLE_HIERARCHY[node.min_role as keyof typeof ROLE_HIERARCHY] ?? 0
+      const nodeLevel = getRoleLevel(node.min_role)
+      if (nodeLevel === null) return false
       return nodeLevel <= userLevel
     })
   }

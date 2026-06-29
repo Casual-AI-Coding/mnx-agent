@@ -407,6 +407,29 @@ describe('ServiceNodeRegistry', () => {
       expect(result).toHaveLength(1)
       expect(result[0].method_name).toBe('generate')
     })
+
+    it('should exclude enabled nodes whose min role is not recognized', async () => {
+      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const permissionsWithUnknownRole: ServiceNodePermission[] = [
+        ...mockPermissions,
+        {
+          id: 'perm-unknown-role',
+          service_name: 'experimentalService',
+          method_name: 'experimental',
+          display_name: 'Experimental',
+          category: 'ai',
+          min_role: 'vip',
+          is_enabled: true,
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01'
+        }
+      ]
+      mockDb.getAllServiceNodePermissions.mockResolvedValue(permissionsWithUnknownRole)
+
+      const result = await registry.getAvailableNodes('super')
+
+      expect(result.map(node => node.method_name)).not.toContain('experimental')
+    })
   })
 })
 
