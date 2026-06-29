@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import type { MediaType, MediaRecord, PaginationInfo } from '@/types/media'
+import type { MediaRecord, PaginationInfo } from '@/types/media'
 import {
   listMedia,
   deleteMedia as deleteMediaApi,
@@ -14,6 +14,13 @@ import {
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useAudioStore } from '@/stores/audio'
 import { useAuthStore } from '@/stores/auth'
+import {
+  applyMediaPatch,
+  applyMediaPatchByIds,
+  buildMediaListParams,
+  collectUnfetchedPlayableRecords,
+  mergeSignedUrlResults,
+} from './media/media-management-helpers'
 
 export interface DeleteDialogState {
   isOpen: boolean
@@ -249,17 +256,14 @@ export function useMediaManagement(): UseMediaManagementReturn {
     const page = forcePage ?? paginationRef.current.page
 
     try {
-      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music', 'lyrics']
-      const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
-
-      const response = await listMedia({
-        type,
-        search: searchQuery.trim() || undefined,
+      const response = await listMedia(buildMediaListParams({
+        activeTab,
+        searchQuery,
         page,
         limit: paginationRef.current.limit,
-        favoriteFilter: Array.from(favoriteFilters),
-        publicFilter: Array.from(publicFilters),
-      })
+        favoriteFilters,
+        publicFilters,
+      }))
 
       if (response.success) {
         setRecords(response.data.records)
@@ -287,17 +291,14 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
     setIsLoadingMore(true)
     try {
-      const validTypes: MediaType[] = ['audio', 'image', 'video', 'music', 'lyrics']
-      const type = validTypes.includes(activeTab as MediaType) ? (activeTab as MediaType) : undefined
-
-      const response = await listMedia({
-        type,
-        search: searchQuery.trim() || undefined,
+      const response = await listMedia(buildMediaListParams({
+        activeTab,
+        searchQuery,
         page,
         limit: 20,
-        favoriteFilter: Array.from(favoriteFilters),
-        publicFilter: Array.from(publicFilters),
-      })
+        favoriteFilters,
+        publicFilters,
+      }))
 
       if (response.success) {
         const newRecords = response.data.records
@@ -518,118 +519,60 @@ export function useMediaManagement(): UseMediaManagementReturn {
     return () => observer.disconnect()
   }, [hasMore, isLoadingMore, timelinePage, viewMode, fetchTimelineMedia])
 
-  // Fetch signed URLs for playable media (image, audio, music) in records
-  useEffect(() => {
-    if (records.length === 0) return
+  const fetchSignedUrlsForRecords = useCallback((mediaRecords: readonly MediaRecord[]) => {
+    if (mediaRecords.length === 0) return
 
-    const playableRecords = records.filter(r =>
-      (r.type === 'image' || r.type === 'audio' || r.type === 'music') && !fetchedIdsRef.current.has(r.id)
-    )
+    const playableRecords = collectUnfetchedPlayableRecords(mediaRecords, fetchedIdsRef.current)
     if (playableRecords.length === 0) return
 
-    playableRecords.forEach(r => fetchedIdsRef.current.add(r.id))
+    playableRecords.forEach(record => fetchedIdsRef.current.add(record.id))
 
-    Promise.all(
-      playableRecords.map(async (r) => {
-        try {
-          const url = await getMediaDownloadUrl(r.id)
-          return { id: r.id, url }
-        } catch {
-          return { id: r.id, url: '' }
-        }
+    Promise.allSettled(
+      playableRecords.map(async (record) => {
+        const url = await getMediaDownloadUrl(record.id)
+        return { id: record.id, url }
       })
     ).then(results => {
-      setSignedUrls(prev => {
-        const urlMap = { ...prev }
-        results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
-        return urlMap
-      })
+      const fulfilledResults = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value)
+      setSignedUrls(prev => mergeSignedUrlResults(prev, fulfilledResults))
     })
-  }, [records])
+  }, [])
+
+  // Fetch signed URLs for playable media (image, audio, music) in records
+  useEffect(() => {
+    fetchSignedUrlsForRecords(records)
+  }, [fetchSignedUrlsForRecords, records])
 
   // Fetch signed URLs for playable media (image, audio, music) in timeline records
   useEffect(() => {
-    if (timelineRecords.length === 0) return
-
-    const playableRecords = timelineRecords.filter(r =>
-      (r.type === 'image' || r.type === 'audio' || r.type === 'music') && !fetchedIdsRef.current.has(r.id)
-    )
-    if (playableRecords.length === 0) return
-
-    playableRecords.forEach(r => fetchedIdsRef.current.add(r.id))
-
-    Promise.all(
-      playableRecords.map(async (r) => {
-        try {
-          const url = await getMediaDownloadUrl(r.id)
-          return { id: r.id, url }
-        } catch {
-          return { id: r.id, url: '' }
-        }
-      })
-    ).then(results => {
-      setSignedUrls(prev => {
-        const urlMap = { ...prev }
-        results.forEach(r => { if (r.url) urlMap[r.id] = r.url })
-        return urlMap
-      })
-    })
-  }, [timelineRecords])
+    fetchSignedUrlsForRecords(timelineRecords)
+  }, [fetchSignedUrlsForRecords, timelineRecords])
 
   const handleRename = useCallback(async (id: string, newName: string) => {
     await updateMedia(id, { original_name: newName })
-    setRecords(prev => prev.map(r => 
-      r.id === id ? { ...r, original_name: newName } : r
-    ))
-    setTimelineRecords(prev => prev.map(r =>
-      r.id === id ? { ...r, original_name: newName } : r
-    ))
+    setRecords(prev => applyMediaPatch(prev, id, { original_name: newName }))
+    setTimelineRecords(prev => applyMediaPatch(prev, id, { original_name: newName }))
   }, [setRecords, setTimelineRecords])
 
   const handleToggleFavorite = useCallback(async (mediaId: string) => {
     const currentFavorite = records.find(r => r.id === mediaId)?.is_favorite ?? false
     const newFavorite = !currentFavorite
 
-    setRecords(prev => prev.map(item =>
-      item.id === mediaId
-        ? { ...item, is_favorite: newFavorite }
-        : item
-    ))
-
-    setTimelineRecords(prev => prev.map(item =>
-      item.id === mediaId
-        ? { ...item, is_favorite: newFavorite }
-        : item
-    ))
+    setRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: newFavorite }))
+    setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: newFavorite }))
 
     try {
       const result = await toggleFavorite(mediaId)
 
-      setRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_favorite: result.data.isFavorite }
-          : item
-      ))
-
-      setTimelineRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_favorite: result.data.isFavorite }
-          : item
-      ))
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: result.data.isFavorite }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: result.data.isFavorite }))
 
       toastSuccess(result.data.action === 'added' ? '已收藏' : '已取消收藏')
     } catch (error) {
-      setRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_favorite: currentFavorite }
-          : item
-      ))
-
-      setTimelineRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_favorite: currentFavorite }
-          : item
-      ))
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: currentFavorite }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_favorite: currentFavorite }))
 
       console.error('Toggle favorite failed:', error)
       toastError('操作失败，请重试')
@@ -640,46 +583,19 @@ export function useMediaManagement(): UseMediaManagementReturn {
     const currentPublic = records.find(r => r.id === mediaId)?.is_public ?? false
     const newPublic = !currentPublic
 
-    setRecords(prev => prev.map(item =>
-      item.id === mediaId
-        ? { ...item, is_public: newPublic }
-        : item
-    ))
-
-    setTimelineRecords(prev => prev.map(item =>
-      item.id === mediaId
-        ? { ...item, is_public: newPublic }
-        : item
-    ))
+    setRecords(prev => applyMediaPatch(prev, mediaId, { is_public: newPublic }))
+    setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_public: newPublic }))
 
     try {
       const result = await togglePublic(mediaId, newPublic)
 
-      setRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_public: result.data.is_public }
-          : item
-      ))
-
-      setTimelineRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_public: result.data.is_public }
-          : item
-      ))
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_public: result.data.is_public }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_public: result.data.is_public }))
 
       toastSuccess(newPublic ? '已设为公开' : '已设为私密')
     } catch (error) {
-      setRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_public: currentPublic }
-          : item
-      ))
-
-      setTimelineRecords(prev => prev.map(item =>
-        item.id === mediaId
-          ? { ...item, is_public: currentPublic }
-          : item
-      ))
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_public: currentPublic }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_public: currentPublic }))
 
       console.error('Toggle public failed:', error)
       toastError('操作失败，请重试')
@@ -692,17 +608,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
       const successIds = result.data.filter(r => r.success).map(r => r.id)
 
-      setRecords(prev => prev.map(item =>
-        successIds.includes(item.id)
-          ? { ...item, is_public: isPublic }
-          : item
-      ))
+      const successIdSet = new Set(successIds)
 
-      setTimelineRecords(prev => prev.map(item =>
-        successIds.includes(item.id)
-          ? { ...item, is_public: isPublic }
-          : item
-      ))
+      setRecords(prev => applyMediaPatchByIds(prev, successIdSet, { is_public: isPublic }))
+      setTimelineRecords(prev => applyMediaPatchByIds(prev, successIdSet, { is_public: isPublic }))
 
       const successCount = successIds.length
       toastSuccess(
