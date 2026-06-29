@@ -1,40 +1,23 @@
 import { internalAxios } from './client'
+import { withApiResponse } from './request'
+import type { ApiResponse } from './errors'
+import type {
+  AsyncTaskStatus,
+  CreateExternalApiLog,
+  ExternalApiLog,
+  ExternalApiLogQuery,
+  ExternalApiLogStats as BackendExternalApiLogStats,
+  ExternalApiStatus,
+  ServiceProvider,
+  UpdateExternalApiLog,
+} from '@mnx/shared-types'
 
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-}
-
-export type ServiceProvider = 'minimax' | 'openai' | 'deepseek' | string
-export type ExternalApiStatus = 'pending' | 'success' | 'failed'
-export type AsyncTaskStatus = 'sync' | 'pending' | 'completed' | 'failed'
-
-export interface ExternalApiLog {
-  id: number
-  service_provider: ServiceProvider
-  api_endpoint: string
-  operation: string
-  request_params: Record<string, unknown> | null
-  request_body: string | null
-  response_body: string | null
-  status: ExternalApiStatus
-  error_message: string | null
-  duration_ms: number | null
-  user_id: string | null
-  trace_id: string | null
-  created_at: string
-  task_status: AsyncTaskStatus
-  result_media_id: string | null
-  result_data: Record<string, unknown> | null
-}
-
-interface BackendExternalApiLogStats {
-  total_logs: number
-  by_service_provider: Record<string, number>
-  by_status: Record<string, number>
-  by_operation: Record<string, number>
-  avg_duration_ms: number
+export type {
+  AsyncTaskStatus,
+  ExternalApiLog,
+  ExternalApiLogQuery,
+  ExternalApiStatus,
+  ServiceProvider,
 }
 
 export interface ExternalApiLogStats {
@@ -45,17 +28,22 @@ export interface ExternalApiLogStats {
   avgDuration: number
 }
 
-export interface ExternalApiLogQuery {
-  service_provider?: ServiceProvider
-  status?: ExternalApiStatus
-  operation?: string
-  user_id?: string
-  start_date?: string
-  end_date?: string
-  sort_by?: 'created_at' | 'duration_ms'
-  sort_order?: 'asc' | 'desc'
-  page?: number
-  limit?: number
+interface ExternalApiLogsPayload {
+  readonly logs: ExternalApiLog[]
+  readonly pagination: {
+    readonly page: number
+    readonly limit: number
+    readonly total: number
+    readonly totalPages: number
+  }
+}
+
+interface ExternalApiOperationsPayload {
+  readonly operations: string[]
+}
+
+interface ExternalApiProvidersPayload {
+  readonly providers: string[]
 }
 
 function transformStats(backend: BackendExternalApiLogStats): ExternalApiLogStats {
@@ -68,100 +56,47 @@ function transformStats(backend: BackendExternalApiLogStats): ExternalApiLogStat
   }
 }
 
-export async function getExternalApiLogs(params: ExternalApiLogQuery): Promise<ApiResponse<{ logs: ExternalApiLog[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>> {
-  try {
-    const response = await internalAxios.get('/external-api-logs', { params })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+export async function getExternalApiLogs(params: ExternalApiLogQuery): Promise<ApiResponse<ExternalApiLogsPayload>> {
+  return withApiResponse<ExternalApiLogsPayload>(() => internalAxios.get('/external-api-logs', { params }))
 }
 
 export async function getExternalApiLog(id: number): Promise<ApiResponse<ExternalApiLog>> {
-  try {
-    const response = await internalAxios.get(`/external-api-logs/${id}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<ExternalApiLog>(() => internalAxios.get(`/external-api-logs/${id}`))
 }
 
 export async function getExternalApiLogStats(): Promise<ApiResponse<ExternalApiLogStats>> {
-  try {
-    const response = await internalAxios.get<{ data: BackendExternalApiLogStats }>('/external-api-logs/stats')
-    return { success: true, data: transformStats(response.data.data) }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<BackendExternalApiLogStats, ExternalApiLogStats>(
+    () => internalAxios.get('/external-api-logs/stats'),
+    transformStats
+  )
 }
 
 export async function getUniqueExternalApiOperations(): Promise<ApiResponse<string[]>> {
-  try {
-    const response = await internalAxios.get('/external-api-logs/operations')
-    return { success: true, data: response.data.data.operations }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<ExternalApiOperationsPayload, string[]>(
+    () => internalAxios.get('/external-api-logs/operations'),
+    (payload) => payload.operations
+  )
 }
 
-export interface CreateExternalApiLogInput {
-  service_provider: string
-  api_endpoint: string
-  operation: string
-  request_params?: Record<string, unknown> | null
-  request_body?: string | null
-  response_body?: string | null
-  status?: ExternalApiStatus
-  error_message?: string | null
-  duration_ms?: number | null
-  trace_id?: string | null
-  task_status?: AsyncTaskStatus
-  result_media_id?: string | null
-  result_data?: Record<string, unknown> | null
+export type CreateExternalApiLogInput = Omit<CreateExternalApiLog, 'status' | 'user_id'> & {
+  readonly status?: ExternalApiStatus
 }
 
-export interface UpdateExternalApiLogInput {
-  response_body?: string
-  status?: ExternalApiStatus
-  error_message?: string
-  duration_ms?: number
-  task_status?: AsyncTaskStatus
-  result_media_id?: string | null
-  result_data?: Record<string, unknown> | null
-}
+export type UpdateExternalApiLogInput = UpdateExternalApiLog
 
 export async function createExternalApiLog(input: CreateExternalApiLogInput): Promise<ApiResponse<ExternalApiLog>> {
-  try {
-    const response = await internalAxios.post('/external-api-logs', input)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<ExternalApiLog>(() => internalAxios.post('/external-api-logs', input))
 }
 
 export async function updateExternalApiLog(id: number, input: UpdateExternalApiLogInput): Promise<ApiResponse<ExternalApiLog>> {
-  try {
-    const response = await internalAxios.patch(`/external-api-logs/${id}`, input)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<ExternalApiLog>(() => internalAxios.patch(`/external-api-logs/${id}`, input))
 }
 
 export async function getUniqueExternalApiProviders(): Promise<ApiResponse<string[]>> {
-  try {
-    const response = await internalAxios.get('/external-api-logs/providers')
-    return { success: true, data: response.data.data.providers }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<ExternalApiProvidersPayload, string[]>(
+    () => internalAxios.get('/external-api-logs/providers'),
+    (payload) => payload.providers
+  )
 }
 
 export interface SubmitTaskInput {
@@ -190,21 +125,9 @@ export interface TaskStatusResponse {
 }
 
 export async function submitTask(input: SubmitTaskInput): Promise<ApiResponse<SubmitTaskResponse>> {
-  try {
-    const response = await internalAxios.post('/external-proxy/submit', input)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<SubmitTaskResponse>(() => internalAxios.post('/external-proxy/submit', input))
 }
 
 export async function getTaskStatus(taskId: number): Promise<ApiResponse<TaskStatusResponse>> {
-  try {
-    const response = await internalAxios.get(`/external-proxy/status/${taskId}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<TaskStatusResponse>(() => internalAxios.get(`/external-proxy/status/${taskId}`))
 }

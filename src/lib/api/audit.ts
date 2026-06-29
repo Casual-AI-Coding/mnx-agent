@@ -1,10 +1,6 @@
 import { internalAxios } from './client'
-
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-}
+import { withApiResponse } from './request'
+import type { ApiResponse } from './errors'
 
 export type AuditAction = 'create' | 'update' | 'delete' | 'execute'
 
@@ -59,6 +55,24 @@ export interface AuditLogQuery {
   limit?: number
 }
 
+interface AuditLogsPayload {
+  readonly logs: AuditLog[]
+  readonly pagination: {
+    readonly page: number
+    readonly limit: number
+    readonly total: number
+    readonly totalPages: number
+  }
+}
+
+interface RequestPathsPayload {
+  readonly paths: string[]
+}
+
+interface AuditUsersPayload {
+  readonly users: { readonly id: string; readonly username: string }[]
+}
+
 function transformAuditStats(backend: BackendAuditStats): AuditStats {
   return {
     total: backend.total_logs,
@@ -69,52 +83,31 @@ function transformAuditStats(backend: BackendAuditStats): AuditStats {
   }
 }
 
-export async function getAuditLogs(params: AuditLogQuery): Promise<ApiResponse<{ logs: AuditLog[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>> {
-  try {
-    const response = await internalAxios.get('/audit', { params })
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+export async function getAuditLogs(params: AuditLogQuery): Promise<ApiResponse<AuditLogsPayload>> {
+  return withApiResponse<AuditLogsPayload>(() => internalAxios.get('/audit', { params }))
 }
 
 export async function getAuditLog(id: string): Promise<ApiResponse<AuditLog>> {
-  try {
-    const response = await internalAxios.get(`/audit/${id}`)
-    return { success: true, data: response.data.data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<AuditLog>(() => internalAxios.get(`/audit/${id}`))
 }
 
 export async function getAuditStats(): Promise<ApiResponse<AuditStats>> {
-  try {
-    const response = await internalAxios.get<{ data: BackendAuditStats }>('/audit/stats')
-    return { success: true, data: transformAuditStats(response.data.data) }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<BackendAuditStats, AuditStats>(
+    () => internalAxios.get('/audit/stats'),
+    transformAuditStats
+  )
 }
 
 export async function getUniqueRequestPaths(): Promise<ApiResponse<string[]>> {
-  try {
-    const response = await internalAxios.get('/audit/paths')
-    return { success: true, data: response.data.data.paths }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<RequestPathsPayload, string[]>(
+    () => internalAxios.get('/audit/paths'),
+    (payload) => payload.paths
+  )
 }
 
 export async function getUniqueAuditUsers(): Promise<ApiResponse<{ id: string; username: string }[]>> {
-  try {
-    const response = await internalAxios.get('/audit/users')
-    return { success: true, data: response.data.data.users }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: message }
-  }
+  return withApiResponse<AuditUsersPayload, { readonly id: string; readonly username: string }[]>(
+    () => internalAxios.get('/audit/users'),
+    (payload) => payload.users
+  )
 }
