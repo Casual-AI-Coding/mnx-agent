@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.11] - 2026-06-30
+
+### 🏗️ 重构
+
+- **媒体恢复领域规则提取** — 将媒体恢复的资源 URL 提取、重复过滤、恢复计划构建下沉到无副作用领域服务纯函数，路由不再直接操作恢复逻辑 (`server/services/domain/media-recovery.service.ts`, `server/services/domain/index.ts`)
+- **路由业务逻辑下沉** — 删除 `media.ts` 中两份重复的 `OPERATION_MEDIA_MAP` 和内联 `ApiResponseData` 类型，路由仅保留 HTTP 编排、文件下载与持久化调用 (`server/routes/media.ts`)
+
+### 🐛 Fixed
+
+- **测试隔离修复** — `media.test.ts` beforeEach 添加删除 public 记录，防止并行测试污染 (`server/routes/__tests__/media.test.ts`)
+- **Zod any 类型消除** — validate.ts `ZodType<any, any, any>` 替换为 `ZodType<unknown>`，消除 ESLint any 类型错误 (`server/middleware/validate.ts`)
+
+### 🔄 Changed
+
+- **Release Guide 修正** — 脚本名称 `create-release-note.mjs` → `create-release-notes.mjs`，参数格式改为 `--tag=vX.Y.Z` (`docs/guides/release-guide.md`)
+
+### 📝 Docs
+
+- **媒体恢复架构切片计划** — 新增设计实现文档，定义媒体恢复领域规则的范围、文件结构和任务分解 (`docs/plans/2026-06-29-media-recovery-architecture-slice.md`)
+
+### 🔧 Chore
+
+- **.gitignore** — 添加 `.omo/` 目录到忽略列表 (`.gitignore`)
+
+### 🧪 Tests
+
+- **媒体恢复领域服务单元测试** — 237 行测试覆盖候选生成、重复过滤、无效 JSON 跳过、恢复计划成功与错误分支 (`server/services/domain/__tests__/media-recovery.service.test.ts`)
+- **媒体恢复路由安全测试** — 新增 POST /recover/:logId 安全测试，覆盖恢复成功和 resource_url 不在日志响应中的错误场景 (`server/routes/__tests__/media-safety.test.ts`)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ `media-recovery.service.ts` 为新增领域服务，不影响现有路由签名
+- ✅ `media.ts` 重构为内部逻辑抽取，外部行为不变
+- ✅ 测试修复为测试基础设施改进，不影响生产代码
+
 ## [2.2.10] - 2026-05-16
 
 ### 🔒 Security
