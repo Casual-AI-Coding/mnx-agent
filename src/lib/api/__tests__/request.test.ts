@@ -32,4 +32,12 @@ describe('withApiResponse', () => {
 
     expect(result).toEqual({ success: false, error: '请求失败' })
   })
+
+  it('返回标准错误响应 when 后端响应缺少 data 包装体', async () => {
+    const malformedRequest = async (): Promise<unknown> => ({ data: { payload: { id: 'user-1' } } })
+
+    const result = await withApiResponse<UserPayload>(malformedRequest)
+
+    expect(result).toEqual({ success: false, error: 'Invalid API response format' })
+  })
 })
