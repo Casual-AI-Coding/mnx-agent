@@ -134,6 +134,20 @@ describe('createApiMethod', () => {
   })
 
   describe('handling API errors', () => {
+    it('should return error response when backend envelope is invalid', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { payload: { id: '1' } } })
+
+      const getItem = createApiMethod<{ id: string }, { id: string }>({
+        method: 'GET',
+        path: '/items/:id',
+      })
+
+      const result = await getItem({ id: '1' })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid API response format')
+    })
+
     it('should handle API errors and return error response for GET', async () => {
       const axiosError = new Error('Not found')
       axiosError.name = 'AxiosError'
