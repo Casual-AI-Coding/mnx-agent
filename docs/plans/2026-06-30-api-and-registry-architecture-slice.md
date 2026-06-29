@@ -20,11 +20,14 @@
 - 为 `ServiceNodeRegistry` 增加未知 `min_role` 的安全过滤测试。
 - 移除 `ServiceNodeRegistry.call()` 中的动态调用类型断言，保留服务方法 `this` 绑定与同步/异步返回兼容。
 - 抽取角色等级解析，保证调用者未知角色按最低权限处理，节点未知角色不开放。
+- 为 `create-api-method` 增加无效响应包络回归测试，避免后端异常结构被误判为成功响应。
+- 移除 `create-api-method` 中的响应包络类型断言与 GET query 类型断言，改为显式 envelope 类型与运行时守卫。
 
 ### 本轮不包含
 
 - 不替换现有 Axios 客户端、Express 路由或认证刷新主链路。
-- 不重构 `workflows.ts`、`create-api-method.ts` 或 workflow executor 注册表中的全部历史类型断言。
+- 不重构 `workflows.ts` 或 workflow executor 注册表中的全部历史类型断言。
+- 不迁移 `cron.ts` 的全部 `createApiMethod()` 调用点；本轮只加固其公共工厂边界。
 - 不修改数据库 schema、API 路径、响应字段或权限表结构。
 - 不清理旧测试文件中的全部历史 `as unknown as` 用法，避免把架构切片扩散成测试框架迁移。
 
@@ -66,6 +69,13 @@
 
 - `server/services/__tests__/service-node-registry.test.ts`
   - 增加未知 `min_role` 的安全过滤测试。
+
+- `src/lib/api/create-api-method.ts`
+  - 新增 API 响应 envelope 类型与运行时守卫。
+  - 保持现有 `cron.ts` 调用契约不变，收紧响应解析边界。
+
+- `src/lib/api/__tests__/create-api-method.test.ts`
+  - 增加无效后端 envelope 的回归测试。
 
 ---
 
@@ -124,6 +134,18 @@
 - [x] 运行 `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts`，结果 37 个测试通过。
 - [x] 运行 `rtk npm run build`，结果通过。
 
+### Task 8: RED/GREEN - `createApiMethod` 响应包络边界加固
+
+- [x] 修改 `src/lib/api/__tests__/create-api-method.test.ts`。
+- [x] 增加 `should return error response when backend envelope is invalid`，锁定后端未返回 `{ data: { data } }` 时不能误判成功。
+- [x] 运行 `rtk npm run test -- src/lib/api/__tests__/create-api-method.test.ts`。
+- [x] 期望 RED：无效 envelope 当前返回 `success: true`。
+- [x] 修改 `src/lib/api/create-api-method.ts`。
+- [x] 新增 `ApiEnvelope`、`ApiClientResponse` 与 `isApiClientResponse()`，通过运行时守卫确认后端 envelope。
+- [x] 新增 `getQueryParams()`，移除 GET query 的类型断言并保持既有 `{ params }` 调用契约。
+- [x] 运行 `rtk npm run test -- src/lib/api/__tests__/create-api-method.test.ts`，结果 11 个测试通过。
+- [x] 运行 `rtk npm run build`，结果通过。
+
 ---
 
 ## 验证记录
@@ -131,6 +153,7 @@
 | 命令 | 结果 | 说明 |
 |------|------|------|
 | `rtk npm run test -- src/lib/api/__tests__/request.test.ts` | PASS | 3 个测试通过 |
+| `rtk npm run test -- src/lib/api/__tests__/create-api-method.test.ts` | PASS | 11 个测试通过 |
 | `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts` | PASS | 37 个测试通过 |
 | `rtk npm run build` | PASS | TypeScript build 与 Vite build 通过；保留既有 `zh.json` 动静态导入警告 |
 
@@ -140,6 +163,7 @@
 
 - 单一职责：新增 `request.ts` 只负责 API envelope → `ApiResponse` 的边界适配；`ServiceNodeRegistry` 保持服务注册、调用与可用节点筛选职责。
 - 类型安全：新增生产代码未引入 `any`、`@ts-ignore`、`@ts-expect-error` 或动态调用类型断言。
+- 边界韧性：`createApiMethod` 不再盲信后端 envelope；异常结构会进入统一错误响应而不是把 `undefined` 当成功数据。
 - 行为兼容：前端 API 返回结构、后端服务节点 API、数据库字段与权限等级语义保持不变。
 - 安全边界：未知调用者角色按最低权限处理，未知节点 `min_role` 不再默认开放。
-- 后续切片：`workflows.ts`、`create-api-method.ts`、`node-executor-registry.ts` 仍存在可继续收敛的重复或历史类型逃逸，应另起 TDD 切片处理。
+- 后续切片：`workflows.ts`、`cron.ts` 的局部 `ApiResponse` 与 `node-executor-registry.ts` 仍存在可继续收敛的重复或历史类型逃逸，应另起 TDD 切片处理。
