@@ -99,6 +99,26 @@ describe('ServiceNodeRegistry', () => {
       })
     })
 
+    it('should use method minRole when syncing permissions', async () => {
+      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const mockService = createMockService({})
+      const methods: ServiceMethodMeta[] = [
+        { name: 'adminOnly', displayName: 'Admin Only', category: 'actions', minRole: 'admin' }
+      ]
+      const config = createMockServiceConfig('secureService', methods, mockService)
+
+      await registry.register(config)
+
+      expect(mockDb.upsertServiceNodePermission).toHaveBeenCalledWith({
+        service_name: 'secureService',
+        method_name: 'adminOnly',
+        display_name: 'Admin Only',
+        category: 'actions',
+        min_role: 'admin',
+        is_enabled: true
+      })
+    })
+
     it('should continue registering even if database upsert fails for one method', async () => {
       const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
       const mockService = createMockService({})

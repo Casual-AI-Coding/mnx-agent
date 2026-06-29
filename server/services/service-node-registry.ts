@@ -30,10 +30,11 @@ function getRoleLevel(role: string): number | null {
 }
 
 export interface ServiceMethodMeta {
-  name: string
-  displayName: string
-  category: string
-  description?: string
+  readonly name: string
+  readonly displayName: string
+  readonly category: string
+  readonly description?: string
+  readonly minRole?: UserRole
 }
 
 export interface ServiceConfig {
@@ -63,7 +64,7 @@ export class ServiceNodeRegistry {
           method_name: method.name,
           display_name: method.displayName,
           category: method.category,
-          min_role: 'pro',
+          min_role: method.minRole ?? 'pro',
           is_enabled: true,
         })
       } catch (error) {
