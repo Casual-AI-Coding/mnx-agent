@@ -15,6 +15,12 @@ export interface SignedUrlResult {
   readonly url: string
 }
 
+export interface BuildPaginationItemsInput {
+  readonly currentPage: number
+  readonly totalPages: number
+  readonly maxVisible?: number
+}
+
 const PLAYABLE_MEDIA_TYPES: readonly MediaType[] = ['image', 'audio', 'music']
 const FILTERABLE_MEDIA_TYPES = ['audio', 'image', 'video', 'music', 'lyrics'] as const satisfies readonly MediaType[]
 
@@ -70,4 +76,84 @@ export function applyMediaPatchByIds(
   patch: Readonly<Partial<Pick<MediaRecord, 'original_name' | 'is_favorite' | 'is_public'>>>
 ): MediaRecord[] {
   return records.map(record => (ids.has(record.id) ? { ...record, ...patch } : record))
+}
+
+export function buildPaginationItems(input: BuildPaginationItemsInput): (number | string)[] {
+  const pages: (number | string)[] = []
+  const maxVisible = input.maxVisible ?? 5
+
+  if (input.totalPages <= maxVisible) {
+    for (let page = 1; page <= input.totalPages; page += 1) {
+      pages.push(page)
+    }
+    return pages
+  }
+
+  if (input.currentPage <= 3) {
+    for (let page = 1; page <= 4; page += 1) {
+      pages.push(page)
+    }
+    pages.push('...')
+    pages.push(input.totalPages)
+    return pages
+  }
+
+  if (input.currentPage >= input.totalPages - 2) {
+    pages.push(1)
+    pages.push('...')
+    for (let page = input.totalPages - 3; page <= input.totalPages; page += 1) {
+      pages.push(page)
+    }
+    return pages
+  }
+
+  pages.push(1)
+  pages.push('...')
+  for (let page = input.currentPage - 1; page <= input.currentPage + 1; page += 1) {
+    pages.push(page)
+  }
+  pages.push('...')
+  pages.push(input.totalPages)
+  return pages
+}
+
+export function toggleAllSelectedIds(
+  selectedIds: ReadonlySet<string>,
+  visibleRecords: readonly Pick<MediaRecord, 'id'>[]
+): Set<string> {
+  if (visibleRecords.length === 0) {
+    return new Set()
+  }
+
+  if (selectedIds.size === visibleRecords.length) {
+    return new Set()
+  }
+
+  return new Set(visibleRecords.map(record => record.id))
+}
+
+export function toggleSelectedId(selectedIds: ReadonlySet<string>, id: string): Set<string> {
+  const next = new Set(selectedIds)
+  if (next.has(id)) {
+    next.delete(id)
+    return next
+  }
+
+  next.add(id)
+  return next
+}
+
+export function toggleSetValueWithFallback<T extends string>(
+  currentValues: ReadonlySet<T>,
+  value: T,
+  fallbackValues: readonly T[]
+): Set<T> {
+  const next = new Set(currentValues)
+  if (next.has(value)) {
+    next.delete(value)
+  } else {
+    next.add(value)
+  }
+
+  return next.size === 0 ? new Set(fallbackValues) : next
 }

@@ -3,10 +3,14 @@ import type { MediaRecord } from '@/types/media'
 import {
   applyMediaPatch,
   applyMediaPatchByIds,
+  buildPaginationItems,
   buildMediaListParams,
   collectUnfetchedPlayableRecords,
   isPlayableMedia,
   mergeSignedUrlResults,
+  toggleAllSelectedIds,
+  toggleSelectedId,
+  toggleSetValueWithFallback,
 } from './media-management-helpers'
 
 const makeRecord = (id: string, type: MediaRecord['type']): MediaRecord => ({
@@ -115,6 +119,42 @@ describe('media-management-helpers', () => {
     expect(applyMediaPatchByIds(records, new Set(['private-1']), { is_public: true })).toEqual([
       { ...records[0], is_public: true },
       records[1],
+    ])
+  })
+
+  it('buildPaginationItems keeps compact pagination windows with ellipsis', () => {
+    expect(buildPaginationItems({ currentPage: 1, totalPages: 3 })).toEqual([1, 2, 3])
+    expect(buildPaginationItems({ currentPage: 2, totalPages: 10 })).toEqual([1, 2, 3, 4, '...', 10])
+    expect(buildPaginationItems({ currentPage: 5, totalPages: 10 })).toEqual([1, '...', 4, 5, 6, '...', 10])
+    expect(buildPaginationItems({ currentPage: 9, totalPages: 10 })).toEqual([1, '...', 7, 8, 9, 10])
+  })
+
+  it('toggleAllSelectedIds clears when all visible records are selected otherwise selects visible records', () => {
+    const records = [makeRecord('image-1', 'image'), makeRecord('music-1', 'music')]
+
+    expect(Array.from(toggleAllSelectedIds(new Set(['image-1']), records))).toEqual(['image-1', 'music-1'])
+    expect(Array.from(toggleAllSelectedIds(new Set(['image-1', 'music-1']), records))).toEqual([])
+    expect(Array.from(toggleAllSelectedIds(new Set(['other']), []))).toEqual([])
+  })
+
+  it('toggleSelectedId adds missing ids and removes selected ids without mutating the input set', () => {
+    const selectedIds = new Set(['keep'])
+
+    expect(Array.from(toggleSelectedId(selectedIds, 'add'))).toEqual(['keep', 'add'])
+    expect(Array.from(toggleSelectedId(selectedIds, 'keep'))).toEqual([])
+    expect(Array.from(selectedIds)).toEqual(['keep'])
+  })
+
+  it('toggleSetValueWithFallback restores fallback values when the last value is removed', () => {
+    const fallback = ['favorite', 'non-favorite'] as const
+
+    expect(Array.from(toggleSetValueWithFallback(new Set(['favorite']), 'favorite', fallback))).toEqual([
+      'favorite',
+      'non-favorite',
+    ])
+    expect(Array.from(toggleSetValueWithFallback(new Set(['favorite']), 'non-favorite', fallback))).toEqual([
+      'favorite',
+      'non-favorite',
     ])
   })
 })

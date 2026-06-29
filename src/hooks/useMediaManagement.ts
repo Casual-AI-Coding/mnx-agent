@@ -17,9 +17,13 @@ import { useAuthStore } from '@/stores/auth'
 import {
   applyMediaPatch,
   applyMediaPatchByIds,
+  buildPaginationItems,
   buildMediaListParams,
   collectUnfetchedPlayableRecords,
   mergeSignedUrlResults,
+  toggleAllSelectedIds,
+  toggleSelectedId,
+  toggleSetValueWithFallback,
 } from './media/media-management-helpers'
 
 export interface DeleteDialogState {
@@ -199,42 +203,10 @@ export function useMediaManagement(): UseMediaManagementReturn {
   )
 
   // Derived: page numbers for pagination
-  const pageNumbers = useMemo(() => {
-    const pages: (number | string)[] = []
-    const maxVisible = 5
-    const currentPage = pagination.page
-    const totalPages = pagination.totalPages
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i)
-        }
-        pages.push('...')
-        pages.push(totalPages)
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1)
-        pages.push('...')
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i)
-        }
-      } else {
-        pages.push(1)
-        pages.push('...')
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i)
-        }
-        pages.push('...')
-        pages.push(totalPages)
-      }
-    }
-
-    return pages
-  }, [pagination.page, pagination.totalPages])
+  const pageNumbers = useMemo(() => buildPaginationItems({
+    currentPage: pagination.page,
+    totalPages: pagination.totalPages,
+  }), [pagination.page, pagination.totalPages])
 
   // Clear selection when tab or page changes
   useEffect(() => {
@@ -369,22 +341,12 @@ export function useMediaManagement(): UseMediaManagementReturn {
 
   // Handle select all
   const handleSelectAll = useCallback(() => {
-    if (selectedIds.size === filteredRecords.length && filteredRecords.length > 0) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(filteredRecords.map(m => m.id)))
-    }
+    setSelectedIds(toggleAllSelectedIds(selectedIds, filteredRecords))
   }, [selectedIds, filteredRecords])
 
   // Handle single select
   const handleSelect = useCallback((id: string) => {
-    const newSelected = new Set(selectedIds)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
-      newSelected.add(id)
-    }
-    setSelectedIds(newSelected)
+    setSelectedIds(toggleSelectedId(selectedIds, id))
   }, [selectedIds])
 
   // Handle batch delete
@@ -632,28 +594,12 @@ export function useMediaManagement(): UseMediaManagementReturn {
   }, [])
 
   const toggleFavoriteFilter = useCallback((filter: 'favorite' | 'non-favorite') => {
-    setFavoriteFilters(prev => {
-      const next = new Set(prev)
-      if (next.has(filter)) {
-        next.delete(filter)
-      } else {
-        next.add(filter)
-      }
-      return next.size === 0 ? new Set(['favorite', 'non-favorite']) : next
-    })
+    setFavoriteFilters(prev => toggleSetValueWithFallback(prev, filter, ['favorite', 'non-favorite']))
     setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
   const togglePublicFilter = useCallback((filter: 'private' | 'public' | 'others-public') => {
-    setPublicFilters(prev => {
-      const next = new Set(prev)
-      if (next.has(filter)) {
-        next.delete(filter)
-      } else {
-        next.add(filter)
-      }
-      return next.size === 0 ? new Set(['private', 'public', 'others-public']) : next
-    })
+    setPublicFilters(prev => toggleSetValueWithFallback(prev, filter, ['private', 'public', 'others-public']))
     setPagination(prev => ({ ...prev, page: 1 }))
   }, [])
 
