@@ -20,6 +20,7 @@
 - 为 `ServiceNodeRegistry` 增加未知 `min_role` 的安全过滤测试。
 - 移除 `ServiceNodeRegistry.call()` 中的动态调用类型断言，保留服务方法 `this` 绑定与同步/异步返回兼容。
 - 抽取角色等级解析，保证调用者未知角色按最低权限处理，节点未知角色不开放。
+- 为 `ServiceNodeRegistry.register()` 增加方法级 `minRole` 配置，移除权限同步时的固定 `pro` 角色硬编码。
 - 为 `create-api-method` 增加无效响应包络回归测试，避免后端异常结构被误判为成功响应。
 - 移除 `create-api-method` 中的响应包络类型断言与 GET query 类型断言，改为显式 envelope 类型与运行时守卫。
 
@@ -66,9 +67,11 @@
   - 新增 `ServiceMethod` 类型守卫。
   - 使用 `Reflect.get()` + 类型守卫替代动态索引类型断言。
   - 新增角色类型守卫与等级解析函数。
+  - `ServiceMethodMeta` 支持方法级 `minRole`，权限同步默认 `pro` 且允许显式配置更高角色。
 
 - `server/services/__tests__/service-node-registry.test.ts`
   - 增加未知 `min_role` 的安全过滤测试。
+  - 增加注册同步时尊重方法级 `minRole` 的回归测试。
 
 - `src/lib/api/create-api-method.ts`
   - 新增 API 响应 envelope 类型与运行时守卫。
@@ -146,6 +149,17 @@
 - [x] 运行 `rtk npm run test -- src/lib/api/__tests__/create-api-method.test.ts`，结果 11 个测试通过。
 - [x] 运行 `rtk npm run build`，结果通过。
 
+### Task 9: RED/GREEN - 服务节点权限角色配置化
+
+- [x] 修改 `server/services/__tests__/service-node-registry.test.ts`。
+- [x] 增加 `should use method minRole when syncing permissions`，锁定注册服务方法时应同步方法元数据里的最小角色。
+- [x] 运行 `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts`。
+- [x] 期望 RED：当前 `register()` 固定写入 `min_role: 'pro'`，忽略 `minRole: 'admin'`。
+- [x] 修改 `server/services/service-node-registry.ts`。
+- [x] 为 `ServiceMethodMeta` 增加只读 `minRole?: UserRole`，权限同步改为 `method.minRole ?? 'pro'`。
+- [x] 保持未配置方法默认 `pro` 的既有兼容语义。
+- [x] 运行 `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts`，结果 38 个测试通过。
+
 ---
 
 ## 验证记录
@@ -154,7 +168,7 @@
 |------|------|------|
 | `rtk npm run test -- src/lib/api/__tests__/request.test.ts` | PASS | 3 个测试通过 |
 | `rtk npm run test -- src/lib/api/__tests__/create-api-method.test.ts` | PASS | 11 个测试通过 |
-| `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts` | PASS | 37 个测试通过 |
+| `rtk npm run test -- server/services/__tests__/service-node-registry.test.ts` | PASS | 38 个测试通过 |
 | `rtk npm run build` | PASS | TypeScript build 与 Vite build 通过；保留既有 `zh.json` 动静态导入警告 |
 
 ---
@@ -166,4 +180,5 @@
 - 边界韧性：`createApiMethod` 不再盲信后端 envelope；异常结构会进入统一错误响应而不是把 `undefined` 当成功数据。
 - 行为兼容：前端 API 返回结构、后端服务节点 API、数据库字段与权限等级语义保持不变。
 - 安全边界：未知调用者角色按最低权限处理，未知节点 `min_role` 不再默认开放。
+- 配置化权限：服务方法可显式声明 `minRole`，避免新增 admin/super 能力时继续修改注册表内部硬编码。
 - 后续切片：`workflows.ts`、`cron.ts` 的局部 `ApiResponse` 与 `node-executor-registry.ts` 仍存在可继续收敛的重复或历史类型逃逸，应另起 TDD 切片处理。
