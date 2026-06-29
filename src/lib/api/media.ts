@@ -1,30 +1,8 @@
 import { apiClient } from './client'
-import type { MediaType, MediaSource } from '@/types/media'
+import type { MediaType, MediaSource, MediaRecord, MediaListResponse } from '@/types/media'
 
 // Re-export types for backward compatibility
-export type { MediaType, MediaSource }
-
-const client = apiClient.client_
-
-export interface MediaRecord {
-  id: string
-  filename: string
-  original_name: string | null
-  filepath: string
-  type: MediaType
-  mime_type: string | null
-  size_bytes: number
-  source: MediaSource | null
-  task_id: string | null
-  metadata: string | Record<string, unknown> | null
-  is_deleted: boolean
-  is_public?: boolean
-  is_favorite?: boolean
-  owner_id?: string | null
-  created_at: string
-  updated_at: string
-  deleted_at: string | null
-}
+export type { MediaType, MediaSource, MediaRecord }
 
 export type FavoriteFilter = 'favorite' | 'non-favorite'
 export type PublicFilter = 'private' | 'public' | 'others-public'
@@ -40,18 +18,7 @@ export interface ListMediaParams {
   publicFilter?: PublicFilter[]
 }
 
-export interface ListMediaResponse {
-  success: boolean
-  data: {
-    records: MediaRecord[]
-    pagination: {
-      page: number
-      limit: number
-      total: number
-      totalPages: number
-    }
-  }
-}
+export type ListMediaResponse = MediaListResponse
 
 export interface CreateMediaData {
   filename: string
@@ -82,48 +49,41 @@ export async function listMedia(params?: ListMediaParams): Promise<ListMediaResp
     queryParams.publicFilter = params.publicFilter.join(',')
   }
   
-  const response = await client.get('/media', { params: queryParams })
-  return response.data
+  return apiClient.get<ListMediaResponse>('/media', queryParams)
 }
 
 export async function getMedia(id: string): Promise<{ success: boolean; data: MediaRecord }> {
-  const response = await client.get(`/media/${id}`)
-  return response.data
+  return apiClient.get<{ success: boolean; data: MediaRecord }>(`/media/${id}`)
 }
 
 export async function createMedia(data: CreateMediaData): Promise<{ success: boolean; data: MediaRecord }> {
-  const response = await client.post('/media', data)
-  return response.data
+  return apiClient.post<{ success: boolean; data: MediaRecord }>('/media', data)
 }
 
 export async function updateMedia(id: string, data: { original_name?: string; metadata?: Record<string, unknown> }): Promise<{ success: boolean; data: MediaRecord }> {
-  const response = await client.put(`/media/${id}`, data)
-  return response.data
+  return apiClient.put<{ success: boolean; data: MediaRecord }>(`/media/${id}`, data)
 }
 
 export async function deleteMedia(id: string): Promise<{ success: boolean; data: { deleted: boolean } }> {
-  const response = await client.delete(`/media/${id}`)
-  return response.data
+  return apiClient.delete<{ success: boolean; data: { deleted: boolean } }>(`/media/${id}`)
 }
 
 export async function getMediaDownloadUrl(id: string): Promise<string> {
-  const response = await client.get(`/media/${id}/token`)
-  if (response.data.success && response.data.data.downloadUrl) {
-    return response.data.data.downloadUrl
+  const response = await apiClient.get<{ success: boolean; data: { downloadUrl?: string }; error?: string }>(`/media/${id}/token`)
+  if (response.success && response.data.downloadUrl) {
+    return response.data.downloadUrl
   }
-  throw new Error(response.data.error || 'Failed to get download URL')
+  throw new Error(response.error || 'Failed to get download URL')
 }
 
 export async function batchDeleteMedia(ids: string[]): Promise<{ success: boolean; data: { deletedCount: number } }> {
-  const response = await client.delete('/media/batch', { data: { ids } })
-  return response.data
+  return apiClient.delete<{ success: boolean; data: { deletedCount: number } }>('/media/batch', { data: { ids } })
 }
 
 export async function batchDownloadMedia(ids: string[]): Promise<Blob> {
-  const response = await client.post('/media/batch/download', { ids }, {
+  return apiClient.post<Blob>('/media/batch/download', { ids }, {
     responseType: 'blob',
   })
-  return response.data
 }
 
 export function formatFileSize(bytes: number): string {
@@ -175,12 +135,11 @@ export async function uploadMedia(
     formData.append('metadata', JSON.stringify(metadata))
   }
 
-  const response = await client.post('/media/upload', formData, {
+  return apiClient.post<{ success: boolean; data: MediaRecord }>('/media/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   })
-  return response.data
 }
 
 export async function uploadMediaFromUrl(
@@ -190,14 +149,13 @@ export async function uploadMediaFromUrl(
   source?: MediaSource,
   metadata?: Record<string, unknown>
 ): Promise<{ success: boolean; data: MediaRecord }> {
-  const response = await client.post('/media/upload-from-url', {
+  return apiClient.post<{ success: boolean; data: MediaRecord }>('/media/upload-from-url', {
     url,
     filename,
     type,
     source,
     metadata,
   })
-  return response.data
 }
 
 export async function toggleFavorite(mediaId: string): Promise<{
@@ -208,24 +166,34 @@ export async function toggleFavorite(mediaId: string): Promise<{
     action: 'added' | 'removed'
   }
 }> {
-  const response = await client.patch(`/media/${mediaId}/favorite`)
-  return response.data
+  return apiClient.patch<{
+    success: boolean
+    data: {
+      mediaId: string
+      isFavorite: boolean
+      action: 'added' | 'removed'
+    }
+  }>(`/media/${mediaId}/favorite`)
 }
 
 export async function togglePublic(id: string, isPublic: boolean): Promise<{
   success: boolean
   data: MediaRecord
 }> {
-  const response = await client.patch(`/media/${id}/public`, { isPublic })
-  return response.data
+  return apiClient.patch<{
+    success: boolean
+    data: MediaRecord
+  }>(`/media/${id}/public`, { isPublic })
 }
 
 export async function batchTogglePublic(ids: string[], isPublic: boolean): Promise<{
   success: boolean
   data: Array<{ id: string; success: boolean; data?: MediaRecord; error?: string }>
 }> {
-  const response = await client.post('/media/batch/public', { ids, isPublic })
-  return response.data
+  return apiClient.post<{
+    success: boolean
+    data: Array<{ id: string; success: boolean; data?: MediaRecord; error?: string }>
+  }>('/media/batch/public', { ids, isPublic })
 }
 
 export interface RecoverableMediaRecord {
@@ -243,22 +211,28 @@ export async function getRecoverableMedia(): Promise<{
   success: boolean
   data: { records: RecoverableMediaRecord[]; total: number }
 }> {
-  const response = await client.get('/media/recoverable')
-  return response.data
+  return apiClient.get<{
+    success: boolean
+    data: { records: RecoverableMediaRecord[]; total: number }
+  }>('/media/recoverable')
 }
 
 export async function recoverMedia(logId: number, resourceUrl?: string): Promise<{
   success: boolean
   data: { message: string; record: MediaRecord }
 }> {
-  const response = await client.post(`/media/recover/${logId}`, { resource_url: resourceUrl })
-  return response.data
+  return apiClient.post<{
+    success: boolean
+    data: { message: string; record: MediaRecord }
+  }>(`/media/recover/${logId}`, { resource_url: resourceUrl })
 }
 
 export async function getMediaToken(mediaId: string): Promise<{
   success: boolean
   data: { downloadUrl: string; token: string }
 }> {
-  const response = await client.get(`/media/${mediaId}/token`)
-  return response.data
+  return apiClient.get<{
+    success: boolean
+    data: { downloadUrl: string; token: string }
+  }>(`/media/${mediaId}/token`)
 }

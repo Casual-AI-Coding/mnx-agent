@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { API_HOSTS } from '@/types'
@@ -160,13 +161,13 @@ class InternalAPIClient {
     return this.client
   }
 
-  async get<T>(url: string, params?: Record<string, unknown>) {
-    const response = await this.client.get<T>(url, { params })
+  async get<T>(url: string, params?: Record<string, unknown>, config?: AxiosRequestConfig) {
+    const response = await this.client.get<T>(url, { ...config, params })
     return response.data
   }
 
-  async post<T>(url: string, data?: unknown) {
-    const response = await this.client.post<T>(url, data)
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig) {
+    const response = await this.client.post<T>(url, data, config)
     return response.data
   }
 
@@ -180,8 +181,8 @@ class InternalAPIClient {
     return response.data
   }
 
-  async delete<T>(url: string) {
-    const response = await this.client.delete<T>(url)
+  async delete<T>(url: string, config?: AxiosRequestConfig) {
+    const response = await this.client.delete<T>(url, config)
     return response.data
   }
 }
