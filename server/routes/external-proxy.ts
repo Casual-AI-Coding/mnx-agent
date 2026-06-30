@@ -18,6 +18,11 @@ import {
   stripBase64Images,
   toExternalProxyResultData,
 } from './external-proxy/external-proxy-response-helpers.js'
+import {
+  getProxyErrorMessage,
+  parseExternalProxyResponseText,
+  parseExternalProxyUrl,
+} from './external-proxy/external-proxy-request-helpers.js'
 import type { ExternalProxyMediaType } from './external-proxy/external-proxy-media-helpers.js'
 
 const logger = getLogger()
@@ -60,7 +65,10 @@ export function isUrlAllowed(urlString: string): boolean {
     // `.api.sisyphusx.com.evil.com`.endsWith(`.api.sisyphusx.com`) → false ✅
     const wrappedHostname = `.${hostname}`
     return ALLOWED_HOSTS.some(h => wrappedHostname.endsWith(`.${h}`))
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      return false
+    }
     return false
   }
 }
@@ -83,16 +91,14 @@ router.post(
 
     const { url, method, headers, body } = parsed.data
 
-    let targetUrl: URL
-    try {
-      targetUrl = new URL(url)
-    } catch {
-      errorResponse(res, '无效的 URL', 400)
+    const targetUrlResult = parseExternalProxyUrl(url)
+    if (!targetUrlResult.ok) {
+      errorResponse(res, targetUrlResult.error, 400)
       return
     }
 
     if (!isUrlAllowed(url)) {
-      errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
+      errorResponse(res, `不允许访问该域名: ${targetUrlResult.url.hostname}`, 403)
       return
     }
 
@@ -121,12 +127,7 @@ router.post(
       const durationMs = Math.round(performance.now() - startTime)
 
       const responseText = await response.text()
-      let responseBody: unknown
-      try {
-        responseBody = JSON.parse(responseText)
-      } catch {
-        responseBody = responseText
-      }
+      const responseBody = parseExternalProxyResponseText(responseText)
 
       const responseHeaders: Record<string, string> = {}
       response.headers.forEach((value, key) => {
@@ -150,7 +151,7 @@ router.post(
       })
     } catch (err) {
       const durationMs = Math.round(performance.now() - startTime)
-      const message = err instanceof Error ? err.message : '代理请求失败'
+      const message = getProxyErrorMessage(err, '代理请求失败')
 
       logger.error({
         msg: 'External proxy request failed',
@@ -186,16 +187,14 @@ router.post(
 
     const { url, method, headers, body, service_provider, operation, media_type } = parsed.data
 
-    let targetUrl: URL
-    try {
-      targetUrl = new URL(url)
-    } catch {
-      errorResponse(res, '无效的 URL', 400)
+    const targetUrlResult = parseExternalProxyUrl(url)
+    if (!targetUrlResult.ok) {
+      errorResponse(res, targetUrlResult.error, 400)
       return
     }
 
     if (!isUrlAllowed(url)) {
-      errorResponse(res, `不允许访问该域名: ${targetUrl.hostname}`, 403)
+      errorResponse(res, `不允许访问该域名: ${targetUrlResult.url.hostname}`, 403)
       return
     }
 
@@ -318,12 +317,7 @@ async function executeAsyncTask(
     const durationMs = Math.round(performance.now() - startTime)
 
     const responseText = await response.text()
-    let responseBody: unknown
-    try {
-      responseBody = JSON.parse(responseText)
-    } catch {
-      responseBody = responseText
-    }
+    const responseBody = parseExternalProxyResponseText(responseText)
 
     const isSuccess = response.status >= 200 && response.status < 300
 
@@ -421,7 +415,7 @@ async function executeAsyncTask(
     })
   } catch (err) {
     const durationMs = Math.round(performance.now() - startTime)
-    const message = err instanceof Error ? err.message : '代理请求失败'
+    const message = getProxyErrorMessage(err, '代理请求失败')
 
     try {
       await repo.updateResult(String(logId), {
