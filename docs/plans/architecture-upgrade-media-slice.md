@@ -223,6 +223,26 @@
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
 
+## 第十一切片计划：外部代理请求解析边界收敛
+
+第九、十切片已消除 external proxy 的媒体类型断言与响应体 `Record` 断言。`server/routes/external-proxy.ts` 仍在代理请求和异步任务流程中内联 URL 构造、JSON 响应解析，并存在多个空 `catch {}`。这些逻辑属于边界解析与错误消息生成，应抽出为可测试 helper，让 route 只处理 schema 校验、访问控制、转发请求和响应写入。
+
+### 范围
+
+- 新增 `server/routes/external-proxy/external-proxy-request-helpers.ts`：
+  - `parseExternalProxyUrl(value)`：返回 `{ ok: true, url }` 或 `{ ok: false, error: '无效的 URL' }`，避免 route 内空 catch。
+  - `parseExternalProxyResponseText(text)`：JSON 可解析时返回对象/数组/标量，否则返回原始文本，避免响应解析空 catch。
+  - `getProxyErrorMessage(error, fallback)`：统一 unknown error 到日志/响应消息。
+- 新增 `server/routes/__tests__/external-proxy-request-helpers.test.ts`，先用 RED 锁定 URL 解析、JSON/text 解析、unknown error 消息契约。
+- 修改 `server/routes/external-proxy.ts`：`POST /`、`POST /submit` 和 `executeAsyncTask()` 复用 helper，移除 URL/JSON 解析空 catch。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy-request-helpers.test.ts`，预期 helper 模块不存在或函数未导出失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/external-proxy.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
 ## 第八切片计划：后端媒体批量删除校验边界收敛
 
 第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
