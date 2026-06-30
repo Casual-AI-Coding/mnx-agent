@@ -159,3 +159,22 @@
 - GREEN：实现 helper 并改下载路由后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
+## 第七切片计划：后端媒体批量操作决策边界收敛
+
+第六切片把单文件下载响应规划抽出后，`server/routes/media.ts` 中仍有批量公开和批量下载的应用决策直接内联：逐条判断记录是否可公开、拼接每条结果、批量下载时生成 zip 文件名和审计不可访问记录数量。这些逻辑属于批量媒体操作的纯决策层，不应与 HTTP handler 中的数据库读取、文件读取和响应流编排混在一起。第七切片继续做行为保持型重构，只抽取纯函数，不改变权限策略、存储、审计和 zip 写入行为。
+
+### 范围
+
+- 新增 `server/routes/media/media-batch-helpers.ts`，集中处理批量媒体操作决策：
+  - `buildBatchPublicPlan()`：根据请求 ID、可访问记录、当前用户和目标公开状态，生成可授权 ID 与逐项结果。
+  - `buildBatchDownloadPlan()`：根据请求 ID、可访问记录和时间戳生成 zip 文件名、可下载记录与不可访问审计摘要。
+- 新增 `server/routes/__tests__/media-batch-helpers.test.ts`，先用 RED 锁定 owner/super 授权、缺失/删除记录失败结果、批量下载空记录与部分不可访问审计契约。
+- `server/routes/media.ts` 的 `/batch/public` 和 `/batch/download` 只负责解析请求、读取数据库、调用 helper、执行批量更新或 zip 写入。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/media-batch-helpers.test.ts`，预期 helper 模块不存在失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
