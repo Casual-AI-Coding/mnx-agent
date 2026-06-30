@@ -21,7 +21,6 @@ import axios from 'axios'
 import archiver from 'archiver'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import {
-  getPaginationParams,
   createPaginatedResponse,
   withEntityNotFound,
 } from '../utils/index.js'
@@ -32,6 +31,7 @@ import {
   createMediaRecoveryPlan,
   type CreateMediaRecoveryPlanResult,
 } from '../services/domain/media-recovery.service.js'
+import { buildMediaListRouteOptions, parseUploadMetadata } from './media/media-route-helpers.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -61,29 +61,25 @@ function getErrorMessage(error: unknown): string {
 
 router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { type, source, search, includeDeleted, favoriteFilter, publicFilter } = req.query
-  const { page, limit, offset } = getPaginationParams(req.query)
   const userId = req.user?.userId ? req.user.userId : undefined
   const role = req.user?.role
 
   const ownerFilter = buildOwnerFilter(req)
   const visibilityOwnerId = ownerFilter.ownerId
-
-  const result = await db.getAll({
-    type: type as string,
-    source: source as string,
-    search: search as string,
-    limit,
-    offset,
-    includeDeleted: !!includeDeleted,
-    visibilityOwnerId,
-    favoriteFilter: favoriteFilter as ('favorite' | 'non-favorite')[] | undefined,
-    publicFilter: publicFilter as ('private' | 'public' | 'others-public')[] | undefined,
-    favoriteUserId: userId,
+  const routeOptions = buildMediaListRouteOptions({
+    query: req.query,
+    userId,
     role,
+    visibilityOwnerId,
   })
 
-  successResponse(res, createPaginatedResponse(result.records, result.total, page, limit))
+  const result = await db.getAll(routeOptions.mediaOptions)
+  successResponse(res, createPaginatedResponse(
+    result.records,
+    result.total,
+    routeOptions.pagination.page,
+    routeOptions.pagination.limit
+  ))
 }))
 
 router.get('/recoverable', asyncHandler(async (req, res) => {
@@ -358,16 +354,10 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const source = req.body.source as string
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
-  let metadata: Record<string, unknown> | undefined
-  if (req.body.metadata) {
-    try {
-      metadata = typeof req.body.metadata === 'string'
-        ? JSON.parse(req.body.metadata)
-        : req.body.metadata
-    } catch {
-      errorResponse(res, 'Invalid metadata JSON', 400)
-      return
-    }
+  const metadataResult = parseUploadMetadata(req.body.metadata)
+  if (!metadataResult.ok) {
+    errorResponse(res, metadataResult.error, 400)
+    return
   }
 
   const { filepath, filename, size_bytes } = await saveMediaFile(
@@ -384,7 +374,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     mime_type: req.file.mimetype,
     size_bytes,
     source: source as MediaSource,
-    metadata: metadata ?? undefined,
+    metadata: metadataResult.metadata,
   }, ownerId)
 
   createdResponse(res, record)
