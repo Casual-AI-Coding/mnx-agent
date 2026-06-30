@@ -35,6 +35,15 @@ export interface BatchDownloadPlan {
   readonly inaccessibleSummary?: BatchDownloadInaccessibleSummary
 }
 
+export interface BatchDeleteValidationInput {
+  readonly requestedIds: readonly string[]
+  readonly records: readonly MediaRecord[]
+}
+
+export type BatchDeleteValidationResult =
+  | { readonly ok: true; readonly records: readonly MediaRecord[] }
+  | { readonly ok: false; readonly statusCode: 404; readonly error: string }
+
 const NOT_AUTHORIZED_OR_NOT_FOUND = 'Not authorized or not found'
 
 function canSetPublic(record: MediaRecord, input: Pick<BatchPublicPlanInput, 'userId' | 'userRole'>): boolean {
@@ -80,4 +89,19 @@ export function buildBatchDownloadPlan(input: BatchDownloadPlanInput): BatchDown
     records: input.records,
     inaccessibleSummary,
   }
+}
+
+export function validateBatchDeleteRecords(input: BatchDeleteValidationInput): BatchDeleteValidationResult {
+  const foundIds = new Set(input.records.map(record => record.id))
+  const missingId = input.requestedIds.find(id => !foundIds.has(id))
+  if (missingId) {
+    return { ok: false, statusCode: 404, error: `Media record not found: ${missingId}` }
+  }
+
+  const deletedRecord = input.records.find(record => record.is_deleted)
+  if (deletedRecord) {
+    return { ok: false, statusCode: 404, error: `Media record already deleted: ${deletedRecord.id}` }
+  }
+
+  return { ok: true, records: input.records }
 }

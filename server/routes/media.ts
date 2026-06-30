@@ -38,7 +38,7 @@ import {
   parseUploadMetadata,
 } from './media/media-route-helpers.js'
 import { buildMediaDownloadPlan } from './media/media-download-helpers.js'
-import { buildBatchDownloadPlan, buildBatchPublicPlan } from './media/media-batch-helpers.js'
+import { buildBatchDownloadPlan, buildBatchPublicPlan, validateBatchDeleteRecords } from './media/media-batch-helpers.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -286,23 +286,15 @@ router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, re
   const ownerId = buildOwnerFilter(req).params[0]
 
   const records = await db.getByIds(ids, ownerId)
-
-  if (records.length !== ids.length) {
-    const foundIds = new Set(records.map(r => r.id))
-    const missingId = ids.find(id => !foundIds.has(id))
-    errorResponse(res, `Media record not found: ${missingId}`, 404)
-    return
-  }
-
-  if (records.some(r => r.is_deleted)) {
-    const deletedId = records.find(r => r.is_deleted)?.id
-    errorResponse(res, `Media record already deleted: ${deletedId}`, 404)
+  const deleteValidation = validateBatchDeleteRecords({ requestedIds: ids, records })
+  if (!deleteValidation.ok) {
+    errorResponse(res, deleteValidation.error, deleteValidation.statusCode)
     return
   }
 
   const failedFiles: Array<{ id: string; filepath: string; error: string }> = []
   await Promise.all(
-    records.map(r =>
+    deleteValidation.records.map(r =>
       deleteMediaFile(r.filepath).catch(error => {
         failedFiles.push({ id: r.id, filepath: r.filepath, error: String(error) })
         logger.error({ filepath: r.filepath, recordId: r.id, error }, 'Failed to delete media file during batch delete')

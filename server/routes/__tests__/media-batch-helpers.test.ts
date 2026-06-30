@@ -3,6 +3,7 @@ import type { MediaRecord } from '../../database/types'
 import {
   buildBatchDownloadPlan,
   buildBatchPublicPlan,
+  validateBatchDeleteRecords,
 } from '../media/media-batch-helpers'
 
 function createMediaRecord(overrides: Partial<MediaRecord>): MediaRecord {
@@ -90,5 +91,39 @@ describe('media-batch-helpers', () => {
     expect(plan.archiveFilename).toBe('media_batch_1777777777000.zip')
     expect(plan.records.map(record => record.id)).toEqual(['media-1'])
     expect(plan.inaccessibleSummary).toEqual({ requestedCount: 2, accessibleCount: 1 })
+  })
+
+  it('validates batch delete records when all requested records are accessible and active', () => {
+    const records = [
+      createMediaRecord({ id: 'media-1' }),
+      createMediaRecord({ id: 'media-2' }),
+    ]
+    const result = validateBatchDeleteRecords({
+      requestedIds: ['media-1', 'media-2'],
+      records,
+    })
+
+    expect(result).toEqual({ ok: true, records })
+  })
+
+  it('rejects batch delete when the first requested id is missing', () => {
+    const result = validateBatchDeleteRecords({
+      requestedIds: ['missing', 'media-1'],
+      records: [createMediaRecord({ id: 'media-1' })],
+    })
+
+    expect(result).toEqual({ ok: false, statusCode: 404, error: 'Media record not found: missing' })
+  })
+
+  it('rejects batch delete when any requested record is already deleted', () => {
+    const result = validateBatchDeleteRecords({
+      requestedIds: ['media-1', 'deleted'],
+      records: [
+        createMediaRecord({ id: 'media-1' }),
+        createMediaRecord({ id: 'deleted', is_deleted: true }),
+      ],
+    })
+
+    expect(result).toEqual({ ok: false, statusCode: 404, error: 'Media record already deleted: deleted' })
   })
 })
