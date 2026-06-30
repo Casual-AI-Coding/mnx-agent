@@ -3,11 +3,11 @@ import { z } from 'zod'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { getLogger } from '../lib/logger'
-import { EXTERNAL_PROXY_TIMEOUTS } from '../config/timeouts'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository'
 import { MediaRepository } from '../repositories/media-repository'
 import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
+import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
 import {
   EXTERNAL_PROXY_MEDIA_TYPES,
   isRecord,
@@ -20,7 +20,6 @@ import {
 } from './external-proxy/external-proxy-response-helpers.js'
 import {
   getProxyErrorMessage,
-  parseExternalProxyResponseText,
   parseExternalProxyUrl,
 } from './external-proxy/external-proxy-request-helpers.js'
 import type { ExternalProxyMediaType } from './external-proxy/external-proxy-media-helpers.js'
@@ -102,52 +101,27 @@ router.post(
       return
     }
 
-    const forwardHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (headers) {
-      for (const [key, value] of Object.entries(headers)) {
-        if (key.toLowerCase() !== 'host') {
-          forwardHeaders[key] = value
-        }
-      }
-    }
-
     const startTime = performance.now()
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_PROXY_TIMEOUTS.PROXY_REQUEST_MS)
-      const response = await fetch(url, {
+      const proxyResult = await executeExternalProxyRequest({
+        url,
         method,
-        headers: forwardHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-      const durationMs = Math.round(performance.now() - startTime)
-
-      const responseText = await response.text()
-      const responseBody = parseExternalProxyResponseText(responseText)
-
-      const responseHeaders: Record<string, string> = {}
-      response.headers.forEach((value, key) => {
-        if (!['transfer-encoding', 'content-encoding', 'connection'].includes(key.toLowerCase())) {
-          responseHeaders[key] = value
-        }
+        headers,
+        body,
       })
 
       logger.info({
         msg: 'External proxy request completed',
         url,
         method,
-        status: response.status,
-        durationMs,
+        status: proxyResult.status,
+        durationMs: proxyResult.durationMs,
       })
 
       successResponse(res, {
-        status: response.status,
-        headers: responseHeaders,
-        body: responseBody,
+        status: proxyResult.status,
+        headers: proxyResult.headers,
+        body: proxyResult.body,
       })
     } catch (err) {
       const durationMs = Math.round(performance.now() - startTime)
@@ -294,36 +268,18 @@ async function executeAsyncTask(
       task_status: 'processing',
     })
 
-    const forwardHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (headers) {
-      for (const [key, value] of Object.entries(headers)) {
-        if (key.toLowerCase() !== 'host') {
-          forwardHeaders[key] = value
-        }
-      }
-    }
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_PROXY_TIMEOUTS.PROXY_REQUEST_MS)
-    const response = await fetch(url, {
+    const proxyResult = await executeExternalProxyRequest({
+      url,
       method,
-      headers: forwardHeaders,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
+      headers,
+      body,
     })
-    clearTimeout(timeoutId)
-    const durationMs = Math.round(performance.now() - startTime)
 
-    const responseText = await response.text()
-    const responseBody = parseExternalProxyResponseText(responseText)
-
-    const isSuccess = response.status >= 200 && response.status < 300
+    const isSuccess = proxyResult.status >= 200 && proxyResult.status < 300
 
     let resultMediaId: string | null = null
-    if (isSuccess && mediaType && isRecord(responseBody)) {
-      const images = extractAllImages(responseBody)
+    if (isSuccess && mediaType && isRecord(proxyResult.body)) {
+      const images = extractAllImages(proxyResult.body)
 
       let firstMediaId: string | null = null
       for (const [index, imageInfo] of images.entries()) {
@@ -394,14 +350,14 @@ async function executeAsyncTask(
 
     const errorMessage = isSuccess
       ? undefined
-      : extractErrorMessage(responseBody, response.status)
+      : extractErrorMessage(proxyResult.body, proxyResult.status)
 
-    const cleanedBody = stripBase64Images(responseBody)
+    const cleanedBody = stripBase64Images(proxyResult.body)
     await repo.updateResult(String(logId), {
       response_body: JSON.stringify(cleanedBody),
       status: isSuccess ? 'success' : 'failed',
       error_message: errorMessage,
-      duration_ms: durationMs,
+      duration_ms: proxyResult.durationMs,
       task_status: isSuccess ? 'completed' : 'failed',
       result_media_id: resultMediaId,
       result_data: toExternalProxyResultData(cleanedBody),
@@ -411,7 +367,7 @@ async function executeAsyncTask(
       msg: 'Async task completed',
       logId,
       status: isSuccess ? 'success' : 'failed',
-      durationMs,
+      durationMs: proxyResult.durationMs,
     })
   } catch (err) {
     const durationMs = Math.round(performance.now() - startTime)
