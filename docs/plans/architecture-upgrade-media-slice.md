@@ -76,3 +76,26 @@
 - GREEN：实现 helper 并改 Hook 调用，运行 `rtk npm run test -- src/hooks/media/media-management-helpers.test.ts src/hooks/useMediaManagement.refill.test.ts src/components/media/AnimatedMediaGrid.test.tsx src/components/media/BatchOperationsToolbar.test.tsx`。
 - Regression：运行后端媒体测试保持媒体纵向切片不回退。
 - Build：运行 `rtk npm run build`。
+
+## 第三切片计划：后端媒体仓储查询与行映射边界收敛
+
+前两个切片已经完成前端应用层与 API 适配层的低风险治理。第三切片转向后端媒体基础设施层，优先处理 `server/repositories/media-repository.ts` 中的 SQL 查询构建与数据库行映射职责。当前文件仍超过 600 行，且同时承担仓储协调、过滤策略拼装、SQL 参数索引管理、PostgreSQL/SQLite 差异和 row mapping，后续继续扩展会放大回归风险。
+
+### 范围
+
+- 新增 `server/repositories/media/media-list-query-builder.ts`，把媒体列表查询的 select/join/where/pagination 纯规则从仓储类中抽出。
+- 新增 `server/repositories/media/media-row-mapper.ts`，把数据库行到 `MediaRecord` 的边界解析集中到一个可测试模块。
+- 新增 `server/repositories/__tests__/media-repository-helpers.test.ts`，先用 RED 锁定：
+  - favorite-only 使用 `INNER JOIN user_media_favorites` 并追加用户参数。
+  - user/pro 视角默认加入 owner/public 可见性过滤与未删除过滤。
+  - publicFilter 的 `others-public` 能正确表达“他人公开/无主公开”。
+  - 搜索词会 trim 并同时匹配 filename/original_name。
+  - row mapper 能解析 JSON metadata、字符串 size_bytes、数字 is_deleted。
+- `MediaRepository.list()` 只负责调用 query builder、执行 count/list 查询、调用 row mapper 返回实体，不再内联 SQL 拼装细节。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/repositories/__tests__/media-repository-helpers.test.ts`，预期因 helper 模块尚不存在失败。
+- GREEN：实现 helper 并改 `MediaRepository` 调用后，运行新增 helper 测试与既有 `server/repositories/__tests__/media-repository.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
