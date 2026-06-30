@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildMediaListRouteOptions,
+  parseBatchIds,
+  parseMediaUploadFields,
+  parseUploadFromUrlBody,
   parseUploadMetadata,
 } from '../media/media-route-helpers'
 
@@ -65,5 +68,58 @@ describe('media-route-helpers', () => {
     const result = parseUploadMetadata('{bad json')
 
     expect(result).toEqual({ ok: false, error: 'Invalid metadata JSON' })
+  })
+
+  it('parses batch id request bodies without mutating ids', () => {
+    const ids = ['media-1', 'media-2']
+    const result = parseBatchIds({ ids })
+
+    expect(result).toEqual({ ok: true, ids: ['media-1', 'media-2'] })
+    expect(ids).toEqual(['media-1', 'media-2'])
+  })
+
+  it('parses media upload fields into typed values', () => {
+    const result = parseMediaUploadFields({
+      type: 'image',
+      source: 'image_generation',
+    })
+
+    expect(result).toEqual({ ok: true, type: 'image', source: 'image_generation' })
+  })
+
+  it('rejects invalid media upload type before storage', () => {
+    const result = parseMediaUploadFields({
+      type: 'spreadsheet',
+      source: 'image_generation',
+    })
+
+    expect(result).toEqual({ ok: false, error: 'Invalid media upload fields' })
+  })
+
+  it('parses upload-from-url bodies and metadata consistently', () => {
+    const result = parseUploadFromUrlBody({
+      url: 'https://example.com/cat.png',
+      filename: 'cat.png',
+      type: 'image',
+      source: 'image_generation',
+      metadata: '{"prompt":"cat"}',
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      url: 'https://example.com/cat.png',
+      filename: 'cat.png',
+      type: 'image',
+      source: 'image_generation',
+      metadata: { prompt: 'cat' },
+    })
+  })
+
+  it('rejects upload-from-url bodies without url and type', () => {
+    const result = parseUploadFromUrlBody({
+      source: 'image_generation',
+    })
+
+    expect(result).toEqual({ ok: false, error: 'url and type are required' })
   })
 })

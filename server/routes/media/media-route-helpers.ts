@@ -1,4 +1,6 @@
-import { listMediaQuerySchema } from '../../validation/media-schemas.js'
+import { z } from 'zod'
+import { batchDeleteSchema, listMediaQuerySchema, mediaSourceEnum, mediaTypeEnum } from '../../validation/media-schemas.js'
+import type { MediaSource, MediaType } from '../../database/types.js'
 
 export type MediaRouteRole = 'user' | 'pro' | 'admin' | 'super'
 
@@ -35,6 +37,36 @@ export interface MediaListRouteOptions {
 export type UploadMetadataParseResult =
   | { readonly ok: true; readonly metadata?: Record<string, unknown> }
   | { readonly ok: false; readonly error: string }
+
+export type BatchIdsParseResult =
+  | { readonly ok: true; readonly ids: string[] }
+  | { readonly ok: false; readonly error: string }
+
+export type MediaUploadFieldsParseResult =
+  | { readonly ok: true; readonly type: MediaType; readonly source?: MediaSource }
+  | { readonly ok: false; readonly error: string }
+
+export type UploadFromUrlBodyParseResult =
+  | {
+      readonly ok: true
+      readonly url: string
+      readonly filename?: string
+      readonly type: MediaType
+      readonly source?: MediaSource
+      readonly metadata?: Record<string, unknown>
+    }
+  | { readonly ok: false; readonly error: string }
+
+const uploadFieldsSchema = z.object({
+  type: mediaTypeEnum,
+  source: mediaSourceEnum.optional(),
+})
+
+const uploadFromUrlBodySchema = uploadFieldsSchema.extend({
+  url: z.string().min(1),
+  filename: z.string().min(1).optional(),
+  metadata: z.unknown().optional(),
+})
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -98,5 +130,48 @@ export function parseUploadMetadata(value: unknown): UploadMetadataParseResult {
       return { ok: false, error: 'Invalid metadata JSON' }
     }
     return { ok: false, error: 'Invalid metadata JSON' }
+  }
+}
+
+export function parseBatchIds(value: unknown): BatchIdsParseResult {
+  const parsed = batchDeleteSchema.safeParse(value)
+  if (!parsed.success) {
+    return { ok: false, error: 'ids must be non-empty array' }
+  }
+
+  return { ok: true, ids: [...parsed.data.ids] }
+}
+
+export function parseMediaUploadFields(value: unknown): MediaUploadFieldsParseResult {
+  const parsed = uploadFieldsSchema.safeParse(value)
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid media upload fields' }
+  }
+
+  return {
+    ok: true,
+    type: parsed.data.type,
+    source: parsed.data.source,
+  }
+}
+
+export function parseUploadFromUrlBody(value: unknown): UploadFromUrlBodyParseResult {
+  const parsed = uploadFromUrlBodySchema.safeParse(value)
+  if (!parsed.success) {
+    return { ok: false, error: 'url and type are required' }
+  }
+
+  const metadataResult = parseUploadMetadata(parsed.data.metadata)
+  if (!metadataResult.ok) {
+    return metadataResult
+  }
+
+  return {
+    ok: true,
+    url: parsed.data.url,
+    filename: parsed.data.filename,
+    type: parsed.data.type,
+    source: parsed.data.source,
+    metadata: metadataResult.metadata,
   }
 }

@@ -25,13 +25,18 @@ import {
   withEntityNotFound,
 } from '../utils/index.js'
 import { access } from 'fs/promises'
-import type { MediaType, MediaSource } from '../database/types.js'
 import {
   buildRecoverableMediaCandidates,
   createMediaRecoveryPlan,
   type CreateMediaRecoveryPlanResult,
 } from '../services/domain/media-recovery.service.js'
-import { buildMediaListRouteOptions, parseUploadMetadata } from './media/media-route-helpers.js'
+import {
+  buildMediaListRouteOptions,
+  parseBatchIds,
+  parseMediaUploadFields,
+  parseUploadFromUrlBody,
+  parseUploadMetadata,
+} from './media/media-route-helpers.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -286,7 +291,12 @@ router.post('/batch/public', asyncHandler(async (req, res) => {
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { ids } = req.body as { ids: string[] }
+  const idsResult = parseBatchIds(req.body)
+  if (!idsResult.ok) {
+    errorResponse(res, idsResult.error, 400)
+    return
+  }
+  const ids = idsResult.ids
   const ownerId = buildOwnerFilter(req).params[0]
 
   const records = await db.getByIds(ids, ownerId)
@@ -350,8 +360,11 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     return
   }
 
-  const type = req.body.type as string
-  const source = req.body.source as string
+  const uploadFields = parseMediaUploadFields(req.body)
+  if (!uploadFields.ok) {
+    errorResponse(res, uploadFields.error, 400)
+    return
+  }
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
   const metadataResult = parseUploadMetadata(req.body.metadata)
@@ -363,17 +376,17 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const { filepath, filename, size_bytes } = await saveMediaFile(
     req.file.buffer,
     req.file.originalname,
-    type as MediaType
+    uploadFields.type
   )
 
   const record = await db.create({
     filename,
     original_name: req.file.originalname,
     filepath,
-    type: type as MediaType,
+    type: uploadFields.type,
     mime_type: req.file.mimetype,
     size_bytes,
-    source: source as MediaSource,
+    source: uploadFields.source,
     metadata: metadataResult.metadata,
   }, ownerId)
 
@@ -382,38 +395,38 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
 
 router.post('/upload-from-url', asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { url, filename, type, source, metadata } = req.body
+  const bodyResult = parseUploadFromUrlBody(req.body)
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
-  if (!url || !type) {
-    errorResponse(res, 'url and type are required', 400)
+  if (!bodyResult.ok) {
+    errorResponse(res, bodyResult.error, 400)
     return
   }
 
-  const response = await axios.get(url, {
+  const response = await axios.get(bodyResult.url, {
     responseType: 'arraybuffer',
     timeout: REMOTE_DOWNLOAD_TIMEOUT_MS,
     maxContentLength: REMOTE_DOWNLOAD_MAX_BYTES,
     maxBodyLength: REMOTE_DOWNLOAD_MAX_BYTES,
   })
   const buffer = Buffer.from(response.data)
-  const finalFilename = filename || `image_${Date.now()}.png`
+  const finalFilename = bodyResult.filename || `image_${Date.now()}.png`
 
   const { filepath, filename: savedFilename, size_bytes } = await saveMediaFile(
     buffer,
     finalFilename,
-    type as MediaType
+    bodyResult.type
   )
 
   const record = await db.create({
     filename: savedFilename,
     original_name: finalFilename,
     filepath,
-    type: type as MediaType,
+    type: bodyResult.type,
     mime_type: String(response.headers['content-type'] ?? 'application/octet-stream'),
     size_bytes,
-    source: source as MediaSource,
-    metadata: metadata || null,
+    source: bodyResult.source,
+    metadata: bodyResult.metadata,
   }, ownerId)
 
   createdResponse(res, record)
@@ -490,7 +503,12 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
-  const { ids } = req.body as { ids: string[] }
+  const idsResult = parseBatchIds(req.body)
+  if (!idsResult.ok) {
+    errorResponse(res, idsResult.error, 400)
+    return
+  }
+  const ids = idsResult.ids
   // P0: 批量下载必须按当前用户 owner_id 过滤，防止跨租户读取
   const ownerId = buildOwnerFilter(req).params[0]
   const records = await db.getByIds(ids, ownerId)
