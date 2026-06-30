@@ -37,6 +37,7 @@ import {
   parseUploadFromUrlBody,
   parseUploadMetadata,
 } from './media/media-route-helpers.js'
+import { buildMediaDownloadPlan } from './media/media-download-helpers.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -478,27 +479,19 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
   }
 
   const buffer = await readMediaFile(record.filepath)
-  const fileSize = buffer.length
+  const downloadPlan = buildMediaDownloadPlan({
+    file: buffer,
+    filename: record.filename,
+    originalName: record.original_name,
+    mimeType: record.mime_type,
+    rangeHeader: req.headers.range,
+  })
 
-  res.setHeader('Content-Type', record.mime_type || 'application/octet-stream')
-  res.setHeader('Content-Disposition', `inline; filename="${record.original_name || record.filename}"`)
-  res.setHeader('Accept-Ranges', 'bytes')
-
-  const range = req.headers.range
-  if (range) {
-    const parts = range.replace(/bytes=/, '').split('-')
-    const start = parseInt(parts[0], 10)
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
-    const chunkSize = end - start + 1
-
-    res.status(206)
-    res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`)
-    res.setHeader('Content-Length', chunkSize)
-    res.send(buffer.slice(start, end + 1))
-  } else {
-    res.setHeader('Content-Length', fileSize)
-    res.send(buffer)
+  for (const [name, value] of Object.entries(downloadPlan.headers)) {
+    res.setHeader(name, value)
   }
+  res.status(downloadPlan.statusCode)
+  res.send(downloadPlan.body)
 }))
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
