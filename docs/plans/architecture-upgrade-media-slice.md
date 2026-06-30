@@ -263,6 +263,26 @@
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-forward-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
 
+## 第十三切片计划：外部代理异步媒体保存边界收敛
+
+第十二切片已把 external proxy 的同步代理与异步任务 HTTP 转发执行抽出。`executeAsyncTask()` 中仍内联图片 URL 下载、base64 解码、文件扩展名识别、保存媒体文件、创建媒体记录、首个媒体 ID 选择和失败跳过逻辑。这些属于异步任务的媒体保存应用边界，应从 route 文件中拆出，避免 route 同时承担网络转发、媒体保存副作用和任务状态更新三类职责。
+
+### 范围
+
+- 新增 `server/routes/external-proxy/external-proxy-media-save-helpers.ts`：
+  - `detectImageExtension(buffer)`：根据图片魔数识别 png/jpeg/webp，未知回退 png。
+  - `saveExternalProxyImages(input)`：按现有顺序处理 `ExtractedImagePayload[]`，拒绝不可信 URL、跳过下载/保存失败项，按现有命名规则保存媒体，并返回第一个成功创建的媒体 ID。
+  - helper 通过窄接口注入 URL 可信判断、图片下载、文件保存和媒体记录创建，便于单元测试，不直接依赖 Express route。
+- 新增 `server/routes/__tests__/external-proxy-media-save-helpers.test.ts`，先用 RED 锁定文件名生成、首个媒体 ID、保存失败跳过和不可信 URL 跳过契约。
+- 修改 `server/routes/external-proxy.ts`：`executeAsyncTask()` 只负责提取图片 payload、调用 helper、写入任务结果；删除本文件内图片扩展名识别和保存循环。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy-media-save-helpers.test.ts`，预期 helper 模块不存在或函数未导出失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 external-proxy 测试。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-save-helpers.test.ts server/routes/__tests__/external-proxy-forward-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
 ## 第八切片计划：后端媒体批量删除校验边界收敛
 
 第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
