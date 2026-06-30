@@ -38,6 +38,7 @@ import {
   parseUploadMetadata,
 } from './media/media-route-helpers.js'
 import { buildMediaDownloadPlan } from './media/media-download-helpers.js'
+import { buildBatchDownloadPlan, buildBatchPublicPlan } from './media/media-batch-helpers.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
@@ -260,34 +261,18 @@ router.post('/batch/public', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
 
   const records = await db.getByIds(ids, ownerId)
-  const recordMap = new Map(records.map(r => [r.id, r]))
+  const publicPlan = buildBatchPublicPlan({
+    requestedIds: ids,
+    records,
+    userId,
+    userRole,
+  })
 
-  const authorizedIds: string[] = []
-  const results: Array<{ id: string; success: boolean; data?: unknown; error?: string }> = []
-
-  for (const id of ids) {
-    const record = recordMap.get(id)
-    if (!record || record.is_deleted) {
-      results.push({ id, success: false, error: 'Not authorized or not found' })
-      continue
-    }
-    const isOwner = record.owner_id === userId
-    const isSuperWithNoOwner = !record.owner_id && userRole === 'super'
-    if (isOwner || isSuperWithNoOwner) {
-      authorizedIds.push(id)
-    } else {
-      results.push({ id, success: false, error: 'Not authorized or not found' })
-    }
+  if (publicPlan.authorizedIds.length > 0) {
+    await db.batchTogglePublic([...publicPlan.authorizedIds], isPublic, userId)
   }
 
-  if (authorizedIds.length > 0) {
-    await db.batchTogglePublic(authorizedIds, isPublic, userId)
-    for (const id of authorizedIds) {
-      results.push({ id, success: true })
-    }
-  }
-
-  successResponse(res, results)
+  successResponse(res, publicPlan.results)
 }))
 
 router.delete('/batch', validate(batchDeleteSchema), asyncHandler(async (req, res) => {
@@ -510,11 +495,16 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
     errorResponse(res, 'No valid media found', 404)
     return
   }
+  const downloadPlan = buildBatchDownloadPlan({
+    requestedIds: ids,
+    records,
+    timestamp: Date.now(),
+  })
 
   // 审计记录：当请求 ID 数量与可访问记录数量不一致时静默记录
-  if (records.length !== ids.length) {
+  if (downloadPlan.inaccessibleSummary) {
     logger.warn(
-      { requestedCount: ids.length, accessibleCount: records.length, userId: ownerId },
+      { ...downloadPlan.inaccessibleSummary, userId: ownerId },
       'Batch download: some media IDs are inaccessible or do not exist'
     )
   }
@@ -522,11 +512,11 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
   const archive = archiver('zip', { zlib: { level: 9 } })
 
   res.setHeader('Content-Type', 'application/zip')
-  res.setHeader('Content-Disposition', `attachment; filename="media_batch_${Date.now()}.zip"`)
+  res.setHeader('Content-Disposition', `attachment; filename="${downloadPlan.archiveFilename}"`)
 
   archive.pipe(res)
 
-  for (const record of records) {
+  for (const record of downloadPlan.records) {
     try {
       const buffer = await readMediaFile(record.filepath)
       const filename = record.original_name || record.filename
