@@ -178,3 +178,23 @@
 - GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
+## 第八切片计划：后端媒体批量删除校验边界收敛
+
+第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
+
+### 范围
+
+- 扩展 `server/routes/media/media-batch-helpers.ts`，新增 `validateBatchDeleteRecords()`：
+  - 当可访问记录数量少于请求 ID 时，返回第一个缺失 ID 的 404 错误消息。
+  - 当记录已被软删除时，返回第一个已删除 ID 的 404 错误消息。
+  - 全部可删除时返回可删除记录列表，供 route 执行文件删除与数据库软删除。
+- 扩展 `server/routes/__tests__/media-batch-helpers.test.ts`，先用 RED 锁定缺失记录、已删除记录和 happy path 契约。
+- `server/routes/media.ts` 的 `DELETE /batch` 只负责解析请求、读取记录、调用校验 helper、执行文件删除和软删除响应。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/media-batch-helpers.test.ts`，预期新增 helper 尚未导出导致失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
