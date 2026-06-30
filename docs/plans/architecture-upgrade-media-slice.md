@@ -243,6 +243,26 @@
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
 
+## 第十二切片计划：外部代理转发请求执行边界收敛
+
+第十一切片已把 external proxy 的 URL、JSON 响应和 unknown error 解析抽出。`server/routes/external-proxy.ts` 仍在同步代理与异步任务两处重复构造转发 headers、创建 `AbortController`、执行 `fetch()`、读取文本响应并解析 body。这些属于“外部 HTTP 调用执行计划”边界，应沉淀为可测试 helper，让 route 只负责 schema 校验、SSRF 判断、日志仓储编排和响应输出。
+
+### 范围
+
+- 新增 `server/routes/external-proxy/external-proxy-forward-helpers.ts`：
+  - `buildForwardHeaders(headers)`：默认设置 `Content-Type: application/json`，过滤 `host`，保留其它调用方 headers。
+  - `sanitizeResponseHeaders(headers)`：过滤 `transfer-encoding`、`content-encoding`、`connection`，只返回可透传响应头。
+  - `executeExternalProxyRequest(input)`：统一执行带 timeout 的 `fetch()`，读取 response text，并复用 `parseExternalProxyResponseText()` 返回 body、status、headers 与 duration。
+- 新增 `server/routes/__tests__/external-proxy-forward-helpers.test.ts`，先用 RED 锁定 header 过滤、响应头过滤和 fetch 执行契约。
+- 修改 `server/routes/external-proxy.ts`：同步代理与 `executeAsyncTask()` 复用 helper，不再内联转发 headers、AbortController 和 response text 解析。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy-forward-helpers.test.ts`，预期 helper 模块不存在或函数未导出失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/external-proxy.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-forward-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
 ## 第八切片计划：后端媒体批量删除校验边界收敛
 
 第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
