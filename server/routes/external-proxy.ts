@@ -8,7 +8,11 @@ import { ExternalApiLogRepository } from '../repositories/external-api-log.repos
 import { MediaRepository } from '../repositories/media-repository'
 import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
-import type { MediaType } from '../database/types'
+import {
+  EXTERNAL_PROXY_MEDIA_TYPES,
+  isRecord,
+} from './external-proxy/external-proxy-media-helpers.js'
+import type { ExternalProxyMediaType } from './external-proxy/external-proxy-media-helpers.js'
 
 const logger = getLogger()
 
@@ -162,7 +166,7 @@ const submitTaskSchema = z.object({
   body: z.unknown().optional(),
   service_provider: z.string(),
   operation: z.string(),
-  media_type: z.enum(['image', 'video', 'audio', 'music']).optional(),
+  media_type: z.enum(EXTERNAL_PROXY_MEDIA_TYPES).optional(),
 })
 
 router.post(
@@ -266,7 +270,7 @@ async function executeAsyncTask(
   method: string,
   headers?: Record<string, string>,
   body?: unknown,
-  mediaType?: string,
+  mediaType?: ExternalProxyMediaType,
   userId?: string
 ): Promise<void> {
   const conn = await getConnection()
@@ -318,9 +322,8 @@ async function executeAsyncTask(
     const isSuccess = response.status >= 200 && response.status < 300
 
     let resultMediaId: string | null = null
-    if (isSuccess && mediaType && responseBody && typeof responseBody === 'object') {
-      const data = responseBody as Record<string, unknown>
-      const images = extractAllImages(data)
+    if (isSuccess && mediaType && isRecord(responseBody)) {
+      const images = extractAllImages(responseBody)
 
       let firstMediaId: string | null = null
       for (const [index, imageInfo] of images.entries()) {
@@ -359,14 +362,14 @@ async function executeAsyncTask(
             const filename = images.length > 1
               ? `openai-image-${logId}-${index + 1}.${ext}`
               : `openai-image-${logId}.${ext}`
-            const result = await saveMediaFile(imageBuffer, filename, mediaType as MediaType)
+            const result = await saveMediaFile(imageBuffer, filename, mediaType)
             const mediaRepo = new MediaRepository(conn)
             const mediaRecord = await mediaRepo.create(
               {
                 filename: result.filename,
                 original_name: filename,
                 filepath: result.filepath,
-                type: mediaType as MediaType,
+                type: mediaType,
                 mime_type: `image/${ext}`,
                 size_bytes: result.size_bytes,
                 source: 'external_debug',
@@ -485,16 +488,16 @@ function detectImageExtension(buffer: Buffer): string {
 }
 
 function extractErrorMessage(responseBody: unknown, httpStatus: number): string {
-  if (responseBody && typeof responseBody === 'object') {
-    const body = responseBody as Record<string, unknown>
+  if (isRecord(responseBody)) {
+    const body = responseBody
     // OpenAI 格式: { error: { message: "...", type: "..." } }
-    if (body.error && typeof body.error === 'object') {
-      const error = body.error as Record<string, unknown>
+    if (isRecord(body.error)) {
+      const error = body.error
       if (typeof error.message === 'string') return error.message
     }
     // MiniMax 格式: { base_resp: { status_msg: "...", status_code: N } }
-    if (body.base_resp && typeof body.base_resp === 'object') {
-      const baseResp = body.base_resp as Record<string, unknown>
+    if (isRecord(body.base_resp)) {
+      const baseResp = body.base_resp
       if (typeof baseResp.status_msg === 'string') return baseResp.status_msg
     }
     // 通用格式: { error: "..." }
