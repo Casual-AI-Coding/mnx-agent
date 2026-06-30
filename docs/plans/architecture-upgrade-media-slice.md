@@ -99,3 +99,23 @@
 - GREEN：实现 helper 并改 `MediaRepository` 调用后，运行新增 helper 测试与既有 `server/repositories/__tests__/media-repository.test.ts`。
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
+## 第四切片计划：后端媒体路由入参解析边界收敛
+
+第三切片已经把媒体仓储的 SQL 查询构建与 row mapper 从 `MediaRepository` 中抽离。第四切片继续沿同一条媒体纵向链路上移一层，治理 `server/routes/media.ts` 中的入参解析与类型断言。当前路由层仍直接从 `req.query`/`req.body` 拼装领域服务参数，并散落 `type as string`、`favoriteFilter as ...`、metadata JSON 解析等边界逻辑。这会让路由处理器同时承担 HTTP 编排、入参解析、领域参数构造三类职责。
+
+### 范围
+
+- 新增 `server/routes/media/media-route-helpers.ts`，集中处理媒体列表查询参数到领域服务 `getAll()` 参数的转换。
+- 新增 `server/routes/__tests__/media-route-helpers.test.ts`，先用 RED 锁定：
+  - 字符串 query 中 page/limit/includeDeleted/favoriteFilter/publicFilter 能转换为分页与媒体列表参数。
+  - 空筛选字段保持 `undefined`，避免把无意义空字符串下传到仓储层。
+  - upload metadata JSON 字符串能解析为对象，非法 JSON 返回显式错误。
+- `server/routes/media.ts` 的 GET `/` 只负责获取 owner/user 上下文、调用 helper、调用 service、组装分页响应；上传 metadata 的 JSON 边界由 helper 管理，避免空 catch。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/media-route-helpers.test.ts`，预期 helper 模块不存在失败。
+- GREEN：实现 helper 并改路由后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
