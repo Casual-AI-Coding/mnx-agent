@@ -40,7 +40,7 @@ export enum UserRole {
 
 export type AuditAction = 'create' | 'update' | 'delete' | 'execute'
 
-export type MediaType = 'audio' | 'image' | 'video' | 'music' | 'lyrics'
+export type MediaType = 'audio' | 'image' | 'video' | 'music' | 'lyrics' | 'document'
 
 export type MediaSource = 
   | 'voice_sync' 
@@ -50,5 +50,6 @@ export type MediaSource =
   | 'music_generation'
   | 'lyrics_generation'
   | 'external_debug'
+  | 'generation'
 
 export type WebhookEvent = 'on_start' | 'on_success' | 'on_failure'

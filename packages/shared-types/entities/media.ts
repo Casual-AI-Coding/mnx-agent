@@ -14,7 +14,7 @@ export interface MediaRecord {
   size_bytes: number
   source: MediaSource | null
   task_id: string | null
-  metadata: string | null
+  metadata: string | Record<string, unknown> | null
   is_deleted: boolean
   is_public?: boolean
   owner_id?: string | null
