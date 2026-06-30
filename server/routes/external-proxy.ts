@@ -12,6 +12,12 @@ import {
   EXTERNAL_PROXY_MEDIA_TYPES,
   isRecord,
 } from './external-proxy/external-proxy-media-helpers.js'
+import {
+  extractAllImages,
+  extractErrorMessage,
+  stripBase64Images,
+  toExternalProxyResultData,
+} from './external-proxy/external-proxy-response-helpers.js'
 import type { ExternalProxyMediaType } from './external-proxy/external-proxy-media-helpers.js'
 
 const logger = getLogger()
@@ -207,7 +213,7 @@ router.post(
       service_provider,
       api_endpoint: url,
       operation,
-      request_params: body as Record<string, unknown>,
+      request_params: toExternalProxyResultData(body),
       request_body: JSON.stringify(body),
       status: 'pending',
       task_status: 'pending',
@@ -404,7 +410,7 @@ async function executeAsyncTask(
       duration_ms: durationMs,
       task_status: isSuccess ? 'completed' : 'failed',
       result_media_id: resultMediaId,
-      result_data: cleanedBody as Record<string, unknown>,
+      result_data: toExternalProxyResultData(cleanedBody),
     })
 
     logger.info({
@@ -441,39 +447,6 @@ async function executeAsyncTask(
   }
 }
 
-function extractAllImages(data: Record<string, unknown>): Array<{ url?: string; base64?: string }> {
-  const images: Array<{ url?: string; base64?: string }> = []
-  if (Array.isArray(data.data)) {
-    for (const item of data.data) {
-      if (item && typeof item === 'object') {
-        const record = item as Record<string, unknown>
-        const url = typeof record.url === 'string' ? record.url : undefined
-        const base64 = typeof record.b64_json === 'string' ? record.b64_json : undefined
-        if (url || base64) {
-          images.push({ url, base64 })
-        }
-      }
-    }
-  }
-  return images
-}
-
-function stripBase64Images(body: unknown): unknown {
-  if (!body || typeof body !== 'object') return body
-  const data = { ...(body as Record<string, unknown>) }
-  if (Array.isArray(data.data)) {
-    data.data = (data.data as unknown[]).map((item) => {
-      if (item && typeof item === 'object' && 'b64_json' in (item as Record<string, unknown>)) {
-        const cleaned = { ...(item as Record<string, unknown>) }
-        delete cleaned.b64_json
-        return cleaned
-      }
-      return item
-    })
-  }
-  return data
-}
-
 function detectImageExtension(buffer: Buffer): string {
   if (buffer.length >= 4) {
     // PNG: 89 50 4E 47
@@ -485,27 +458,6 @@ function detectImageExtension(buffer: Buffer): string {
         buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'webp'
   }
   return 'png'
-}
-
-function extractErrorMessage(responseBody: unknown, httpStatus: number): string {
-  if (isRecord(responseBody)) {
-    const body = responseBody
-    // OpenAI 格式: { error: { message: "...", type: "..." } }
-    if (isRecord(body.error)) {
-      const error = body.error
-      if (typeof error.message === 'string') return error.message
-    }
-    // MiniMax 格式: { base_resp: { status_msg: "...", status_code: N } }
-    if (isRecord(body.base_resp)) {
-      const baseResp = body.base_resp
-      if (typeof baseResp.status_msg === 'string') return baseResp.status_msg
-    }
-    // 通用格式: { error: "..." }
-    if (typeof body.error === 'string') return body.error
-    // 通用格式: { message: "..." }
-    if (typeof body.message === 'string') return body.message
-  }
-  return `HTTP ${httpStatus}`
 }
 
 export default router
