@@ -2,27 +2,16 @@ import { v4 as uuidv4 } from 'uuid'
 import { DatabaseConnection } from '../database/connection.js'
 import type {
   MediaRecord,
-  MediaRecordRow,
   CreateMediaRecord,
   FavoriteRecord,
   FavoriteRecordRow,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
-import type { MediaType, MediaSource } from '../database/types.js'
+import { buildMediaListQuery } from './media/media-list-query-builder.js'
+import { mapMediaListRow, mapMediaRecordRow } from './media/media-row-mapper.js'
+import type { MediaListDatabaseRow, MediaRecordDatabaseRow } from './media/media-row-mapper.js'
 
 import { toLocalISODateString } from '../lib/date-utils.js'
-
-function rowToMediaRecord(row: MediaRecordRow): MediaRecord {
-  const metadata = row.metadata ? (typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata) : null
-  return {
-    ...row,
-    type: row.type as MediaType,
-    source: row.source as MediaSource | null,
-    size_bytes: typeof row.size_bytes === 'string' ? parseInt(row.size_bytes, 10) : row.size_bytes,
-    is_deleted: typeof row.is_deleted === 'boolean' ? row.is_deleted : row.is_deleted === 1,
-    metadata,
-  }
-}
 
 export interface MediaListOptions {
   type?: string
@@ -38,25 +27,6 @@ export interface MediaListOptions {
   role?: 'user' | 'pro' | 'admin' | 'super'
 }
 
-type MediaListQueryParam = string | number | boolean | undefined
-
-interface MediaListQueryState {
-  selectClause: string
-  joinClause: string
-  whereConditions: string[]
-  params: MediaListQueryParam[]
-  paramIndex: number
-}
-
-interface MediaListFilterFlags {
-  hasFavorite: boolean
-  hasNonFavorite: boolean
-  hasPrivate: boolean
-  hasPublic: boolean
-  hasOthersPublic: boolean
-  isAdminOrSuper: boolean
-}
-
 export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaRecord, Partial<MediaRecord>> {
   protected readonly tableName = 'media_records'
 
@@ -69,7 +39,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   protected rowToEntity(row: unknown): MediaRecord {
-    return rowToMediaRecord(row as MediaRecordRow)
+    return mapMediaRecordRow(row)
   }
 
   async getById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
@@ -79,316 +49,47 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       const whereClause = includePublic
         ? `SELECT * FROM media_records WHERE id = $1 AND (owner_id = $2 OR is_public = true)`
         : `SELECT * FROM media_records WHERE id = $1 AND owner_id = $2`
-      const rows = await this.conn.query<MediaRecordRow>(whereClause, [id, ownerId])
-      return rows[0] ? rowToMediaRecord(rows[0]) : null
+      const rows = await this.conn.query<MediaRecordDatabaseRow>(whereClause, [id, ownerId])
+      return rows[0] ? mapMediaRecordRow(rows[0]) : null
     }
-    const rows = await this.conn.query<MediaRecordRow>(
+    const rows = await this.conn.query<MediaRecordDatabaseRow>(
       `SELECT * FROM media_records WHERE id = $1`,
       [id]
     )
-    return rows[0] ? rowToMediaRecord(rows[0]) : null
+    return rows[0] ? mapMediaRecordRow(rows[0]) : null
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
     const { type, source, search, limit = 50, offset = 0, includeDeleted = false, visibilityOwnerId, favoriteFilter, publicFilter, favoriteUserId, role } = options
-
-    const flags = this.buildMediaListFilterFlags(favoriteFilter, publicFilter, role)
-    const queryState = this.buildMediaListQueryState({
-      favoriteUserId,
-      visibilityOwnerId,
-      publicFilter,
-      includeDeleted,
+    const query = buildMediaListQuery({
       type,
       source,
       search,
-      flags,
+      limit,
+      offset,
+      includeDeleted,
+      visibilityOwnerId,
+      favoriteFilter,
+      publicFilter,
+      favoriteUserId,
+      role,
+      isPostgres: this.isPostgres(),
     })
-    const whereClause = this.buildWhereClause(queryState.whereConditions)
 
     const countRows = await this.conn.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM media_records m ${queryState.joinClause} ${whereClause}`,
-      queryState.params
+      `SELECT COUNT(*) as count FROM media_records m ${query.joinClause} ${query.whereClause}`,
+      [...query.params]
     )
     const total = parseInt(countRows[0]?.count ?? '0', 10)
 
-    const pagination = this.buildPaginationClause(queryState.paramIndex, limit, offset)
-    const rows = await this.conn.query<MediaRecordRow & { is_favorite?: boolean }>(
-      `SELECT ${queryState.selectClause} FROM media_records m ${queryState.joinClause} ${whereClause} ORDER BY m.created_at DESC ${pagination.clause}`,
-      [...queryState.params, ...pagination.params]
+    const rows = await this.conn.query<MediaListDatabaseRow>(
+      `SELECT ${query.selectClause} FROM media_records m ${query.joinClause} ${query.whereClause} ORDER BY m.created_at DESC ${query.pagination.clause}`,
+      [...query.params, ...query.pagination.params]
     )
 
     return {
-      items: rows.map(row => {
-        const record = rowToMediaRecord(row)
-        if (favoriteUserId) {
-          record.is_favorite = row.is_favorite ?? false
-        }
-        return record
-      }),
+      items: rows.map(row => mapMediaListRow(row, Boolean(favoriteUserId))),
       total,
-    }
-  }
-
-  private buildMediaListFilterFlags(
-    favoriteFilter: MediaListOptions['favoriteFilter'],
-    publicFilter: MediaListOptions['publicFilter'],
-    role: MediaListOptions['role']
-  ): MediaListFilterFlags {
-    return {
-      hasFavorite: favoriteFilter?.includes('favorite') ?? false,
-      hasNonFavorite: favoriteFilter?.includes('non-favorite') ?? false,
-      hasPrivate: publicFilter?.includes('private') ?? false,
-      hasPublic: publicFilter?.includes('public') ?? false,
-      hasOthersPublic: publicFilter?.includes('others-public') ?? false,
-      isAdminOrSuper: role === 'admin' || role === 'super',
-    }
-  }
-
-  private buildMediaListQueryState({
-    favoriteUserId,
-    visibilityOwnerId,
-    publicFilter,
-    includeDeleted,
-    type,
-    source,
-    search,
-    flags,
-  }: {
-    favoriteUserId?: string
-    visibilityOwnerId?: string
-    publicFilter?: ('private' | 'public' | 'others-public')[]
-    includeDeleted: boolean
-    type?: string
-    source?: string
-    search?: string
-    flags: MediaListFilterFlags
-  }): MediaListQueryState {
-    let state: MediaListQueryState = {
-      selectClause: 'm.*',
-      joinClause: '',
-      whereConditions: [],
-      params: [],
-      paramIndex: 1,
-    }
-
-    state = this.buildFavoriteClause(state, favoriteUserId, flags)
-    state = this.buildVisibilityClause(state, visibilityOwnerId, flags)
-    state = this.buildPublicFilterClause(state, publicFilter, visibilityOwnerId, flags)
-    state = this.buildDeletedClause(state, includeDeleted)
-    state = this.buildFieldFilterClause(state, 'm.type', type)
-    state = this.buildFieldFilterClause(state, 'm.source', source)
-    state = this.buildSearchClause(state, search)
-
-    return state
-  }
-
-  private buildFavoriteClause(
-    state: MediaListQueryState,
-    favoriteUserId: string | undefined,
-    flags: MediaListFilterFlags
-  ): MediaListQueryState {
-    if (!favoriteUserId) {
-      return state
-    }
-
-    const newSelectClause = state.selectClause + ', CASE WHEN f.id IS NOT NULL AND f.is_deleted = false THEN true ELSE false END as is_favorite'
-
-    if (flags.hasFavorite && !flags.hasNonFavorite) {
-      return {
-        ...state,
-        selectClause: newSelectClause,
-        joinClause: `INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex} AND f.is_deleted = false`,
-        params: [...state.params, favoriteUserId],
-        paramIndex: state.paramIndex + 1,
-      }
-    }
-
-    const result: MediaListQueryState = {
-      ...state,
-      selectClause: newSelectClause,
-      joinClause: `LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex}`,
-      params: [...state.params, favoriteUserId],
-      paramIndex: state.paramIndex + 1,
-    }
-
-    if (!flags.hasFavorite && flags.hasNonFavorite) {
-      result.whereConditions = [...result.whereConditions, '(f.id IS NULL OR f.is_deleted = true)']
-    }
-
-    return result
-  }
-
-  private buildVisibilityClause(
-    state: MediaListQueryState,
-    visibilityOwnerId: string | undefined,
-    flags: MediaListFilterFlags
-  ): MediaListQueryState {
-    if (visibilityOwnerId && !flags.isAdminOrSuper) {
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, `(m.owner_id = $${state.paramIndex} OR m.is_public = true)`],
-        params: [...state.params, visibilityOwnerId],
-        paramIndex: state.paramIndex + 1,
-      }
-    }
-    return state
-  }
-
-  private buildPublicFilterClause(
-    state: MediaListQueryState,
-    publicFilter: MediaListOptions['publicFilter'],
-    visibilityOwnerId: string | undefined,
-    flags: MediaListFilterFlags
-  ): MediaListQueryState {
-    if (!publicFilter || publicFilter.length === 0) {
-      return state
-    }
-
-    if (flags.hasPrivate && !flags.hasPublic && !flags.hasOthersPublic) {
-      const condition = flags.isAdminOrSuper
-        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false`
-        : `m.owner_id = $${state.paramIndex} AND m.is_public = false`
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, condition],
-        params: [...state.params, visibilityOwnerId],
-        paramIndex: state.paramIndex + 1,
-      }
-    }
-
-    if (!flags.hasPrivate && flags.hasPublic && !flags.hasOthersPublic) {
-      const condition = flags.isAdminOrSuper
-        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = true`
-        : `m.owner_id = $${state.paramIndex} AND m.is_public = true`
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, condition],
-        params: [...state.params, visibilityOwnerId],
-        paramIndex: state.paramIndex + 1,
-      }
-    }
-
-    if (!flags.hasPrivate && !flags.hasPublic && flags.hasOthersPublic) {
-      if (flags.isAdminOrSuper && visibilityOwnerId) {
-        return {
-          ...state,
-          whereConditions: [...state.whereConditions, `m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true`],
-          params: [...state.params, visibilityOwnerId],
-          paramIndex: state.paramIndex + 1,
-        }
-      }
-
-      if (visibilityOwnerId) {
-        return {
-          ...state,
-          whereConditions: [...state.whereConditions, `(m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}) AND m.is_public = true`],
-          params: [...state.params, visibilityOwnerId],
-          paramIndex: state.paramIndex + 1,
-        }
-      }
-
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, 'm.is_public = true'],
-      }
-    }
-
-    if (flags.hasPrivate && flags.hasPublic && !flags.hasOthersPublic) {
-      const condition = flags.isAdminOrSuper
-        ? `(m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL)`
-        : `m.owner_id = $${state.paramIndex}`
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, condition],
-        params: [...state.params, visibilityOwnerId],
-        paramIndex: state.paramIndex + 1,
-      }
-    }
-
-    if (flags.hasPrivate && !flags.hasPublic && flags.hasOthersPublic) {
-      if (flags.isAdminOrSuper && visibilityOwnerId) {
-        return {
-          ...state,
-          whereConditions: [...state.whereConditions, `((m.owner_id = $${state.paramIndex} OR m.owner_id IS NULL) AND m.is_public = false OR m.owner_id != $${state.paramIndex} AND m.owner_id IS NOT NULL AND m.is_public = true)`],
-          params: [...state.params, visibilityOwnerId],
-          paramIndex: state.paramIndex + 1,
-        }
-      }
-
-      if (visibilityOwnerId) {
-        return {
-          ...state,
-          whereConditions: [...state.whereConditions, `(m.owner_id = $${state.paramIndex} AND m.is_public = false OR m.is_public = true AND (m.owner_id IS NULL OR m.owner_id != $${state.paramIndex}))`],
-          params: [...state.params, visibilityOwnerId],
-          paramIndex: state.paramIndex + 1,
-        }
-      }
-      return state
-    }
-
-    if (!flags.hasPrivate && flags.hasPublic && flags.hasOthersPublic) {
-      return {
-        ...state,
-        whereConditions: [...state.whereConditions, 'm.is_public = true'],
-      }
-    }
-
-    return state
-  }
-
-  private buildDeletedClause(state: MediaListQueryState, includeDeleted: boolean): MediaListQueryState {
-    if (includeDeleted) {
-      return state
-    }
-
-    return {
-      ...state,
-      whereConditions: [...state.whereConditions, this.isPostgres() ? 'm.is_deleted = false' : 'm.is_deleted = 0'],
-    }
-  }
-
-  private buildFieldFilterClause(
-    state: MediaListQueryState,
-    field: 'm.type' | 'm.source',
-    value: string | undefined
-  ): MediaListQueryState {
-    if (!value) {
-      return state
-    }
-
-    return {
-      ...state,
-      whereConditions: [...state.whereConditions, `${field} = $${state.paramIndex}`],
-      params: [...state.params, value],
-      paramIndex: state.paramIndex + 1,
-    }
-  }
-
-  private buildSearchClause(state: MediaListQueryState, search: string | undefined): MediaListQueryState {
-    if (!search || !search.trim()) {
-      return state
-    }
-
-    return {
-      ...state,
-      whereConditions: [...state.whereConditions, `(m.filename LIKE $${state.paramIndex} OR m.original_name LIKE $${state.paramIndex})`],
-      params: [...state.params, `%${search.trim()}%`],
-      paramIndex: state.paramIndex + 1,
-    }
-  }
-
-  private buildWhereClause(whereConditions: string[]): string {
-    if (whereConditions.length === 0) {
-      return ''
-    }
-
-    return `WHERE ${whereConditions.join(' AND ')}`
-  }
-
-  private buildPaginationClause(paramIndex: number, limit: number, offset: number): { clause: string; params: [number, number] } {
-    return {
-      clause: `LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      params: [limit, offset],
     }
   }
 
@@ -403,7 +104,11 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       [id, data.filename, data.original_name ?? null, data.filepath, data.type, data.mime_type ?? null, data.size_bytes, data.source ?? null, data.task_id ?? null, metadata, now, now, ownerId ?? null]
     )
 
-    return (await this.getById(id))!
+    const created = await this.getById(id)
+    if (!created) {
+      throw new Error(`Failed to create media record ${id}`)
+    }
+    return created
   }
 
   async update(
@@ -534,17 +239,17 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     }
 
     if (this.isPostgres()) {
-      const rows = await this.conn.query<MediaRecordRow>(
+      const rows = await this.conn.query<MediaRecordDatabaseRow>(
         `SELECT * FROM media_records ${whereClause}`,
         params
       )
-      return rows.map(rowToMediaRecord)
+      return rows.map(mapMediaRecordRow)
     } else {
-      const rows = await this.conn.query<MediaRecordRow>(
+      const rows = await this.conn.query<MediaRecordDatabaseRow>(
         `SELECT * FROM media_records ${whereClause}`,
         params
       )
-      return rows.map(rowToMediaRecord)
+      return rows.map(mapMediaRecordRow)
     }
   }
 
@@ -590,8 +295,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         await this.insertFavorite(userId, mediaId)
         return { isFavorite: true, action: 'added' }
       } catch (error: unknown) {
-        const pgError = error as { code?: unknown }
-        if (pgError.code === '23505') {
+        if (isUniqueViolationError(error)) {
           const raceExisting = await this.findFavorite(userId, mediaId)
           if (raceExisting) {
             if (raceExisting.is_deleted) {
@@ -629,11 +333,11 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
         params.push(ownerId)
       }
 
-      const rows = await this.conn.query<MediaRecordRow>(
+      const rows = await this.conn.query<MediaRecordDatabaseRow>(
         `UPDATE media_records SET is_public = $1, updated_at = $2 ${whereClause} RETURNING *`,
         params
       )
-      return rows[0] ? rowToMediaRecord(rows[0]) : null
+      return rows[0] ? mapMediaRecordRow(rows[0]) : null
     } else {
       const params: (string | number)[] = [isPublic ? 1 : 0, now, id]
       let whereClause = 'WHERE id = ? AND is_deleted = 0'
@@ -687,4 +391,8 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       return result.changes
     }
   }
+}
+
+function isUniqueViolationError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505')
 }
