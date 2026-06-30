@@ -139,3 +139,23 @@
 - GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
+## 第六切片计划：后端媒体下载响应边界收敛
+
+第五切片完成请求体解析后，`server/routes/media.ts` 中仍有下载响应逻辑直接内联：文件名响应头、Content-Type、Accept-Ranges、Range 头解析、206 partial content 的 Content-Range/Content-Length 计算。这些属于 HTTP 响应规划，不应与 token 校验、记录读取、文件读取混在同一个 route handler 中。第六切片只抽取纯响应计划函数，不改变 token、权限、文件读取和实际发送方式。
+
+### 范围
+
+- 新增 `server/routes/media/media-download-helpers.ts`，集中构造下载响应计划：
+  - 无 Range 时生成 200/full 响应头和完整 byte slice。
+  - 有合法 `bytes=start-end` Range 时生成 206 响应头、Content-Range、Content-Length 与 slice 边界。
+  - 文件名优先使用 `original_name`，缺失时回退 `filename`；mime type 缺失时回退 `application/octet-stream`。
+- 新增 `server/routes/__tests__/media-download-helpers.test.ts`，先用 RED 锁定上述响应计划契约。
+- `server/routes/media.ts` 的 GET `/:id/download` 只负责 token 校验、读取媒体记录和文件 buffer、调用 helper、写入响应。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/media-download-helpers.test.ts`，预期 helper 模块不存在失败。
+- GREEN：实现 helper 并改下载路由后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
