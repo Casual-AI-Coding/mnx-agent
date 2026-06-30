@@ -179,6 +179,29 @@
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
 
+## 第九切片计划：外部代理媒体类型边界收敛
+
+前八个切片已把媒体主路由中的查询、请求体、下载响应和批量操作纯规则逐步收敛到 helper。当前后端剩余已识别类型逃逸热点在 `server/routes/external-proxy.ts`：异步外部代理任务的 `mediaType` 以 `string` 在内部流转，并在保存媒体文件和创建媒体记录时使用 `mediaType as MediaType`。该逻辑属于“外部输入解析到领域类型”的边界问题，适合用 TDD 抽出窄 helper，避免在副作用代码中散落类型断言。
+
+### 范围
+
+- 新增 `server/routes/external-proxy/external-proxy-media-helpers.ts`：
+  - 定义 external proxy 允许保存的媒体类型集合（`image`、`video`、`audio`、`music`），并导出严格的 `ExternalProxyMediaType`。
+  - 提供 `parseExternalProxyMediaType(value)`，只在边界解析 unknown/string，非法值返回显式错误，不允许 `document`、`lyrics` 等非代理保存类型混入。
+  - 提供 `isRecord(value)` 作为 response body 的边界缩窄工具，替代 route 内 `responseBody as Record<string, unknown>`。
+- 新增 `server/routes/__tests__/external-proxy-media-helpers.test.ts`，先用 RED 锁定合法媒体类型、非法媒体类型和 record 缩窄契约。
+- 修改 `server/routes/external-proxy.ts`：
+  - `submitTaskSchema.media_type` 复用 helper 的 allowed values。
+  - `executeAsyncTask()` 的 `mediaType` 参数改为 `ExternalProxyMediaType`，保存媒体文件与创建媒体记录时直接使用该类型，不再使用 `mediaType as MediaType`。
+  - response body 进入 `extractAllImages()` 前用 `isRecord()` 缩窄。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy-media-helpers.test.ts`，预期 helper 模块不存在或函数未导出失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/external-proxy.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
 ## 第八切片计划：后端媒体批量删除校验边界收敛
 
 第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
