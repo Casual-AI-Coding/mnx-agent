@@ -8,6 +8,7 @@ import { MediaRepository } from '../repositories/media-repository'
 import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
 import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
+import { saveExternalProxyImages } from './external-proxy/external-proxy-media-save-helpers.js'
 import {
   EXTERNAL_PROXY_MEDIA_TYPES,
   isRecord,
@@ -280,72 +281,42 @@ async function executeAsyncTask(
     let resultMediaId: string | null = null
     if (isSuccess && mediaType && isRecord(proxyResult.body)) {
       const images = extractAllImages(proxyResult.body)
-
-      let firstMediaId: string | null = null
-      for (const [index, imageInfo] of images.entries()) {
-        let imageBuffer: Buffer | null = null
-
-        if (imageInfo.url) {
-          if (!isUrlAllowed(imageInfo.url)) {
-            logger.warn({
-              msg: 'Rejected untrusted image URL (SSRF protection)',
-              logId,
-              index,
-              url: imageInfo.url,
-            })
-            continue
-          }
-
-          try {
-            const arrayBuffer = await fetch(imageInfo.url).then(r => r.arrayBuffer())
-            imageBuffer = Buffer.from(new Uint8Array(arrayBuffer))
-          } catch (fetchErr) {
-            logger.error({
-              msg: 'Failed to fetch image from URL',
-              logId,
-              index,
-              url: imageInfo.url,
-              error: fetchErr instanceof Error ? fetchErr.message : 'Unknown error',
-            })
-          }
-        } else if (imageInfo.base64) {
-          imageBuffer = Buffer.from(imageInfo.base64, 'base64')
-        }
-
-        if (imageBuffer) {
-          try {
-            const ext = detectImageExtension(imageBuffer)
-            const filename = images.length > 1
-              ? `openai-image-${logId}-${index + 1}.${ext}`
-              : `openai-image-${logId}.${ext}`
-            const result = await saveMediaFile(imageBuffer, filename, mediaType)
-            const mediaRepo = new MediaRepository(conn)
-            const mediaRecord = await mediaRepo.create(
-              {
-                filename: result.filename,
-                original_name: filename,
-                filepath: result.filepath,
-                type: mediaType,
-                mime_type: `image/${ext}`,
-                size_bytes: result.size_bytes,
-                source: 'external_debug',
-              },
-              userId
-            )
-            if (firstMediaId === null) {
-              firstMediaId = mediaRecord.id
-            }
-          } catch (saveErr) {
-            logger.error({
-              msg: 'Failed to save media',
-              logId,
-              index,
-              error: saveErr instanceof Error ? saveErr.message : 'Unknown error',
-            })
-          }
-        }
-      }
-      resultMediaId = firstMediaId
+      const mediaRepo = new MediaRepository(conn)
+      resultMediaId = await saveExternalProxyImages({
+        logId,
+        images,
+        mediaType,
+        userId,
+        isUrlAllowed,
+        fetchImage: async imageUrl => fetch(imageUrl).then(response => response.arrayBuffer()),
+        saveFile: saveMediaFile,
+        createMediaRecord: (record, recordUserId) => mediaRepo.create(record, recordUserId),
+        onRejectedUrl: ({ index, url: rejectedUrl }) => {
+          logger.warn({
+            msg: 'Rejected untrusted image URL (SSRF protection)',
+            logId,
+            index,
+            url: rejectedUrl,
+          })
+        },
+        onFetchError: ({ index, url: failedUrl, error }) => {
+          logger.error({
+            msg: 'Failed to fetch image from URL',
+            logId,
+            index,
+            url: failedUrl,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+        },
+        onSaveError: ({ index, error }) => {
+          logger.error({
+            msg: 'Failed to save media',
+            logId,
+            index,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+        },
+      })
     }
 
     const errorMessage = isSuccess
@@ -395,19 +366,6 @@ async function executeAsyncTask(
       durationMs,
     })
   }
-}
-
-function detectImageExtension(buffer: Buffer): string {
-  if (buffer.length >= 4) {
-    // PNG: 89 50 4E 47
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'png'
-    // JPEG: FF D8 FF
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'jpeg'
-    // WebP: RIFF....WEBP
-    if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-        buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'webp'
-  }
-  return 'png'
 }
 
 export default router
