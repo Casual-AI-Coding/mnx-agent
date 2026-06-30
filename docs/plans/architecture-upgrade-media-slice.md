@@ -119,3 +119,23 @@
 - GREEN：实现 helper 并改路由后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
+## 第五切片计划：后端媒体路由请求体解析边界收敛
+
+第四切片已经把媒体列表查询和上传 metadata 的解析从 route handler 中抽出。第五切片继续治理 `server/routes/media.ts` 剩余低风险请求体边界：批量 ID、上传媒体类型/来源、远程 URL 上传参数。目前这些逻辑仍散落在路由中，并依赖 `req.body as { ids: string[] }`、`type as MediaType`、`source as MediaSource` 等类型断言。该切片只收敛解析边界，不改变存储、权限、批量操作和下载行为。
+
+### 范围
+
+- 扩展 `server/routes/media/media-route-helpers.ts`，新增请求体纯解析函数：
+  - `parseBatchIds()`：从已通过 Zod 的 body 中提取媒体 ID 列表，供批量删除/下载复用。
+  - `parseMediaUploadFields()`：解析 multer 上传表单中的 `type`/`source`，复用已存在的媒体类型与来源 schema，失败返回显式错误。
+  - `parseUploadFromUrlBody()`：解析远程 URL 上传参数，统一处理 url/type/source/filename/metadata。
+- 扩展 `server/routes/__tests__/media-route-helpers.test.ts`，先用 RED 锁定批量 ID、上传字段、远程 URL 上传字段的契约。
+- `server/routes/media.ts` 的 upload、upload-from-url、batch delete、batch download 只负责编排 service/storage/response，不再直接做请求体类型断言。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/media-route-helpers.test.ts`，预期新增 helper 尚未导出导致失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/media.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
