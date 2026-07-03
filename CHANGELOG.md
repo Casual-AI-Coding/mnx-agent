@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-07-04
+
+### ✨ Added
+
+- **Prompt 模板版本管理** — 新增 `prompt_template_versions` 表（迁移 036），`prompt_templates` 补充 `owner_id` 字段，支持版本创建、列表、字段级对比、回滚完整生命周期（`packages/shared-types/entities/prompt-template.ts`, `server/database/schema-pg.ts`, `server/database/migrations-async.ts`）
+- **版本管理 API** — 新增 `GET /api/templates/:id/versions` 版本列表、`POST /api/templates/:id/versions` 快照创建、`GET /api/templates/:id/versions/compare` 版本对比、`POST /api/templates/:id/versions/:versionId/rollback` 版本回滚端点（`server/routes/templates.ts`, `server/validation/template-schemas.ts`）
+- **版本管理 Repository** — 新增 `createVersion`/`getVersionsByTemplate`/`compareVersions`/`updateFromVersion` 方法，版本号自动递增，字段级 diff 对比，回滚时激活目标版本（`server/repositories/prompt-template-repository.ts`）
+- **前端版本管理弹窗 TemplateVersionDialog** — 三区块面板：当前快照保存（变更摘要输入）、版本对比（双下拉选择 + 字段级 diff 展示）、版本历史列表 + 回滚按钮（`src/components/templates/TemplateVersionDialog.tsx`）
+- **TemplateCard 独立组件** — 从 TemplateLibrary 页面抽取为独立可复用组件，新增版本管理入口按钮，保持原有复制/编辑/删除功能（`src/components/templates/TemplateCard.tsx`）
+- **前端 API 客户端版本管理方法** — 新增 `listTemplateVersions`/`createTemplateVersion`/`compareTemplateVersions`/`rollbackTemplateVersion` 及对应类型（`src/lib/api/templates.ts`）
+
+### 🏗️ 重构
+
+- **Store 工厂模式内联** — 通用 `createTemplateStore` 工厂抽取到独立文件 `template-store-factory.ts`，`useTemplatesStore` 内联为具体 `PromptTemplateStoreState` 类型，消除泛型复杂度，新增版本管理 state/actions（`src/stores/templates.ts`）
+- **路由数据源切换** — `templates.ts` 从 WorkflowService 切换到 DatabaseService，直接调用 `getPromptTemplates`/`getPromptTemplateById` 等方法（`server/routes/templates.ts`）
+
+### 📝 文档
+
+- **Roadmap 同步** — R-019（Prompt 模板版本管理）标记为已完成；下一版本调整为 v2.4（资源集成）（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+
+### 🧪 测试
+
+- **PromptTemplateRepository 版本管理单元测试** — 4 条测试覆盖版本创建（快照字段 + 版本号递增）、列表（owner 隔离 + 最新优先排序）、字段级对比（name/description/content/variables diff）、回滚（模板快照更新 + 版本激活状态）（`server/repositories/__tests__/prompt-template-repository.test.ts`）
+- **Prompt Templates API 集成测试** — 158 行完整 E2E 测试覆盖创建/列表/对比/回滚全流程，使用真实数据库（`server/routes/__tests__/templates.test.ts`）
+- **TemplateVersionDialog 组件测试** — 3 条测试覆盖创建版本（提交摘要）、比较版本（选择版本号 + 校验 diff 展示）、回滚版本（提交 versionId）（`src/components/templates/TemplateVersionDialog.test.tsx`）
+- **Store 版本管理测试** — 4 条测试覆盖 fetch 版本列表、create 前置追加、compare 存储 diff、rollback 更新当前模板（`src/stores/__tests__/templates.test.ts`）
+
+### Backward Compatibility
+
+- ✅ 新增 `prompt_template_versions` 表为增量数据库迁移
+- ✅ `prompt_templates.owner_id` 新增列向后兼容（旧行自动为 NULL）
+- ✅ 所有新增 API 端点为增量扩展，不影响现有路线
+- ✅ 路由数据源从 WorkflowService 切换到 DatabaseService 行为等价（查询逻辑一致）
+- ✅ Store 重构为内部重构，外部接口不变
+- ✅ TemplateCard 抽取为独立组件，渲染行为等价
+- ✅ 版本管理弹窗为增量 UI，不影响现有页面功能
+
 ## [2.3.2] - 2026-07-04
 
 ### 🐛 Fixed
