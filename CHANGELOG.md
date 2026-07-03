@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-07-03
+
+### 🏗️ 重构
+
+- **媒体路由业务逻辑收敛** — 将 media.ts 中批量公开状态决策（`buildBatchPublicPlan`）、批量删除校验（`validateBatchDeleteRecords`）、下载响应规划（`buildMediaDownloadPlan`）、请求体解析（`parseBatchIds`/`parseMediaUploadFields`/`parseUploadMetadata`）抽取为独立纯函数，路由仅保留 HTTP 编排，消除约 200 行样板代码 (`server/routes/media/`)：
+  - `media-route-helpers.ts` — 列表参数构建、上传字段解析、元数据解析、批量 ID 解析
+  - `media-batch-helpers.ts` — 批量公开/删除计划构建
+  - `media-download-helpers.ts` — 下载响应规划
+- **媒体仓储查询与行映射收敛** — 动态列表 SQL 构建器（`buildMediaListQuery`）和 SQL 行→实体映射（`mapMediaRecordRow`/`mapMediaListRow`）独立为不可变模式领域服务，消除 `MediaRepository` 中约 300 行 mutable builder 状态机，Repository 仅保留数据访问编排 (`server/repositories/media/`)：
+  - `media-list-query-builder.ts` — 动态列表查询构建（filter flags 状态机）
+  - `media-row-mapper.ts` — SQL 行→实体映射（含 metadata JSON 解析、类型转换）
+- **外部代理路由业务逻辑收敛** — 将 external-proxy.ts 中 URL 安全规则、请求解析、转发执行、响应体解析、媒体保存、媒体类型边界等逻辑抽取为 6 个独立助手模块，消除约 120 行内联样板 (`server/routes/external-proxy/`)：
+  - `external-proxy-url-security-helpers.ts` — isUrlAllowed SSRF 防护/白名单匹配
+  - `external-proxy-request-helpers.ts` — URL 解析、错误消息提取
+  - `external-proxy-forward-helpers.ts` — fetch 转发执行（超时 + 响应头过滤）
+  - `external-proxy-response-helpers.ts` — 响应体解析、base64 剥离、图片提取
+  - `external-proxy-media-helpers.ts` — 媒体类型枚举、isRecord 类型守卫
+  - `external-proxy-media-save-helpers.ts` — 图片下载 + 文件持久化 + 日志记录
+- **WebSocket 订阅生命周期统一收敛** — 抽取 `useStoreWebSocketSubscription` 通用 hook，消除 `useCronJobsWebSocket`/`useExecutionLogsWebSocket`/`useTaskQueueWebSocket` 中 3 份重复的 auth hydration 检查 + useEffect 生命周期管理 (`src/hooks/`)
+- **媒体管理状态派生逻辑收敛** — 抽取 `media-management-helpers.ts` 纯函数，收敛分页项构建、列表参数构建、选中态管理、signed URL 合并等状态派生逻辑，`useMediaManagement.ts` 中约 80 行派生逻辑替换为函数调用 (`src/hooks/media/`)
+- **API 客户端类型收敛** — 删除 `src/lib/api/media.ts` 中重复的 `MediaRecord`/`ListMediaResponse` 类型定义，改为从 `@/types/media` 导入，消除约 30 行重复代码；`apiClient.get/post/delete` 方法新增 `AxiosRequestConfig` 透传参数 (`src/lib/api/client.ts`, `src/lib/api/media.ts`)
+
+### 🔄 变更
+
+- **MediaType 扩展** — 新增 `'document'` 文档媒体类型 (`packages/shared-types/entities/enums.ts`)
+- **MediaSource 扩展** — 新增 `'generation'` 来源枚举值 (`packages/shared-types/entities/enums.ts`)
+- **MediaRecord.metadata 类型放宽** — 从 `string | null` 扩展为 `string | Record<string, unknown> | null`，支持结构化元数据 (`packages/shared-types/entities/media.ts`)
+
+### 🧪 测试
+
+- **媒体路由 helper 单元测试** — 覆盖批量公开计划、批量删除校验、下载规划、入参解析等核心分支 (`server/routes/__tests__/media-batch-helpers.test.ts`, `server/routes/__tests__/media-download-helpers.test.ts`, `server/routes/__tests__/media-route-helpers.test.ts`)
+- **媒体仓储 helper 单元测试** — 覆盖动态查询构建器、行映射的各种 filter/type/source/search 组合 (`server/repositories/__tests__/media-repository-helpers.test.ts`)
+- **外部代理 helper 单元测试** — 覆盖 URL 安全规则、请求解析、响应体解析、转发执行、媒体保存全流程 (`server/routes/__tests__/external-proxy-forward-helpers.test.ts`, `server/routes/__tests__/external-proxy-media-helpers.test.ts`, `server/routes/__tests__/external-proxy-media-save-helpers.test.ts`, `server/routes/__tests__/external-proxy-request-helpers.test.ts`, `server/routes/__tests__/external-proxy-response-helpers.test.ts`, `server/routes/__tests__/external-proxy-url-security-helpers.test.ts`)
+- **WebSocket 订阅 hook 单元测试** — 覆盖 auth hydration/认证状态与订阅生命周期绑定 (`src/hooks/useStoreWebSocketSubscription.test.ts`)
+- **WebSocket hook 收敛测试** — 覆盖三个 WebSocket hook 收敛后的行为正确性 (`src/hooks/useCronWebSocketHooks.test.ts`)
+- **媒体管理状态派生单元测试** — 覆盖分页项构建、列表参数构建、选中态管理、signed URL 合并 (`src/hooks/media/media-management-helpers.test.ts`)
+
+### 📝 文档
+
+- **WebSocket hook 合并切片计划** — 记录 WebSocket 订阅生命周期收敛的设计与任务分解 (`docs/plans/2026-07-03-websocket-hook-consolidation.md`)
+- **外部代理切片计划** — 9-14 切片，记录 external-proxy 逐步收敛的过程与文件结构 (`docs/plans/`)
+- **媒体架构升级切片计划** — 2-8 切片，记录媒体路由/仓储/前端帮助函数的逐步收敛过程 (`docs/plans/`)
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 媒体路由/仓储/外部代理重构为内部逻辑抽取，外部行为不变
+- ✅ WebSocket hook 收敛为内部重构，订阅销毁行为等价
+- ✅ API Client 类型收敛为内部重构，不影响导入方
+- ✅ MediaType/MediaSource 扩展为新增枚举值，不影响现有类型
+- ✅ `metadata` 类型放宽为结构化对象的兼容扩展，不影响现有 `string` 用法
+
 ## [2.2.12] - 2026-06-30
 
 ### 🏗️ 重构
