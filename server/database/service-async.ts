@@ -413,6 +413,7 @@ export class DatabaseService {
   async updateMaterialItem(id: string, data: UpdateMaterialItem, ownerId?: string): Promise<MaterialItem | null> { return this.materialService.updateMaterialItem(id, data, ownerId) }
   async softDeleteMaterialItem(id: string, ownerId?: string): Promise<boolean> { return this.materialService.softDeleteMaterialItem(id, ownerId) }
   async reorderMaterialItems(materialId: string, items: Array<{ id: string; sort_order: number }>, ownerId?: string): Promise<void> { return this.materialService.reorderMaterialItems(materialId, items, ownerId) }
+  async listPrompts(filter: { target_type: PromptRecord['target_type']; target_id: string; slot_type: PromptRecord['slot_type'] }, ownerId?: string): Promise<PromptRecord[]> { return this.materialService.listPrompts(filter, ownerId) }
   async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> { return this.materialService.createPrompt(data, ownerId) }
   async updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null> { return this.materialService.updatePrompt(id, data, ownerId) }
   async softDeletePrompt(id: string, ownerId?: string): Promise<boolean> { return this.materialService.softDeletePrompt(id, ownerId) }

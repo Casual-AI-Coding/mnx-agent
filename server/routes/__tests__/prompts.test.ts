@@ -116,6 +116,27 @@ describe('Prompts API Routes', () => {
     expect(detail?.materialPrompts.find((item: PromptRecord) => item.id === second.body.data.id)?.is_default).toBe(true)
   })
 
+  it('lists prompts for a target and slot in sort order', async () => {
+    const first = await createPrompt('Prompt A', true)
+    const second = await createPrompt('Prompt B', false)
+
+    const res = await request(app)
+      .get('/api/prompts')
+      .query({
+        target_type: 'material-main',
+        target_id: materialId,
+        slot_type: 'artist-style',
+      })
+
+    expect(first.status).toBe(201)
+    expect(second.status).toBe(201)
+    expect(res.status).toBe(200)
+    expect(res.body.success).toBe(true)
+    expect(res.body.data).toHaveLength(2)
+    expect(res.body.data[0].id).toBe(first.body.data.id)
+    expect(res.body.data[1].id).toBe(second.body.data.id)
+  })
+
   it('sets a prompt as default explicitly', async () => {
     const first = await createPrompt('Prompt A', true)
     const second = await createPrompt('Prompt B', false)

@@ -7,6 +7,7 @@ import { internalAxios } from './client'
 import type {
   ApiResponse,
   CreatePromptParams,
+  ListPromptsParams,
   PromptSlotType,
   PromptTargetType,
   UpdatePromptParams,
@@ -19,6 +20,18 @@ export async function createPrompt(
 ): Promise<ApiResponse<PromptRecord>> {
   try {
     const response = await internalAxios.post('/prompts', data)
+    return { success: true, data: response.data.data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+export async function listPrompts(
+  params: ListPromptsParams
+): Promise<ApiResponse<readonly PromptRecord[]>> {
+  try {
+    const response = await internalAxios.get('/prompts', { params })
     return { success: true, data: response.data.data }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

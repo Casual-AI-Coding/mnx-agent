@@ -42,6 +42,12 @@ export interface ReorderPromptsRequest {
   items: ReorderPromptInput[]
 }
 
+export interface PromptTargetFilter {
+  target_type: PromptRecord['target_type']
+  target_id: string
+  slot_type: PromptRecord['slot_type']
+}
+
 export interface IMaterialService {
   getById(id: string, ownerId?: string): Promise<Material | null>
   list(filter: MaterialFilter): Promise<MaterialQueryResult>
@@ -53,6 +59,7 @@ export interface IMaterialService {
   updateMaterialItem(id: string, data: UpdateMaterialItem, ownerId?: string): Promise<MaterialItem | null>
   softDeleteMaterialItem(id: string, ownerId?: string): Promise<boolean>
   reorderMaterialItems(materialId: string, items: ReorderMaterialItemInput[], ownerId?: string): Promise<void>
+  listPrompts(filter: PromptTargetFilter, ownerId?: string): Promise<PromptRecord[]>
   createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord>
   updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null>
   softDeletePrompt(id: string, ownerId?: string): Promise<boolean>

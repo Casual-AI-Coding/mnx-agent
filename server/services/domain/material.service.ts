@@ -4,6 +4,7 @@ import type {
   MaterialFilter,
   MaterialQueryResult,
   MaterialDetailResult,
+  PromptTargetFilter,
   ReorderMaterialItemInput,
   ReorderPromptsRequest,
 } from './interfaces/material.interface.js'
@@ -85,6 +86,10 @@ export class MaterialService implements IMaterialService {
 
   async reorderMaterialItems(materialId: string, items: ReorderMaterialItemInput[], ownerId?: string): Promise<void> {
     return this.db.reorderMaterialItems(materialId, items, ownerId)
+  }
+
+  async listPrompts(filter: PromptTargetFilter, ownerId?: string): Promise<PromptRecord[]> {
+    return this.db.listPrompts(filter, ownerId)
   }
 
   async createPrompt(data: CreatePromptRecord, ownerId?: string): Promise<PromptRecord> {

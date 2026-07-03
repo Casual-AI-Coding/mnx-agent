@@ -15,6 +15,12 @@ export const createPromptSchema = z.object({
   sort_order: z.number().int().min(0).optional(),
 })
 
+export const listPromptsQuerySchema = z.object({
+  target_type: promptTargetTypeEnum,
+  target_id: z.string().uuid(),
+  slot_type: promptSlotTypeEnum,
+})
+
 export const updatePromptSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   content: z.string().min(1).optional(),

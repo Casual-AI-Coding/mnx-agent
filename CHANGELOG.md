@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2026-07-03
+
+### ✨ Added
+
+- **Prompt 列表查询 API** — 新增 `GET /api/prompts` 端点，支持按 `target_type`/`target_id`/`slot_type` 筛选并返回排序后的 prompt 列表（`server/routes/prompts.ts`, `server/validation/prompt-schemas.ts`）
+- **前端 listPrompts 集成** — 新增 `listPrompts()` API 函数和 `ListPromptsParams` 类型定义（`src/lib/api/prompts.ts`, `src/types/prompt.ts`）
+- **数据库 listPrompts 委托方法** — MaterialService 和 DatabaseService 新增 `listPrompts` 方法（`server/database/services/material-service.ts`, `server/database/service-async.ts`）
+- **PromptTargetFilter 接口** — 新增领域服务查询过滤接口（`server/services/domain/interfaces/material.interface.ts`）
+
+### 🧪 Tests
+
+- **Prompt 列表路由测试** — 覆盖 target/slot 筛选及排序验证（`server/routes/__tests__/prompts.test.ts`）
+- **前端 API 测试** — 新增 listPrompts 测试覆盖（`src/lib/api/__tests__/prompts.test.ts`）
+
+### Backward Compatibility
+
+- ✅ `GET /api/prompts` 为新增端点，不影响现有 POST/PUT/DELETE 端点
+- ✅ 所有现有 API 端点保持不变
+- ✅ 新增类型和委托方法为内部扩展，不影响现有调用方
+
 ## [2.3.0] - 2026-07-03
 
 ### 🏗️ 重构

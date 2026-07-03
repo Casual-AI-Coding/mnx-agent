@@ -43,6 +43,12 @@ export interface CreatePromptParams {
   sort_order?: number
 }
 
+export interface ListPromptsParams {
+  target_type: PromptTargetType
+  target_id: string
+  slot_type: PromptSlotType
+}
+
 // 更新提示词参数
 export interface UpdatePromptParams {
   name?: string

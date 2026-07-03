@@ -128,6 +128,23 @@ export class MaterialService {
     })
   }
 
+  async listPrompts(
+    filter: {
+      target_type: PromptRecord['target_type']
+      target_id: string
+      slot_type: PromptRecord['slot_type']
+    },
+    ownerId?: string
+  ): Promise<PromptRecord[]> {
+    if (!ownerId) throw new Error('ownerId is required for listPrompts')
+    return this.promptRepo.listByTarget({
+      targetType: filter.target_type,
+      targetId: filter.target_id,
+      slotType: filter.slot_type,
+      ownerId,
+    })
+  }
+
   async updatePrompt(id: string, data: UpdatePromptRecord, ownerId?: string): Promise<PromptRecord | null> {
     if (!ownerId) throw new Error('ownerId is required for updatePrompt')
     return this.promptRepo.update(id, data, ownerId)

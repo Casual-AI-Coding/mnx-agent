@@ -1,12 +1,22 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { createdResponse, deletedResponse, successResponse } from '../middleware/api-response'
-import { validate, validateParams } from '../middleware/validate'
+import { validate, validateParams, validateQuery } from '../middleware/validate'
 import { getMaterialService } from '../service-registration.js'
-import { createPromptSchema, promptIdParamsSchema, reorderPromptsSchema, updatePromptSchema } from '../validation/prompt-schemas.js'
+import { createPromptSchema, listPromptsQuerySchema, promptIdParamsSchema, reorderPromptsSchema, updatePromptSchema } from '../validation/prompt-schemas.js'
 import { withEntityNotFound } from '../utils/index.js'
 
 const router = Router()
+
+router.get('/', validateQuery(listPromptsQuerySchema), asyncHandler(async (req, res) => {
+  const materialService = getMaterialService()
+  const ownerId = req.user?.userId
+  const query = listPromptsQuerySchema.parse(req.query)
+
+  const prompts = await materialService.listPrompts(query, ownerId)
+
+  successResponse(res, prompts)
+}))
 
 router.post('/', validate(createPromptSchema), asyncHandler(async (req, res) => {
   const materialService = getMaterialService()
