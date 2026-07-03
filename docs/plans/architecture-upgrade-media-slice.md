@@ -283,6 +283,26 @@
 - Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-media-save-helpers.test.ts server/routes/__tests__/external-proxy-forward-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
 - Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
 
+## 第十四切片计划：外部代理 URL 安全规则边界收敛
+
+第十三切片已把 external proxy 的异步媒体保存循环从 route 中抽离。当前 `server/routes/external-proxy.ts` 仍内联 SSRF 防护规则：允许域名列表、localhost/loopback 阻断规则、wrapped-dot 子域白名单判断和 URL 解析失败处理。这些是稳定的安全策略，不应与 Express route、任务执行和媒体保存编排混在同一文件中。第十四切片只抽取 URL 安全纯规则，不改变允许域名、阻断域名和错误响应行为。
+
+### 范围
+
+- 新增 `server/routes/external-proxy/external-proxy-url-security-helpers.ts`：
+  - 导出 `EXTERNAL_PROXY_ALLOWED_HOSTS` 与 `isExternalProxyUrlAllowed(urlString)`。
+  - 保持现有规则：阻断 localhost、127.*、0.0.0.0、IPv6 loopback；允许白名单域名及其真实子域；拒绝 wrapped-dot 子域欺骗。
+  - URL 解析失败时返回 false。
+- 新增 `server/routes/__tests__/external-proxy-url-security-helpers.test.ts`，先用 RED 锁定内部地址阻断、白名单放行、子域欺骗拒绝和非法 URL 拒绝契约。
+- 修改 `server/routes/external-proxy.ts`：`isUrlAllowed()` 只委托 helper，route 文件不再保存 URL 安全策略细节。
+
+### 验证
+
+- RED：先运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy-url-security-helpers.test.ts`，预期 helper 模块不存在或函数未导出失败。
+- GREEN：实现 helper 并改 route 后，运行新增 helper 测试与既有 `server/routes/__tests__/external-proxy.test.ts`。
+- Regression：运行 `rtk npm run test:server -- server/routes/__tests__/external-proxy.test.ts server/routes/__tests__/external-proxy-url-security-helpers.test.ts server/routes/__tests__/external-proxy-media-save-helpers.test.ts server/routes/__tests__/external-proxy-forward-helpers.test.ts server/routes/__tests__/external-proxy-request-helpers.test.ts server/routes/__tests__/external-proxy-media-helpers.test.ts server/routes/__tests__/external-proxy-response-helpers.test.ts server/routes/__tests__/media.test.ts server/routes/__tests__/media-route-helpers.test.ts server/routes/__tests__/media-download-helpers.test.ts server/routes/__tests__/media-batch-helpers.test.ts server/services/domain/media.service.test.ts server/repositories/__tests__/media-repository.test.ts server/repositories/__tests__/media-repository-helpers.test.ts`。
+- Build：运行 `rtk npm run build`，确保后端类型与前端构建一起通过。
+
 ## 第八切片计划：后端媒体批量删除校验边界收敛
 
 第七切片把批量公开与批量下载的纯决策抽出后，`server/routes/media.ts` 的批量删除 handler 仍内联“请求 ID 与可访问记录完整性校验”“已删除记录校验”“错误消息构造”等纯规则。该 handler 还需要保留文件删除副作用与数据库软删除编排，因此第八切片只抽取批量删除前置校验，不改变文件删除、日志记录和 `softDeleteBatch()` 行为。
