@@ -75,8 +75,27 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
   category VARCHAR(20) CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
   variables JSONB,
   is_builtin BOOLEAN DEFAULT false,
+  owner_id VARCHAR(36) REFERENCES users(id),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Prompt template versions (depends on prompt_templates and users)
+CREATE TABLE IF NOT EXISTS prompt_template_versions (
+  id TEXT PRIMARY KEY,
+  template_id VARCHAR(36) NOT NULL REFERENCES prompt_templates(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  content TEXT NOT NULL,
+  category VARCHAR(20) CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
+  variables JSONB,
+  change_summary TEXT,
+  created_by VARCHAR(36) REFERENCES users(id),
+  owner_id VARCHAR(36) REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  UNIQUE(template_id, version_number)
 );
 
 -- Materials (depends on users)

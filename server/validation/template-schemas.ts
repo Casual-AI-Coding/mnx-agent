@@ -19,6 +19,20 @@ export const templateIdParamsSchema = z.object({
   id: z.string().min(1),
 })
 
+export const templateVersionParamsSchema = z.object({
+  id: z.string().min(1),
+  versionId: z.string().min(1),
+})
+
+export const compareTemplateVersionsQuerySchema = z.object({
+  from: z.coerce.number().int().min(1),
+  to: z.coerce.number().int().min(1),
+})
+
+export const createTemplateVersionSchema = z.object({
+  change_summary: z.string().max(1000).optional().nullable(),
+})
+
 export const createTemplateSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),

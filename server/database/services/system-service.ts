@@ -1,7 +1,9 @@
 import type {
   CapacityRecord,
-  CreatePromptTemplate,
-  CreateSystemConfig,
+	  CreatePromptTemplate,
+	  PromptTemplateVersion,
+	  PromptTemplateVersionDiff,
+	  CreateSystemConfig,
   CreateWebhookConfig,
   CreateWebhookDelivery,
   PromptTemplate,
@@ -83,9 +85,30 @@ export class SystemService {
     return this.promptTemplateRepo.update(id, data, ownerId)
   }
 
-  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> {
-    return this.promptTemplateRepo.delete(id, ownerId)
-  }
+	  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> {
+	    return this.promptTemplateRepo.delete(id, ownerId)
+	  }
+
+	  async createPromptTemplateVersion(templateId: string, ownerId: string, changeSummary?: string | null): Promise<PromptTemplateVersion> {
+	    return this.promptTemplateRepo.createVersion(templateId, ownerId, changeSummary)
+	  }
+
+	  async getPromptTemplateVersions(templateId: string, ownerId: string): Promise<PromptTemplateVersion[]> {
+	    return this.promptTemplateRepo.getVersionsByTemplate(templateId, ownerId)
+	  }
+
+	  async comparePromptTemplateVersions(
+	    templateId: string,
+	    fromVersion: number,
+	    toVersion: number,
+	    ownerId: string
+	  ): Promise<PromptTemplateVersionDiff[]> {
+	    return this.promptTemplateRepo.compareVersions(templateId, fromVersion, toVersion, ownerId)
+	  }
+
+	  async rollbackPromptTemplateVersion(templateId: string, versionId: string, ownerId: string): Promise<PromptTemplate | null> {
+	    return this.promptTemplateRepo.updateFromVersion(templateId, versionId, ownerId)
+	  }
 
   async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
     return this.webhookRepo.createConfig(data, ownerId)

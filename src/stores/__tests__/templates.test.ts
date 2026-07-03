@@ -1,6 +1,6 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useTemplatesStore, createTemplateStore } from '../templates'
-import type { PromptTemplate, CreateTemplateData } from '@/lib/api/templates'
+import type { PromptTemplate, CreateTemplateData, PromptTemplateVersion, PromptTemplateVersionDiff } from '@/lib/api/templates'
 
 vi.mock('@/lib/api/templates', () => ({
   listTemplates: vi.fn(),
@@ -8,6 +8,10 @@ vi.mock('@/lib/api/templates', () => ({
   createTemplate: vi.fn(),
   updateTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
+  listTemplateVersions: vi.fn(),
+  createTemplateVersion: vi.fn(),
+  compareTemplateVersions: vi.fn(),
+  rollbackTemplateVersion: vi.fn(),
 }))
 
 import {
@@ -16,6 +20,10 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  listTemplateVersions,
+  createTemplateVersion,
+  compareTemplateVersions,
+  rollbackTemplateVersion,
 } from '@/lib/api/templates'
 
 const mockTemplate: PromptTemplate = {
@@ -32,13 +40,42 @@ const mockTemplate: PromptTemplate = {
   updated_at: '2024-01-01T00:00:00Z',
 }
 
+const mockVersion: PromptTemplateVersion = {
+  id: 'ptv-1',
+  template_id: 'template-1',
+  version_number: 1,
+  name: 'Test Template',
+  description: 'Test description',
+  content: 'Hello {{name}}!',
+  category: 'text',
+  variables: [
+    { name: 'name', description: 'The name to greet', required: true },
+  ],
+  change_summary: 'Initial version',
+  created_by: 'owner-1',
+  owner_id: 'owner-1',
+  created_at: '2024-01-01T00:00:00Z',
+  is_active: true,
+}
+
+const mockDiffs: PromptTemplateVersionDiff[] = [
+  {
+    field: 'content',
+    from: 'Hello {{name}}!',
+    to: 'Hi {{name}}!',
+  },
+]
+
 describe('useTemplatesStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useTemplatesStore.setState({
       templates: [],
       currentTemplate: null,
+      versions: [],
+      versionDiffs: [],
       isLoading: false,
+      isVersionLoading: false,
       error: null,
     })
   })
@@ -419,6 +456,66 @@ describe('useTemplatesStore', () => {
         result.current.clearError()
       })
       expect(result.current.error).toBeNull()
+    })
+  })
+
+  describe('version management', () => {
+    it('should fetch template versions from API', async () => {
+      vi.mocked(listTemplateVersions).mockResolvedValue({
+        success: true,
+        data: { versions: [mockVersion] },
+      })
+
+      const { result } = renderHook(() => useTemplatesStore())
+      await result.current.fetchTemplateVersions('template-1')
+
+      expect(listTemplateVersions).toHaveBeenCalledWith('template-1')
+      expect(result.current.versions).toEqual([mockVersion])
+      expect(result.current.isVersionLoading).toBe(false)
+      expect(result.current.error).toBeNull()
+    })
+
+    it('should create template version and prepend it to versions', async () => {
+      vi.mocked(createTemplateVersion).mockResolvedValue({
+        success: true,
+        data: mockVersion,
+      })
+
+      const { result } = renderHook(() => useTemplatesStore())
+      const success = await result.current.createTemplateVersion('template-1', 'Initial version')
+
+      expect(createTemplateVersion).toHaveBeenCalledWith('template-1', { change_summary: 'Initial version' })
+      expect(success).toBe(true)
+      expect(result.current.versions).toEqual([mockVersion])
+    })
+
+    it('should compare template versions and store diffs', async () => {
+      vi.mocked(compareTemplateVersions).mockResolvedValue({
+        success: true,
+        data: { diffs: mockDiffs },
+      })
+
+      const { result } = renderHook(() => useTemplatesStore())
+      await result.current.compareTemplateVersions('template-1', 1, 2)
+
+      expect(compareTemplateVersions).toHaveBeenCalledWith('template-1', 1, 2)
+      expect(result.current.versionDiffs).toEqual(mockDiffs)
+    })
+
+    it('should rollback template version and update current template snapshot', async () => {
+      useTemplatesStore.setState({ templates: [{ ...mockTemplate, name: 'Changed' }], currentTemplate: { ...mockTemplate, name: 'Changed' } })
+      vi.mocked(rollbackTemplateVersion).mockResolvedValue({
+        success: true,
+        data: mockTemplate,
+      })
+
+      const { result } = renderHook(() => useTemplatesStore())
+      const success = await result.current.rollbackTemplateVersion('template-1', 'ptv-1')
+
+      expect(rollbackTemplateVersion).toHaveBeenCalledWith('template-1', 'ptv-1')
+      expect(success).toBe(true)
+      expect(result.current.currentTemplate).toEqual(mockTemplate)
+      expect(result.current.templates[0]).toEqual(mockTemplate)
     })
   })
 })

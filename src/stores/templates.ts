@@ -1,144 +1,168 @@
 import { create } from 'zustand'
-import type { PromptTemplate, TemplateCategory, CreateTemplateData, UpdateTemplateData } from '@/lib/api/templates'
-import { listTemplates, getTemplate, createTemplate, updateTemplate, deleteTemplate } from '@/lib/api/templates'
+import type { TemplateStoreState } from './template-store-factory'
+export { createTemplateStore } from './template-store-factory'
+export type { TemplateStoreState, TemplateStoreConfig } from './template-store-factory'
+import type {
+  PromptTemplate,
+  TemplateCategory,
+  CreateTemplateData,
+  UpdateTemplateData,
+  PromptTemplateVersion,
+  PromptTemplateVersionDiff,
+} from '@/lib/api/templates'
+import {
+  listTemplates,
+  getTemplate,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  listTemplateVersions,
+  createTemplateVersion,
+  compareTemplateVersions,
+  rollbackTemplateVersion,
+} from '@/lib/api/templates'
 
-export type { PromptTemplate, TemplateCategory, CreateTemplateData, UpdateTemplateData }
+export type { PromptTemplate, TemplateCategory, CreateTemplateData, UpdateTemplateData, PromptTemplateVersion, PromptTemplateVersionDiff }
 
-// ===========================
-// Generic Template Store Factory
-// ===========================
-
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
+export interface PromptTemplateStoreState extends TemplateStoreState<PromptTemplate> {
+  versions: PromptTemplateVersion[]
+  versionDiffs: PromptTemplateVersionDiff[]
+  isVersionLoading: boolean
+  fetchTemplateVersions: (id: string) => Promise<void>
+  createTemplateVersion: (id: string, changeSummary?: string | null) => Promise<boolean>
+  compareTemplateVersions: (id: string, from: number, to: number) => Promise<void>
+  rollbackTemplateVersion: (id: string, versionId: string) => Promise<boolean>
 }
 
-export interface TemplateStoreState<T> {
-  templates: T[]
-  currentTemplate: T | null
-  isLoading: boolean
-  error: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fetchTemplates: (params?: any) => Promise<void>
-  fetchTemplate: (id: string) => Promise<void>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  addTemplate: (data: any) => Promise<boolean>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  editTemplate: (id: string, data: any) => Promise<boolean>
-  removeTemplate: (id: string) => Promise<boolean>
-  setCurrentTemplate: (template: T | null) => void
-  clearError: () => void
-}
+export const useTemplatesStore = create<PromptTemplateStoreState>((set) => ({
+  templates: [],
+  currentTemplate: null,
+  versions: [],
+  versionDiffs: [],
+  isLoading: false,
+  isVersionLoading: false,
+  error: null,
 
-export interface TemplateStoreConfig<T> {
-  name: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  listApi: (params?: any) => Promise<ApiResponse<Record<string, unknown>>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getApi: (id: string) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  createApi: (data: any) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  updateApi: (id: string, data: any) => Promise<ApiResponse<T>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deleteApi: (id: string) => Promise<ApiResponse<{ deleted: boolean }>>
-  listKey?: string
-}
-
-export function createTemplateStore<T>(config: TemplateStoreConfig<T>) {
-  return create<TemplateStoreState<T>>((set) => ({
-    templates: [],
-    currentTemplate: null,
-    isLoading: false,
-    error: null,
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchTemplates: async (params: any) => {
-      set({ isLoading: true, error: null })
-      const result = await config.listApi(params)
-      if (result.success && result.data) {
-        const key = config.listKey || 'templates'
-        const items = result.data[key] as T[]
-        if (items) {
-          set({ templates: items, isLoading: false })
-        } else {
-          set({ error: `Invalid response format from ${config.name} API`, isLoading: false })
-        }
-      } else {
-        set({ error: result.error || `Failed to fetch ${config.name}`, isLoading: false })
+  fetchTemplates: async (params?: Parameters<typeof listTemplates>[0]) => {
+    set({ isLoading: true, error: null })
+    const result = await listTemplates(params)
+    if (result.success && result.data) {
+      if (Array.isArray(result.data.templates)) {
+        set({ templates: result.data.templates, isLoading: false })
+        return
       }
-    },
-
-    fetchTemplate: async (id) => {
-      set({ isLoading: true, error: null })
-      const result = await config.getApi(id)
-      if (result.success && result.data) {
-        set({ currentTemplate: result.data, isLoading: false })
-      } else {
-        set({ error: result.error || `Failed to fetch ${config.name}`, isLoading: false })
-      }
-    },
-
-    addTemplate: async (data) => {
-      set({ isLoading: true, error: null })
-      const result = await config.createApi(data)
-      if (result.success && result.data) {
-        set(state => ({
-          templates: [result.data!, ...state.templates],
-          isLoading: false
-        }))
-        return true
-      }
-      set({ error: result.error || `Failed to create ${config.name}`, isLoading: false })
-      return false
-    },
-
-    editTemplate: async (id, data) => {
-      set({ isLoading: true, error: null })
-      const result = await config.updateApi(id, data)
-      if (result.success && result.data) {
-        set(state => ({
-          templates: state.templates.map(t => (t as { id: string }).id === id ? result.data! : t),
-          currentTemplate: (state.currentTemplate as { id: string } | null)?.id === id ? result.data! : state.currentTemplate,
-          isLoading: false
-        }))
-        return true
-      }
-      set({ error: result.error || `Failed to update ${config.name}`, isLoading: false })
-      return false
-    },
-
-    removeTemplate: async (id) => {
-      set({ isLoading: true, error: null })
-      const result = await config.deleteApi(id)
-      if (result.success) {
-        set(state => ({
-          templates: state.templates.filter(t => (t as { id: string }).id !== id),
-          currentTemplate: (state.currentTemplate as { id: string } | null)?.id === id ? null : state.currentTemplate,
-          isLoading: false
-        }))
-        return true
-      }
-      set({ error: result.error || `Failed to delete ${config.name}`, isLoading: false })
-      return false
-    },
-
-    setCurrentTemplate: (template) => {
-      set({ currentTemplate: template })
-    },
-
-    clearError: () => {
-      set({ error: null })
+      set({ error: 'Invalid response format from prompt-templates API', isLoading: false })
+      return
     }
-  }))
-}
+    set({ error: result.error || 'Failed to fetch prompt-templates', isLoading: false })
+  },
 
-export const useTemplatesStore = createTemplateStore<PromptTemplate>({
-  name: 'prompt-templates',
-  listApi: (params) => listTemplates(params as Parameters<typeof listTemplates>[0]),
-  getApi: getTemplate,
-  createApi: createTemplate,
-  updateApi: updateTemplate,
-  deleteApi: deleteTemplate,
-})
+  fetchTemplate: async (id) => {
+    set({ isLoading: true, error: null })
+    const result = await getTemplate(id)
+    if (result.success && result.data) {
+      set({ currentTemplate: result.data, isLoading: false })
+      return
+    }
+    set({ error: result.error || 'Failed to fetch prompt-templates', isLoading: false })
+  },
+
+  addTemplate: async (data: CreateTemplateData) => {
+    set({ isLoading: true, error: null })
+    const result = await createTemplate(data)
+    if (result.success && result.data) {
+      const createdTemplate = result.data
+      set(state => ({ templates: [createdTemplate, ...state.templates], isLoading: false }))
+      return true
+    }
+    set({ error: result.error || 'Failed to create prompt-templates', isLoading: false })
+    return false
+  },
+
+  editTemplate: async (id, data: UpdateTemplateData) => {
+    set({ isLoading: true, error: null })
+    const result = await updateTemplate(id, data)
+    if (result.success && result.data) {
+      const updatedTemplate = result.data
+      set(state => ({
+        templates: state.templates.map(template => template.id === id ? updatedTemplate : template),
+        currentTemplate: state.currentTemplate?.id === id ? updatedTemplate : state.currentTemplate,
+        isLoading: false,
+      }))
+      return true
+    }
+    set({ error: result.error || 'Failed to update prompt-templates', isLoading: false })
+    return false
+  },
+
+  removeTemplate: async (id) => {
+    set({ isLoading: true, error: null })
+    const result = await deleteTemplate(id)
+    if (result.success) {
+      set(state => ({
+        templates: state.templates.filter(template => template.id !== id),
+        currentTemplate: state.currentTemplate?.id === id ? null : state.currentTemplate,
+        isLoading: false,
+      }))
+      return true
+    }
+    set({ error: result.error || 'Failed to delete prompt-templates', isLoading: false })
+    return false
+  },
+
+  setCurrentTemplate: (template) => {
+    set({ currentTemplate: template })
+  },
+
+  clearError: () => {
+    set({ error: null })
+  },
+
+  fetchTemplateVersions: async (id) => {
+    set({ isVersionLoading: true, error: null })
+    const result = await listTemplateVersions(id)
+    if (result.success && result.data) {
+      set({ versions: result.data.versions, isVersionLoading: false })
+      return
+    }
+    set({ error: result.error || 'Failed to fetch template versions', isVersionLoading: false })
+  },
+
+  createTemplateVersion: async (id, changeSummary) => {
+    set({ isVersionLoading: true, error: null })
+    const result = await createTemplateVersion(id, { change_summary: changeSummary })
+    if (result.success && result.data) {
+      const createdVersion = result.data
+      set(state => ({ versions: [createdVersion, ...state.versions], isVersionLoading: false }))
+      return true
+    }
+    set({ error: result.error || 'Failed to create template version', isVersionLoading: false })
+    return false
+  },
+
+  compareTemplateVersions: async (id, from, to) => {
+    set({ isVersionLoading: true, error: null })
+    const result = await compareTemplateVersions(id, from, to)
+    if (result.success && result.data) {
+      set({ versionDiffs: result.data.diffs, isVersionLoading: false })
+      return
+    }
+    set({ error: result.error || 'Failed to compare template versions', isVersionLoading: false })
+  },
+
+  rollbackTemplateVersion: async (id, versionId) => {
+    set({ isVersionLoading: true, error: null })
+    const result = await rollbackTemplateVersion(id, versionId)
+    if (result.success && result.data) {
+      const rolledBackTemplate = result.data
+      set(state => ({
+        templates: state.templates.map(template => template.id === id ? rolledBackTemplate : template),
+        currentTemplate: state.currentTemplate?.id === id ? rolledBackTemplate : state.currentTemplate,
+        isVersionLoading: false,
+      }))
+      return true
+    }
+    set({ error: result.error || 'Failed to rollback template version', isVersionLoading: false })
+    return false
+  },
+}))

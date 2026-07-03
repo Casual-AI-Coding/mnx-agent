@@ -162,11 +162,29 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_prompt_templates_category ON prompt_templates(category);
-CREATE INDEX IF NOT EXISTS idx_prompt_templates_is_builtin ON prompt_templates(is_builtin);
-CREATE INDEX IF NOT EXISTS idx_prompt_templates_created_at ON prompt_templates(created_at DESC);
-    `,
-  },
+	CREATE INDEX IF NOT EXISTS idx_prompt_templates_category ON prompt_templates(category);
+	CREATE INDEX IF NOT EXISTS idx_prompt_templates_is_builtin ON prompt_templates(is_builtin);
+	CREATE INDEX IF NOT EXISTS idx_prompt_templates_created_at ON prompt_templates(created_at DESC);
+	CREATE TABLE IF NOT EXISTS prompt_template_versions (
+	  id TEXT PRIMARY KEY,
+	  template_id VARCHAR(36) NOT NULL REFERENCES prompt_templates(id) ON DELETE CASCADE,
+	  version_number INTEGER NOT NULL,
+	  name VARCHAR(255) NOT NULL,
+	  description TEXT,
+	  content TEXT NOT NULL,
+	  category VARCHAR(20),
+	  variables JSONB,
+	  change_summary TEXT,
+	  created_by VARCHAR(36),
+	  owner_id VARCHAR(36),
+	  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  is_active BOOLEAN DEFAULT true,
+	  UNIQUE(template_id, version_number)
+	);
+	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_template ON prompt_template_versions(template_id, version_number DESC);
+	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_owner ON prompt_template_versions(owner_id);
+	    `,
+	  },
   {
     id: 7,
     name: 'migration_007_audit_logs',
@@ -545,10 +563,36 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner
   migration_030,
   migration_031,
   migration_032,
-  migration_033,
-  migration_034,
-  migration_035,
-]
+	  migration_033,
+	  migration_034,
+	  migration_035,
+	  {
+	    id: 36,
+	    name: 'migration_036_prompt_template_versions',
+	    sql: `
+	CREATE TABLE IF NOT EXISTS prompt_template_versions (
+	  id TEXT PRIMARY KEY,
+	  template_id VARCHAR(36) NOT NULL REFERENCES prompt_templates(id) ON DELETE CASCADE,
+	  version_number INTEGER NOT NULL,
+	  name VARCHAR(255) NOT NULL,
+	  description TEXT,
+	  content TEXT NOT NULL,
+	  category VARCHAR(20) CHECK(category IN ('text', 'image', 'music', 'video', 'general')),
+	  variables JSONB,
+	  change_summary TEXT,
+	  created_by VARCHAR(36) REFERENCES users(id),
+	  owner_id VARCHAR(36) REFERENCES users(id),
+	  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	  is_active BOOLEAN DEFAULT true,
+	  UNIQUE(template_id, version_number)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_template ON prompt_template_versions(template_id, version_number DESC);
+	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_owner ON prompt_template_versions(owner_id);
+	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_active ON prompt_template_versions(template_id, is_active);
+	    `,
+	  },
+	]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
   try {

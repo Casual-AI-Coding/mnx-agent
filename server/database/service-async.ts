@@ -14,8 +14,10 @@ import type {
   CreateMaterialItem,
   CreateMediaRecord,
   CreatePromptRecord,
-  CreatePromptTemplate,
-  CreateSystemConfig,
+	  CreatePromptTemplate,
+	  PromptTemplateVersion,
+	  PromptTemplateVersionDiff,
+	  CreateSystemConfig,
   CreateTaskQueueItem,
   CreateWebhookConfig,
   CreateWebhookDelivery,
@@ -430,9 +432,13 @@ export class DatabaseService {
   async getPromptTemplates(options: { category?: string; limit: number; offset: number; ownerId?: string }): Promise<{ templates: PromptTemplate[]; total: number }> { return this.systemService.getPromptTemplates(options) }
   async getPromptTemplateById(id: string, ownerId?: string): Promise<PromptTemplate | null> { return this.systemService.getPromptTemplateById(id, ownerId) }
   async createPromptTemplate(data: CreatePromptTemplate, ownerId?: string): Promise<PromptTemplate> { return this.systemService.createPromptTemplate(data, ownerId) }
-  async updatePromptTemplate(id: string, data: UpdatePromptTemplate, ownerId?: string): Promise<PromptTemplate | null> { return this.systemService.updatePromptTemplate(id, data, ownerId) }
-  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> { return this.systemService.deletePromptTemplate(id, ownerId) }
-  async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> { return this.systemService.createWebhookConfig(data, ownerId) }
+	  async updatePromptTemplate(id: string, data: UpdatePromptTemplate, ownerId?: string): Promise<PromptTemplate | null> { return this.systemService.updatePromptTemplate(id, data, ownerId) }
+	  async deletePromptTemplate(id: string, ownerId?: string): Promise<boolean> { return this.systemService.deletePromptTemplate(id, ownerId) }
+	  async createPromptTemplateVersion(templateId: string, ownerId: string, changeSummary?: string | null): Promise<PromptTemplateVersion> { return this.systemService.createPromptTemplateVersion(templateId, ownerId, changeSummary) }
+	  async getPromptTemplateVersions(templateId: string, ownerId: string): Promise<PromptTemplateVersion[]> { return this.systemService.getPromptTemplateVersions(templateId, ownerId) }
+	  async comparePromptTemplateVersions(templateId: string, fromVersion: number, toVersion: number, ownerId: string): Promise<PromptTemplateVersionDiff[]> { return this.systemService.comparePromptTemplateVersions(templateId, fromVersion, toVersion, ownerId) }
+	  async rollbackPromptTemplateVersion(templateId: string, versionId: string, ownerId: string): Promise<PromptTemplate | null> { return this.systemService.rollbackPromptTemplateVersion(templateId, versionId, ownerId) }
+	  async createWebhookConfig(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> { return this.systemService.createWebhookConfig(data, ownerId) }
   async getWebhookConfigById(id: string, ownerId?: string): Promise<WebhookConfig | null> { return this.systemService.getWebhookConfigById(id, ownerId) }
   async getWebhookConfigsByJobId(jobId: string): Promise<WebhookConfig[]> { return this.systemService.getWebhookConfigsByJobId(jobId) }
   async getWebhookConfigsByOwner(ownerId: string): Promise<WebhookConfig[]> { return this.systemService.getWebhookConfigsByOwner(ownerId) }

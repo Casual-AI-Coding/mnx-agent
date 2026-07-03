@@ -1,10 +1,13 @@
 import { Router } from 'express'
 import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getWorkflowService } from '../service-registration.js'
+import { getDatabaseService } from '../service-registration.js'
 import {
+  compareTemplateVersionsQuerySchema,
+  createTemplateVersionSchema,
   listTemplatesQuerySchema,
   templateIdParamsSchema,
+  templateVersionParamsSchema,
   createTemplateSchema,
   updateTemplateSchema,
 } from '../validation/template-schemas'
@@ -19,11 +22,16 @@ import {
 const router = Router()
 
 router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req, res) => {
-  const { page, limit } = getPaginationParams(req.query)
+  const { page, limit, offset } = getPaginationParams(req.query)
   const ownerId = getOwnerId(req)
 
-  const workflowService = getWorkflowService()
-  const result = await workflowService.getPaginated(page, limit, ownerId)
+  const db = getDatabaseService()
+  const result = await db.getPromptTemplates({
+    category: req.query.category as string | undefined,
+    limit,
+    offset,
+    ownerId,
+  })
 
   successResponse(res, {
     templates: result.templates,
@@ -32,35 +40,92 @@ router.get('/', validateQuery(listTemplatesQuerySchema), asyncHandler(async (req
 }))
 
 router.get('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
-  const workflowService = getWorkflowService()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
-  const template = await workflowService.getById(req.params.id, ownerId)
+  const template = await db.getPromptTemplateById(req.params.id, ownerId)
   if (!withEntityNotFound(template, res, 'Template')) return
   successResponse(res, template)
 }))
 
+router.get('/:id/versions', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
+  const ownerId = req.user!.userId
+  const db = getDatabaseService()
+  const template = await db.getPromptTemplateById(req.params.id, ownerId)
+  if (!withEntityNotFound(template, res, 'Template')) return
+
+  const versions = await db.getPromptTemplateVersions(req.params.id, ownerId)
+  successResponse(res, { versions })
+}))
+
+router.get(
+  '/:id/versions/compare',
+  validateParams(templateIdParamsSchema),
+  validateQuery(compareTemplateVersionsQuerySchema),
+  asyncHandler(async (req, res) => {
+    const ownerId = req.user!.userId
+    const db = getDatabaseService()
+    const template = await db.getPromptTemplateById(req.params.id, ownerId)
+    if (!withEntityNotFound(template, res, 'Template')) return
+
+    const diffs = await db.comparePromptTemplateVersions(
+      req.params.id,
+      Number(req.query.from),
+      Number(req.query.to),
+      ownerId
+    )
+    successResponse(res, { diffs })
+  })
+)
+
+router.post(
+  '/:id/versions',
+  validateParams(templateIdParamsSchema),
+  validate(createTemplateVersionSchema),
+  asyncHandler(async (req, res) => {
+    const ownerId = req.user!.userId
+    const db = getDatabaseService()
+    const template = await db.getPromptTemplateById(req.params.id, ownerId)
+    if (!withEntityNotFound(template, res, 'Template')) return
+
+    const version = await db.createPromptTemplateVersion(req.params.id, ownerId, req.body.change_summary ?? null)
+    createdResponse(res, version)
+  })
+)
+
+router.post('/:id/versions/:versionId/rollback', validateParams(templateVersionParamsSchema), asyncHandler(async (req, res) => {
+  const ownerId = req.user!.userId
+  const db = getDatabaseService()
+  const template = await db.rollbackPromptTemplateVersion(req.params.id, req.params.versionId, ownerId)
+  if (!withEntityNotFound(template, res, 'Template version')) return
+  successResponse(res, template)
+}))
+
 router.post('/', validate(createTemplateSchema), asyncHandler(async (req, res) => {
-  const workflowService = getWorkflowService()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
-  const template = await workflowService.create(req.body, ownerId)
+  const template = await db.createPromptTemplate(req.body, ownerId)
   createdResponse(res, template)
 }))
 
 router.put('/:id', validateParams(templateIdParamsSchema), validate(updateTemplateSchema), asyncHandler(async (req, res) => {
-  const workflowService = getWorkflowService()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
-  const template = await workflowService.update(req.params.id, req.body, ownerId)
+  const template = await db.updatePromptTemplate(req.params.id, req.body, ownerId)
   if (!withEntityNotFound(template, res, 'Template')) return
   successResponse(res, template)
 }))
 
 router.delete('/:id', validateParams(templateIdParamsSchema), asyncHandler(async (req, res) => {
-  const workflowService = getWorkflowService()
+  const db = getDatabaseService()
   const ownerId = getOwnerId(req)
   try {
-    await workflowService.delete(req.params.id, ownerId)
+    const deleted = await db.deletePromptTemplate(req.params.id, ownerId)
+    if (!deleted) {
+      errorResponse(res, 'Template not found', 404)
+      return
+    }
     deletedResponse(res)
-  } catch (error) {
+  } catch {
     errorResponse(res, 'Template not found', 404)
   }
 }))

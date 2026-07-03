@@ -144,6 +144,10 @@ export type {
   TemplateVariable,
   PromptTemplate,
   PromptTemplateRow,
+  PromptTemplateVersion,
+  PromptTemplateVersionRow,
+  CreatePromptTemplateVersion,
+  PromptTemplateVersionDiff,
   CreatePromptTemplate,
   UpdatePromptTemplate,
 } from '@mnx/shared-types/entities'

@@ -1,46 +1,41 @@
 import { useEffect, useState, useRef } from 'react'
+import { TemplateCard } from '@/components/templates/TemplateCard'
 import { CreateTemplateModal } from '@/components/templates/CreateTemplateModal'
-import { motion } from 'framer-motion'
+import { TemplateVersionDialog } from '@/components/templates/TemplateVersionDialog'
 import { useTranslation } from 'react-i18next'
-import { Plus, Search, FileText, Image, Music, Video, FolderOpen, Edit3, Trash2, Copy } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Plus, Search, FileText } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
-import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useTemplatesStore } from '@/stores/templates'
 import { useAuthStore } from '@/stores/auth'
 import type { PromptTemplate, TemplateCategory } from '@/lib/api/templates'
 import { toastSuccess, toastError } from '@/lib/toast'
-import { cn } from '@/lib/utils'
-import { services } from '@/themes/tokens'
-
-const CATEGORY_ICONS: Record<TemplateCategory, typeof FileText> = {
-  text: FileText,
-  image: Image,
-  music: Music,
-  video: Video,
-  general: FolderOpen,
-}
-
-const CATEGORY_COLORS: Record<TemplateCategory, string> = {
-  text: cn(services.text.bg, services.text.text),
-  image: cn(services.image.bg, services.image.text),
-  music: cn(services.music.bg, services.music.text),
-  video: cn(services.video.bg, services.video.text),
-  general: 'bg-muted/10 text-muted-foreground',
-}
 
 export default function TemplateLibrary() {
   const { t } = useTranslation()
-  const { templates, isLoading, fetchTemplates, removeTemplate } = useTemplatesStore()
+  const {
+    templates,
+    versions,
+    versionDiffs,
+    isLoading,
+    isVersionLoading,
+    fetchTemplates,
+    fetchTemplateVersions,
+    createTemplateVersion,
+    compareTemplateVersions,
+    rollbackTemplateVersion,
+    removeTemplate,
+  } = useTemplatesStore()
   const { isHydrated } = useAuthStore()
   const hasInitializedRef = useRef(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all')
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [versionTemplate, setVersionTemplate] = useState<PromptTemplate | null>(null)
 
   useEffect(() => {
     if (!isHydrated || hasInitializedRef.current) return
@@ -72,6 +67,27 @@ export default function TemplateLibrary() {
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content)
     toastSuccess('已复制', '模板内容已复制到剪贴板')
+  }
+
+  const openVersionDialog = (template: PromptTemplate) => {
+    setVersionTemplate(template)
+    fetchTemplateVersions(template.id)
+  }
+
+  const handleCreateVersion = async (templateId: string, changeSummary: string | null) => {
+    const success = await createTemplateVersion(templateId, changeSummary)
+    if (success) {
+      await fetchTemplateVersions(templateId)
+    }
+    return success
+  }
+
+  const handleRollbackVersion = async (templateId: string, versionId: string) => {
+    const success = await rollbackTemplateVersion(templateId, versionId)
+    if (success) {
+      await fetchTemplateVersions(templateId)
+    }
+    return success
   }
 
   const categories: (TemplateCategory | 'all')[] = ['all', 'text', 'image', 'music', 'video', 'general']
@@ -135,7 +151,7 @@ export default function TemplateLibrary() {
               key={template.id}
               template={template}
               onCopy={handleCopy}
-              onDelete={handleDelete}
+              onManageVersions={openVersionDialog}
               openDeleteConfirm={openDeleteConfirm}
             />
           ))}
@@ -162,76 +178,18 @@ export default function TemplateLibrary() {
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      <TemplateVersionDialog
+        open={versionTemplate !== null}
+        template={versionTemplate}
+        versions={versions}
+        diffs={versionDiffs}
+        isLoading={isVersionLoading}
+        onClose={() => setVersionTemplate(null)}
+        onCreateVersion={handleCreateVersion}
+        onCompareVersions={compareTemplateVersions}
+        onRollbackVersion={handleRollbackVersion}
+      />
     </div>
-  )
-}
-
-function TemplateCard({
-  template,
-  onCopy,
-  onDelete,
-  openDeleteConfirm,
-}: {
-  template: PromptTemplate
-  onCopy: (content: string) => void
-  onDelete: () => void
-  openDeleteConfirm: (id: string, name: string) => void
-}) {
-  const Icon = CATEGORY_ICONS[template.category] || FileText
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card className="border-border hover:border-border transition-colors">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <div className={cn('p-2 rounded-lg', CATEGORY_COLORS[template.category])}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div>
-                <CardTitle className="text-base">{template.name}</CardTitle>
-                {template.is_builtin && (
-                  <Badge variant="secondary" className="text-xs mt-1">内置</Badge>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={() => onCopy(template.content)}>
-                <Copy className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Edit3 className="w-4 h-4" />
-              </Button>
-              {!template.is_builtin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => openDeleteConfirm(template.id, template.name)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground/70 text-sm line-clamp-2">{template.description || template.content.slice(0, 100)}</p>
-          {template.variables && template.variables.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
-              {template.variables.map((v) => (
-                <Badge key={v.name} variant="outline" className="text-xs">
-                  {`{{${v.name}}}`}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
   )
 }

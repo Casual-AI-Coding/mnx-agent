@@ -484,6 +484,170 @@ describe('PromptTemplateRepository', () => {
     })
   })
 
+  describe('version management', () => {
+    const templateRow = {
+      id: 'template-1',
+      name: 'Original prompt',
+      description: 'Original description',
+      content: 'Hello {{name}}',
+      category: 'general',
+      variables: JSON.stringify([{ name: 'name', required: true }]),
+      is_builtin: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-02T00:00:00Z',
+      owner_id: 'owner-1',
+    }
+
+    const versionOneRow = {
+      id: 'ptv-1',
+      template_id: 'template-1',
+      version_number: 1,
+      name: 'Original prompt',
+      description: 'Original description',
+      content: 'Hello {{name}}',
+      category: 'general',
+      variables: JSON.stringify([{ name: 'name', required: true }]),
+      change_summary: 'Initial version',
+      created_by: 'owner-1',
+      owner_id: 'owner-1',
+      created_at: '2026-01-03T00:00:00Z',
+      is_active: false,
+    }
+
+    const versionTwoRow = {
+      ...versionOneRow,
+      id: 'ptv-2',
+      version_number: 2,
+      name: 'Updated prompt',
+      description: 'Updated description',
+      content: 'Hi {{name}}',
+      variables: JSON.stringify([{ name: 'name', required: false }]),
+      change_summary: 'Updated greeting',
+      created_at: '2026-01-04T00:00:00Z',
+      is_active: true,
+    }
+
+    it('should create version with next version number from current template snapshot', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ max: 1 }])
+        .mockResolvedValueOnce([templateRow])
+        .mockResolvedValueOnce([versionTwoRow])
+
+      vi.mocked(mockDb.execute)
+        .mockResolvedValueOnce({ changes: 1 })
+        .mockResolvedValueOnce({ changes: 1 })
+
+      const repo = new PromptTemplateRepository(mockDb)
+
+      // Given: owner-1 owns template-1 and the latest version is 1.
+      // When: a new version is created from the current template snapshot.
+      const result = await repo.createVersion('template-1', 'owner-1', 'Updated greeting')
+
+      // Then: version 2 is inserted with the required snapshot fields and active state.
+      expect(result.version_number).toBe(2)
+      expect(result.variables).toEqual([{ name: 'name', required: false }])
+      expect(mockDb.execute).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('INSERT INTO prompt_template_versions'),
+        expect.arrayContaining([
+          'template-1',
+          2,
+          'Original prompt',
+          'Original description',
+          'Hello {{name}}',
+          'general',
+          JSON.stringify([{ name: 'name', required: true }]),
+          'Updated greeting',
+          'owner-1',
+          'owner-1',
+          true,
+        ])
+      )
+    })
+
+    it('should list versions by template with owner isolation and newest first', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([versionTwoRow, versionOneRow])
+
+      const repo = new PromptTemplateRepository(mockDb)
+
+      // Given: template versions include owner metadata.
+      // When: owner-1 lists versions for template-1.
+      const result = await repo.getVersionsByTemplate('template-1', 'owner-1')
+
+      // Then: the query constrains owner access and orders versions descending.
+      expect(result.map((version) => version.version_number)).toEqual([2, 1])
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('ORDER BY ptv.version_number DESC'),
+        ['template-1', 'owner-1']
+      )
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('pt.owner_id = $2'),
+        ['template-1', 'owner-1']
+      )
+    })
+
+    it('should compare versions and return field-level differences', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([versionOneRow, versionTwoRow])
+
+      const repo = new PromptTemplateRepository(mockDb)
+
+      // Given: two owner-visible versions of the same template differ in prompt fields.
+      // When: the repository compares version 1 to version 2.
+      const result = await repo.compareVersions('template-1', 1, 2, 'owner-1')
+
+      // Then: field-level differences are returned for changed snapshot fields only.
+      expect(result).toEqual([
+        { field: 'name', from: 'Original prompt', to: 'Updated prompt' },
+        { field: 'description', from: 'Original description', to: 'Updated description' },
+        { field: 'content', from: 'Hello {{name}}', to: 'Hi {{name}}' },
+        { field: 'variables', from: [{ name: 'name', required: true }], to: [{ name: 'name', required: false }] },
+      ])
+    })
+
+    it('should update template from version snapshot and activate that version', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([versionOneRow])
+        .mockResolvedValueOnce([{ ...templateRow, name: 'Original prompt' }])
+
+      vi.mocked(mockDb.execute)
+        .mockResolvedValueOnce({ changes: 1 })
+        .mockResolvedValueOnce({ changes: 1 })
+        .mockResolvedValueOnce({ changes: 1 })
+
+      const repo = new PromptTemplateRepository(mockDb)
+
+      // Given: version 1 belongs to owner-1 and contains the target snapshot.
+      // When: template-1 is restored from that version.
+      const result = await repo.updateFromVersion('template-1', 'ptv-1', 'owner-1')
+
+      // Then: the template snapshot is updated and the restored version becomes active.
+      expect(result?.name).toBe('Original prompt')
+      expect(mockDb.execute).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('UPDATE prompt_templates SET'),
+        expect.arrayContaining([
+          'Original prompt',
+          'Original description',
+          'Hello {{name}}',
+          'general',
+          JSON.stringify([{ name: 'name', required: true }]),
+          'template-1',
+          'owner-1',
+        ])
+      )
+      expect(mockDb.execute).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('UPDATE prompt_template_versions SET is_active = false'),
+        ['template-1', 'owner-1']
+      )
+      expect(mockDb.execute).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('UPDATE prompt_template_versions SET is_active = true'),
+        ['ptv-1', 'template-1', 'owner-1']
+      )
+    })
+  })
+
   describe('getById', () => {
     it('should return template by id', async () => {
       const mockRow = {

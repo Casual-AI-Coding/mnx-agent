@@ -3,6 +3,9 @@ import { DatabaseConnection } from '../database/connection.js'
 import type {
   PromptTemplate,
   PromptTemplateRow,
+  PromptTemplateVersion,
+  PromptTemplateVersionDiff,
+  PromptTemplateVersionRow,
   CreatePromptTemplate,
   UpdatePromptTemplate,
 } from '../database/types.js'
@@ -19,6 +22,25 @@ function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
     is_builtin: typeof row.is_builtin === 'boolean' ? row.is_builtin : row.is_builtin === 1,
     variables,
   }
+}
+
+function rowToPromptTemplateVersion(row: PromptTemplateVersionRow): PromptTemplateVersion {
+  const variables = row.variables ? (typeof row.variables === 'string' ? JSON.parse(row.variables) : row.variables) : []
+  return {
+    ...row,
+    category: row.category as TemplateCategory | null,
+    is_active: typeof row.is_active === 'boolean' ? row.is_active : row.is_active === 1,
+    variables,
+  }
+}
+
+function diffField(
+  field: PromptTemplateVersionDiff['field'],
+  from: PromptTemplateVersionDiff['from'],
+  to: PromptTemplateVersionDiff['to']
+): PromptTemplateVersionDiff | null {
+  if (JSON.stringify(from) === JSON.stringify(to)) return null
+  return { field, from, to }
 }
 
 export interface PromptTemplateListOptions {
@@ -158,5 +180,131 @@ export class PromptTemplateRepository extends BaseRepository<PromptTemplate, Cre
       values
     )
     return this.getById(id, ownerId)
+  }
+
+  async getLatestVersionNumber(templateId: string, ownerId: string): Promise<number> {
+    const rows = await this.conn.query<{ max: number | null }>(
+      `SELECT MAX(ptv.version_number) as max
+       FROM prompt_template_versions ptv
+       INNER JOIN prompt_templates pt ON pt.id = ptv.template_id
+       WHERE ptv.template_id = $1 AND pt.owner_id = $2`,
+      [templateId, ownerId]
+    )
+    return rows[0]?.max ?? 0
+  }
+
+  async getVersionById(id: string, templateId: string, ownerId: string): Promise<PromptTemplateVersion | null> {
+    const rows = await this.conn.query<PromptTemplateVersionRow>(
+      `SELECT ptv.*
+       FROM prompt_template_versions ptv
+       INNER JOIN prompt_templates pt ON pt.id = ptv.template_id
+       WHERE ptv.id = $1 AND ptv.template_id = $2 AND pt.owner_id = $3`,
+      [id, templateId, ownerId]
+    )
+    return rows[0] ? rowToPromptTemplateVersion(rows[0]) : null
+  }
+
+  async getVersionsByTemplate(templateId: string, ownerId: string): Promise<PromptTemplateVersion[]> {
+    const rows = await this.conn.query<PromptTemplateVersionRow>(
+      `SELECT ptv.*
+       FROM prompt_template_versions ptv
+       INNER JOIN prompt_templates pt ON pt.id = ptv.template_id
+       WHERE ptv.template_id = $1 AND pt.owner_id = $2
+       ORDER BY ptv.version_number DESC`,
+      [templateId, ownerId]
+    )
+    return rows.map(rowToPromptTemplateVersion)
+  }
+
+  async createVersion(templateId: string, ownerId: string, changeSummary?: string | null): Promise<PromptTemplateVersion> {
+    const nextVersion = await this.getLatestVersionNumber(templateId, ownerId) + 1
+    const template = await this.getById(templateId, ownerId)
+    if (!template) throw new Error(`Prompt template ${templateId} not found`)
+
+    const id = `ptv_${uuidv4().replace(/-/g, '')}`
+    const now = toLocalISODateString()
+    const variables = JSON.stringify(template.variables)
+
+    await this.conn.execute(
+      `UPDATE prompt_template_versions SET is_active = false WHERE template_id = $1 AND owner_id = $2`,
+      [templateId, ownerId]
+    )
+    await this.conn.execute(
+      `INSERT INTO prompt_template_versions (
+        id, template_id, version_number, name, description, content, category,
+        variables, change_summary, created_by, owner_id, created_at, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        id,
+        templateId,
+        nextVersion,
+        template.name,
+        template.description,
+        template.content,
+        template.category,
+        variables,
+        changeSummary ?? null,
+        ownerId,
+        ownerId,
+        now,
+        true,
+      ]
+    )
+
+    const version = await this.getVersionById(id, templateId, ownerId)
+    if (!version) throw new Error(`Prompt template version ${id} not found after create`)
+    return version
+  }
+
+  async compareVersions(
+    templateId: string,
+    fromVersion: number,
+    toVersion: number,
+    ownerId: string
+  ): Promise<PromptTemplateVersionDiff[]> {
+    const rows = await this.conn.query<PromptTemplateVersionRow>(
+      `SELECT ptv.*
+       FROM prompt_template_versions ptv
+       INNER JOIN prompt_templates pt ON pt.id = ptv.template_id
+       WHERE ptv.template_id = $1
+         AND pt.owner_id = $2
+         AND ptv.version_number IN ($3, $4)
+       ORDER BY ptv.version_number ASC`,
+      [templateId, ownerId, fromVersion, toVersion]
+    )
+    const versions = rows.map(rowToPromptTemplateVersion)
+    const from = versions.find((version) => version.version_number === fromVersion)
+    const to = versions.find((version) => version.version_number === toVersion)
+    if (!from || !to) return []
+
+    return [
+      diffField('name', from.name, to.name),
+      diffField('description', from.description, to.description),
+      diffField('content', from.content, to.content),
+      diffField('category', from.category, to.category),
+      diffField('variables', from.variables, to.variables),
+    ].filter((diff): diff is PromptTemplateVersionDiff => diff !== null)
+  }
+
+  async updateFromVersion(templateId: string, versionId: string, ownerId: string): Promise<PromptTemplate | null> {
+    const version = await this.getVersionById(versionId, templateId, ownerId)
+    if (!version) return null
+
+    const variables = JSON.stringify(version.variables)
+    await this.conn.execute(
+      `UPDATE prompt_templates SET name = $1, description = $2, content = $3, category = $4, variables = $5, updated_at = $6
+       WHERE id = $7 AND owner_id = $8`,
+      [version.name, version.description, version.content, version.category, variables, toLocalISODateString(), templateId, ownerId]
+    )
+    await this.conn.execute(
+      'UPDATE prompt_template_versions SET is_active = false WHERE template_id = $1 AND owner_id = $2',
+      [templateId, ownerId]
+    )
+    await this.conn.execute(
+      'UPDATE prompt_template_versions SET is_active = true WHERE id = $1 AND template_id = $2 AND owner_id = $3',
+      [versionId, templateId, ownerId]
+    )
+
+    return this.getById(templateId, ownerId)
   }
 }
