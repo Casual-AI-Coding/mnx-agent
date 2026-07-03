@@ -9,6 +9,7 @@ import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
 import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
 import { saveExternalProxyImages } from './external-proxy/external-proxy-media-save-helpers.js'
+import { isExternalProxyUrlAllowed } from './external-proxy/external-proxy-url-security-helpers.js'
 import {
   EXTERNAL_PROXY_MEDIA_TYPES,
   isRecord,
@@ -29,48 +30,8 @@ const logger = getLogger()
 
 const router = Router()
 
-const ALLOWED_HOSTS = [
-  'mikuapi.org',
-  'api.pptoken.org',
-  'code.azsheen.top',
-  'api.tokenfty.net',
-  'gpt.hslife.fun',
-  'lumin-ai.tiandi.run',
-  'api.sisyphusx.com',
-]
-
 export function isUrlAllowed(urlString: string): boolean {
-  try {
-    const url = new URL(urlString)
-    const hostname = url.hostname.toLowerCase()
-
-    // 阻止内部地址：
-    // - 精确匹配：localhost、0.0.0.0 仅匹配自身（localhost.evil.com 是合法外部域名）
-    // - 前缀匹配：127. 匹配所有 loopback IP；[::1]/::1 匹配 IPv6 loopback
-    const blockedInternal = [
-      { pattern: 'localhost', exact: true },
-      { pattern: '127.', exact: false },
-      { pattern: '0.0.0.0', exact: true },
-      { pattern: '[::1]', exact: true },
-      { pattern: '::1', exact: true },
-    ]
-    for (const { pattern, exact } of blockedInternal) {
-      if (exact ? hostname === pattern : hostname.startsWith(pattern)) {
-        return false
-      }
-    }
-
-    // 白名单匹配 - 使用 wrapped-dot 防止子域名欺骗：
-    // `.sub.api.sisyphusx.com`.endsWith(`.api.sisyphusx.com`) → true  ✅
-    // `.api.sisyphusx.com.evil.com`.endsWith(`.api.sisyphusx.com`) → false ✅
-    const wrappedHostname = `.${hostname}`
-    return ALLOWED_HOSTS.some(h => wrappedHostname.endsWith(`.${h}`))
-  } catch (error) {
-    if (error instanceof Error) {
-      return false
-    }
-    return false
-  }
+  return isExternalProxyUrlAllowed(urlString)
 }
 
 const proxyRequestSchema = z.object({
