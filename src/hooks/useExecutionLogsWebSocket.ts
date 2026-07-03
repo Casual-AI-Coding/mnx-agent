@@ -1,15 +1,9 @@
-import { useEffect } from 'react'
 import { useExecutionLogsStore } from '@/stores/executionLogs'
-import { useAuthStore } from '@/stores/auth'
+import { useStoreWebSocketSubscription } from './useStoreWebSocketSubscription'
 
 export function useExecutionLogsWebSocket() {
-  const { isHydrated, isAuthenticated } = useAuthStore()
-  const subscribe = useExecutionLogsStore((state) => state.subscribeToWebSocket)
-  const unsubscribe = useExecutionLogsStore((state) => state.unsubscribeFromWebSocket)
+  const subscribeToWebSocket = useExecutionLogsStore((state) => state.subscribeToWebSocket)
+  const unsubscribeFromWebSocket = useExecutionLogsStore((state) => state.unsubscribeFromWebSocket)
 
-  useEffect(() => {
-    if (!isHydrated || !isAuthenticated) return
-    subscribe()
-    return () => unsubscribe()
-  }, [isHydrated, isAuthenticated, subscribe, unsubscribe])
+  useStoreWebSocketSubscription({ subscribeToWebSocket, unsubscribeFromWebSocket })
 }

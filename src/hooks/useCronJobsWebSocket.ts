@@ -1,13 +1,9 @@
-import { useEffect } from 'react'
 import { useCronJobsStore } from '@/stores/cronJobs'
-import { useAuthStore } from '@/stores/auth'
+import { useStoreWebSocketSubscription } from './useStoreWebSocketSubscription'
 
 export function useCronJobsWebSocket() {
-  const { isHydrated, isAuthenticated } = useAuthStore()
-  
-  useEffect(() => {
-    if (!isHydrated || !isAuthenticated) return
-    useCronJobsStore.getState().subscribeToWebSocket()
-    return () => useCronJobsStore.getState().unsubscribeFromWebSocket()
-  }, [isHydrated, isAuthenticated])
+  const subscribeToWebSocket = useCronJobsStore((state) => state.subscribeToWebSocket)
+  const unsubscribeFromWebSocket = useCronJobsStore((state) => state.unsubscribeFromWebSocket)
+
+  useStoreWebSocketSubscription({ subscribeToWebSocket, unsubscribeFromWebSocket })
 }
