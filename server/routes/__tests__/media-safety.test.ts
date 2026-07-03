@@ -119,7 +119,7 @@ describe('Media Route Safety', () => {
         .send({
           url: 'https://example.com/image.png',
           type: 'image',
-          source: 'upload',
+          source: 'image_generation',
         })
 
       expect(res.status).toBe(201)
