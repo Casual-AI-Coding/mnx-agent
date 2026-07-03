@@ -47,7 +47,6 @@ describe('Media API Routes', () => {
   beforeEach(async () => {
     const conn = getConnection()
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
-    await conn.execute(`DELETE FROM media_records WHERE is_public = true`)
     createdRecordIds.clear()
   })
 
@@ -430,7 +429,7 @@ describe('Media API Routes', () => {
       }
 
       for (const type of types) {
-        const res = await request(app).get(`/api/media?type=${type}`)
+        const res = await request(app).get(`/api/media?type=${type}&publicFilter=private`)
         expect(res.body.data.records.length).toBe(1)
         expect(res.body.data.records[0].type).toBe(type)
       }
@@ -444,7 +443,7 @@ describe('Media API Routes', () => {
         size_bytes: 100,
       })
 
-      const res = await request(app).get('/api/media?type=video')
+      const res = await request(app).get('/api/media?type=video&publicFilter=private')
 
       expect(res.body.data.records.length).toBe(0)
     })
@@ -464,7 +463,7 @@ describe('Media API Routes', () => {
       }
 
       for (const source of sources) {
-        const res = await request(app).get(`/api/media?source=${source}`)
+        const res = await request(app).get(`/api/media?source=${source}&publicFilter=private`)
         expect(res.body.data.records.length).toBe(1)
         expect(res.body.data.records[0].source).toBe(source)
       }
@@ -495,7 +494,7 @@ describe('Media API Routes', () => {
         source: 'image_generation',
       })
 
-      const res = await request(app).get('/api/media?type=audio&source=voice_sync')
+      const res = await request(app).get('/api/media?type=audio&source=voice_sync&publicFilter=private')
 
       expect(res.body.data.records.length).toBe(1)
       expect(res.body.data.records[0].filename).toBe('audio_sync.mp3')
@@ -519,7 +518,7 @@ describe('Media API Routes', () => {
         source: 'video_generation',
       })
 
-      const res = await request(app).get('/api/media?type=audio&source=voice_sync&page=1&limit=3')
+      const res = await request(app).get('/api/media?type=audio&source=voice_sync&page=1&limit=3&publicFilter=private')
 
       expect(res.body.data.records.length).toBe(3)
       expect(res.body.data.pagination.total).toBe(5)

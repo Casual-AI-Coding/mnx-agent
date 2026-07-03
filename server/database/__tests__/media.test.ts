@@ -50,7 +50,6 @@ describe('MediaRecord Database Service', () => {
 
   beforeEach(async () => {
     const conn = getConnection()
-    await conn.execute(`DELETE FROM media_records WHERE is_public = true`)
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
     await conn.execute(`DELETE FROM media_records WHERE owner_id IN ($1, $2)`, [testOwnerId1, testOwnerId2])
     createdRecordIds.clear()
@@ -823,9 +822,10 @@ describe('togglePublic', () => {
     it('user sees own private + all public records', async () => {
       const user1 = testOwnerId1
       const user2 = testOwnerId2
+      const visibilityPrefix = `visibility-${fileMarker.slice(0, 8)}`
 
       const ownPrivate = await createAndTrack({
-        filename: 'user1_private.png',
+        filename: `${visibilityPrefix}-user1_private.png`,
         filepath: '/data/media/user1_private.png',
         type: 'image',
         size_bytes: 1024,
@@ -833,7 +833,7 @@ describe('togglePublic', () => {
       await db.togglePublicMediaRecord(ownPrivate.id, false)
 
       const ownPublic = await createAndTrack({
-        filename: 'user1_public.png',
+        filename: `${visibilityPrefix}-user1_public.png`,
         filepath: '/data/media/user1_public.png',
         type: 'image',
         size_bytes: 1024,
@@ -841,7 +841,7 @@ describe('togglePublic', () => {
       await db.togglePublicMediaRecord(ownPublic.id, true)
 
       const otherPrivate = await createAndTrack({
-        filename: 'user2_private.png',
+        filename: `${visibilityPrefix}-user2_private.png`,
         filepath: '/data/media/user2_private.png',
         type: 'image',
         size_bytes: 1024,
@@ -849,20 +849,20 @@ describe('togglePublic', () => {
       await db.togglePublicMediaRecord(otherPrivate.id, false)
 
       const otherPublic = await createAndTrack({
-        filename: 'user2_public.png',
+        filename: `${visibilityPrefix}-user2_public.png`,
         filepath: '/data/media/user2_public.png',
         type: 'image',
         size_bytes: 1024,
       }, user2)
       await db.togglePublicMediaRecord(otherPublic.id, true)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: user1, role: 'user' })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, visibilityOwnerId: user1, role: 'user', search: visibilityPrefix })
       const filenames = result.records.map(r => r.filename)
       
-      expect(filenames).toContain('user1_private.png')
-      expect(filenames).toContain('user1_public.png')
-      expect(filenames).toContain('user2_public.png')
-      expect(filenames).not.toContain('user2_private.png')
+      expect(filenames).toContain(`${visibilityPrefix}-user1_private.png`)
+      expect(filenames).toContain(`${visibilityPrefix}-user1_public.png`)
+      expect(filenames).toContain(`${visibilityPrefix}-user2_public.png`)
+      expect(filenames).not.toContain(`${visibilityPrefix}-user2_private.png`)
       expect(result.records.length).toBe(3)
     })
 
@@ -895,9 +895,10 @@ describe('togglePublic', () => {
 
     it('isPublic=true filter returns only public records', async () => {
       const user1 = testOwnerId1
+      const publicFilterPrefix = `public-filter-${fileMarker.slice(0, 8)}`
 
       const privateRecord = await createAndTrack({
-        filename: 'filter_private.png',
+        filename: `${publicFilterPrefix}-private.png`,
         filepath: '/data/media/filter_private.png',
         type: 'image',
         size_bytes: 1024,
@@ -905,7 +906,7 @@ describe('togglePublic', () => {
       await db.togglePublicMediaRecord(privateRecord.id, false)
 
       const publicRecord1 = await createAndTrack({
-        filename: 'filter_public1.png',
+        filename: `${publicFilterPrefix}-public1.png`,
         filepath: '/data/media/filter_public1.png',
         type: 'image',
         size_bytes: 1024,
@@ -913,19 +914,19 @@ describe('togglePublic', () => {
       await db.togglePublicMediaRecord(publicRecord1.id, true)
 
       const publicRecord2 = await createAndTrack({
-        filename: 'filter_public2.png',
+        filename: `${publicFilterPrefix}-public2.png`,
         filepath: '/data/media/filter_public2.png',
         type: 'image',
         size_bytes: 1024,
       }, user1)
       await db.togglePublicMediaRecord(publicRecord2.id, true)
 
-      const result = await db.getMediaRecords({ limit: 10, offset: 0, publicFilter: ['public', 'others-public'] })
+      const result = await db.getMediaRecords({ limit: 10, offset: 0, publicFilter: ['public', 'others-public'], search: publicFilterPrefix })
       const filenames = result.records.map(r => r.filename)
       
-      expect(filenames).toContain('filter_public1.png')
-      expect(filenames).toContain('filter_public2.png')
-      expect(filenames).not.toContain('filter_private.png')
+      expect(filenames).toContain(`${publicFilterPrefix}-public1.png`)
+      expect(filenames).toContain(`${publicFilterPrefix}-public2.png`)
+      expect(filenames).not.toContain(`${publicFilterPrefix}-private.png`)
       expect(result.records.length).toBe(2)
     })
   })
