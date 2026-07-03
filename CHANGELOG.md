@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.2] - 2026-07-04
+
+### 🐛 Fixed
+
+- **跨文件测试全局 public 清理移除** — 移除 `media.test.ts`（database 和 routes）中 `DELETE FROM media_records WHERE is_public = true` 导致的跨文件测试污染，改为通过唯一前缀 + `search` 参数隔离可见性测试断言范围（`server/database/__tests__/media.test.ts`, `server/routes/__tests__/media.test.ts`）
+- **Media safety remote download source 字段修正** — 将 `source` 从 `'upload'` 修正为 `'image_generation'` 以匹配实际 API 枚举值（`server/routes/__tests__/media-safety.test.ts`）
+
+### 🧪 Tests
+
+- **可见性查询隔离增强** — 各可见性测试用例使用 `visibility-`/`public-filter-` 前缀命名空间隔离断言（`server/database/__tests__/media.test.ts`）
+- **公共 filter 路由测试增强** — 媒体路由测试中补充 `publicFilter=private` 查询参数，确保测试隔离性（`server/routes/__tests__/media.test.ts`）
+
+### Backward Compatibility
+
+- ✅ 所有变更均为测试内部修复和增强，不影响运行时逻辑
+- ✅ 所有 API 端点、数据库 schema、类型定义均保持不变
+- ✅ 移除的全局清理原本就属于测试反模式，修复提升了测试可靠性
+
 ## [2.3.1] - 2026-07-03
 
 ### ✨ Added
