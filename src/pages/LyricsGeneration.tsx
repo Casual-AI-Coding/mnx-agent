@@ -1,15 +1,19 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileText, Wand2 } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { generateLyrics } from '@/lib/api/lyrics'
-import { createMedia } from '@/lib/api/media'
 import { toastSuccess, toastError } from '@/lib/toast'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks'
-import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
+import {
+  upsertResourceReference,
+  type ResourceReference,
+} from '@/lib/resource-references'
 import type { LyricsMode, LyricsTask, LyricsGenerationResponse, LyricsGenerationRequest } from '@/types/lyrics'
 import { LyricsGenerationForm } from './LyricsGeneration/LyricsGenerationForm.js'
+import { LyricsGenerationHeader } from './LyricsGeneration/LyricsGenerationHeader.js'
 import { LyricsGenerationResults } from './LyricsGeneration/LyricsGenerationResults.js'
+import { downloadLyricsFile } from './LyricsGeneration/lyricsExport.js'
+import { saveLyricsToMedia as persistLyricsToMedia } from './LyricsGeneration/lyricsMedia'
 
 type LyricsFormData = {
   mode: LyricsMode
@@ -44,6 +48,7 @@ export default function LyricsGeneration() {
   const [tasks, setTasks] = useState<LyricsTask[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
 
   const updateTask = useCallback((index: number, updates: Partial<LyricsTask>) => {
     setTasks(prev => {
@@ -53,55 +58,17 @@ export default function LyricsGeneration() {
     })
   }, [])
 
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }
+
   const saveLyricsToMedia = async (
     result: LyricsGenerationResponse,
     taskTitle?: string,
-    index?: number
+    index?: number,
+    references: readonly ResourceReference[] = resourceReferences
   ): Promise<{ id: string; title: string } | null> => {
-    try {
-      const songTitle = result.song_title || taskTitle || 'Unnamed'
-      let filename: string
-      if (songTitle && songTitle.trim()) {
-        const sanitizedTitle = songTitle.trim().replace(/[^\w\u4e00-\u9fa5-]/g, '_')
-        if (index !== undefined) {
-          filename = `${sanitizedTitle} (${index + 1}).txt`
-        } else {
-          filename = `${sanitizedTitle}.txt`
-        }
-      } else {
-        filename = `lyrics_${Date.now()}.txt`
-      }
-
-      const styleTags = Array.isArray(result.style_tags)
-        ? result.style_tags
-        : (result.style_tags ? result.style_tags.split(',').map(s => s.trim()) : [])
-
-      const mediaResult = await createMedia({
-        filename,
-        filepath: `lyrics://virtual/${Date.now()}`,
-        type: 'lyrics',
-        source: 'lyrics_generation',
-        size_bytes: new TextEncoder().encode(result.lyrics).length,
-        metadata: {
-          title: songTitle,
-          style_tags: styleTags,
-          lyrics: result.lyrics,
-          mode: formData.mode,
-          generated_at: new Date().toISOString(),
-        },
-      })
-
-      if (mediaResult.success && mediaResult.data) {
-        return {
-          id: mediaResult.data.id,
-          title: mediaResult.data.original_name || mediaResult.data.filename,
-        }
-      }
-      return null
-    } catch (error) {
-      console.error('Failed to save lyrics:', error)
-      return null
-    }
+    return persistLyricsToMedia({ mode: formData.mode, references, result, taskTitle, index })
   }
 
   const handleGenerate = async () => {
@@ -132,6 +99,7 @@ export default function LyricsGeneration() {
         status: 'generating',
         request,
         createdAt: new Date().toISOString(),
+        resourceReferences,
       }
 
       setTasks(prev => [newTask, ...prev].slice(0, 10))
@@ -149,7 +117,7 @@ export default function LyricsGeneration() {
         ))
         toastSuccess(t('lyrics.successGenerated'))
 
-        saveLyricsToMedia(result, title).then(mediaInfo => {
+        saveLyricsToMedia(result, title, undefined, newTask.resourceReferences).then(mediaInfo => {
           if (mediaInfo) {
             setTasks(prev => prev.map(task =>
               task.id === taskId ? { ...task, mediaId: mediaInfo.id, mediaTitle: mediaInfo.title } : task
@@ -171,6 +139,7 @@ export default function LyricsGeneration() {
         status: 'generating' as const,
         request,
         createdAt: new Date().toISOString(),
+        resourceReferences,
       }))
       setTasks(newTasks)
       setCurrentIndex(0)
@@ -184,7 +153,7 @@ export default function LyricsGeneration() {
             throw new Error('No result from lyrics generation')
           }
           updateTask(index, { status: 'completed', result })
-          saveLyricsToMedia(result, title, index)
+          saveLyricsToMedia(result, title, index, _task.resourceReferences ?? [])
           return { success: true, index }
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
@@ -199,7 +168,7 @@ export default function LyricsGeneration() {
     }
   }
 
-const handleRetry = async (index: number) => {
+  const handleRetry = async (index: number) => {
     const task = tasks[index]
     if (!task.request) return
 
@@ -214,7 +183,7 @@ const handleRetry = async (index: number) => {
       }
       updateTask(index, { status: 'completed', result })
       toastSuccess(t('lyrics.successGenerated'))
-      saveLyricsToMedia(result, task.request.title, index)
+      saveLyricsToMedia(result, task.request.title, index, task.resourceReferences ?? [])
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : t('lyrics.errorGenerationFailed')
       updateTask(index, { status: 'failed', error: errorMsg })
@@ -237,6 +206,7 @@ const handleRetry = async (index: number) => {
     setCurrentIndex(0)
     setFormData(DEFAULT_FORM)
     setIsGenerating(false)
+    setResourceReferences([])
   }
 
   const generateApiCurl = useCallback(() => {
@@ -264,26 +234,7 @@ const handleRetry = async (index: number) => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('lyrics.title')}
-        description="AI 辅助歌词创作与优化"
-        icon={<FileText className="w-5 h-5" />}
-        gradient="violet-purple"
-        actions={
-          <WorkbenchActions
-            helpTitle={t('lyrics.creationTipsTitle') || '歌词创作提示'}
-            helpTips={(
-              <ul className="text-xs text-muted-foreground space-y-2">
-                <li className="whitespace-normal">• 写整首歌：提供主题和风格描述；编辑模式：优化已有歌词</li>
-                <li className="whitespace-normal">• 提示词越具体，生成结果越符合预期</li>
-              </ul>
-            )}
-            generateCurl={generateApiCurl}
-            onClear={clearAll}
-            clearLabel={t('common.clear')}
-          />
-        }
-      />
+      <LyricsGenerationHeader generateCurl={generateApiCurl} onClear={clearAll} />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         <LyricsGenerationForm
@@ -295,6 +246,22 @@ const handleRetry = async (index: number) => {
           isGenerating={isGenerating}
           updateForm={(key, value) => updateForm(key as keyof LyricsFormData, value as LyricsFormData[keyof LyricsFormData])}
           onGenerate={handleGenerate}
+          resourceReferenceSlot={(
+            <ResourceReferenceCard
+              generationType="lyrics"
+              onApplyTemplate={({ content, reference }) => {
+                updateForm('mode', 'write_full_song')
+                updateForm('prompt', content)
+                trackResourceReference(reference)
+              }}
+              onApplyMaterialItem={({ lyrics: materialLyrics, reference }) => {
+                updateForm('mode', 'edit')
+                updateForm('lyrics', materialLyrics)
+                trackResourceReference(reference)
+              }}
+              onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+            />
+          )}
           t={t}
         />
 
@@ -305,14 +272,7 @@ const handleRetry = async (index: number) => {
           onIndexChange={setCurrentIndex}
           onRetry={handleRetry}
           onEdit={handleEdit}
-          onExport={(result: LyricsGenerationResponse) => {
-            const content = result.lyrics
-            const filename = `${result.song_title || 'lyrics'}.txt`
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
-          }}
+          onExport={downloadLyricsFile}
           t={t}
         />
       </div>

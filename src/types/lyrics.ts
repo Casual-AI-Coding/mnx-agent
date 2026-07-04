@@ -1,3 +1,5 @@
+import type { ResourceReference } from '@/lib/resource-references'
+
 export type LyricsMode = 'write_full_song' | 'edit'
 
 export interface LyricsGenerationRequest {
@@ -36,6 +38,7 @@ export interface LyricsTask {
   error?: string
   request?: LyricsGenerationRequest
   createdAt: string
+  resourceReferences?: readonly ResourceReference[]
   mediaId?: string
   mediaTitle?: string
   isFavorite?: boolean
