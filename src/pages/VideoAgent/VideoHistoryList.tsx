@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { VIDEO_AGENT_TEMPLATES } from '@/types'
+import type { ResourceReference } from '@/lib/resource-references'
 
 export type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
@@ -13,8 +14,11 @@ export interface AgentTask {
   taskId: string
   status: TaskStatus
   templateId: string
+  templateName: string
   inputs: Record<string, string>
+  prompt: string
   createdAt: number
+  resourceReferences: readonly ResourceReference[]
   videoUrl?: string
   duration?: number
   error?: string
@@ -77,10 +81,10 @@ export function VideoHistoryList({
 
                     <div className="text-sm">
                       <Badge variant="outline" className="mb-1">
-                        {VIDEO_AGENT_TEMPLATES.find((template) => template.id === task.templateId)?.name}
+                        {VIDEO_AGENT_TEMPLATES.find((template) => template.id === task.templateId)?.name ?? task.templateName}
                       </Badge>
                       <p className="text-muted-foreground break-words">
-                        {Object.entries(task.inputs).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                        {Object.entries(task.inputs).map(([key, value]) => `${key}: ${value}`).join(', ') || task.prompt}
                       </p>
                     </div>
 

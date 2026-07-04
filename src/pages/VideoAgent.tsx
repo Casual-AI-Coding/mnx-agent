@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
-import { AlertCircle, CheckCircle, Clock, Cpu, Loader2, Shield, Video, Waves, XCircle } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
+import { Cpu, Shield, Video, Waves } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
+import {
+  mergeResourceUsageMetadata,
+  upsertResourceReference,
+  type ResourceReference,
+} from '@/lib/resource-references'
 import { VIDEO_AGENT_TEMPLATES, type VideoAgentTemplate } from '@/types'
-import { cn } from '@/lib/utils'
-import { status as statusTokens } from '@/themes/tokens'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { VideoHistoryList, type AgentTask, type TaskStatus } from './VideoAgent/VideoHistoryList.js'
 import { VideoInputForm, type VideoFormField } from './VideoAgent/VideoInputForm.js'
+import { formatDuration, getStatusBadge, getStatusIcon } from './VideoAgent/videoAgentStatus.js'
 
 interface VideoAgentFormData {
   selectedTemplateId: string | null
   inputs: Record<string, string>
+  resourcePrompt: string
 }
 
 const ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
@@ -45,9 +50,10 @@ export default function VideoAgent() {
     defaultValue: {
       selectedTemplateId: null,
       inputs: {},
+      resourcePrompt: '',
     },
   })
-  const { selectedTemplateId, inputs } = formData
+  const { selectedTemplateId, inputs, resourcePrompt } = formData
 
   const selectedTemplate = selectedTemplateId
     ? VIDEO_AGENT_TEMPLATES.find(t => t.id === selectedTemplateId) ?? null
@@ -60,12 +66,17 @@ export default function VideoAgent() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<AgentTask[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
   const handleTemplateSelect = (template: VideoAgentTemplate) => {
-    updateForm({ selectedTemplateId: template.id, inputs: {} })
+    updateForm({ selectedTemplateId: template.id, inputs: {}, resourcePrompt: '' })
     setError(null)
+  }
+
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
   }
 
   const handleInputChange = (key: string, value: string) => {
@@ -73,6 +84,7 @@ export default function VideoAgent() {
   }
 
   const generatePrompt = () => {
+    if (resourcePrompt.trim()) return resourcePrompt.trim()
     if (!selectedTemplate) return ''
 
     let prompt = ''
@@ -111,13 +123,16 @@ export default function VideoAgent() {
         id: response.task_id,
         taskId: response.task_id,
         status: 'pending',
-        templateId: selectedTemplate!.id,
+        templateId: selectedTemplate?.id ?? 'resource-prompt',
+        templateName: selectedTemplate?.name ?? '资源 Prompt',
         inputs: { ...inputs },
+        prompt,
         createdAt: Date.now(),
+        resourceReferences,
       }
 
       setTasks(prev => [newTask, ...prev])
-      updateForm({ inputs: {} })
+      updateForm({ inputs: {}, resourcePrompt: '' })
 
       addUsage('videoRequests', 1)
 
@@ -153,14 +168,14 @@ export default function VideoAgent() {
 
             addItem({
               type: 'video',
-              input: `模板: ${VIDEO_AGENT_TEMPLATES.find(t => t.id === task.templateId)?.name}`,
+              input: task.templateId === 'resource-prompt' ? task.prompt : `模板: ${task.templateName}`,
               outputUrl: status.results.video_url,
-              metadata: {
+              metadata: mergeResourceUsageMetadata({
                 taskId,
                 templateId: task.templateId,
                 inputs: task.inputs,
                 duration: status.results.duration,
-              },
+              }, task.resourceReferences),
             })
           } else if (status.status === 'failed') {
             updatedTask.error = status.error || '生成失败'
@@ -205,44 +220,8 @@ export default function VideoAgent() {
     anchor.click()
   }
 
-  const getStatusIcon = (status: TaskStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-5 h-5 text-muted-foreground" />
-      case 'processing':
-        return <Loader2 className="w-5 h-5 animate-spin text-primary" />
-      case 'completed':
-        return <CheckCircle className={cn('w-5 h-5', statusTokens.success.icon)} />
-      case 'failed':
-        return <XCircle className="w-5 h-5 text-destructive" />
-      default:
-        return <AlertCircle className="w-5 h-5 text-muted-foreground" />
-    }
-  }
-
-  const getStatusBadge = (status: TaskStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">等待中</Badge>
-      case 'processing':
-        return <Badge variant="default">处理中</Badge>
-      case 'completed':
-        return <Badge variant="secondary" className={cn(statusTokens.success.bgSubtle, statusTokens.success.text)}>已完成</Badge>
-      case 'failed':
-        return <Badge variant="destructive">失败</Badge>
-      default:
-        return <Badge variant="outline">未知</Badge>
-    }
-  }
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return '--:--'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
   const isFormValid = () => {
+    if (resourcePrompt.trim()) return true
     if (!selectedTemplate) return false
     const formFields = TEMPLATE_FORMS[selectedTemplate.id] || []
     return formFields.every(field => inputs[field.label]?.trim())
@@ -258,6 +237,14 @@ export default function VideoAgent() {
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
+          <ResourceReferenceCard
+            generationType="video-agent"
+            onApplyTemplate={({ content, reference }) => {
+              updateForm({ selectedTemplateId: null, inputs: {}, resourcePrompt: content })
+              trackResourceReference(reference)
+            }}
+            onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+          />
           <VideoInputForm
             error={error}
             iconMap={ICON_MAP}
