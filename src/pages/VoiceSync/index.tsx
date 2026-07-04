@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mic, HelpCircle, Music } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -11,12 +9,18 @@ import { uploadMedia, type MediaSource } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
-import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
+import {
+  mergeResourceUsageMetadata,
+  upsertResourceReference,
+  type ResourceReference,
+} from '@/lib/resource-references'
 import { SPEECH_MODELS, VOICE_OPTIONS, EMOTIONS, type SpeechModel, type Emotion } from '@/types'
 import { VoiceSyncForm } from './VoiceSyncForm'
 import { VoiceResult } from './VoiceResult'
 import { VoiceSettings } from './VoiceSettings'
 import { VoiceConfigSummary } from './VoiceConfigSummary'
+import { VoiceSyncHeader } from './VoiceSyncHeader'
 import type { VoiceConfigSummary as VoiceConfigSummaryType } from './types'
 
 const MAX_CHARS = 10000
@@ -35,10 +39,11 @@ const containerVariants = {
 const saveToMedia = async (
   blob: Blob,
   filename: string,
-  source: MediaSource
+  source: MediaSource,
+  metadata: Record<string, unknown>
 ): Promise<void> => {
   try {
-    await uploadMedia(blob, filename, 'audio', source)
+    await uploadMedia(blob, filename, 'audio', source, metadata)
   } catch (error) {
     console.error('Failed to save media:', error)
   }
@@ -57,11 +62,16 @@ export default function VoiceSync() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
 
   const charCount = text.length
   const isOverLimit = charCount > MAX_CHARS
+
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }
 
   const handleGenerate = async () => {
     if (!text.trim() || isOverLimit) return
@@ -99,21 +109,22 @@ export default function VoiceSync() {
       setAudioUrl(url)
 
       addUsage('voiceCharacters', charCount)
+      const metadata = mergeResourceUsageMetadata({
+        model,
+        voiceId,
+        emotion,
+        speed,
+        volume,
+        pitch,
+      }, resourceReferences)
       addItem({
         type: 'voice',
         input: text.trim(),
         outputUrl: url,
-        metadata: {
-          model,
-          voiceId,
-          emotion,
-          speed,
-          volume,
-          pitch,
-        },
+        metadata,
       })
 
-      saveToMedia(blob, `voice_sync_${Date.now()}.wav`, 'voice_sync')
+      saveToMedia(blob, `voice_sync_${Date.now()}.wav`, 'voice_sync', metadata)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('voiceSync.voiceGenerationFailed'))
     } finally {
@@ -165,6 +176,7 @@ export default function VoiceSync() {
     setSpeed(defaultSettings.speed)
     setVolume(defaultSettings.volume)
     setPitch(defaultSettings.pitch)
+    setResourceReferences([])
   }
 
   const selectedVoice = VOICE_OPTIONS.find((v) => v.id === voiceId)
@@ -189,52 +201,20 @@ export default function VoiceSync() {
       variants={containerVariants}
       className="space-y-6"
     >
-      <PageHeader
-        icon={<Mic className="w-5 h-5" />}
-        title="语音同步合成"
-        description="实时语音合成服务"
-        gradient="sky-blue"
-        actions={
-          <WorkbenchActions
-            helpTitle="语音合成使用帮助"
-            helpTips={
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <HelpCircle className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                  <div>
-                    <p className="font-medium text-foreground">文本质量</p>
-                    <p>使用清晰、准确的文本，避免特殊字符。支持中文、英文等多种语言。</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Music className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                  <div>
-                    <p className="font-medium text-foreground">音色选择</p>
-                    <p>提供多种高质量音色，可根据场景选择男声、女声或特定情感风格。</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Mic className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                  <div>
-                    <p className="font-medium text-foreground">音频设置</p>
-                    <p>可调节语速、音量和音调。建议保持默认设置以获得最佳效果。</p>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-border/60 text-xs">
-                  <p>API 端点: POST https://api.minimaxi.com/api/tts</p>
-                </div>
-              </div>
-            }
-            generateCurl={generateCurl}
-            onClear={clearAll}
-            clearLabel="清空"
-          />
-        }
-      />
+      <VoiceSyncHeader generateCurl={generateCurl} onClear={clearAll} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <VoiceSyncForm text={text} onTextChange={setText} />
+
+          <ResourceReferenceCard
+            generationType="voice"
+            onApplyTemplate={({ content, reference }) => {
+              setText(content)
+              trackResourceReference(reference)
+            }}
+            onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+          />
 
           <AnimatePresence>
             {error && (
@@ -280,16 +260,6 @@ export default function VoiceSync() {
           <VoiceConfigSummary config={configSummary} />
         </div>
       </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-      `}</style>
     </motion.div>
   )
 }
