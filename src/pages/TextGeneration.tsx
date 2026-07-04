@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, MessageSquare, Sparkle, Terminal, Zap } from 'lucide-react'
-import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
 import { streamChatCompletion } from '@/lib/api/text'
+import {
+  mergeResourceUsageMetadata,
+  upsertResourceReference,
+  type ResourceReference,
+} from '@/lib/resource-references'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
@@ -11,6 +14,7 @@ import { SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { useRetry } from '@/hooks/useRetry'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
 import { PromptInput } from './TextGeneration/PromptInput.js'
+import { TextGenerationHeader } from './TextGeneration/TextGenerationHeader.js'
 import { TextResults, type TextMessage } from './TextGeneration/TextResults.js'
 
 interface TextGenerationFormData {
@@ -43,11 +47,16 @@ export default function TextGeneration() {
   const [isLoading, setIsLoading] = useState(false)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const [messagesEndElement, setMessagesEndElement] = useState<HTMLDivElement | null>(null)
   const [textareaElement, setTextareaElement] = useState<HTMLTextAreaElement | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
   const { execute, isRetrying, lastError, retryCount } = useRetry()
+
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }
 
   const scrollToBottom = () => {
     messagesEndElement?.scrollIntoView({ behavior: 'smooth' })
@@ -138,7 +147,7 @@ export default function TextGeneration() {
         type: 'text',
         input: userMessageContent,
         output: fullContent,
-        metadata: { model: selectedModel },
+        metadata: mergeResourceUsageMetadata({ model: selectedModel }, resourceReferences),
       })
     } else {
       setMessages(prev => prev.map(m =>
@@ -160,6 +169,7 @@ export default function TextGeneration() {
 
   const clearChat = () => {
     const template = SYSTEM_PROMPT_TEMPLATES.find(t => t.id === selectedTemplate)
+    setResourceReferences([])
     setMessages(template ? [{
       id: 'system-1',
       role: 'system',
@@ -211,40 +221,7 @@ export default function TextGeneration() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader
-        icon={<MessageSquare className="w-5 h-5" />}
-        title="文本生成"
-        description="使用 MiniMax API 进行智能文本生成"
-        gradient="indigo-violet"
-        actions={
-          <WorkbenchActions
-            helpTitle="文本生成使用指南"
-            helpTips={
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <Sparkle className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                  <span><strong>提示词工程：</strong>提供清晰、具体的上下文和指令，模型输出质量更高</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Bot className="w-4 h-4 mt-0.5 text-accent shrink-0" />
-                  <span><strong>模型选择：</strong>MiniMax-M2.7 适合复杂任务，M2.5 适合一般对话</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Terminal className="w-4 h-4 mt-0.5 text-secondary shrink-0" />
-                  <span><strong>系统提示：</strong>使用场景模板快速设置角色和风格</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Zap className="w-4 h-4 mt-0.5 text-warning shrink-0" />
-                  <span><strong>Prompt 缓存：</strong>开启缓存可加速重复内容的生成</span>
-                </li>
-              </ul>
-            }
-            generateCurl={generateCurl}
-            onClear={clearChat}
-            clearLabel={t('textGeneration.clearChat')}
-          />
-        }
-      />
+      <TextGenerationHeader generateCurl={generateCurl} onClear={clearChat} />
 
       <PromptInput
         clearLabel={t('textGeneration.clearChat')}
@@ -256,6 +233,17 @@ export default function TextGeneration() {
         onSelectedModelChange={(value) => updateForm({ selectedModel: value })}
         onSelectedTemplateChange={(value) => updateForm({ selectedTemplate: value })}
       />
+
+      <div className="mb-4">
+        <ResourceReferenceCard
+          generationType="text"
+          onApplyTemplate={({ content, reference }) => {
+            setInput(content)
+            trackResourceReference(reference)
+          }}
+          onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+        />
+      </div>
 
       <TextResults
         copiedId={copiedId}
