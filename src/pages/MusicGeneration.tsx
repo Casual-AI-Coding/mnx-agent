@@ -12,7 +12,9 @@ import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { MUSIC_MODELS, MUSIC_TEMPLATES, STRUCTURE_TAGS, type MusicModel, type MusicGenerationRequest } from '@/types'
 import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks'
+import { mergeResourceUsageMetadata, upsertResourceReference, type ResourceReference } from '@/lib/resource-references'
 import { LyricsEditorCard } from './MusicGeneration/LyricsEditorCard.js'
 import { StylePromptCard } from './MusicGeneration/StylePromptCard.js'
 import { MusicSettingsCard } from './MusicGeneration/MusicSettingsCard.js'
@@ -43,6 +45,7 @@ export default function MusicGeneration() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const [preprocessLoading, setPreprocessLoading] = useState(false)
   const [preprocessResult, setPreprocessResult] = useState<{ lyrics: string; audio_url: string } | null>(null)
   const advancedRef = useRef<HTMLDivElement>(null)
@@ -56,6 +59,10 @@ export default function MusicGeneration() {
   const isStylePromptOverLimit = stylePrompt.length > STYLE_PROMPT_MAX
   const isLyricsOverLimit = lyrics.length > LYRICS_MAX
   const isGenerating = tasks.some(task => task.status === 'generating')
+
+  const trackResourceReference = useCallback((reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }, [])
 
   useEffect(() => () => { blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url)); blobUrlsRef.current.clear() }, [])
   useEffect(() => {
@@ -72,13 +79,13 @@ export default function MusicGeneration() {
   const saveMusicToMedia = useCallback(async (audioUrl: string, title?: string, index?: number): Promise<MediaRecord | null> => {
     try {
       const filename = title?.trim() ? `${title.trim().replace(/[^\w\u4e00-\u9fa5-]/g, '_')}${index !== undefined ? ` (${index + 1})` : ''}.mp3` : `music_${Date.now()}.mp3`
-      const result = await uploadMediaFromUrl(audioUrl, filename, 'music', 'music_generation', { source_url: audioUrl, saved_at: new Date().toISOString() })
+      const result = await uploadMediaFromUrl(audioUrl, filename, 'music', 'music_generation', mergeResourceUsageMetadata({ source_url: audioUrl, saved_at: new Date().toISOString() }, resourceReferences))
       return result.success && result.data ? result.data : null
     } catch (saveError) {
       console.error('Failed to save music:', saveError)
       return null
     }
-  }, [])
+  }, [resourceReferences])
   const buildRequest = useCallback((): MusicGenerationRequest => {
     const request: MusicGenerationRequest = { model, output_format: outputFormat, audio_setting: { sample_rate: sampleRate, bitrate, format } }
     if (isCoverModel) {
@@ -135,11 +142,11 @@ export default function MusicGeneration() {
       updateTask(index, { status: 'completed', progress: 100, audioUrl: url, audioDuration: durationSec })
       persistMediaTask(index, audioData.startsWith('http') ? audioData : url, taskCount)
       addUsage('musicRequests', 1)
-      if (addHistory) addItem({ type: 'music', input: isCoverModel ? referenceAudioUrl : lyrics.trim(), outputUrl: url, metadata: { model, stylePrompt, optimizeLyrics, duration: durationSec, instrumental, seed: seed ? parseInt(seed, 10) : undefined } })
+      if (addHistory) addItem({ type: 'music', input: isCoverModel ? referenceAudioUrl : lyrics.trim(), outputUrl: url, metadata: mergeResourceUsageMetadata({ model, stylePrompt, optimizeLyrics, duration: durationSec, instrumental, seed: seed ? parseInt(seed, 10) : undefined }, resourceReferences) })
     } catch (runError) {
       updateTask(index, { status: 'failed', progress: 100, error: runError instanceof Error ? runError.message : t('musicGeneration.musicGenFailed') })
     }
-  }, [updateTask, decodeAudioData, persistMediaTask, addUsage, addItem, isCoverModel, referenceAudioUrl, lyrics, model, stylePrompt, optimizeLyrics, instrumental, seed, t])
+  }, [updateTask, decodeAudioData, persistMediaTask, addUsage, addItem, isCoverModel, referenceAudioUrl, lyrics, model, stylePrompt, optimizeLyrics, instrumental, seed, resourceReferences, t])
   const handleTemplateSelect = useCallback((templateId: string) => {
     const template = MUSIC_TEMPLATES.find(item => item.id === templateId)
     if (template) updateForm('stylePrompt', template.style)
@@ -168,7 +175,7 @@ export default function MusicGeneration() {
     await runGeneration(index, buildRequest(), task.retryCount + 1, false, tasks.length)
   }, [tasks, runGeneration, buildRequest])
   const clearAll = useCallback(() => {
-    blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url)); blobUrlsRef.current.clear(); setTasks([]); setCurrentIndex(0); setFormData(defaultValue); setError(null)
+    blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url)); blobUrlsRef.current.clear(); setTasks([]); setCurrentIndex(0); setFormData(defaultValue); setError(null); setResourceReferences([])
   }, [defaultValue, setFormData])
   const handlePreprocess = useCallback(async (file: File) => {
     setPreprocessLoading(true); setError(null); setPreprocessResult(null)
@@ -193,6 +200,18 @@ export default function MusicGeneration() {
       <PageHeader icon={<Music className="w-5 h-5" />} title="音乐生成" description="AI 音乐创作与生成" gradient="violet-purple" actions={<WorkbenchActions helpTitle={t('musicGeneration.creationTipsTitle')} helpTips={<ul className="text-xs text-muted-foreground space-y-2">{Array.from({ length: 9 }, (_, i) => <li key={i} className="whitespace-normal">• {t(`musicGeneration.tip${i + 1}`)}</li>)}</ul>} generateCurl={generateApiCurl} onClear={clearAll} clearLabel={t('musicGeneration.clearBtn')} />} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
+          <ResourceReferenceCard
+            generationType="music"
+            onApplyTemplate={({ content, reference }) => {
+              updateForm('stylePrompt', content)
+              trackResourceReference(reference)
+            }}
+            onApplyMaterialItem={({ lyrics: materialLyrics, reference }) => {
+              updateForm('lyrics', materialLyrics)
+              trackResourceReference(reference)
+            }}
+            onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+          />
           {(!instrumental || !isInstrumentalAvailable) && !isCoverModel && <LyricsEditorCard title={t('musicGeneration.lyricsEditorTitle')} songTitle={songTitle} lyrics={lyrics} lyricsPlaceholder={t('musicGeneration.lyricsPlaceholder')} useTagsLabel={t('musicGeneration.useTags')} songTitlePlaceholder="可选，用于命名生成的音乐文件" structureTags={STRUCTURE_TAGS} lyricsMax={LYRICS_MAX} isLyricsOverLimit={isLyricsOverLimit} onSongTitleChange={value => updateForm('songTitle', value)} onLyricsChange={value => updateForm('lyrics', value)} onInsertTag={insertTag} />}
           {!isCoverModel && <StylePromptCard title={instrumental ? '风格描述 *' : t('musicGeneration.styleDescription')} stylePrompt={stylePrompt} stylePromptMax={STYLE_PROMPT_MAX} isStylePromptOverLimit={isStylePromptOverLimit} showSaveTemplate={showSaveTemplate} newTemplateName={newTemplateName} templates={MUSIC_TEMPLATES} placeholder={instrumental ? '纯音乐模式需填写风格描述，定义音乐风格和段落结构' : t('musicGeneration.stylePlaceholder')} saveTemplateTitle="保存为模板" saveTemplateLabel="模板名称" saveTemplatePlaceholder="输入模板名称..." cancelLabel="取消" confirmLabel="保存" templateSelectPlaceholder="选择风格模板..." onTemplateSelect={handleTemplateSelect} onToggleSaveTemplate={() => setShowSaveTemplate(prev => !prev)} onNewTemplateNameChange={setNewTemplateName} onStylePromptChange={value => updateForm('stylePrompt', value)} onCancelSaveTemplate={resetTemplateSave} onConfirmSaveTemplate={confirmSaveTemplate} />}
         </div>
