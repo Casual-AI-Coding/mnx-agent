@@ -1,27 +1,21 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Video, Download, Sparkles, Loader2, Wand2, Clock, CheckCircle, XCircle, AlertCircle, Film, Trash2, Camera, Lightbulb } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
-import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Textarea'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
-import { Badge } from '@/components/ui/Badge'
 import { createVideo, getVideoStatus } from '@/lib/api/video'
 import { uploadMediaFromUrl } from '@/lib/api/media'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import { useSettingsStore } from '@/settings/store'
-import { VIDEO_MODELS, CAMERA_COMMANDS, DEFAULT_MODELS, type VideoModel, type CameraCommand } from '@/types'
-import { cn } from '@/lib/utils'
-import { status as statusTokens } from '@/themes/tokens'
-import { motion } from 'framer-motion'
+import { DEFAULT_MODELS, type VideoModel, type CameraCommand } from '@/types'
+import { mergeResourceUsageMetadata, upsertResourceReference, type ResourceReference } from '@/lib/resource-references'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
+import { VideoGenerationFormPanel } from './VideoGeneration/VideoGenerationFormPanel.js'
+import { VideoGenerationHeader } from './VideoGeneration/VideoGenerationHeader.js'
+import { VideoTaskList } from './VideoGeneration/VideoTaskList.js'
 
-type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
+export type TaskStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
-interface VideoTask {
+export interface VideoTask {
   id: string
   taskId: string
   status: TaskStatus
@@ -30,9 +24,10 @@ interface VideoTask {
   videoUrl?: string
   duration?: number
   error?: string
+  resourceReferences: readonly ResourceReference[]
 }
 
-interface VideoGenerationFormData {
+export interface VideoGenerationFormData {
   [key: string]: unknown
   prompt: string
   model: VideoModel
@@ -60,9 +55,14 @@ export default function VideoGeneration() {
   
   const [isGenerating, setIsGenerating] = useState(false)
   const [tasks, setTasks] = useState<VideoTask[]>([])
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
+
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -83,6 +83,7 @@ export default function VideoGeneration() {
         status: 'pending',
         prompt: prompt.trim(),
         createdAt: Date.now(),
+        resourceReferences,
       }
 
       setTasks(prev => [newTask, ...prev])
@@ -123,14 +124,14 @@ export default function VideoGeneration() {
               type: 'video',
               input: task.prompt,
               outputUrl: status.results.video_url,
-              metadata: {
+              metadata: mergeResourceUsageMetadata({
                 taskId,
                 model,
                 duration: status.results.duration,
-              },
+              }, task.resourceReferences),
             })
 
-            saveVideoToMedia(status.results.video_url)
+            saveVideoToMedia(status.results.video_url, task.resourceReferences)
           } else if (status.status === 'failed') {
             updatedTask.error = status.error || t('videoGeneration.failed')
           }
@@ -147,14 +148,17 @@ export default function VideoGeneration() {
     }, 5000)
   }
 
-  const saveVideoToMedia = async (videoUrl: string): Promise<void> => {
+  const saveVideoToMedia = async (
+    videoUrl: string,
+    references: readonly ResourceReference[]
+  ): Promise<void> => {
     try {
       await uploadMediaFromUrl(
         videoUrl,
         `video_${Date.now()}.mp4`,
         'video',
         'video_generation',
-        { source_url: videoUrl, saved_at: new Date().toISOString() }
+        mergeResourceUsageMetadata({ source_url: videoUrl, saved_at: new Date().toISOString() }, references)
       )
     } catch (error) {
       console.error('Failed to save video:', error)
@@ -163,43 +167,6 @@ export default function VideoGeneration() {
 
   const removeTask = (taskId: string) => {
     setTasks(prev => prev.filter(t => t.taskId !== taskId))
-  }
-
-  const getStatusIcon = (status: TaskStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-5 h-5 text-muted-foreground" />
-      case 'processing':
-        return <Loader2 className="w-5 h-5 animate-spin text-primary" />
-      case 'completed':
-        return <CheckCircle className={cn('w-5 h-5', statusTokens.success.icon)} />
-      case 'failed':
-        return <XCircle className="w-5 h-5 text-destructive" />
-      default:
-        return <AlertCircle className="w-5 h-5 text-muted-foreground" />
-    }
-  }
-
-  const getStatusBadge = (status: TaskStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">{t('videoGeneration.waiting')}</Badge>
-      case 'processing':
-        return <Badge variant="default">{t('videoGeneration.processing')}</Badge>
-      case 'completed':
-        return <Badge variant="secondary" className={cn(statusTokens.success.bgSubtle, statusTokens.success.text)}>{t('videoGeneration.completed')}</Badge>
-      case 'failed':
-        return <Badge variant="destructive">{t('videoGeneration.failed')}</Badge>
-      default:
-        return <Badge variant="outline">{t('videoGeneration.unknown')}</Badge>
-    }
-  }
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return '--:--'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const generateCurl = () => {
@@ -217,20 +184,8 @@ export default function VideoGeneration() {
       model: DEFAULT_MODELS.video,
       cameraCommand: 'static',
     })
+    setResourceReferences([])
   }
-
-  const helpTips = (
-    <div className="space-y-3">
-      <p className="text-sm font-medium text-foreground">视频生成使用技巧：</p>
-      <ul className="text-sm text-muted-foreground space-y-1.5">
-        <li>• <strong>提示词质量</strong>：提供详细、清晰的场景描述，包括主体、动作、环境、光照等要素</li>
-        <li>• <strong>分辨率选择</strong>：标准模型适合大多数场景，实时模型提供更快速响应</li>
-        <li>• <strong>时长限制</strong>：生成视频通常为 5-10 秒，适合短视频和动态演示</li>
-        <li>• <strong>镜头控制</strong>：使用镜头运动指令（推近、拉远、平移等）增强视觉表现力</li>
-        <li>• <strong>模型选择</strong>：video-01 为标准模型，video-01-live 为实时生成模型</li>
-      </ul>
-    </div>
-  )
 
   return (
     <ErrorBoundary
@@ -244,225 +199,18 @@ export default function VideoGeneration() {
       }
     >
       <div className="space-y-6">
-        <PageHeader
-          icon={<Video className="w-5 h-5" />}
-          title="视频生成"
-          description="AI 视频内容生成"
-          gradient="orange-amber"
-          actions={
-            <WorkbenchActions
-              helpTitle="视频生成帮助"
-              helpTips={helpTips}
-              generateCurl={generateCurl}
-              onClear={clearAll}
-              clearLabel="清空表单"
-            />
-          }
+        <VideoGenerationHeader generateCurl={generateCurl} onClear={clearAll} />
+        <VideoGenerationFormPanel
+          formData={formData}
+          isGenerating={isGenerating}
+          error={error}
+          onFormChange={updateForm}
+          onGenerate={handleGenerate}
+          onTrackResourceReference={trackResourceReference}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative group"
-            >
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <Sparkles className="w-5 h-5 text-accent-foreground" />
-                <span className="text-sm font-medium text-foreground">{t('videoGeneration.promptTitle')}</span>
-              </div>
-              <div className="p-4 space-y-4">
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => updateForm({ prompt: e.target.value })}
-                  placeholder={t('videoGeneration.placeholder')}
-                  className="min-h-[200px] resize-none bg-background/50 border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-primary/20"
-                />
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t('videoGeneration.modelLabel')}</label>
-                  <Select value={model} onValueChange={(v) => updateForm({ model: v as VideoModel })}>
-                    <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {VIDEO_MODELS.map(m => (
-                        <SelectItem key={m.id} value={m.id} className="text-foreground focus:bg-secondary">
-                          <div className="flex flex-col">
-                            <span>{m.name}</span>
-                            <span className="text-xs text-muted-foreground">{m.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2 text-foreground">
-                    <Camera className="w-4 h-4" />
-                    镜头控制
-                  </label>
-                  <Select value={cameraCommand} onValueChange={(v) => updateForm({ cameraCommand: v as CameraCommand })}>
-                    <SelectTrigger className="bg-background/50 border-border text-foreground hover:border-primary/50 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {CAMERA_COMMANDS.map(cmd => (
-                        <SelectItem key={cmd.id} value={cmd.id} className="text-foreground focus:bg-secondary">
-                          <div className="flex flex-col">
-                            <span>{cmd.name}</span>
-                            <span className="text-xs text-muted-foreground">{cmd.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {error && (
-                  <div className="p-4 border border-destructive rounded-lg text-destructive bg-destructive/10">
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || isGenerating}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('videoGeneration.createTask')}
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4 mr-2" />
-                      {t('videoGeneration.generateVideo')}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
-            className="relative group"
-          >
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/10 via-primary/10 to-secondary/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <Lightbulb className="w-5 h-5 text-secondary-foreground" />
-                <span className="text-sm font-medium text-foreground">{t('videoGeneration.usageTipsTitle')}</span>
-              </div>
-              <div className="p-4">
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>• {t('videoGeneration.tip1')}</li>
-                  <li>• {t('videoGeneration.tip2')}</li>
-                  <li>• {t('videoGeneration.tip3')}</li>
-                  <li>• {t('videoGeneration.tip4')}</li>
-                </ul>
-              </div>
-            </div>
-          </motion.div>
-        </div>
 
         <div className="space-y-4">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-            className="relative group"
-          >
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 via-primary/20 to-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <Film className="w-5 h-5 text-primary" />
-                <span className="text-sm font-medium text-foreground">{t('videoGeneration.taskListTitle')}</span>
-              </div>
-              <div className="p-4">
-                {tasks.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>{t('videoGeneration.noTasksTitle')}</p>
-                    <p className="text-sm">{t('videoGeneration.tasksAppearHere')}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.taskId}
-                        className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4 space-y-3"
-                      >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(task.status)}
-                          <span className="font-medium text-sm">{task.taskId.slice(0, 8)}...</span>
-                          {getStatusBadge(task.status)}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTask(task.taskId)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {task.prompt}
-                      </p>
-
-                      {task.status === 'completed' && task.videoUrl && (
-                        <div className="space-y-3">
-                          <video
-                            src={task.videoUrl}
-                            controls
-                            className="w-full rounded-lg border"
-                          />
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                              {t('videoGeneration.duration', { duration: formatDuration(task.duration) })}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const a = document.createElement('a')
-                                a.href = task.videoUrl!
-                                a.download = `video-${task.taskId}.mp4`
-                                a.click()
-                              }}
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              {t('videoGeneration.download')}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {task.error && (
-                        <p className="text-sm text-destructive">{task.error}</p>
-                      )}
-
-                      <div className="text-xs text-muted-foreground">
-                        {t('videoGeneration.createdAt', { time: new Date(task.createdAt).toLocaleString() })}
-                      </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            </motion.div>
-          </div>
+          <VideoTaskList tasks={tasks} onRemoveTask={removeTask} />
         </div>
       </div>
     </ErrorBoundary>
