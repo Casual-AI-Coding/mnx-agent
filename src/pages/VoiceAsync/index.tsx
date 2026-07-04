@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { MicOff } from 'lucide-react'
-import { toast } from 'sonner'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { WorkbenchActions } from '@/components/shared/WorkbenchActions'
-import { useSettingsStore } from '@/settings/store'
+import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
 import { createAsyncVoice, getAsyncVoiceStatus } from '@/lib/api/voice'
-import { uploadMedia, type MediaSource } from '@/lib/api/media'
+import {
+  mergeResourceUsageMetadata,
+  upsertResourceReference,
+  type ResourceReference,
+} from '@/lib/resource-references'
 import { useHistoryStore } from '@/stores/history'
 import { useUsageStore } from '@/stores/usage'
 import {
@@ -14,30 +14,11 @@ import {
   type T2AAsyncStatusResponse,
 } from '@/types'
 import { VoiceAsyncForm } from './VoiceAsyncForm'
+import { VoiceAsyncHeader } from './VoiceAsyncHeader'
 import { VoiceHistory } from './VoiceHistory'
+import { useVoiceAsyncUpload } from './useVoiceAsyncUpload'
+import { buildVoiceAsyncCurl, containerVariants, saveVoiceAsyncToMedia } from './voiceAsyncHelpers'
 import type { Task, TaskStatus, VoiceFormData } from './types'
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-  },
-}
-
-const saveToMedia = async (
-  audioUrl: string,
-  filename: string,
-  source: MediaSource
-): Promise<void> => {
-  try {
-    const response = await fetch(audioUrl)
-    const blob = await response.blob()
-    await uploadMedia(blob, filename, 'audio', source)
-  } catch (error) {
-    console.error('Failed to save media:', error)
-  }
-}
 
 export default function VoiceAsync() {
   const [formData, setFormData] = useState<VoiceFormData>({
@@ -52,11 +33,7 @@ export default function VoiceAsync() {
     fileId: null,
   })
   const [tasks, setTasks] = useState<Task[]>([])
-  const [isDragging, setIsDragging] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadRetryCount, setUploadRetryCount] = useState(0)
-  const [pendingFile, setPendingFile] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [resourceReferences, setResourceReferences] = useState<readonly ResourceReference[]>([])
   const pollingIntervalsRef = useRef<NodeJS.Timeout[]>([])
   const { addItem } = useHistoryStore()
   const { addUsage } = useUsageStore()
@@ -75,6 +52,14 @@ export default function VoiceAsync() {
     setFormData(prev => ({ ...prev, ...data }))
   }
 
+  const uploadState = useVoiceAsyncUpload({
+    onUploaded: (fileId) => setFormData(prev => ({ ...prev, fileId })),
+  })
+
+  const trackResourceReference = (reference: ResourceReference) => {
+    setResourceReferences(current => upsertResourceReference(current, reference))
+  }
+
   const handleClearAll = () => {
     setFormData({
       text: '',
@@ -87,44 +72,11 @@ export default function VoiceAsync() {
       activeTab: 'text',
       fileId: null,
     })
-    setUploadError(null)
-    setPendingFile(null)
-    setUploadRetryCount(0)
+    uploadState.resetUpload()
+    setResourceReferences([])
   }
 
-  const generateCurl = () => {
-    const { settings } = useSettingsStore.getState()
-    const apiKey = settings.api.minimaxKey || 'YOUR_API_KEY'
-    const baseUrl = settings.api.region === 'intl' 
-      ? 'https://api.minimaxi.com' 
-      : 'https://api.minimax.chat'
-
-    const payload = {
-      model: formData.model,
-      text: formData.activeTab === 'text' ? formData.text : undefined,
-      file_id: formData.activeTab === 'file' ? formData.fileId : undefined,
-      voice_setting: {
-        voice_id: formData.voiceId,
-        speed: formData.speed,
-        vol: formData.volume,
-        pitch: formData.pitch,
-        emotion: formData.emotion,
-      },
-      audio_setting: {
-        sample_rate: 24000,
-        bitrate: 128000,
-        format: 'mp3',
-        channel: 1,
-      },
-    }
-
-    const cleanPayload = JSON.parse(JSON.stringify(payload))
-
-    return `curl -X POST "${baseUrl}/v1/t2a_async" \\
-  -H "Authorization: Bearer ${apiKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '${JSON.stringify(cleanPayload, null, 2)}'`
-  }
+  const generateCurl = () => buildVoiceAsyncCurl(formData)
 
   const createTask = async () => {
     if (formData.activeTab === 'text' && (!formData.text.trim() || isOverLimit)) return
@@ -156,6 +108,7 @@ export default function VoiceAsync() {
         status: 'pending',
         text: formData.activeTab === 'text' ? formData.text.trim() : (formData.fileId ? '文件任务' : ''),
         createdAt: Date.now(),
+        resourceReferences,
       }
 
       setTasks(prev => [newTask, ...prev])
@@ -217,19 +170,20 @@ export default function VoiceAsync() {
             subtitleUrl: status.results.subtitle_url,
             audioLength: status.results.audio_length,
           }
+          const metadata = mergeResourceUsageMetadata({
+            taskId,
+            model: formData.model,
+            voiceId: formData.voiceId,
+            audioLength: status.results.audio_length,
+          }, task.resourceReferences)
           addItem({
             type: 'voice',
             input: task.text,
             outputUrl: status.results.audio_url,
-            metadata: {
-              taskId,
-              model: formData.model,
-              voiceId: formData.voiceId,
-              audioLength: status.results.audio_length,
-            },
+            metadata,
           })
           
-          saveToMedia(status.results.audio_url, `voice_async_${Date.now()}.wav`, 'voice_async')
+          saveVoiceAsyncToMedia(status.results.audio_url, `voice_async_${Date.now()}.wav`, 'voice_async', metadata)
         } else if (status.status === 'failed') {
           newTask.error = '生成失败'
         }
@@ -237,88 +191,6 @@ export default function VoiceAsync() {
         return newTask
       })
     )
-  }
-
-  const uploadFile = async (file: File) => {
-    setUploadError(null)
-    
-    const formDataUpload = new FormData()
-    formDataUpload.append('file', file)
-
-    try {
-      const { settings } = useSettingsStore.getState()
-      const { API_HOSTS } = await import('@/types')
-      const baseUrl = API_HOSTS[settings.api.region]
-      const apiKey = settings.api.minimaxKey
-
-      const response = await fetch(`${baseUrl}/v1/files`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formDataUpload,
-      })
-
-      if (!response.ok) {
-        throw new Error('上传失败')
-      }
-
-      const data = await response.json()
-      setFormData(prev => ({ ...prev, fileId: data.file_id }))
-      setPendingFile(null)
-      setUploadRetryCount(0)
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : '文件上传失败')
-      setPendingFile(file)
-    }
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
-      toast.error('仅支持 .txt 和 .zip 文件')
-      return
-    }
-
-    await uploadFile(file)
-  }
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (!file) return
-
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.zip')) {
-      toast.error('仅支持 .txt 和 .zip 文件')
-      return
-    }
-
-    await uploadFile(file)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
-
-  const handleRetryUpload = () => {
-    if (pendingFile) {
-      setUploadRetryCount(prev => prev + 1)
-      uploadFile(pendingFile)
-    }
-  }
-
-  const clearUploadError = () => {
-    setUploadError(null)
-    setPendingFile(null)
-    setUploadRetryCount(0)
   }
 
   const handleDownload = (url: string, filename: string) => {
@@ -339,61 +211,36 @@ export default function VoiceAsync() {
       animate="visible"
       className="space-y-6"
     >
-      <PageHeader
-        icon={<MicOff className="w-5 h-5" />}
-        title="语音异步合成"
-        description="批量语音合成与长文本处理"
-        gradient="sky-blue"
-        actions={
-          <WorkbenchActions
-            helpTitle="异步语音合成帮助"
-            helpTips={
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="font-medium text-foreground mb-1">异步工作流程</p>
-                  <p className="text-muted-foreground">
-                    提交任务后系统会立即返回任务ID，您可以在任务历史中查看进度。任务完成后可下载生成的音频文件。
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground mb-1">长文本处理</p>
-                  <p className="text-muted-foreground">
-                    支持最长 50,000 字符的文本输入。对于超长文本，建议使用文件上传方式（支持 .txt 和 .zip 格式）。
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground mb-1">语音选择</p>
-                  <p className="text-muted-foreground">
-                    提供多种预设音色，支持调整语速、音量、音高和情绪。选择合适的语音和参数可获得最佳效果。
-                  </p>
-                </div>
-              </div>
-            }
-            generateCurl={generateCurl}
-            onClear={handleClearAll}
-            clearLabel="清空"
-          />
-        }
-      />
+      <VoiceAsyncHeader generateCurl={generateCurl} onClear={handleClearAll} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <VoiceAsyncForm
-          formData={formData}
-          onFormChange={handleFormChange}
-          onCreateTask={createTask}
-          uploadError={uploadError}
-          uploadRetryCount={uploadRetryCount}
-          pendingFile={pendingFile}
-          isDragging={isDragging}
-          onFileUpload={handleFileUpload}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onRetryUpload={handleRetryUpload}
-          onClearUploadError={clearUploadError}
-          fileInputRef={fileInputRef}
-          charCount={charCount}
-          isOverLimit={isOverLimit}
-        />
+        <div className="space-y-6">
+          <ResourceReferenceCard
+            generationType="voice"
+            onApplyTemplate={({ content, reference }) => {
+              handleFormChange({ text: content, activeTab: 'text' })
+              trackResourceReference(reference)
+            }}
+            onApplyWorkflow={({ reference }) => trackResourceReference(reference)}
+          />
+          <VoiceAsyncForm
+            formData={formData}
+            onFormChange={handleFormChange}
+            onCreateTask={createTask}
+            uploadError={uploadState.uploadError}
+            uploadRetryCount={uploadState.uploadRetryCount}
+            pendingFile={uploadState.pendingFile}
+            isDragging={uploadState.isDragging}
+            onFileUpload={uploadState.handleFileUpload}
+            onDrop={uploadState.handleDrop}
+            onDragOver={uploadState.handleDragOver}
+            onDragLeave={uploadState.handleDragLeave}
+            onRetryUpload={uploadState.handleRetryUpload}
+            onClearUploadError={uploadState.clearUploadError}
+            fileInputRef={uploadState.fileInputRef}
+            charCount={charCount}
+            isOverLimit={isOverLimit}
+          />
+        </div>
         <VoiceHistory
           tasks={tasks}
           onRemoveTask={removeTask}

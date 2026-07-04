@@ -1,4 +1,5 @@
 import type { SpeechModel, Emotion, T2AAsyncStatusResponse } from '@/types'
+import type { ResourceReference } from '@/lib/resource-references'
 
 export const MAX_CHARS = 50000
 
@@ -10,6 +11,7 @@ export interface Task {
   status: TaskStatus
   text: string
   createdAt: number
+  resourceReferences: readonly ResourceReference[]
   result?: {
     audioUrl: string
     subtitleUrl?: string
