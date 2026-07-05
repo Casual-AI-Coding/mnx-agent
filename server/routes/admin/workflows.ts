@@ -1,17 +1,24 @@
-import { Router } from 'express'
+import { Router, type Request } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabaseService } from '../../service-registration.js'
-import { UserService } from '../../services/user-service'
-import { getConnection } from '../../database/connection'
+import { getDatabaseService, getUserService } from '../../service-registration.js'
 import { successResponse, errorResponse } from '../../middleware/api-response'
+import type { TokenPayload } from '../../services/user-service.js'
 
 const router = Router()
+
+function getAuthenticatedUser(req: Request): TokenPayload {
+  if (!req.user) {
+    throw new Error('Admin workflows 路由缺少已认证用户上下文')
+  }
+
+  return req.user
+}
 
 router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
   const { userId } = req.body
-  const grantedBy = req.user!.userId
+  const grantedBy = getAuthenticatedUser(req).userId
 
   if (!userId) {
     errorResponse(res, 'userId is required', 400)
@@ -26,8 +33,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
     return
   }
 
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
   const user = await userService.getUserById(userId)
 
   if (!user) {
