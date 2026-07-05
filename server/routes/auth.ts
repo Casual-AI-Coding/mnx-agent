@@ -4,10 +4,11 @@ import { validate } from '../middleware/validate.js'
 import { authRateLimiter } from '../middleware/rateLimit.js'
 import { z } from 'zod'
 import { UserService } from '../services/user-service.js'
-import { getConnection } from '../database/connection.js'
 import { authenticateJWT } from '../middleware/auth-middleware.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { isProduction } from '../config/index.js'
+import { getUserService } from '../service-registration.js'
+import type { TokenPayload } from '../services/user-service.js'
 
 const router = Router()
 
@@ -20,7 +21,7 @@ const registerSchema = z.object({
   username: z.string().min(1, '用户名不能为空').max(50, '用户名不能超过50字符'),
   password: z.string().min(6, '密码至少6位'),
   invitationCode: z.string().min(1, '邀请码不能为空'),
-  email: z.string().email('邮箱格式不正确').optional().nullable(),
+  email: z.email({ message: '邮箱格式不正确' }).optional().nullable(),
 })
 
 const changePasswordSchema = z.object({
@@ -33,10 +34,17 @@ const updateProfileSchema = z.object({
   minimax_region: z.enum(['cn', 'intl']).optional(),
 })
 
+function getAuthenticatedUser(req: Request): TokenPayload {
+  if (!req.user) {
+    throw new Error('Auth 路由缺少已认证用户上下文')
+  }
+
+  return req.user
+}
+
 router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.body
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
 
   const result = await userService.login(username, password)
 
@@ -68,8 +76,7 @@ router.post('/login', authRateLimiter, validate(loginSchema), asyncHandler(async
 
 router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, invitationCode, email } = req.body
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
 
   const result = await userService.register({ username, password, invitationCode, email })
 
@@ -80,7 +87,12 @@ router.post('/register', authRateLimiter, validate(registerSchema), asyncHandler
 
   const loginResult = await userService.login(username, password)
 
-  req.user = { userId: result.user!.id, username: result.user!.username, role: result.user!.role }
+  if (!result.user) {
+    errorResponse(res, 'Registration failed', 400)
+    return
+  }
+
+  req.user = { userId: result.user.id, username: result.user.username, role: result.user.role }
 
   res.cookie('refreshToken', loginResult.refreshToken, {
     httpOnly: true,
@@ -110,8 +122,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     return
   }
 
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
   const user = await userService.getUserById(payload.userId)
 
   if (!user || !user.is_active) {
@@ -141,7 +152,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   successResponse(res, { accessToken: newAccessToken })
 }))
 
-router.post('/logout', authenticateJWT, asyncHandler(async (req: Request, res) => {
+router.post('/logout', authenticateJWT, asyncHandler(async (_, res) => {
   res.cookie('refreshToken', '', {
     httpOnly: true,
     secure: isProduction(),
@@ -154,10 +165,10 @@ router.post('/logout', authenticateJWT, asyncHandler(async (req: Request, res) =
 }))
 
 router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
+  const authenticatedUser = getAuthenticatedUser(req)
 
-  const user = await userService.getUserById(req.user!.userId)
+  const user = await userService.getUserById(authenticatedUser.userId)
 
   if (!user) {
     errorResponse(res, '用户不存在', 404)
@@ -169,10 +180,10 @@ router.get('/me', authenticateJWT, asyncHandler(async (req: Request, res) => {
 
 router.post('/change-password', authRateLimiter, authenticateJWT, validate(changePasswordSchema), asyncHandler(async (req: Request, res) => {
   const { oldPassword, newPassword } = req.body
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
+  const authenticatedUser = getAuthenticatedUser(req)
 
-  const result = await userService.changePassword(req.user!.userId, oldPassword, newPassword)
+  const result = await userService.changePassword(authenticatedUser.userId, oldPassword, newPassword)
 
   if (!result.success) {
     errorResponse(res, result.error ?? 'Password change failed', 400)
@@ -184,10 +195,10 @@ router.post('/change-password', authRateLimiter, authenticateJWT, validate(chang
 
 router.patch('/me', authenticateJWT, validate(updateProfileSchema), asyncHandler(async (req: Request, res) => {
   const { minimax_api_key, minimax_region } = req.body
-  const conn = getConnection()
-  const userService = new UserService(conn)
+  const userService = getUserService()
+  const authenticatedUser = getAuthenticatedUser(req)
 
-  const user = await userService.updateUser(req.user!.userId, {
+  const user = await userService.updateUser(authenticatedUser.userId, {
     minimax_api_key,
     minimax_region,
   })

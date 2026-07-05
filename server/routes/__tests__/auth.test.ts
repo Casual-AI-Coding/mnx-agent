@@ -3,12 +3,13 @@ import express from 'express'
 import request from 'supertest'
 
 const mocks = vi.hoisted(() => ({
-  getConnection: vi.fn(),
   login: vi.fn(),
 }))
 
-vi.mock('../../database/connection.js', () => ({
-  getConnection: mocks.getConnection,
+vi.mock('../../service-registration.js', () => ({
+  getUserService: () => ({
+    login: mocks.login,
+  }),
 }))
 
 vi.mock('../../middleware/rateLimit.js', () => ({
@@ -42,7 +43,6 @@ describe('Auth API Routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getConnection.mockReturnValue({})
 
     app = express()
     app.use(express.json())
