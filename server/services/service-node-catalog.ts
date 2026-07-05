@@ -1,27 +1,92 @@
-import type { DatabaseService } from '../database/service-async.js'
-import type { MiniMaxClient } from '../lib/minimax/index.js'
-import type { CapacityChecker } from './capacity-checker.js'
-import type { QueueProcessor } from './queue-processor.js'
 import type { ServiceNodeRegistry } from './service-node-registry.js'
 
+type CatalogCallable = (...args: never[]) => unknown
+
+export interface MiniMaxServiceNodes {
+  readonly chatCompletion: CatalogCallable
+  readonly imageGeneration: CatalogCallable
+  readonly videoGeneration: CatalogCallable
+  readonly textToAudioSync: CatalogCallable
+  readonly textToAudioAsync: CatalogCallable
+  readonly musicGeneration: CatalogCallable
+  readonly lyricsGeneration: CatalogCallable
+  readonly textToAudioAsyncStatus: CatalogCallable
+  readonly videoGenerationStatus: CatalogCallable
+  readonly videoAgentGenerate: CatalogCallable
+  readonly videoAgentStatus: CatalogCallable
+  readonly fileList: CatalogCallable
+  readonly fileUpload: CatalogCallable
+  readonly fileRetrieve: CatalogCallable
+  readonly fileDelete: CatalogCallable
+  readonly voiceList: CatalogCallable
+  readonly voiceDelete: CatalogCallable
+  readonly voiceClone: CatalogCallable
+  readonly voiceDesign: CatalogCallable
+  readonly getBalance: CatalogCallable
+  readonly getCodingPlanRemains: CatalogCallable
+}
+
+export interface DatabaseServiceNodes {
+  readonly getPendingTasks: CatalogCallable
+  readonly createMediaRecord: CatalogCallable
+  readonly updateTask: CatalogCallable
+  readonly getTaskById: CatalogCallable
+  readonly getAllCronJobs: CatalogCallable
+  readonly getCronJobById: CatalogCallable
+  readonly createCronJob: CatalogCallable
+  readonly updateCronJob: CatalogCallable
+  readonly deleteCronJob: CatalogCallable
+  readonly toggleCronJobActive: CatalogCallable
+  readonly getActiveCronJobs: CatalogCallable
+  readonly getAllTasks: CatalogCallable
+  readonly createTask: CatalogCallable
+  readonly markTaskRunning: CatalogCallable
+  readonly markTaskCompleted: CatalogCallable
+  readonly markTaskFailed: CatalogCallable
+  readonly getQueueStats: CatalogCallable
+  readonly getAllExecutionLogs: CatalogCallable
+  readonly createExecutionLog: CatalogCallable
+  readonly updateExecutionLog: CatalogCallable
+  readonly getMediaRecords: CatalogCallable
+  readonly getMediaRecordById: CatalogCallable
+  readonly updateMediaRecord: CatalogCallable
+}
+
+export interface CapacityServiceNodes {
+  readonly getRemainingCapacity: CatalogCallable
+  readonly hasCapacity: CatalogCallable
+  readonly getSafeExecutionLimit: CatalogCallable
+  readonly checkBalance: CatalogCallable
+  readonly refreshAllCapacity: CatalogCallable
+  readonly canExecuteTask: CatalogCallable
+  readonly waitForCapacity: CatalogCallable
+}
+
+export interface QueueServiceNodes {
+  readonly processImageQueueWithCapacity: CatalogCallable
+  readonly processQueue: CatalogCallable
+  readonly getQueueStats: CatalogCallable
+  readonly retryFailedTasks: CatalogCallable
+}
+
 export interface MediaStorageServiceNodes {
-  readonly saveMediaFile: unknown
-  readonly saveFromUrl: unknown
-  readonly deleteMediaFile: unknown
-  readonly readMediaFile: unknown
+  readonly saveMediaFile: CatalogCallable
+  readonly saveFromUrl: CatalogCallable
+  readonly deleteMediaFile: CatalogCallable
+  readonly readMediaFile: CatalogCallable
 }
 
 export interface UtilityServiceNodes {
-  readonly toCSV: unknown
-  readonly generateMediaToken: unknown
-  readonly verifyMediaToken: unknown
+  readonly toCSV: CatalogCallable
+  readonly generateMediaToken: CatalogCallable
+  readonly verifyMediaToken: CatalogCallable
 }
 
 export interface ServiceNodeCatalogDependencies {
-  readonly minimaxClient: MiniMaxClient | object
-  readonly dbService: DatabaseService | object
-  readonly capacityChecker: CapacityChecker | object
-  readonly queueProcessor: QueueProcessor | object
+  readonly minimaxClient: MiniMaxServiceNodes
+  readonly dbService: DatabaseServiceNodes
+  readonly capacityChecker: CapacityServiceNodes
+  readonly queueProcessor: QueueServiceNodes
   readonly mediaStorage: MediaStorageServiceNodes
   readonly utils: UtilityServiceNodes
 }
