@@ -1,6 +1,6 @@
 import { getGlobalContainer } from './container.js'
 import { getDatabase, type DatabaseService } from './database/service-async.js'
-import { getMiniMaxClient, type MiniMaxClient } from './lib/minimax/index.js'
+import { getMiniMaxClient } from './lib/minimax/index.js'
 import { TaskExecutor } from './services/task-executor.js'
 import { CapacityChecker } from './services/capacity-checker.js'
 import { QueueProcessor } from './services/queue-processor.js'
@@ -12,7 +12,8 @@ import { NotificationService } from './services/notification-service.js'
 import { ExecutionStateManager } from './services/execution-state-manager.js'
 import { WorkflowService, JobService, TaskService, LogService, MediaService, WebhookService, CapacityService, MaterialService } from './services/domain/index.js'
 import { ExportService } from './services/export-service.js'
-import { cronEvents, CronEventEmitter } from './services/websocket-service.js'
+import { SettingsService } from './services/settings-service.js'
+import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
 import { createMisfireHandler } from './services/misfire-handler.js'
@@ -49,6 +50,7 @@ export const TOKENS = {
   CAPACITY_SERVICE: 'capacityService',
   MATERIAL_SERVICE: 'materialService',
   EXPORT_SERVICE: 'exportService',
+  SETTINGS_SERVICE: 'settingsService',
 } as const
 
 export async function registerServices(): Promise<void> {
@@ -165,6 +167,10 @@ export async function registerServices(): Promise<void> {
     return new ExportService(c.resolve(TOKENS.DATABASE))
   })
 
+  container.registerSingleton(TOKENS.SETTINGS_SERVICE, (c) => {
+    return new SettingsService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -263,4 +269,8 @@ export function getMaterialService(): MaterialService {
 
 export function getExportService(): ExportService {
   return getGlobalContainer().resolve<ExportService>(TOKENS.EXPORT_SERVICE)
+}
+
+export function getSettingsService(): SettingsService {
+  return getGlobalContainer().resolve<SettingsService>(TOKENS.SETTINGS_SERVICE)
 }

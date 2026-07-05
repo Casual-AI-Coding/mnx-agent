@@ -2,8 +2,7 @@ import { Router, Request } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler.js'
 import { authenticateJWT } from '../../middleware/auth-middleware.js'
 import { validate, validateQuery, validateParams } from '../../middleware/validate.js'
-import { getConnection } from '../../database/connection.js'
-import { SettingsService } from '../../services/settings-service.js'
+import { getSettingsService } from '../../service-registration.js'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import {
   settingsCategoryParamsSchema,
@@ -16,10 +15,16 @@ const router = Router()
 
 router.use(authenticateJWT)
 
+function getAuthenticatedUserId(req: Request): string {
+  if (!req.user) {
+    throw new Error('Settings 路由缺少已认证用户上下文')
+  }
+  return req.user.userId
+}
+
 router.get('/', asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
 
   const result = await settingsService.getAllSettings(userId)
 
@@ -32,9 +37,8 @@ router.get('/', asyncHandler(async (req: Request, res) => {
 }))
 
 router.get('/history', validateQuery(settingsHistoryQuerySchema), asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
   const { category, page, limit } = req.query as {
     category?: SettingsCategory
     page?: number
@@ -46,9 +50,8 @@ router.get('/history', validateQuery(settingsHistoryQuerySchema), asyncHandler(a
   successResponse(res, result)
 }))
 
-router.get('/defaults', asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
+router.get('/defaults', asyncHandler(async (_req: Request, res) => {
+  const settingsService = getSettingsService()
 
   const defaults = {
     account: settingsService.getDefaults('account'),
@@ -67,9 +70,8 @@ router.get('/defaults', asyncHandler(async (req: Request, res) => {
 }))
 
 router.get('/:category', validateParams(settingsCategoryParamsSchema), asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
   const category = req.params.category as SettingsCategory
 
   const settings = await settingsService.getSettingsByCategory(userId, category)
@@ -78,9 +80,8 @@ router.get('/:category', validateParams(settingsCategoryParamsSchema), asyncHand
 }))
 
 router.patch('/:category', validateParams(settingsCategoryParamsSchema), validate(updateSettingsSchema), asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
   const category = req.params.category as SettingsCategory
   const { settings } = req.body
 
@@ -106,9 +107,8 @@ router.patch('/:category', validateParams(settingsCategoryParamsSchema), validat
 }))
 
 router.put('/:category', validateParams(settingsCategoryParamsSchema), validate(updateSettingsSchema), asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
   const category = req.params.category as SettingsCategory
   const { settings } = req.body
 
@@ -134,9 +134,8 @@ router.put('/:category', validateParams(settingsCategoryParamsSchema), validate(
 }))
 
 router.delete('/:category', validateParams(settingsCategoryParamsSchema), asyncHandler(async (req: Request, res) => {
-  const conn = getConnection()
-  const settingsService = new SettingsService(conn)
-  const userId = req.user!.userId
+  const settingsService = getSettingsService()
+  const userId = getAuthenticatedUserId(req)
   const category = req.params.category as SettingsCategory
 
   const defaults = await settingsService.resetCategory(userId, category, userId)

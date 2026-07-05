@@ -24,6 +24,7 @@ import type { IRetryManager } from './services/interfaces/retry-manager.interfac
 import type { NotificationService } from './services/notification-service.js'
 import type { QueueProcessor } from './services/queue-processor.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
+import type { SettingsService } from './services/settings-service.js'
 import type { TaskExecutor } from './services/task-executor.js'
 import type { WebSocketService } from './services/websocket-service.js'
 import type { WorkflowEngine } from './services/workflow/index.js'
@@ -54,6 +55,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.CAPACITY_SERVICE]: CapacityService
   readonly [TOKENS.MATERIAL_SERVICE]: MaterialService
   readonly [TOKENS.EXPORT_SERVICE]: ExportService
+  readonly [TOKENS.SETTINGS_SERVICE]: SettingsService
 }
 
 export type ContainerToken = keyof ContainerTokenMap
