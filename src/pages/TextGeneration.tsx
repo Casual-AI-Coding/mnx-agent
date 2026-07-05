@@ -13,11 +13,13 @@ import { useSettingsStore } from '@/settings/store'
 import { SYSTEM_PROMPT_TEMPLATES, type ChatMessage } from '@/types'
 import { useRetry } from '@/hooks/useRetry'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
+import { createHistoryReplaySnapshot } from '@/lib/history-replay'
 import { PromptInput } from './TextGeneration/PromptInput.js'
 import { TextGenerationHeader } from './TextGeneration/TextGenerationHeader.js'
 import { TextResults, type TextMessage } from './TextGeneration/TextResults.js'
 
 interface TextGenerationFormData {
+  input: string
   selectedModel: string
   selectedTemplate: string
   promptCaching: boolean
@@ -30,6 +32,7 @@ export default function TextGeneration() {
   const [formData, setFormData] = useFormPersistence<TextGenerationFormData>({
     storageKey: FORM_PERSISTENCE_KEYS.TEXT_GENERATION,
     defaultValue: {
+      input: '',
       selectedModel: textSettings.model,
       selectedTemplate: 'general',
       promptCaching: textSettings.promptCaching,
@@ -43,7 +46,7 @@ export default function TextGeneration() {
   }
   
   const [messages, setMessages] = useState<TextMessage[]>([])
-  const [input, setInput] = useState('')
+  const [input, setInputState] = useState(formData.input)
   const [isLoading, setIsLoading] = useState(false)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -56,6 +59,11 @@ export default function TextGeneration() {
 
   const trackResourceReference = (reference: ResourceReference) => {
     setResourceReferences(current => upsertResourceReference(current, reference))
+  }
+
+  const setInput = (value: string) => {
+    setInputState(value)
+    updateForm({ input: value })
   }
 
   const scrollToBottom = () => {
@@ -141,6 +149,7 @@ export default function TextGeneration() {
 
     if (success !== null) {
       const usageEstimate = Math.ceil(userMessageContent.length / 4) + Math.ceil(fullContent.length / 4)
+      const replaySnapshot = createHistoryReplaySnapshot({ label: '文本参数', routePath: '/text', formPersistenceKey: FORM_PERSISTENCE_KEYS.TEXT_GENERATION, formData: { ...formData, input: userMessageContent, selectedModel, selectedTemplate, promptCaching } })
       addUsage('textTokens', usageEstimate)
 
       addItem({
@@ -148,6 +157,7 @@ export default function TextGeneration() {
         input: userMessageContent,
         output: fullContent,
         metadata: mergeResourceUsageMetadata({ model: selectedModel }, resourceReferences),
+        replaySnapshot,
       })
     } else {
       setMessages(prev => prev.map(m =>

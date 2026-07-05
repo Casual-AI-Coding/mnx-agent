@@ -14,6 +14,7 @@ import { DEFAULT_MODELS } from '@/models'
 import { MusicCarousel, type MusicTask } from '@/components/music/MusicCarousel'
 import { ResourceReferenceCard } from '@/components/resources/ResourceReferenceCard'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks'
+import { createHistoryReplaySnapshot } from '@/lib/history-replay'
 import { mergeResourceUsageMetadata, upsertResourceReference, type ResourceReference } from '@/lib/resource-references'
 import { LyricsEditorCard } from './MusicGeneration/LyricsEditorCard.js'
 import { StylePromptCard } from './MusicGeneration/StylePromptCard.js'
@@ -142,7 +143,7 @@ export default function MusicGeneration() {
       updateTask(index, { status: 'completed', progress: 100, audioUrl: url, audioDuration: durationSec })
       persistMediaTask(index, audioData.startsWith('http') ? audioData : url, taskCount)
       addUsage('musicRequests', 1)
-      if (addHistory) addItem({ type: 'music', input: isCoverModel ? referenceAudioUrl : lyrics.trim(), outputUrl: url, metadata: mergeResourceUsageMetadata({ model, stylePrompt, optimizeLyrics, duration: durationSec, instrumental, seed: seed ? parseInt(seed, 10) : undefined }, resourceReferences) })
+      if (addHistory) addItem({ type: 'music', input: isCoverModel ? referenceAudioUrl : lyrics.trim(), outputUrl: url, metadata: mergeResourceUsageMetadata({ model, stylePrompt, optimizeLyrics, duration: durationSec, instrumental, seed: seed ? parseInt(seed, 10) : undefined }, resourceReferences), replaySnapshot: createHistoryReplaySnapshot({ label: '音乐参数', routePath: '/music', formPersistenceKey: FORM_PERSISTENCE_KEYS.MUSIC_GENERATION, formData }) })
     } catch (runError) {
       updateTask(index, { status: 'failed', progress: 100, error: runError instanceof Error ? runError.message : t('musicGeneration.musicGenFailed') })
     }

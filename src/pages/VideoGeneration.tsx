@@ -9,6 +9,7 @@ import { useSettingsStore } from '@/settings/store'
 import { DEFAULT_MODELS, type VideoModel, type CameraCommand } from '@/types'
 import { mergeResourceUsageMetadata, upsertResourceReference, type ResourceReference } from '@/lib/resource-references'
 import { useFormPersistence, FORM_PERSISTENCE_KEYS } from '@/hooks/useFormPersistence'
+import { createHistoryReplaySnapshot, type HistoryReplaySnapshot } from '@/lib/history-replay'
 import { VideoGenerationFormPanel } from './VideoGeneration/VideoGenerationFormPanel.js'
 import { VideoGenerationHeader } from './VideoGeneration/VideoGenerationHeader.js'
 import { VideoTaskList } from './VideoGeneration/VideoTaskList.js'
@@ -25,6 +26,7 @@ export interface VideoTask {
   duration?: number
   error?: string
   resourceReferences: readonly ResourceReference[]
+  replaySnapshot: HistoryReplaySnapshot
 }
 
 export interface VideoGenerationFormData {
@@ -84,6 +86,17 @@ export default function VideoGeneration() {
         prompt: prompt.trim(),
         createdAt: Date.now(),
         resourceReferences,
+        replaySnapshot: createHistoryReplaySnapshot({
+          label: '视频参数',
+          routePath: '/video',
+          formPersistenceKey: FORM_PERSISTENCE_KEYS.VIDEO_GENERATION,
+          formData: {
+            ...formData,
+            prompt: prompt.trim(),
+            model,
+            cameraCommand,
+          },
+        }),
       }
 
       setTasks(prev => [newTask, ...prev])
@@ -129,6 +142,7 @@ export default function VideoGeneration() {
                 model,
                 duration: status.results.duration,
               }, task.resourceReferences),
+              replaySnapshot: task.replaySnapshot,
             })
 
             saveVideoToMedia(status.results.video_url, task.resourceReferences)
