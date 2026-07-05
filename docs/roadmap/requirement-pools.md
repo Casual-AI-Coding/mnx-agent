@@ -189,7 +189,7 @@
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
 | R-024 | OpenAI Image-2 外部调试 | DevTools | P1 | v2.2.6 | 已完成 |
-| R-025 | 补充完善系统配置功能 | Admin | P2 | v2.5 | 待办 |
+| R-025 | 补充完善系统配置功能 | Admin | P2 | v2.5 | 已完成 |
 
 ### R-024 - OpenAI Image-2 外部调试
 - **描述**: 增加外部供应商 OpenAI，接入 chatgpt-image-2 / gpt-image-2 模型的图片生成调试功能，用于直接验证外部图片生成 API 参数、响应和媒体保存链路
@@ -198,7 +198,7 @@
 
 ### R-025 - 补充完善系统配置功能
 - **描述**: 将代理域名白名单从硬编码迁移到 `system_config` 动态配置，支持 super 用户在 SystemConfig 页面动态管理允许访问的域名；同时完善 system_config 的 CRUD 体验（如批量更新、配置校验、默认值重置等）
-- **现状**: `external-proxy.ts` 中 `ALLOWED_HOSTS` 为硬编码数组，新增域名需改代码重启服务；`system_config` 表已存在且 SystemConfig.tsx 页面可用，但尚未接入代理白名单场景
+- **现状**: 已完成。migration 037 将 `proxy.allowed_hosts` 写入 `system_config` 种子数据；白名单从静态常量改为 TTL 60s 可缓存，请求前自动刷新；system-config 写入时校验域名格式并拒绝内部地址；写入后立即失效缓存，下次请求自动加载新配置
 - **范围**: `server/routes/external-proxy.ts` 改为从 `system_config` 读取 `proxy.allowed_hosts`（逗号分隔域名），缓存并支持刷新；`server/database/schema-pg.ts` 初始数据预填现有域名；可选：为 SystemConfig 页面添加专用代理白名单管理面板
 
 ---
@@ -222,6 +222,7 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-07-05 | R-025（补充完善系统配置功能）标记为已完成；v2.5.2 已将代理白名单从硬编码迁移到 system_config 动态配置，支持运行时刷新和写入校验 |
 | 2026-07-05 | R-013（结构化日志 + Trace ID）标记为已完成；请求级 Trace ID 已接入结构化日志与审计链路 |
 | 2026-05-04 | R-024（OpenAI Image-2 外部调试）标记为已完成，版本 v2.2.6 |
 | 2026-05-11 | 更新当前 ID 范围到 R-025；完善 R-005/R-009/R-016/R-020/R-022 描述；将 R-016/R-022 分配到 v3.2 |
