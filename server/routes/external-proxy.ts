@@ -7,9 +7,11 @@ import { ExternalApiLogRepository } from '../repositories/external-api-log.repos
 import { MediaRepository } from '../repositories/media-repository'
 import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
+import { getDatabaseService } from '../service-registration.js'
 import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
 import { saveExternalProxyImages } from './external-proxy/external-proxy-media-save-helpers.js'
 import { isExternalProxyUrlAllowed } from './external-proxy/external-proxy-url-security-helpers.js'
+import { ensureExternalProxyAllowedHostsFresh } from '../services/external-proxy-allowed-hosts.service.js'
 import {
   EXTERNAL_PROXY_MEDIA_TYPES,
   isRecord,
@@ -32,6 +34,10 @@ const router = Router()
 
 export function isUrlAllowed(urlString: string): boolean {
   return isExternalProxyUrlAllowed(urlString)
+}
+
+async function refreshAllowedHostsIfNeeded(): Promise<void> {
+  await ensureExternalProxyAllowedHostsFresh(getDatabaseService())
 }
 
 const proxyRequestSchema = z.object({
@@ -58,6 +64,7 @@ router.post(
       return
     }
 
+    await refreshAllowedHostsIfNeeded()
     if (!isUrlAllowed(url)) {
       errorResponse(res, `不允许访问该域名: ${targetUrlResult.url.hostname}`, 403)
       return
@@ -129,6 +136,7 @@ router.post(
       return
     }
 
+    await refreshAllowedHostsIfNeeded()
     if (!isUrlAllowed(url)) {
       errorResponse(res, `不允许访问该域名: ${targetUrlResult.url.hostname}`, 403)
       return
