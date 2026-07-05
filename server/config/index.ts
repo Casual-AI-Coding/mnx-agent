@@ -17,7 +17,7 @@ export interface AppConfig {
   server: {
     port: number
     corsOrigins: string[]
-    nodeEnv: 'development' | 'production' | 'test'
+    nodeEnv: NodeEnv
   }
   database: {
     host: string
@@ -36,14 +36,14 @@ export interface AppConfig {
   }
   minimax: {
     apiKey: string | undefined
-    region: 'domestic' | 'international'
+    region: MiniMaxRegion
   }
   cron: {
     timezone: string
     maxConcurrent: number
   }
   logging: {
-    level: 'debug' | 'info' | 'warn' | 'error'
+    level: LogLevel
     prettyPrint: boolean
     fileOutput: boolean
     logDir: string
@@ -69,13 +69,21 @@ const REQUIRED_ENV_VARS = [
 
 type RequiredEnvVar = typeof REQUIRED_ENV_VARS[number]
 
+const NODE_ENV_VALUES = ['development', 'production', 'test'] as const
+const MINIMAX_REGION_VALUES = ['domestic', 'international'] as const
+const LOG_LEVEL_VALUES = ['debug', 'info', 'warn', 'error'] as const
+
+type NodeEnv = typeof NODE_ENV_VALUES[number]
+type MiniMaxRegion = typeof MINIMAX_REGION_VALUES[number]
+type LogLevel = typeof LOG_LEVEL_VALUES[number]
+
 // ============================================================================
 // JWT_SECRET Validation (Fail-Fast)
 // ============================================================================
 
 const JWT_SECRET_MIN_LENGTH = 32
 
-export function validateJwtSecret(): void {
+export function validateJwtSecret(): string {
   const jwtSecret = process.env.JWT_SECRET
 
   if (!jwtSecret) {
@@ -91,6 +99,8 @@ export function validateJwtSecret(): void {
       'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
     )
   }
+
+  return jwtSecret
 }
 
 // ============================================================================
@@ -99,7 +109,7 @@ export function validateJwtSecret(): void {
 
 const MEDIA_TOKEN_SECRET_MIN_LENGTH = 32
 
-export function validateMediaTokenSecret(): void {
+export function validateMediaTokenSecret(): string {
   const mediaTokenSecret = process.env.MEDIA_TOKEN_SECRET
 
   if (!mediaTokenSecret) {
@@ -115,6 +125,8 @@ export function validateMediaTokenSecret(): void {
       'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
     )
   }
+
+  return mediaTokenSecret
 }
 
 // ============================================================================
@@ -139,6 +151,37 @@ function parseCorsOrigins(value: string | undefined): string[] {
   return value.split(',').map(s => s.trim())
 }
 
+function isAllowedValue<TValue extends string>(value: string, allowedValues: readonly TValue[]): value is TValue {
+  return allowedValues.some(allowedValue => allowedValue === value)
+}
+
+function parseRequiredEnumValue<TValue extends string>(
+  varName: string,
+  value: string,
+  allowedValues: readonly TValue[]
+): TValue {
+  if (isAllowedValue(value, allowedValues)) {
+    return value
+  }
+
+  throw new Error(`${varName} must be one of: ${allowedValues.join(', ')} (got ${value})`)
+}
+
+function parseNodeEnv(value: string | undefined): NodeEnv {
+  if (value === undefined || value === '') return 'development'
+  return parseRequiredEnumValue('NODE_ENV', value, NODE_ENV_VALUES)
+}
+
+function parseMiniMaxRegion(value: string | undefined): MiniMaxRegion {
+  if (value === undefined || value === '') return 'international'
+  return parseRequiredEnumValue('MINIMAX_REGION', value, MINIMAX_REGION_VALUES)
+}
+
+function parseLogLevel(value: string | undefined): LogLevel {
+  if (value === undefined || value === '') return 'info'
+  return parseRequiredEnumValue('LOG_LEVEL', value, LOG_LEVEL_VALUES)
+}
+
 function validateRequiredEnvVars(): void {
   const missing: RequiredEnvVar[] = []
   for (const varName of REQUIRED_ENV_VARS) {
@@ -152,17 +195,13 @@ function validateRequiredEnvVars(): void {
 }
 
 export function loadConfig(): AppConfig {
-  // JWT_SECRET validation runs ALWAYS (fail-fast) - even in test mode
-  validateJwtSecret()
+  const jwtSecret = validateJwtSecret()
+  const mediaTokenSecret = validateMediaTokenSecret()
+  const nodeEnv = parseNodeEnv(process.env.NODE_ENV)
 
-  // MEDIA_TOKEN_SECRET validation runs ALWAYS (fail-fast) - even in test mode
-  validateMediaTokenSecret()
-
-  if (process.env.NODE_ENV !== 'test') {
+  if (nodeEnv !== 'test') {
     validateRequiredEnvVars()
   }
-
-  const nodeEnv = (process.env.NODE_ENV as AppConfig['server']['nodeEnv']) || 'development'
 
   return {
     server: {
@@ -181,20 +220,20 @@ export function loadConfig(): AppConfig {
       connectionTimeout: parseInteger(process.env.DB_CONNECTION_TIMEOUT, 5000),
     },
     auth: {
-      jwtSecret: process.env.JWT_SECRET!,
-      mediaTokenSecret: process.env.MEDIA_TOKEN_SECRET!,
+      jwtSecret,
+      mediaTokenSecret,
       bcryptRounds: parseInteger(process.env.BCRYPT_ROUNDS, 12),
     },
     minimax: {
       apiKey: process.env.MINIMAX_API_KEY,
-      region: (process.env.MINIMAX_REGION as 'domestic' | 'international') || 'international',
+      region: parseMiniMaxRegion(process.env.MINIMAX_REGION),
     },
     cron: {
       timezone: process.env.CRON_TIMEZONE || 'Asia/Shanghai',
       maxConcurrent: parseInteger(process.env.CRON_MAX_CONCURRENT, 5),
     },
     logging: {
-      level: (process.env.LOG_LEVEL as AppConfig['logging']['level']) || 'info',
+      level: parseLogLevel(process.env.LOG_LEVEL),
       prettyPrint: parseBoolean(process.env.LOG_PRETTY, nodeEnv !== 'production'),
       fileOutput: parseBoolean(process.env.LOG_FILE, false),
       logDir: process.env.LOG_DIR || 'logs',
