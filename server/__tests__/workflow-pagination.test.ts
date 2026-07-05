@@ -5,10 +5,6 @@ import workflowRoutes from '../routes/workflows'
 import { getGlobalContainer, resetContainer } from '../container'
 import { TOKENS } from '../service-registration'
 
-vi.mock('../database/service-async', () => ({
-  getDatabase: vi.fn(),
-}))
-
 vi.mock('../services/service-node-registry', () => ({
   getServiceNodeRegistry: vi.fn(),
   resetServiceNodeRegistry: vi.fn(),
@@ -16,15 +12,13 @@ vi.mock('../services/service-node-registry', () => ({
 
 describe('Workflow Pagination Validation', () => {
   let app: express.Application
-  let mockDb: any
+  let getPaginated: ReturnType<typeof vi.fn>
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
     resetContainer()
 
-    mockDb = {
-      getWorkflowTemplatesPaginated: vi.fn().mockResolvedValue({ templates: [], total: 0 }),
-    }
+    getPaginated = vi.fn().mockResolvedValue({ templates: [], total: 0 })
 
     const mockServiceNodeRegistry = {}
 
@@ -34,11 +28,8 @@ describe('Workflow Pagination Validation', () => {
       off: vi.fn(),
     }
 
-    const { getDatabase } = await import('../database/service-async')
-    ;(getDatabase as any).mockResolvedValue(mockDb)
-
     const container = getGlobalContainer()
-    container.register(TOKENS.DATABASE, mockDb)
+    container.register(TOKENS.WORKFLOW_SERVICE, { getPaginated })
     container.register(TOKENS.SERVICE_NODE_REGISTRY, mockServiceNodeRegistry)
     container.register(TOKENS.EVENT_BUS, mockEventBus)
 
@@ -57,9 +48,7 @@ describe('Workflow Pagination Validation', () => {
       .set('Authorization', 'Bearer test-token')
 
     expect(response.status).toBe(200)
-    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 0 })
-    )
+    expect(getPaginated).toHaveBeenCalledWith(1, 10, undefined)
   })
 
   it('should clamp negative limit to 1', async () => {
@@ -68,9 +57,7 @@ describe('Workflow Pagination Validation', () => {
       .set('Authorization', 'Bearer test-token')
 
     expect(response.status).toBe(200)
-    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 1 })
-    )
+    expect(getPaginated).toHaveBeenCalledWith(1, 1, undefined)
   })
 
   it('should clamp limit over 100 to 100', async () => {
@@ -79,9 +66,7 @@ describe('Workflow Pagination Validation', () => {
       .set('Authorization', 'Bearer test-token')
 
     expect(response.status).toBe(200)
-    expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 100 })
-    )
+    expect(getPaginated).toHaveBeenCalledWith(1, 100, undefined)
   })
 
   it('should accept valid pagination', async () => {

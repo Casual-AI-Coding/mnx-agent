@@ -1,19 +1,22 @@
-import { Router } from 'express'
+import { Router, type Request } from 'express'
 import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
-import { getDatabaseService, getEventBus } from '../service-registration.js'
-import { getServiceNodeRegistryService } from '../service-registration.js'
-import { WorkflowService } from '../services/domain'
+import {
+  getDatabaseService,
+  getEventBus,
+  getServiceNodeRegistryService,
+  getWorkflowEngineService,
+  getWorkflowService,
+} from '../service-registration.js'
+import type { TokenPayload } from '../services/user-service.js'
 import {
   workflowIdParamsSchema,
   createWorkflowSchema,
   updateWorkflowSchema,
   partialWorkflowSchema,
-  testRunWorkflowSchema,
 } from '../validation/workflow-schemas'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
-import { WorkflowEngine } from '../services/workflow/index'
 import {
   getPaginationParams,
   createPaginatedResponse,
@@ -23,10 +26,16 @@ import {
 
 const router = Router()
 
-router.get('/available-actions', asyncHandler(async (req, res) => {
-  const userRole = req.user!.role
+function getAuthenticatedUser(req: Request): TokenPayload {
+  if (!req.user) {
+    throw new Error('Workflows 路由缺少已认证用户上下文')
+  }
+  return req.user
+}
 
-  const db = getDatabaseService()
+router.get('/available-actions', asyncHandler(async (req, res) => {
+  const userRole = getAuthenticatedUser(req).role
+
   const serviceRegistry = getServiceNodeRegistryService()
   const nodes = await serviceRegistry.getAvailableNodes(userRole)
 
@@ -47,19 +56,10 @@ router.get('/available-actions', asyncHandler(async (req, res) => {
 }))
 
 router.get('/', asyncHandler(async (req, res) => {
-  const { is_public } = req.query
-  const { page, limit, offset } = getPaginationParams(req.query)
+  const { page, limit } = getPaginationParams(req.query)
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
-  
-  let isPublicFilter: boolean | undefined
-  if (is_public === 'true') {
-    isPublicFilter = true
-  } else if (is_public === 'false') {
-    isPublicFilter = false
-  }
+  const workflowService = getWorkflowService()
 
   const result = await workflowService.getPaginated(page, limit, ownerId)
 
@@ -68,9 +68,8 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
-  const userId = req.user!.userId
-  const userRole = req.user!.role
+  const workflowService = getWorkflowService()
+  const user = getAuthenticatedUser(req)
 
   const workflow = await workflowService.getById(req.params.id)
   if (!workflow) {
@@ -79,10 +78,10 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
   }
 
   const hasAccess =
-    workflow.owner_id === userId ||
-    userRole === 'super' ||
+    workflow.owner_id === user.userId ||
+    user.role === 'super' ||
     workflow.is_public ||
-    await db.hasWorkflowPermission(req.params.id, userId)
+    await db.hasWorkflowPermission(req.params.id, user.userId)
 
   if (!hasAccess) {
     errorResponse(res, 'You do not have access to this workflow', 403)
@@ -94,8 +93,8 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
-  const userRole = req.user!.role
+  const workflowService = getWorkflowService()
+  const userRole = getAuthenticatedUser(req).role
   const ownerId = getOwnerIdForInsert(req) ?? undefined
 
   const { nodes_json } = req.body
@@ -116,9 +115,8 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
-  const userId = req.user!.userId
-  const userRole = req.user!.role
+  const workflowService = getWorkflowService()
+  const user = getAuthenticatedUser(req)
 
   const existing = await workflowService.getById(req.params.id)
   if (!existing) {
@@ -126,7 +124,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
     return
   }
 
-  const hasAccess = existing.owner_id === userId || userRole === 'super'
+  const hasAccess = existing.owner_id === user.userId || user.role === 'super'
   if (!hasAccess) {
     errorResponse(res, 'You do not have permission to update this workflow', 403)
     return
@@ -135,7 +133,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
   if (req.body.nodes_json) {
     const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
     if (!parsed) return
-    if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
+    if (!(await validateWorkflowNodePermissions(parsed, user.role, db, res))) return
   }
 
   const workflow = await workflowService.update(req.params.id, req.body)
@@ -144,9 +142,8 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
 
 router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWorkflowSchema), asyncHandler(async (req, res) => {
   const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
-  const userId = req.user!.userId
-  const userRole = req.user!.role
+  const workflowService = getWorkflowService()
+  const user = getAuthenticatedUser(req)
 
   const existing = await workflowService.getById(req.params.id)
   if (!existing) {
@@ -154,7 +151,7 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
     return
   }
 
-  const hasAccess = existing.owner_id === userId || userRole === 'super'
+  const hasAccess = existing.owner_id === user.userId || user.role === 'super'
   if (!hasAccess) {
     errorResponse(res, 'You do not have permission to update this workflow', 403)
     return
@@ -163,7 +160,7 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
   if (req.body.nodes_json) {
     const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
     if (!parsed) return
-    if (!(await validateWorkflowNodePermissions(parsed, userRole, db, res))) return
+    if (!(await validateWorkflowNodePermissions(parsed, user.role, db, res))) return
   }
 
   const workflow = await workflowService.update(req.params.id, req.body)
@@ -171,8 +168,7 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
 }))
 
 router.delete('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
+  const workflowService = getWorkflowService()
   const ownerId = buildOwnerFilter(req).params[0]
 
   try {
@@ -189,8 +185,7 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const { testData = {}, dryRun = false } = req.body
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const db = getDatabaseService()
-  const workflowService = new WorkflowService(db)
+  const workflowService = getWorkflowService()
 
   const workflow = await workflowService.getById(id, ownerId)
   if (!workflow) {
@@ -201,9 +196,8 @@ router.post('/:id/test-run', asyncHandler(async (req, res) => {
   const edges = JSON.parse(workflow.edges_json)
   const executionId = `test_${Date.now()}`
 
-  const serviceRegistry = getServiceNodeRegistryService()
   const eventBus = getEventBus()
-  const workflowEngine = new WorkflowEngine(db, serviceRegistry, undefined, eventBus)
+  const workflowEngine = getWorkflowEngineService()
 
   eventBus.emitWorkflowTestStarted(id, executionId)
 
