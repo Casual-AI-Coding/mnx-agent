@@ -1,4 +1,4 @@
-export const EXTERNAL_PROXY_ALLOWED_HOSTS = [
+export const DEFAULT_EXTERNAL_PROXY_ALLOWED_HOSTS = [
   'mikuapi.org',
   'api.pptoken.org',
   'code.azsheen.top',
@@ -7,6 +7,10 @@ export const EXTERNAL_PROXY_ALLOWED_HOSTS = [
   'lumin-ai.tiandi.run',
   'api.sisyphusx.com',
 ]
+
+export const EXTERNAL_PROXY_ALLOWED_HOSTS = DEFAULT_EXTERNAL_PROXY_ALLOWED_HOSTS
+
+let activeExternalProxyAllowedHosts: readonly string[] = DEFAULT_EXTERNAL_PROXY_ALLOWED_HOSTS
 
 const BLOCKED_INTERNAL_HOST_PATTERNS = [
   { pattern: 'localhost', exact: true },
@@ -22,6 +26,23 @@ function isBlockedInternalHostname(hostname: string): boolean {
   ))
 }
 
+export function parseExternalProxyAllowedHosts(value: string): readonly string[] {
+  return [...new Set(
+    value
+      .split(',')
+      .map(host => host.trim().toLowerCase())
+      .filter(Boolean)
+  )]
+}
+
+export function configureExternalProxyAllowedHosts(value: string): void {
+  activeExternalProxyAllowedHosts = parseExternalProxyAllowedHosts(value)
+}
+
+export function resetExternalProxyAllowedHosts(): void {
+  activeExternalProxyAllowedHosts = DEFAULT_EXTERNAL_PROXY_ALLOWED_HOSTS
+}
+
 export function isExternalProxyUrlAllowed(urlString: string): boolean {
   try {
     const url = new URL(urlString)
@@ -32,11 +53,8 @@ export function isExternalProxyUrlAllowed(urlString: string): boolean {
     }
 
     const wrappedHostname = `.${hostname}`
-    return EXTERNAL_PROXY_ALLOWED_HOSTS.some(host => wrappedHostname.endsWith(`.${host}`))
-  } catch (error) {
-    if (error instanceof Error) {
-      return false
-    }
+    return activeExternalProxyAllowedHosts.some(host => wrappedHostname.endsWith(`.${host}`))
+  } catch {
     return false
   }
 }
