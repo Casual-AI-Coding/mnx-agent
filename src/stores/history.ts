@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { HistoryReplaySnapshot } from '@/lib/history-replay'
 
 export interface HistoryItem {
   id: string
@@ -9,6 +10,7 @@ export interface HistoryItem {
   output?: string
   outputUrl?: string
   metadata?: Record<string, unknown>
+  replaySnapshot?: HistoryReplaySnapshot
 }
 
 interface HistoryState {
