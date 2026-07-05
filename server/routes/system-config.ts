@@ -4,11 +4,29 @@ import { requireRole } from '../middleware/auth-middleware.js'
 import { getDatabaseService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
-import { v4 as uuidv4 } from 'uuid'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { withEntityNotFound } from '../utils/index.js'
+import {
+  markExternalProxyAllowedHostsStale,
+  PROXY_ALLOWED_HOSTS_CONFIG_KEY,
+  validateProxyAllowedHostsConfig,
+} from '../services/external-proxy-allowed-hosts.service.js'
 
 const router = Router()
+
+function markRuntimeConfigStale(key: string): void {
+  if (key === PROXY_ALLOWED_HOSTS_CONFIG_KEY) {
+    markExternalProxyAllowedHostsStale()
+  }
+}
+
+function validateRuntimeConfig(key: string, value: string): string | null {
+  if (key === PROXY_ALLOWED_HOSTS_CONFIG_KEY) {
+    return validateProxyAllowedHostsConfig(value)
+  }
+
+  return null
+}
 
 // Only super role can access system config
 router.use(requireRole(['super']))
@@ -26,7 +44,7 @@ const createConfigSchema = z.object({
 })
 
 // GET /api/system-config - Get all system configs
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (_req, res) => {
   const db = getDatabaseService()
   const configs = await db.getAllSystemConfigs()
   successResponse(res, configs)
@@ -47,6 +65,11 @@ router.get('/:key', asyncHandler(async (req, res) => {
 router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => {
   const { key, value, description, value_type } = req.body
   const db = getDatabaseService()
+  const validationError = validateRuntimeConfig(key, value)
+  if (validationError) {
+    errorResponse(res, validationError, 400)
+    return
+  }
   
   const existing = await db.getSystemConfigByKey(key)
   if (existing) {
@@ -60,6 +83,7 @@ router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => 
     description: description ?? null,
     value_type,
   }, req.user?.userId)
+  markRuntimeConfigStale(key)
   
   res.status(201).json({ success: true, data: config })
 }))
@@ -69,6 +93,11 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
   const { key } = req.params
   const { value, description } = req.body
   const db = getDatabaseService()
+  const validationError = validateRuntimeConfig(key, value)
+  if (validationError) {
+    errorResponse(res, validationError, 400)
+    return
+  }
   
   const config = await db.updateSystemConfig(key, {
     value,
@@ -76,6 +105,8 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
   }, req.user?.userId)
 
   if (!withEntityNotFound(config, res, 'Configuration')) return
+
+  markRuntimeConfigStale(key)
 
   successResponse(res, config)
 }))
@@ -87,6 +118,7 @@ router.delete('/:key', asyncHandler(async (req, res) => {
   
   const deleted = await db.deleteSystemConfig(key)
   if (!withEntityNotFound(deleted, res, 'Configuration')) return
+  markRuntimeConfigStale(key)
   
   successResponse(res, { message: 'Configuration deleted' })
 }))
