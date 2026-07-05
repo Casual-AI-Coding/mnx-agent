@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0] - 2026-07-06
+
+### ✨ Added
+
+- **参数快照与回放基础设施** — 新增 `history-replay.ts` 模块，提供 `HistoryReplaySnapshot` 标准快照类型、`createHistoryReplaySnapshot` / `applyHistoryReplaySnapshot` 方法、`createAuditReplaySnapshot` 审计回放（含放行列表 + 敏感字段过滤）（`src/lib/history-replay.ts`）
+- **生成历史参数复用** — HistoryPanel 中带快照的条目显示「复用参数」按钮，点击自动填充表单并导航至目标页面（`src/components/layout/HistoryPanel.tsx`）
+- **审计日志参数复用到图片生成** — AuditLogDetail 中放行的图片生成 POST 请求显示「复用参数」按钮，安全填充参数后跳转图片生成页（`src/pages/AuditLogs/AuditLogDetail.tsx`）
+- **文本生成表单持久化** — 输入框内容同步到 form persistence，支持回放恢复上次输入（`src/pages/TextGeneration.tsx`）
+
+### 🔄 Changed
+
+- **图片生成接入快照记录** — 创建生成任务时附加参数快照，支持后续复用 prompt/模型/尺寸/seed 等（`src/pages/ImageGeneration.tsx`）
+- **音乐生成接入快照记录** — 创建生成任务时附加参数快照，支持后续复用歌词/风格/时长等（`src/pages/MusicGeneration.tsx`）
+- **视频生成接入快照记录** — 创建生成任务时附加参数快照，支持后续复用 prompt/模型/镜头指令等（`src/pages/VideoGeneration.tsx`）
+- **文本生成接入快照记录** — 发送消息时附加参数快照，支持后续复用输入/模型/模板等（`src/pages/TextGeneration.tsx`）
+- **HistoryItem 类型扩展** — 新增 `replaySnapshot` 可选字段，向后兼容无快照的旧记录（`src/stores/history.ts`）
+
+### 🧪 测试
+
+- **参数快照核心逻辑测试** — 覆盖快照创建、表单恢复、审计日志放行列表、敏感字段过滤（`src/lib/__tests__/history-replay.test.ts`）
+- **历史面板参数复用测试** — 覆盖复用参数按钮渲染和点击导航行为（`src/components/layout/HistoryPanel.test.tsx`）
+- **审计日志参数复用测试** — 覆盖放行和敏感字段隐藏行为（`src/pages/AuditLogs/AuditLogDetail.test.tsx`）
+
+### Backward Compatibility
+
+- ✅ `HistoryItem` 新增 `replaySnapshot` 可选字段，旧记录不受影响
+- ✅ 所有生成页面 API 行为不变，快照记录为增量增强
+- ✅ 审计日志回放默认仅放行 `/api/image/generate`，含敏感字段时自动隐藏
+- ✅ 所有 API 端点保持不变
+
 ## [2.5.2] - 2026-07-05
 
 ### ✨ Added

@@ -31,7 +31,7 @@
 | R-006 | 工作流/DLQ 投产验证 | QA | P1 | v4.0 | 待办 |
 | R-007 | 性能优化 | Performance | P4 | v3.1 | 待办 |
 | R-008 | 前端环境分离 | DevOps | P4 | v2.0 | 待办 |
-| R-009 | 请求回放与参数复用 | UX | P2 | v2.6 | 待办 |
+| R-009 | 请求回放与参数复用 | UX | P2 | v2.6 | 已完成 |
 | R-010 | 新手引导 Tour | UX | P2 | v3.5 | 待办 |
 | R-011 | 帮助中心 | UX | P2 | v3.4 | 待办 |
 | R-012 | 移动端适配 | UX | P4 | v3.0 | 部分完成 |
@@ -78,8 +78,8 @@
 
 ### R-009 - 请求回放与参数复用
 - **描述**: 从审计日志安全回放允许的请求；从生成历史一键恢复 prompt、模型、尺寸、风格、音色等参数，支持微调后重新生成
-- **现状**: AuditLogs 有日志但无重放按钮；HistoryItem/本地历史有结果记录但缺少统一参数快照与复用入口
-- **范围**: AuditLogs 添加受限回放按钮 + HistoryItem 添加复用按钮 + 各生成页面参数填充 + 参数快照结构标准化；敏感字段、文件上传和外部副作用请求默认不可直接回放
+- **现状**: 已完成。v2.6.0 新增 `history-replay.ts` 提供标准参数快照基础设施；HistoryPanel 中 replayable 的条目显示「复用参数」按钮；AuditLogDetail 中放行的图片生成 POST 请求显示「复用参数」按钮（含敏感字段自动隐藏）；Image/Music/Video/Text 四个生成页面创建任务时自动附加参数快照
+- **范围**: `src/lib/history-replay.ts` + `src/stores/history.ts` + `src/components/layout/HistoryPanel.tsx` + `src/pages/AuditLogs/AuditLogDetail.tsx` + `src/pages/ImageGeneration.tsx` + `src/pages/MusicGeneration.tsx` + `src/pages/VideoGeneration.tsx` + `src/pages/TextGeneration.tsx`
 
 ### R-010 - 新手引导 Tour
 - **描述**: 首次登录时的功能介绍引导，帮助用户快速上手
@@ -222,6 +222,7 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-07-06 | R-009（请求回放与参数复用）标记为已完成；v2.6.0 新增参数快照基础设施，历史面板与审计日志支持一键复用参数 |
 | 2026-07-05 | R-025（补充完善系统配置功能）标记为已完成；v2.5.2 已将代理白名单从硬编码迁移到 system_config 动态配置，支持运行时刷新和写入校验 |
 | 2026-07-05 | R-013（结构化日志 + Trace ID）标记为已完成；请求级 Trace ID 已接入结构化日志与审计链路 |
 | 2026-05-04 | R-024（OpenAI Image-2 外部调试）标记为已完成，版本 v2.2.6 |
