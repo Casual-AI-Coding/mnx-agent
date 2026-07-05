@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
 import { getConnection } from '../database/connection.js'
-import { UserService } from '../services/user-service.js'
+import { getUserService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
@@ -26,7 +26,7 @@ function generateRandomPassword(length: number = 20): string {
 router.use(requireRole(['super']))
 
 const updateUserSchema = z.object({
-  email: z.string().email().nullable().optional(),
+  email: z.email().nullable().optional(),
   role: z.enum(['super', 'admin', 'pro', 'user']).optional(),
   is_active: z.boolean().optional(),
   minimax_api_key: z.string().nullable().optional(),
@@ -36,7 +36,7 @@ const updateUserSchema = z.object({
 const createUserSchema = z.object({
   username: z.string().min(1).max(50),
   password: z.string().min(6),
-  email: z.string().email().nullable().optional(),
+  email: z.email().nullable().optional(),
   role: z.enum(['super', 'admin', 'pro', 'user']).default('user'),
   minimax_api_key: z.string().nullable().optional(),
 })
@@ -46,7 +46,6 @@ const listUsersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
 
-type ListUsersQuery = z.infer<typeof listUsersQuerySchema>
 type UpdateUserInput = z.infer<typeof updateUserSchema>
 type UserUpdateValue = UpdateUserInput[keyof UpdateUserInput] | string
 
@@ -91,7 +90,7 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
     [id, username, email ?? null, passwordHash, role, minimax_api_key ?? null, true, now, now]
   )
 
-  const userService = new UserService(conn)
+  const userService = getUserService()
   const user = await userService.getUserById(id)
   successResponse(res, user, 201)
 }))
@@ -122,7 +121,7 @@ router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) =
 
   await conn.execute(`UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`, values)
 
-  const userService = new UserService(conn)
+  const userService = getUserService()
   const user = await userService.getUserById(id)
   successResponse(res, user)
 }))
@@ -147,7 +146,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
 const batchOperationSchema = z.object({
   action: z.enum(['activate', 'deactivate', 'delete']),
-  userIds: z.array(z.string().uuid()).min(1),
+  userIds: z.array(z.uuid()).min(1),
 })
 
 router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, res) => {

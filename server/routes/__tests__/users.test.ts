@@ -24,10 +24,10 @@ vi.mock('../../middleware/auth-middleware.js', () => ({
   },
 }))
 
-vi.mock('../../services/user-service.js', () => ({
-  UserService: class MockUserService {
-    getUserById = mocks.getUserById
-  },
+vi.mock('../../service-registration.js', () => ({
+  getUserService: () => ({
+    getUserById: mocks.getUserById,
+  }),
 }))
 
 import usersRouter from '../users.js'
