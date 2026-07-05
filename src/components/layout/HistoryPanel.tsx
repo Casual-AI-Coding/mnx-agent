@@ -1,6 +1,9 @@
 import { useHistoryStore, HistoryItem } from '@/stores/history'
-import { History, X, Image, MessageSquare, Video, Music, Mic } from 'lucide-react'
+import { History, X, Image, MessageSquare, Video, Music, Mic, RotateCcw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/Button'
+import { applyHistoryReplaySnapshot, canReplayHistoryItem } from '@/lib/history-replay'
 
 interface HistoryPanelProps {
   isOpen: boolean
@@ -37,6 +40,15 @@ function formatTime(timestamp: number): string {
 
 export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
   const items = useHistoryStore((state) => state.items)
+  const navigate = useNavigate()
+
+  const replayItem = (item: HistoryItem) => {
+    if (!canReplayHistoryItem(item)) return
+
+    const routePath = applyHistoryReplaySnapshot(item.replaySnapshot)
+    navigate(routePath)
+    onClose()
+  }
 
   return (
     <div
@@ -59,6 +71,8 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
           )}
         </div>
         <button
+          type="button"
+          aria-label="关闭生成历史"
           onClick={onClose}
           className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
         >
@@ -85,10 +99,9 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
               const Icon = config.icon
 
               return (
-                <button
+                <article
                   key={item.id}
                   className="w-full p-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border transition-all text-left group"
-                  onClick={() => item.id && undefined}
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -116,9 +129,21 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
                           {item.output}
                         </p>
                       )}
+                      {canReplayHistoryItem(item) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 h-7 px-2 text-xs"
+                          onClick={() => replayItem(item)}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                          复用参数
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </button>
+                </article>
               )
             })}
           </div>
