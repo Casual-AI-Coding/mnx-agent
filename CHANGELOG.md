@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.1] - 2026-07-06
 
+### 🐛 问题修复
+
+- **迁移 037 在无 system_config 表的数据库上启动失败** — 新增 `migration_038_create_system_config_table`，在 `migration_037` 前执行，确保 `system_config` 表始终存在（涉及 `server/database/migrations/038_create_system_config_table.ts`, `server/database/migrations-async.ts`）
+
 ### 🏗️ 代码重构
 
 - **API 路由挂载配置抽离** — 将 `server/index.ts` 中所有路由导入与挂载逻辑集中到 `server/bootstrap/api-routes.ts`，`server/index.ts` 从 197 行精简至 67 行（涉及 `server/bootstrap/api-routes.ts`, `server/index.ts`）
