@@ -11,6 +11,7 @@ import { migration_032 } from './migrations/032_external_api_async_task.js'
 import { migration_033 } from './migrations/033_strip_b64_json_from_logs.js'
 import { migration_034 } from './migrations/034_task_queue_composite_index.js'
 import { migration_035 } from './migrations/035_add_misfire_policy.js'
+import { migration_037 } from './migrations/037_seed_proxy_allowed_hosts_config.js'
 
 export interface Migration {
   id: number
@@ -591,8 +592,9 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner
 	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_owner ON prompt_template_versions(owner_id);
 	CREATE INDEX IF NOT EXISTS idx_prompt_template_versions_active ON prompt_template_versions(template_id, is_active);
 	    `,
-	  },
-	]
+  },
+  migration_037,
+]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {
   try {

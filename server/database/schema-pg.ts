@@ -529,7 +529,8 @@ INSERT INTO system_config (id, key, value, description, value_type) VALUES
   ('cfg-001', 'api.rate_limit_per_minute', '60', 'API rate limit per minute', 'number'),
   ('cfg-002', 'features.workflow_enabled', 'true', 'Enable workflow feature', 'boolean'),
   ('cfg-003', 'system.maintenance_mode', 'false', 'Enable system maintenance mode', 'boolean'),
-  ('cfg-004', 'system.announcement', '', 'System announcement message', 'string')
+  ('cfg-004', 'system.announcement', '', 'System announcement message', 'string'),
+  ('cfg-005', 'proxy.allowed_hosts', 'mikuapi.org,api.pptoken.org,code.azsheen.top,api.tokenfty.net,gpt.hslife.fun,lumin-ai.tiandi.run,api.sisyphusx.com', 'External proxy allowed host domains', 'string')
 ON CONFLICT (key) DO NOTHING;
 
 -- Initialize workflow template for image quota consumption
