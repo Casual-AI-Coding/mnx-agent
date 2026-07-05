@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.2] - 2026-07-05
+
+### ✨ Added
+
+- **代理白名单数据库种子数据** — 新增 migration 037 将 `proxy.allowed_hosts` 写入 `system_config` 表（7 个默认域名），同步更新 schema-pg 种子数据；新增种子数据验证测试（`server/database/migrations/037_seed_proxy_allowed_hosts_config.ts`, `server/database/schema-pg.ts`, `server/database/migrations-async.ts`）
+- **system-config 写入时校验** — PATCH/POST 创建/更新 `proxy.allowed_hosts` 配置时校验域名格式，拒绝内部地址（`server/routes/system-config.ts`）
+- **代理白名单配置校验与刷新服务** — 新增 `external-proxy-allowed-hosts.service.ts`，提供域名校验、内部地址阻断、TTL 60s 缓存刷新机制（`server/services/external-proxy-allowed-hosts.service.ts`）
+
+### 🔄 Changed
+
+- **代理白名单从静态常量改为 TTL 可缓存** — `external-proxy-url-security-helpers.ts` 从静态常量改为模块级可变缓存，支持运行时动态刷新（`server/routes/external-proxy/external-proxy-url-security-helpers.ts`）
+- **请求前按 TTL 刷新白名单缓存** — external-proxy POST /submit 和 POST /proxy 请求前调用 `ensureExternalProxyAllowedHostsFresh`，确保白名单在 60s TTL 内保持新鲜（`server/routes/external-proxy.ts`）
+- **写入配置后自动失效缓存** — system-config PATCH/POST/DELETE 操作后标记 `proxy.allowed_hosts` 缓存过期，下次请求时自动从数据库重新加载（`server/routes/system-config.ts`）
+
+### 🧪 测试
+
+- **种子数据验证测试** — 验证 schema-pg 和 migration 037 包含所有必需的代理域名（`server/database/__tests__/system-config-proxy-allowed-hosts-seed.test.ts`）
+- **白名单动态配置测试** — 覆盖动态域名加载、内部地址阻断保护（`server/routes/__tests__/external-proxy-url-security-helpers.test.ts`）
+- **配置校验与刷新服务测试** — 覆盖刷新服务从 system_config 加载并应用白名单、域名格式校验拒绝非域名和内部地址（`server/services/__tests__/external-proxy-allowed-hosts.service.test.ts`）
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点保持不变
+- ✅ 默认白名单值与之前一致（7 个域名）
+- ✅ migration 037 使用 `ON CONFLICT (key) DO NOTHING` 幂等安全
+- ✅ system-config 写入校验为增量安全加固，不影响现有配置
+- ✅ 白名单动态配置为增量增强，未配置时回退到默认列表
+
 ## [2.5.1] - 2026-07-05
 
 ### ✨ Added
