@@ -79,7 +79,7 @@ router.get('/async/:taskId', asyncHandler(async (req: Request, res: Response) =>
     const result = await client.textToAudioAsyncStatus(taskId)
     res.json({ success: true, data: result })
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 

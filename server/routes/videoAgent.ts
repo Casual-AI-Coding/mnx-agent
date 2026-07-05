@@ -64,7 +64,7 @@ router.get('/status/:taskId', asyncHandler(async (req: Request, res: Response) =
     const result = await client.videoAgentStatus(taskId)
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 

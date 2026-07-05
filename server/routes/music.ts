@@ -113,7 +113,7 @@ router.post('/preprocess', upload.single('audio_file'), async (req: Request, res
 
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 })
 

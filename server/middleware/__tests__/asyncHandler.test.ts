@@ -1,11 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import express from 'express'
+import request from 'supertest'
 import { asyncHandler } from '../asyncHandler.js'
 
 vi.mock('../../config/index.js', () => ({
   isProduction: vi.fn(() => false),
 }))
 
+vi.mock('../../lib/logger', () => ({
+  getLogger: () => ({ error: vi.fn() }),
+}))
+
+vi.mock('../../lib/error-tracking.js', () => ({
+  captureServerException: vi.fn(),
+}))
+
 import { isProduction } from '../../config/index.js'
+import { captureServerException } from '../../lib/error-tracking.js'
+
+function appWithAsyncError(code: number): express.Express {
+  const app = express()
+  app.get('/boom', asyncHandler(async () => {
+    const err: Error & { code?: number } = new Error('route failed')
+    err.code = code
+    throw err
+  }))
+  return app
+}
 
 function mockRes() {
   const res: Record<string, unknown> = {}
@@ -28,7 +49,8 @@ describe('asyncHandler', () => {
       err.code = 400
       throw err
     })
-    await handler(req, res)
+    handler(req, res)
+    await Promise.resolve()
     expect(res.json).toHaveBeenCalledWith({ success: false, error: 'Invalid input' })
   })
 
@@ -41,7 +63,8 @@ describe('asyncHandler', () => {
       err.code = 500
       throw err
     })
-    await handler(req, res)
+    handler(req, res)
+    await Promise.resolve()
     expect(res.json).toHaveBeenCalledWith({ success: false, error: 'Internal server error' })
   })
 
@@ -54,7 +77,8 @@ describe('asyncHandler', () => {
       err.code = 500
       throw err
     })
-    await handler(req, res)
+    handler(req, res)
+    await Promise.resolve()
     expect(res.json).toHaveBeenCalledWith({ success: false, error: 'Dev visible error' })
   })
 
@@ -65,7 +89,8 @@ describe('asyncHandler', () => {
     const handler = asyncHandler(async () => {
       throw new Error('No code error')
     })
-    await handler(req, res)
+    handler(req, res)
+    await Promise.resolve()
     expect(res.status).toHaveBeenCalledWith(500)
   })
 
@@ -78,7 +103,24 @@ describe('asyncHandler', () => {
       err.code = 404
       throw err
     })
-    await handler(req, res)
+    handler(req, res)
+    await Promise.resolve()
     expect(res.status).toHaveBeenCalledWith(404)
+  })
+
+  it('captures 5xx errors for external tracking', async () => {
+    vi.mocked(isProduction).mockReturnValue(false)
+
+    await request(appWithAsyncError(500)).get('/boom').expect(500)
+
+    expect(captureServerException).toHaveBeenCalledOnce()
+  })
+
+  it('does not capture 4xx errors for external tracking', async () => {
+    vi.mocked(isProduction).mockReturnValue(false)
+
+    await request(appWithAsyncError(400)).get('/boom').expect(400)
+
+    expect(captureServerException).not.toHaveBeenCalled()
   })
 })

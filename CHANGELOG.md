@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.1] - 2026-07-05
+
+### ✨ Added
+
+- **Sentry 错误追踪集成（后端）** — 新增 `server/lib/error-tracking.ts`，支持 DSN 环境变量控制懒初始化；`asyncHandler` 和 `errorHandler`/`handleApiError` 捕获 5xx 错误后自动上报 Sentry，并携带 traceId/statusCode/userId/method/path 上下文（`server/middleware/asyncHandler.ts`, `server/middleware/errorHandler.ts`）
+- **Sentry 错误追踪集成（前端）** — 新增 `src/lib/error-tracking.ts`，集成 Sentry browserTracing；`main.tsx` 启动时初始化；`ErrorBoundary.componentDidCatch` 捕获 React 渲染异常后自动上报组件栈（`src/lib/error-tracking.ts`, `src/components/shared/ErrorBoundary.tsx`, `src/main.tsx`）
+
+### 🔄 Changed
+
+- **handleApiError 签名升级** — 新增 `req` 参数，路由上所有 `handleApiError(res, error)` 改为 `handleApiError(req, res, error)`，支持在 catch 路径中携带请求上下文上报 Sentry（`server/routes/files.ts`, `server/routes/music.ts`, `server/routes/text.ts`, `server/routes/usage.ts`, `server/routes/video.ts`, `server/routes/videoAgent.ts`, `server/routes/voice.ts`）
+
+### 🧪 测试
+
+- **后端错误追踪单元测试** — 覆盖无 DSN 跳过、DSN 初始化配置、异常捕获上下文（`server/lib/__tests__/error-tracking.test.ts`）
+- **前端错误追踪单元测试** — 覆盖无 DSN 跳过、DSN 初始化配置、异常捕获调用参数（`src/lib/__tests__/error-tracking.test.ts`）
+- **ErrorBoundary Sentry 集成测试** — 覆盖渲染异常时 `captureClientException` 调用（`src/components/shared/ErrorBoundary.test.tsx`）
+- **asyncHandler/errorHandler 4xx/5xx 区分测试** — 覆盖 4xx 不上报、5xx 上报 Sentry 的差异化策略（`server/middleware/__tests__/asyncHandler.test.ts`, `server/middleware/__tests__/error-handler.test.ts`, `server/middleware/__tests__/errorHandler.test.ts`）
+
+### 📝 文档
+
+- **Roadmap R-014 状态更新** — 错误追踪集成需求标记为已完成（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ `handleApiError` 签名新增 `req` 参数，所有调用方已同步更新
+- ✅ Sentry 上报为增量增强，无 DSN 时完全静默，不影响现有行为
+- ✅ ErrorBoundary 捕获异常后 `onError` 回调仍然保留，行为等价
+- ✅ 所有 API 端点保持不变
+
 ## [2.5.0] - 2026-07-05
 
 ### ✨ Added

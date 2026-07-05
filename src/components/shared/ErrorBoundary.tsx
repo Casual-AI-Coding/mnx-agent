@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { captureClientException } from '../../lib/error-tracking'
 
 interface ErrorBoundaryProps {
   fallback?: React.ReactNode
@@ -22,6 +23,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    const componentStack = errorInfo.componentStack ?? undefined
+    captureClientException(error, componentStack === undefined ? {} : { componentStack })
     this.props.onError?.(error, errorInfo)
   }
 

@@ -59,7 +59,7 @@ router.get('/status/:taskId', asyncHandler(async (req: Request, res: Response) =
     const result = await client.videoGenerationStatus(taskId)
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 

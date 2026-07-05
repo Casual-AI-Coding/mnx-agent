@@ -15,7 +15,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     const result = await client.getBalance()
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 

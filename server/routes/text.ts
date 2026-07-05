@@ -81,7 +81,7 @@ router.post('/chat/stream', asyncHandler(async (req: Request, res: Response) => 
 
     res.end()
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 

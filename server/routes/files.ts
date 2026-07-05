@@ -29,7 +29,7 @@ router.get('/list', asyncHandler(async (req: Request, res: Response) => {
     const result = await client.fileList(purpose as string)
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 
@@ -56,7 +56,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req: Request, 
     const result = await client.fileUpload(formData)
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 
@@ -74,7 +74,7 @@ router.get('/retrieve', asyncHandler(async (req: Request, res: Response) => {
     const result = await client.fileRetrieve(Number(file_id))
     successResponse(res, result)
   } catch (error) {
-    handleApiError(res, error)
+    handleApiError(req, res, error)
   }
 }))
 
