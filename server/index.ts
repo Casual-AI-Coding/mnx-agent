@@ -48,10 +48,10 @@ import { toCSV } from './lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from './lib/media-token'
 import { registerServices, TOKENS, getCronSchedulerService, getDLQAutoRetryScheduler } from './service-registration.js'
 import { getGlobalContainer } from './container.js'
+import { registerServiceNodeCatalog } from './services/service-node-catalog.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
 import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
-import type { TaskExecutor } from './services/task-executor.js'
 import type { CapacityChecker } from './services/capacity-checker.js'
 import type { QueueProcessor } from './services/queue-processor.js'
 
@@ -153,121 +153,25 @@ async function initializeServices() {
   const container = getGlobalContainer()
   const dbService = container.resolve<DatabaseService>(TOKENS.DATABASE)
   const minimaxClient = container.resolve<MiniMaxClient>(TOKENS.MINIMAX_CLIENT)
-  const taskExecutor = container.resolve<TaskExecutor>(TOKENS.TASK_EXECUTOR)
   const capacityChecker = container.resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)
   const queueProcessor = container.resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)
   const serviceRegistry = container.resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)
-  await serviceRegistry.register({
-    serviceName: 'minimaxClient',
-    instance: minimaxClient,
-    methods: [
-      { name: 'chatCompletion', displayName: 'Text Generation', category: 'MiniMax API' },
-      { name: 'imageGeneration', displayName: 'Image Generation', category: 'MiniMax API' },
-      { name: 'videoGeneration', displayName: 'Video Generation', category: 'MiniMax API' },
-      { name: 'textToAudioSync', displayName: 'Voice Sync', category: 'MiniMax API' },
-      { name: 'textToAudioAsync', displayName: 'Voice Async', category: 'MiniMax API' },
-      { name: 'musicGeneration', displayName: 'Music Generation', category: 'MiniMax API' },
-      { name: 'lyricsGeneration', displayName: 'Lyrics Generation', category: 'MiniMax API' },
-      { name: 'textToAudioAsyncStatus', displayName: 'Voice Async Status', category: 'MiniMax API' },
-      { name: 'videoGenerationStatus', displayName: 'Video Generation Status', category: 'MiniMax API' },
-      { name: 'videoAgentGenerate', displayName: 'Video Agent Generate', category: 'MiniMax Video' },
-      { name: 'videoAgentStatus', displayName: 'Video Agent Status', category: 'MiniMax Video' },
-      { name: 'fileList', displayName: 'File List', category: 'MiniMax File' },
-      { name: 'fileUpload', displayName: 'File Upload', category: 'MiniMax File' },
-      { name: 'fileRetrieve', displayName: 'File Retrieve', category: 'MiniMax File' },
-      { name: 'fileDelete', displayName: 'File Delete', category: 'MiniMax File' },
-      { name: 'voiceList', displayName: 'Voice List', category: 'MiniMax Voice' },
-      { name: 'voiceDelete', displayName: 'Voice Delete', category: 'MiniMax Voice' },
-      { name: 'voiceClone', displayName: 'Voice Clone', category: 'MiniMax Voice' },
-      { name: 'voiceDesign', displayName: 'Voice Design', category: 'MiniMax Voice' },
-      { name: 'getBalance', displayName: 'Get Balance', category: 'MiniMax Account' },
-      { name: 'getCodingPlanRemains', displayName: 'Get Coding Plan Remains', category: 'MiniMax Account' },
-    ],
-  })
-
-  await serviceRegistry.register({
-    serviceName: 'db',
-    instance: dbService,
-    methods: [
-      { name: 'getPendingTasks', displayName: 'Get Pending Tasks', category: 'Database Task' },
-      { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
-      { name: 'updateTask', displayName: 'Update Task', category: 'Database Task' },
-      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
-      { name: 'getAllCronJobs', displayName: 'Get All Cron Jobs', category: 'Database Cron' },
-      { name: 'getCronJobById', displayName: 'Get Cron Job By ID', category: 'Database Cron' },
-      { name: 'createCronJob', displayName: 'Create Cron Job', category: 'Database Cron' },
-      { name: 'updateCronJob', displayName: 'Update Cron Job', category: 'Database Cron' },
-      { name: 'deleteCronJob', displayName: 'Delete Cron Job', category: 'Database Cron' },
-      { name: 'toggleCronJobActive', displayName: 'Toggle Cron Job Active', category: 'Database Cron' },
-      { name: 'getActiveCronJobs', displayName: 'Get Active Cron Jobs', category: 'Database Cron' },
-      { name: 'getAllTasks', displayName: 'Get All Tasks', category: 'Database Task' },
-      { name: 'createTask', displayName: 'Create Task', category: 'Database Task' },
-      { name: 'markTaskRunning', displayName: 'Mark Task Running', category: 'Database Task' },
-      { name: 'markTaskCompleted', displayName: 'Mark Task Completed', category: 'Database Task' },
-      { name: 'markTaskFailed', displayName: 'Mark Task Failed', category: 'Database Task' },
-      { name: 'getQueueStats', displayName: 'Get Queue Stats', category: 'Database Task' },
-      { name: 'getAllExecutionLogs', displayName: 'Get All Execution Logs', category: 'Database Log' },
-      { name: 'createExecutionLog', displayName: 'Create Execution Log', category: 'Database Log' },
-      { name: 'updateExecutionLog', displayName: 'Update Execution Log', category: 'Database Log' },
-      { name: 'getMediaRecords', displayName: 'Get Media Records', category: 'Database Media' },
-      { name: 'getMediaRecordById', displayName: 'Get Media Record By ID', category: 'Database Media' },
-      { name: 'updateMediaRecord', displayName: 'Update Media Record', category: 'Database Media' },
-    ],
-  })
-
-  await serviceRegistry.register({
-    serviceName: 'capacityChecker',
-    instance: capacityChecker,
-    methods: [
-      { name: 'getRemainingCapacity', displayName: 'Get Remaining Capacity', category: 'Capacity' },
-      { name: 'hasCapacity', displayName: 'Check Has Capacity', category: 'Capacity' },
-      { name: 'getSafeExecutionLimit', displayName: 'Get Safe Execution Limit', category: 'Capacity' },
-      { name: 'checkBalance', displayName: 'Check Balance', category: 'Capacity' },
-      { name: 'refreshAllCapacity', displayName: 'Refresh All Capacity', category: 'Capacity' },
-      { name: 'canExecuteTask', displayName: 'Can Execute Task', category: 'Capacity' },
-      { name: 'waitForCapacity', displayName: 'Wait For Capacity', category: 'Capacity' },
-    ],
-  })
-
-  await serviceRegistry.register({
-    serviceName: 'mediaStorage',
-    instance: {
+  await registerServiceNodeCatalog(serviceRegistry, {
+    minimaxClient,
+    dbService,
+    capacityChecker,
+    queueProcessor,
+    mediaStorage: {
       saveMediaFile,
       saveFromUrl,
       deleteMediaFile,
       readMediaFile,
     },
-    methods: [
-      { name: 'saveMediaFile', displayName: 'Save Media File', category: 'Media Storage' },
-      { name: 'saveFromUrl', displayName: 'Save From URL', category: 'Media Storage' },
-      { name: 'deleteMediaFile', displayName: 'Delete Media File', category: 'Media Storage' },
-      { name: 'readMediaFile', displayName: 'Read Media File', category: 'Media Storage' },
-    ],
-  })
-
-  await serviceRegistry.register({
-    serviceName: 'queueProcessor',
-    instance: queueProcessor,
-    methods: [
-      { name: 'processImageQueueWithCapacity', displayName: 'Process Image Queue', category: 'Queue Processing' },
-      { name: 'processQueue', displayName: 'Process Queue', category: 'Queue Processing' },
-      { name: 'getQueueStats', displayName: 'Get Queue Stats', category: 'Queue Processing' },
-      { name: 'retryFailedTasks', displayName: 'Retry Failed Tasks', category: 'Queue Processing' },
-    ],
-  })
-
-  await serviceRegistry.register({
-    serviceName: 'utils',
-    instance: {
+    utils: {
       toCSV,
       generateMediaToken,
       verifyMediaToken,
     },
-    methods: [
-      { name: 'toCSV', displayName: 'Convert to CSV', category: 'Utils' },
-      { name: 'generateMediaToken', displayName: 'Generate Media Token', category: 'Utils' },
-      { name: 'verifyMediaToken', displayName: 'Verify Media Token', category: 'Utils' },
-    ],
   })
 
   const cronScheduler = getCronSchedulerService()
