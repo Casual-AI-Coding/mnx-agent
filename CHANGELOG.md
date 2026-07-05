@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2026-07-05
+
+### ✨ Added
+
+- **结构化日志 Trace ID 链路** — 请求级 Trace ID 自动生成与传播：接收 `x-trace-id` 请求头或自动 UUID 生成，所有 pino 日志条目通过 `mixin` 自动携带 `traceId`；响应头返回 `x-trace-id` 实现端到端追踪（`server/lib/logger.ts`, `server/services/audit-context.service.ts`）
+- **日志与审计链路关联** — 请求日志、响应日志、错误日志、审计日志共享同一 `trace_id`，支持跨服务请求追踪（`server/middleware/logger-middleware.ts`）
+
+### 🔄 Changed
+
+- **审计上下文中间件提升为全局** — `auditContextMiddleware` 从 API 路由级中间件提升为全局中间件，确保所有请求（含静态资源、健康检查）均携带审计上下文（`server/index.ts`）
+
+### 🏗️ 重构
+
+- **Logger 中间件事件驱动重构** — 移除 `res.end` 补丁模式，改用 `res.on('finish')` 事件监听响应完成，更符合 Express 最佳实践（`server/middleware/logger-middleware.ts`）
+- **审计上下文服务重构** — 完善 Trace ID 生成/传播逻辑，提取 `getAuditContextInfo()` 工具函数便于外部集成（`server/services/audit-context.service.ts`）
+
+### 🧪 测试
+
+- **Logger 中间件测试** — 覆盖请求日志输出、响应日志输出、Trace ID 传递（`server/middleware/__tests__/logger-middleware.test.ts`）
+- **审计上下文服务测试** — 覆盖 Trace ID 生成/传播/响应头设置、`getAuditContextInfo` 集成（`server/services/__tests__/audit-context.service.test.ts`）
+
+### 📝 文档
+
+- **Roadmap R-013 状态更新** — 结构化日志 + Trace ID 需求标记为已完成（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ Trace ID 为新增字段，不影响现有日志格式解析
+- ✅ 审计上下文中间件提升为全局，行为等价于原 API 路由级注入
+- ✅ `res.on('finish')` 事件与原有 `res.end` 行为等价
+- ✅ 所有 API 端点保持不变，新增 `x-trace-id` 响应头为增量
+
 ## [2.4.1] - 2026-07-05
 
 ### ✨ Added

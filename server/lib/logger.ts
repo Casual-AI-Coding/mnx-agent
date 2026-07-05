@@ -2,6 +2,7 @@ import pino from 'pino'
 import path from 'path'
 import fs from 'fs'
 import { toLocalISODateString } from './date-utils.js'
+import { getCurrentTraceId } from '../services/audit-context.service.js'
 
 type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 
@@ -49,6 +50,13 @@ function createPrettyTransport() {
 
 function createLogger(config: LoggerConfig = defaultConfig): pino.Logger {
   const transports: ReturnType<typeof pino.transport>[] = []
+  const options: pino.LoggerOptions = {
+    level: config.level,
+    mixin() {
+      const traceId = getCurrentTraceId()
+      return traceId ? { traceId } : {}
+    },
+  }
 
   if (config.prettyPrint) {
     transports.push(createPrettyTransport())
@@ -59,15 +67,15 @@ function createLogger(config: LoggerConfig = defaultConfig): pino.Logger {
   }
 
   if (transports.length === 0) {
-    return pino({ level: config.level })
+    return pino(options)
   }
 
   if (transports.length === 1) {
-    return pino({ level: config.level }, transports[0])
+    return pino(options, transports[0])
   }
 
   return pino(
-    { level: config.level },
+    options,
     pino.multistream(transports.map(t => ({ stream: t })))
   )
 }

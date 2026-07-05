@@ -2,10 +2,11 @@
  * AuditContext Service
  * 
  * 用于在请求上下文中传递审计相关信息（user_id, trace_id）
- * v2.4 将实现完整的 trace_id 填充逻辑
+ * 负责请求级 trace_id 生成、传播和读取
  */
 
 import type { Request, Response, NextFunction } from 'express'
+import { v4 as uuidv4 } from 'uuid'
 
 /**
  * 审计上下文信息
@@ -54,12 +55,13 @@ export function runWithAuditContext<T>(context: AuditContext, fn: () => T): T {
 /**
  * Express 中间件：设置审计上下文
  * 
- * 从 JWT token 提取 user_id，设置到上下文中
- * v2.4 将添加 trace_id 生成逻辑
+ * 从 JWT token 提取 user_id，并为请求设置 trace_id
  */
-export function auditContextMiddleware(req: Request, _res: Response, next: NextFunction): void {
+export function auditContextMiddleware(req: Request, res: Response, next: NextFunction): void {
   const userId = req.user?.userId ?? null
-  const context = new AuditContext(userId, null)
+  const traceId = req.get('x-trace-id')?.trim() || uuidv4()
+  const context = new AuditContext(userId, traceId)
+  res.setHeader('x-trace-id', traceId)
   
   auditContextStorage.run(context, () => {
     next()
@@ -80,4 +82,12 @@ export function getCurrentUserId(): string | null {
 
 export function getCurrentTraceId(): string | null {
   return getAuditContext()?.traceId ?? null
+}
+
+export function getAuditContextInfo(): { userId: string | null; traceId: string | null } {
+  const context = getAuditContext()
+  return {
+    userId: context?.userId ?? null,
+    traceId: context?.traceId ?? null,
+  }
 }
