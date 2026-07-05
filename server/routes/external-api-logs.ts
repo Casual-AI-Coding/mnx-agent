@@ -8,8 +8,7 @@ import {
   listExternalApiLogsQuerySchema,
   updateExternalApiLogSchema,
 } from '../validation/external-api-logs-schemas'
-import { getDatabaseService } from '../service-registration.js'
-import { ExternalApiLogRepository } from '../repositories/external-api-log.repository'
+import { getDatabaseService, getExternalApiLogRepository } from '../service-registration.js'
 import type { ServiceProvider, ExternalApiStatus } from '../database/types.js'
 
 const router = Router()
@@ -85,8 +84,7 @@ router.get('/providers', asyncHandler(async (_req, res) => {
 }))
 
 router.post('/', validate(createExternalApiLogSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const repository = new ExternalApiLogRepository(db.getConnection())
+  const repository = getExternalApiLogRepository()
   const userId = req.user?.userId
 
   if (!userId) {
@@ -113,8 +111,7 @@ router.post('/', validate(createExternalApiLogSchema), asyncHandler(async (req, 
 }))
 
 router.patch('/:id', validate(updateExternalApiLogSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const repository = new ExternalApiLogRepository(db.getConnection())
+  const repository = getExternalApiLogRepository()
   const current = await repository.getById(req.params.id)
 
   if (!current) {

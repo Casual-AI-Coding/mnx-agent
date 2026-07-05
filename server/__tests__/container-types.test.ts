@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createContainer } from '../container.js'
 import { resolve } from '../container.types.js'
 import type { DatabaseConnection } from '../database/connection.js'
+import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
 import { TOKENS } from '../service-registration.js'
 import { ConcurrencyManager } from '../services/concurrency-manager.js'
 import { RetryManager } from '../services/retry-manager.js'
@@ -34,20 +35,24 @@ describe('container typed tokens', () => {
     const retryManager = new RetryManager()
     const eventBus = createMockEventBus()
     const settingsService = new SettingsService(fakeConnection)
+    const externalApiLogRepository = new ExternalApiLogRepository(fakeConnection)
 
     container.register(TOKENS.CONCURRENCY_MANAGER, concurrencyManager)
     container.register(TOKENS.RETRY_MANAGER, retryManager)
     container.register(TOKENS.EVENT_BUS, eventBus)
     container.register(TOKENS.SETTINGS_SERVICE, settingsService)
+    container.register(TOKENS.EXTERNAL_API_LOG_REPOSITORY, externalApiLogRepository)
 
     const resolvedConcurrencyManager: IConcurrencyManager = resolve(container, TOKENS.CONCURRENCY_MANAGER)
     const resolvedRetryManager: IRetryManager = resolve(container, TOKENS.RETRY_MANAGER)
     const resolvedEventBus: IEventBus = resolve(container, TOKENS.EVENT_BUS)
     const resolvedSettingsService: SettingsService = resolve(container, TOKENS.SETTINGS_SERVICE)
+    const resolvedExternalApiLogRepository: ExternalApiLogRepository = resolve(container, TOKENS.EXTERNAL_API_LOG_REPOSITORY)
 
     expect(resolvedConcurrencyManager).toBe(concurrencyManager)
     expect(resolvedRetryManager).toBe(retryManager)
     expect(resolvedEventBus).toBe(eventBus)
     expect(resolvedSettingsService).toBe(settingsService)
+    expect(resolvedExternalApiLogRepository).toBe(externalApiLogRepository)
   })
 })
