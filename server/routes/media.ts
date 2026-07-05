@@ -3,7 +3,7 @@ import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import logger from '../lib/logger.js'
-import { getMediaService } from '../service-registration.js'
+import { getExternalApiLogRepository, getMediaService } from '../service-registration.js'
 import {
   listMediaQuerySchema,
   mediaIdParamsSchema,
@@ -13,8 +13,6 @@ import {
   batchDownloadSchema,
 } from '../validation/media-schemas'
 import { saveMediaFile, readMediaFile, deleteMediaFile, saveFromUrl } from '../lib/media-storage'
-import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
-import { getConnection } from '../database/connection.js'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token.js'
 import multer from 'multer'
 import axios from 'axios'
@@ -24,7 +22,6 @@ import {
   createPaginatedResponse,
   withEntityNotFound,
 } from '../utils/index.js'
-import { access } from 'fs/promises'
 import {
   buildRecoverableMediaCandidates,
   createMediaRecoveryPlan,
@@ -92,8 +89,7 @@ router.get('/', validateQuery(listMediaQuerySchema), asyncHandler(async (req, re
 router.get('/recoverable', asyncHandler(async (req, res) => {
   const ownerId = buildOwnerFilter(req).params[0]
 
-  const conn = getConnection()
-  const logRepo = new ExternalApiLogRepository(conn)
+  const logRepo = getExternalApiLogRepository()
 
   const { logs } = await logRepo.queryLogs({
     status: 'success',
@@ -132,8 +128,7 @@ router.post('/recover/:logId', asyncHandler(async (req, res) => {
     return
   }
 
-  const conn = getConnection()
-  const logRepo = new ExternalApiLogRepository(conn)
+  const logRepo = getExternalApiLogRepository()
   const log = await logRepo.getById(String(logId))
   if (!log) {
     errorResponse(res, 'External API log not found', 404)
