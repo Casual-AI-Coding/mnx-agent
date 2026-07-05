@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.1] - 2026-07-06
+
+### 🏗️ 代码重构
+
+- **API 路由挂载配置抽离** — 将 `server/index.ts` 中所有路由导入与挂载逻辑集中到 `server/bootstrap/api-routes.ts`，`server/index.ts` 从 197 行精简至 67 行（涉及 `server/bootstrap/api-routes.ts`, `server/index.ts`）
+- **服务节点目录注册抽离** — 新增 `server/services/service-node-catalog.ts`，将 MiniMax API、数据库、容量检查、队列处理等 6 组服务节点的目录注册逻辑集中管理（涉及 `server/services/service-node-catalog.ts`, `server/index.ts`）
+- **服务节点目录端口契约收紧** — `service-node-catalog.ts` 定义 `MiniMaxServiceNodes`、`DatabaseServiceNodes`、`CapacityServiceNodes` 等 6 个类型化接口，约束注册端口的入参/出参（涉及 `server/services/service-node-catalog.ts`）
+- **模板 Store 泛型契约收紧** — `TemplateStoreState` 从无约束泛型 `<T>` 升级为 `<TTemplate extends IdentifiedTemplate, TListParams, TCreateInput, TUpdateInput>`，消除两处 `@ts-expect-error` 注释（涉及 `src/stores/template-store-factory.ts`, `src/stores/templates.ts`, `src/stores/workflowTemplates.ts`, `src/pages/TemplateLibrary.tsx`）
+
+### 🧪 测试完善
+
+- **API 路由配置测试** — 新增 `api-routes.test.ts`，覆盖中间件链、各路由挂载、鉴权/限流作用域（`server/bootstrap/__tests__/api-routes.test.ts`）
+- **服务节点目录注册测试** — 新增 `service-node-catalog.test.ts`，覆盖各分组注册流程和接口完整性（`server/services/__tests__/service-node-catalog.test.ts`）
+- **模板 Store 测试适配** — 更新 `templates.test.ts` 适配新的泛型签名（`src/stores/__tests__/templates.test.ts`）
+
+### 📝 文档更新
+
+- **首阶段架构升级计划** — 记录服务端引导层与服务目录架构升级的第一阶段计划，标记各步骤完成状态（`docs/superpowers/plans/2026-07-06-architecture-upgrade.md`）
+
+### Backward Compatibility
+
+- ✅ `TemplateStoreState` 泛型签名为严格化变更，调用方无需修改
+- ✅ `fetchTemplates` 参数类型从 `any` 改为 `TListParams`，现有 `TemplateLibrary.tsx` 调用已适配
+- ✅ 所有 API 端点、路由路径不变
+- ✅ 服务节点目录注册 API（`ServiceNodeRegistry.register`）签名不变
+
 ## [2.6.0] - 2026-07-06
 
 ### ✨ Added
