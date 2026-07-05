@@ -526,33 +526,51 @@ describe('createTemplateStore factory', () => {
   })
 
   it('should create a store with custom API config', async () => {
-    const mockListApi = vi.fn().mockResolvedValue({
-      success: true,
-      data: { items: [{ id: 'item-1', name: 'Custom Item' }] },
-    })
-    const mockGetApi = vi.fn().mockResolvedValue({
-      success: true,
-      data: { id: 'item-1', name: 'Custom Item' },
-    })
-    const mockCreateApi = vi.fn().mockResolvedValue({
-      success: true,
-      data: { id: 'item-2', name: 'New Item' },
-    })
-    const mockUpdateApi = vi.fn().mockResolvedValue({
-      success: true,
-      data: { id: 'item-1', name: 'Updated Item' },
-    })
-    const mockDeleteApi = vi.fn().mockResolvedValue({
-      success: true,
-      data: { deleted: true },
-    })
-
     interface CustomItem {
       id: string
       name: string
     }
 
-    const useCustomStore = createTemplateStore<CustomItem>({
+    interface CustomListParams {
+      ownerId: string
+    }
+
+    interface CustomCreateInput {
+      name: string
+    }
+
+    interface CustomUpdateInput {
+      name?: string
+    }
+
+    interface CustomApiResponse<T> {
+      success: boolean
+      data?: T
+      error?: string
+    }
+
+    const mockListApi = vi.fn(async (_params?: CustomListParams): Promise<CustomApiResponse<{ items: CustomItem[] }>> => ({
+      success: true,
+      data: { items: [{ id: 'item-1', name: 'Custom Item' }] },
+    }))
+    const mockGetApi = vi.fn().mockResolvedValue({
+      success: true,
+      data: { id: 'item-1', name: 'Custom Item' },
+    })
+    const mockCreateApi = vi.fn(async (_data: CustomCreateInput): Promise<CustomApiResponse<CustomItem>> => ({
+      success: true,
+      data: { id: 'item-2', name: 'New Item' },
+    }))
+    const mockUpdateApi = vi.fn(async (_id: string, _data: CustomUpdateInput): Promise<CustomApiResponse<CustomItem>> => ({
+      success: true,
+      data: { id: 'item-1', name: 'Updated Item' },
+    }))
+    const mockDeleteApi = vi.fn().mockResolvedValue({
+      success: true,
+      data: { deleted: true },
+    })
+
+    const useCustomStore = createTemplateStore<CustomItem, CustomListParams, CustomCreateInput, CustomUpdateInput>({
       name: 'custom-items',
       listApi: mockListApi,
       getApi: mockGetApi,
@@ -575,8 +593,8 @@ describe('createTemplateStore factory', () => {
     expect(result.current.isLoading).toBe(false)
 
     // Test fetchTemplates
-    await result.current.fetchTemplates()
-    expect(mockListApi).toHaveBeenCalled()
+    await result.current.fetchTemplates({ ownerId: 'owner-1' })
+    expect(mockListApi).toHaveBeenCalledWith({ ownerId: 'owner-1' })
     expect(result.current.templates).toHaveLength(1)
 
     // Test fetchTemplate
@@ -584,7 +602,7 @@ describe('createTemplateStore factory', () => {
     expect(mockGetApi).toHaveBeenCalledWith('item-1')
 
     // Test addTemplate
-    await result.current.addTemplate({ name: 'New Item' } as Record<string, unknown>)
+    await result.current.addTemplate({ name: 'New Item' })
     expect(mockCreateApi).toHaveBeenCalledWith({ name: 'New Item' })
 
     // Test editTemplate

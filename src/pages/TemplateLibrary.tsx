@@ -40,7 +40,7 @@ export default function TemplateLibrary() {
   useEffect(() => {
     if (!isHydrated || hasInitializedRef.current) return
     hasInitializedRef.current = true
-    fetchTemplates(selectedCategory === 'all' ? undefined : selectedCategory)
+    fetchTemplates(selectedCategory === 'all' ? undefined : { category: selectedCategory })
   }, [isHydrated, selectedCategory, fetchTemplates])
 
   const filteredTemplates = templates.filter(template =>

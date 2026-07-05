@@ -24,7 +24,12 @@ import {
 
 export type { PromptTemplate, TemplateCategory, CreateTemplateData, UpdateTemplateData, PromptTemplateVersion, PromptTemplateVersionDiff }
 
-export interface PromptTemplateStoreState extends TemplateStoreState<PromptTemplate> {
+export interface PromptTemplateStoreState extends TemplateStoreState<
+  PromptTemplate,
+  Parameters<typeof listTemplates>[0],
+  CreateTemplateData,
+  UpdateTemplateData
+> {
   versions: PromptTemplateVersion[]
   versionDiffs: PromptTemplateVersionDiff[]
   isVersionLoading: boolean
