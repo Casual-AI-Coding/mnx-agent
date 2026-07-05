@@ -3,6 +3,7 @@ import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
 import { TOKENS } from './service-registration.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
+import type { UserService } from './services/user-service.js'
 import type { CapacityChecker } from './services/capacity-checker.js'
 import type { CronScheduler } from './services/cron-scheduler.js'
 import type {
@@ -58,6 +59,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.EXPORT_SERVICE]: ExportService
   readonly [TOKENS.SETTINGS_SERVICE]: SettingsService
   readonly [TOKENS.EXTERNAL_API_LOG_REPOSITORY]: ExternalApiLogRepository
+  readonly [TOKENS.USER_SERVICE]: UserService
 }
 
 export type ContainerToken = keyof ContainerTokenMap

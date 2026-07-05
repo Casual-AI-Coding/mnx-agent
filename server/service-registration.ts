@@ -14,6 +14,7 @@ import { WorkflowService, JobService, TaskService, LogService, MediaService, Web
 import { ExportService } from './services/export-service.js'
 import { SettingsService } from './services/settings-service.js'
 import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
+import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
@@ -53,6 +54,7 @@ export const TOKENS = {
   EXPORT_SERVICE: 'exportService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
+  USER_SERVICE: 'userService',
 } as const
 
 export async function registerServices(): Promise<void> {
@@ -177,6 +179,10 @@ export async function registerServices(): Promise<void> {
     return new ExternalApiLogRepository(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
   })
 
+  container.registerSingleton(TOKENS.USER_SERVICE, (c) => {
+    return new UserService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -283,4 +289,8 @@ export function getSettingsService(): SettingsService {
 
 export function getExternalApiLogRepository(): ExternalApiLogRepository {
   return getGlobalContainer().resolve<ExternalApiLogRepository>(TOKENS.EXTERNAL_API_LOG_REPOSITORY)
+}
+
+export function getUserService(): UserService {
+  return getGlobalContainer().resolve<UserService>(TOKENS.USER_SERVICE)
 }
