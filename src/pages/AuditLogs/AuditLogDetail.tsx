@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Copy, Check, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogHeader, DialogFooter } from '@/components/ui/Dialog'
 import { cn } from '@/lib/utils'
 import { status } from '@/themes/tokens'
+import { applyHistoryReplaySnapshot, createAuditReplaySnapshot } from '@/lib/history-replay'
 import type { AuditLog, AuditAction } from '@/lib/api/audit'
 
 export function AuditLogDetail({
@@ -25,6 +27,8 @@ export function AuditLogDetail({
   t: (key: string, fallback?: string) => string
 }) {
   const [copied, setCopied] = useState(false)
+  const navigate = useNavigate()
+  const auditReplaySnapshot = createAuditReplaySnapshot(selectedLog)
 
   const getActionConfig = (action: string) =>
     (actionConfig as Record<string, { color: string; label: string }>)[action] || defaultActionConfig
@@ -57,6 +61,14 @@ ${selectedLog.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof selectedLog
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
+  }
+
+  const replayAuditParameters = () => {
+    if (!auditReplaySnapshot) return
+
+    const routePath = applyHistoryReplaySnapshot(auditReplaySnapshot)
+    navigate(routePath)
+    onClose()
   }
 
   return (
@@ -154,6 +166,11 @@ ${selectedLog.request_body ? `\n**请求体**:\n\`\`\`json\n${typeof selectedLog
         )}
       </div>
       <DialogFooter className="gap-2">
+        {auditReplaySnapshot && (
+          <Button variant="outline" onClick={replayAuditParameters}>
+            <RotateCcw className="w-4 h-4 mr-2" />复用参数
+          </Button>
+        )}
         <Button variant="outline" onClick={copyLogToClipboard}>
           {copied ? (
             <><Check className="w-4 h-4 mr-2" />{t('common.copied', '已复制')}</>
