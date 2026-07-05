@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.1] - 2026-07-05
+
+### ✨ Added
+
+- **资源引用共享基础设施** — 新增 `ResourceReferenceCard` 可复用组件，提供 Prompt 模板与素材作品的资源浏览和引用插入功能；新增 `resource-references.ts` 工具库（upsert/merge），支持资源引用追踪与用量元数据合并（`src/components/resources/`, `src/lib/resource-references.ts`）
+- **文本生成页集成资源引用** — 左侧栏插入 ResourceReferenceCard，应用 Prompt 模板后自动填入提示词输入框（`src/pages/TextGeneration.tsx`）
+- **图像生成页集成资源引用** — 左侧栏插入 ResourceReferenceCard，应用 Prompt 模板后自动填入提示词（`src/pages/ImageGeneration.tsx`）
+- **音乐生成页集成资源引用** — 左侧栏插入 ResourceReferenceCard，支持 Prompt 模板（风格/歌词提示）和素材作品（歌词文本）两种引用类型（`src/pages/MusicGeneration.tsx`）
+- **视频生成页集成资源引用** — 左侧栏插入 ResourceReferenceCard，应用 Prompt 模板后自动填入提示词；页面拆分为 Header/FormPanel/TaskList 子组件（`src/pages/VideoGeneration.tsx`）
+- **语音同步页集成资源引用** — 表单区域插入 ResourceReferenceCard，应用 Prompt 模板后填入文本字段，历史记录元数据携带资源引用信息（`src/pages/VoiceSync/index.tsx`）
+- **语音异步页集成资源引用** — 表单区域插入 ResourceReferenceCard，支持 Prompt 模板和素材作品两种引用类型（`src/pages/VoiceAsync/index.tsx`）
+- **歌词生成页集成资源引用** — ResourceReferenceCard 嵌入 LyricsGenerationForm 槽位，支持 Prompt 模板和素材作品两种引用类型（`src/pages/LyricsGeneration.tsx`）
+- **视频智能体页集成资源引用** — 表单区域插入 ResourceReferenceCard，应用 Prompt 模板后填入自定义提示词预览（`src/pages/VideoAgent.tsx`）
+- **前端设计契约 DESIGN.md** — 新增 mnx-agent 前端设计契约文档，明确视觉语言、组件约定、交互状态和响应式规范（`DESIGN.md`）
+
+### 🏗️ 重构
+
+- **VoiceAsync 上传逻辑抽取** — 文件上传、拖拽、重试等 UI 状态管理抽取为独立 `useVoiceAsyncUpload` hook，消除页面内联状态和重复逻辑（`src/pages/VoiceAsync/useVoiceAsyncUpload.ts`）
+- **VoiceAsync 助手函数抽取** — cURL 构建、容器动画变体、媒体保存函数抽取为独立模块，页面缩减 271→111 行（`src/pages/VoiceAsync/voiceAsyncHelpers.ts`）
+- **各页面 Header 组件拆分** — TextGeneration、VideoGeneration、VoiceSync、VoiceAsync、VideoAgent、LyricsGeneration 等页面内联 Header 抽取为独立组件，消除重复模板代码
+
+### 🧪 测试
+
+- **ResourceReferenceCard 组件测试** — 覆盖基础渲染、模板应用、素材应用等场景（`src/components/resources/ResourceReferenceCard.test.tsx`）
+- **resource-references 工具测试** — 覆盖 upsert 去重和 merge 元数据合并（`src/lib/resource-references.test.ts`）
+- **生成页面资源引用集成测试** — 文本/图像/音乐/视频/语音/歌词共计 9 个页面 11 条测试用例，验证资源引用写入对应输入字段（`src/pages/__tests__/GenerationResourceReferences.test.tsx`）
+
+### 📝 文档
+
+- **Roadmap R-021 状态更新** — 资源引用集成需求标记为已完成（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ `ResourceReferenceCard` 为增量 UI 组件，不影响现有页面功能
+- ✅ `resource-references.ts` 为新增工具库，无侵入性
+- ✅ 所有页面 Header 抽取为独立组件，渲染行为等价
+- ✅ VoiceAsync 上传逻辑抽取为内部重构，行为不变
+- ✅ 所有 API 端点保持不变
+
 ## [2.4.0] - 2026-07-04
 
 ### ✨ Added
