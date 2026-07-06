@@ -17,6 +17,9 @@ import { ExternalApiLogRepository } from './repositories/external-api-log.reposi
 import { JobRepository } from './repositories/job-repository.js'
 import { CapacityRepository } from './repositories/capacity-repository.js'
 import { LogRepository } from './repositories/log-repository.js'
+import { MaterialRepository } from './repositories/material-repository.js'
+import { MaterialItemRepository } from './repositories/material-item-repository.js'
+import { PromptRepository } from './repositories/prompt-repository.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
 import { UserRepository } from './repositories/user-repository.js'
@@ -192,11 +195,22 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.MATERIAL_SERVICE, (c) => {
-    return new MaterialService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new MaterialService(
+      new MaterialRepository(conn),
+      new MaterialItemRepository(conn),
+      new PromptRepository(conn)
+    )
   })
 
   container.registerSingleton(TOKENS.EXPORT_SERVICE, (c) => {
-    return new ExportService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new ExportService(
+      new LogRepository(conn),
+      new MediaRepository(conn)
+    )
   })
 
   container.registerSingleton(TOKENS.SETTINGS_SERVICE, (c) => {

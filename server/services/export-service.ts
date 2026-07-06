@@ -1,8 +1,9 @@
-import type { DatabaseService } from '../database/service-async.js'
 import { ExecutionLog } from '../database/types'
 import { MediaRecord } from '../database/types'
 import { ExportFormat } from '../validation/export-schemas'
 import { toCSV, EXECUTION_LOG_HEADERS, MEDIA_RECORD_HEADERS } from '../lib/csv-utils'
+import type { LogRepository } from '../repositories/log-repository.js'
+import type { MediaRepository } from '../repositories/media-repository.js'
 
 export interface ExportOptions {
   format: ExportFormat
@@ -22,17 +23,16 @@ export interface ExportResult {
 }
 
 export class ExportService {
-  private db: DatabaseService
-
-  constructor(db: DatabaseService) {
-    this.db = db
-  }
+  constructor(
+    private readonly logRepo: LogRepository,
+    private readonly mediaRepo: MediaRepository,
+  ) {}
 
   async exportExecutionLogs(options: ExportOptions): Promise<ExportResult> {
     const { format, startDate, endDate, page = 1, limit = 1000, ownerId } = options
     const offset = (page - 1) * limit
 
-    const result = await this.db.getExecutionLogsPaginated({
+    const result = await this.logRepo.getPaginated({
       limit,
       offset,
       startDate,
@@ -63,7 +63,7 @@ export class ExportService {
     const { format, type, page = 1, limit = 1000, ownerId } = options
     const offset = (page - 1) * limit
 
-    const result = await this.db.getMediaRecords({
+    const result = await this.mediaRepo.list({
       type: type,
       limit: limit * page,
       offset: 0,
@@ -71,7 +71,7 @@ export class ExportService {
       visibilityOwnerId: ownerId,
     })
 
-    const filteredRecords = result.records.slice(offset, offset + limit)
+    const filteredRecords = result.items.slice(offset, offset + limit)
     const exportData = filteredRecords.map(record => this.formatMediaRecord(record))
 
     if (format === 'csv') {

@@ -1,5 +1,6 @@
 import { ExportService, ExportOptions } from '../export-service.js'
-import type { DatabaseService } from '../../database/service-async.js'
+import type { LogRepository } from '../../repositories/log-repository.js'
+import type { MediaRepository } from '../../repositories/media-repository.js'
 import type { ExecutionLog, MediaRecord } from '../../database/types.js'
 import * as csvUtils from '../../lib/csv-utils.js'
 import { getExportService } from '../../service-registration.js'
@@ -54,11 +55,13 @@ vi.mock('../../lib/csv-utils.js', () => ({
 // Mock service-registration
 vi.mock('../../service-registration.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../service-registration.js')>()
-  const mockDb = {
-    getExecutionLogsPaginated: vi.fn(),
-    getMediaRecords: vi.fn(),
-  } as unknown as DatabaseService
-  const mockExportService = new ExportService(mockDb)
+  const mockLogRepo = {
+    getPaginated: vi.fn(),
+  } as unknown as LogRepository
+  const mockMediaRepo = {
+    list: vi.fn(),
+  } as unknown as MediaRepository
+  const mockExportService = new ExportService(mockLogRepo, mockMediaRepo)
   return {
     ...actual,
     getDatabaseService: vi.fn(),
@@ -68,9 +71,11 @@ vi.mock('../../service-registration.js', async (importOriginal) => {
 
 describe('ExportService', () => {
   let service: ExportService
-  let mockDb: {
-    getExecutionLogsPaginated: ReturnType<typeof vi.fn>
-    getMediaRecords: ReturnType<typeof vi.fn>
+  let mockLogRepo: {
+    getPaginated: ReturnType<typeof vi.fn>
+  }
+  let mockMediaRepo: {
+    list: ReturnType<typeof vi.fn>
   }
 
   const mockExecutionLog: ExecutionLog = {
@@ -103,11 +108,13 @@ describe('ExportService', () => {
   }
 
   beforeEach(() => {
-    mockDb = {
-      getExecutionLogsPaginated: vi.fn(),
-      getMediaRecords: vi.fn(),
+    mockLogRepo = {
+      getPaginated: vi.fn(),
     }
-    service = new ExportService(mockDb as unknown as DatabaseService)
+    mockMediaRepo = {
+      list: vi.fn(),
+    }
+    service = new ExportService(mockLogRepo as unknown as LogRepository, mockMediaRepo as unknown as MediaRepository)
     vi.clearAllMocks()
   })
 
@@ -126,7 +133,7 @@ describe('ExportService', () => {
   describe('exportExecutionLogs', () => {
     it('should export execution logs as CSV format', async () => {
       const logs = [mockExecutionLog, { ...mockExecutionLog, id: 'log-2' }]
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs,
         total: 2,
         page: 1,
@@ -142,7 +149,7 @@ describe('ExportService', () => {
 
       const result = await service.exportExecutionLogs(options)
 
-      expect(mockDb.getExecutionLogsPaginated).toHaveBeenCalledWith({
+      expect(mockLogRepo.getPaginated).toHaveBeenCalledWith({
         limit: 1000,
         offset: 0,
         startDate: undefined,
@@ -157,7 +164,7 @@ describe('ExportService', () => {
 
     it('should export execution logs as JSON format', async () => {
       const logs = [mockExecutionLog]
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs,
         total: 1,
         page: 1,
@@ -180,7 +187,7 @@ describe('ExportService', () => {
     })
 
     it('should apply date filters when provided', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 1,
@@ -198,7 +205,7 @@ describe('ExportService', () => {
 
       await service.exportExecutionLogs(options)
 
-      expect(mockDb.getExecutionLogsPaginated).toHaveBeenCalledWith({
+      expect(mockLogRepo.getPaginated).toHaveBeenCalledWith({
         limit: 1000,
         offset: 0,
         startDate: '2024-01-01T00:00:00Z',
@@ -208,7 +215,7 @@ describe('ExportService', () => {
     })
 
     it('should apply owner filter when provided', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 1,
@@ -225,7 +232,7 @@ describe('ExportService', () => {
 
       await service.exportExecutionLogs(options)
 
-      expect(mockDb.getExecutionLogsPaginated).toHaveBeenCalledWith({
+      expect(mockLogRepo.getPaginated).toHaveBeenCalledWith({
         limit: 1000,
         offset: 0,
         startDate: undefined,
@@ -235,7 +242,7 @@ describe('ExportService', () => {
     })
 
     it('should calculate correct offset for pagination', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 2,
@@ -251,7 +258,7 @@ describe('ExportService', () => {
 
       await service.exportExecutionLogs(options)
 
-      expect(mockDb.getExecutionLogsPaginated).toHaveBeenCalledWith({
+      expect(mockLogRepo.getPaginated).toHaveBeenCalledWith({
         limit: 100,
         offset: 100, // (page - 1) * limit = (2 - 1) * 100
         startDate: undefined,
@@ -261,7 +268,7 @@ describe('ExportService', () => {
     })
 
     it('should use default page and limit when not provided', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 1,
@@ -275,7 +282,7 @@ describe('ExportService', () => {
 
       await service.exportExecutionLogs(options)
 
-      expect(mockDb.getExecutionLogsPaginated).toHaveBeenCalledWith({
+      expect(mockLogRepo.getPaginated).toHaveBeenCalledWith({
         limit: 1000, // default
         offset: 0, // (1 - 1) * 1000
         startDate: undefined,
@@ -285,7 +292,7 @@ describe('ExportService', () => {
     })
 
     it('should return empty result when no logs exist', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 1,
@@ -300,7 +307,7 @@ describe('ExportService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getExecutionLogsPaginated.mockRejectedValue(new Error('Database error'))
+      mockLogRepo.getPaginated.mockRejectedValue(new Error('Database error'))
 
       await expect(service.exportExecutionLogs({ format: 'json' })).rejects.toThrow('Database error')
     })
@@ -309,8 +316,8 @@ describe('ExportService', () => {
   describe('exportMediaRecords', () => {
     it('should export media records as CSV format', async () => {
       const records = [mockMediaRecord, { ...mockMediaRecord, id: 'media-2' }]
-      mockDb.getMediaRecords.mockResolvedValue({
-        records,
+      mockMediaRepo.list.mockResolvedValue({
+        items: records,
         total: 2,
         page: 1,
         limit: 2000,
@@ -325,7 +332,7 @@ describe('ExportService', () => {
 
       const result = await service.exportMediaRecords(options)
 
-      expect(mockDb.getMediaRecords).toHaveBeenCalledWith({
+      expect(mockMediaRepo.list).toHaveBeenCalledWith({
         type: undefined,
         limit: 1000, // limit * page
         offset: 0,
@@ -339,8 +346,8 @@ describe('ExportService', () => {
 
     it('should export media records as JSON format', async () => {
       const records = [mockMediaRecord]
-      mockDb.getMediaRecords.mockResolvedValue({
-        records,
+      mockMediaRepo.list.mockResolvedValue({
+        items: records,
         total: 1,
         page: 1,
         limit: 1000,
@@ -362,8 +369,8 @@ describe('ExportService', () => {
     })
 
     it('should apply type filter when provided', async () => {
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [],
         total: 0,
         page: 1,
         limit: 1000,
@@ -379,7 +386,7 @@ describe('ExportService', () => {
 
       await service.exportMediaRecords(options)
 
-      expect(mockDb.getMediaRecords).toHaveBeenCalledWith({
+      expect(mockMediaRepo.list).toHaveBeenCalledWith({
         type: 'audio',
         limit: 1000,
         offset: 0,
@@ -389,8 +396,8 @@ describe('ExportService', () => {
     })
 
     it('should apply owner filter when provided', async () => {
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [],
         total: 0,
         page: 1,
         limit: 1000,
@@ -406,7 +413,7 @@ describe('ExportService', () => {
 
       await service.exportMediaRecords(options)
 
-      expect(mockDb.getMediaRecords).toHaveBeenCalledWith({
+      expect(mockMediaRepo.list).toHaveBeenCalledWith({
         type: undefined,
         limit: 1000,
         offset: 0,
@@ -421,8 +428,8 @@ describe('ExportService', () => {
         ...mockMediaRecord,
         id: `media-${i + 1}`,
       }))
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: allRecords,
+      mockMediaRepo.list.mockResolvedValue({
+        items: allRecords,
         total: 15,
         page: 1,
         limit: 10, // limit * page = 5 * 2 = 10, but we're fetching more
@@ -445,8 +452,8 @@ describe('ExportService', () => {
     })
 
     it('should use default page and limit when not provided', async () => {
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [],
         total: 0,
         page: 1,
         limit: 1000,
@@ -459,7 +466,7 @@ describe('ExportService', () => {
 
       await service.exportMediaRecords(options)
 
-      expect(mockDb.getMediaRecords).toHaveBeenCalledWith({
+      expect(mockMediaRepo.list).toHaveBeenCalledWith({
         type: undefined,
         limit: 1000, // default limit * default page = 1000 * 1
         offset: 0,
@@ -469,8 +476,8 @@ describe('ExportService', () => {
     })
 
     it('should return empty result when no records exist', async () => {
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [],
         total: 0,
         page: 1,
         limit: 1000,
@@ -483,7 +490,7 @@ describe('ExportService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getMediaRecords.mockRejectedValue(new Error('Query failed'))
+      mockMediaRepo.list.mockRejectedValue(new Error('Query failed'))
 
       await expect(service.exportMediaRecords({ format: 'json' })).rejects.toThrow('Query failed')
     })
@@ -505,7 +512,7 @@ describe('ExportService', () => {
         error_summary: 'All tasks failed',
       }
 
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [log],
         total: 1,
         page: 1,
@@ -546,7 +553,7 @@ describe('ExportService', () => {
         error_summary: null,
       }
 
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [log],
         total: 1,
         page: 1,
@@ -582,8 +589,8 @@ describe('ExportService', () => {
         updated_at: '2024-04-01T12:30:00Z',
       }
 
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [record],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [record],
         total: 1,
         page: 1,
         limit: 1000,
@@ -625,8 +632,8 @@ describe('ExportService', () => {
         updated_at: null,
       }
 
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [record],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [record],
         total: 1,
         page: 1,
         limit: 1000,
@@ -646,7 +653,7 @@ describe('ExportService', () => {
   describe('executionLogsToCSV', () => {
     it('should generate CSV with correct headers', async () => {
       const logs = [mockExecutionLog]
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs,
         total: 1,
         page: 1,
@@ -663,7 +670,7 @@ describe('ExportService', () => {
     })
 
     it('should handle empty logs array', async () => {
-      mockDb.getExecutionLogsPaginated.mockResolvedValue({
+      mockLogRepo.getPaginated.mockResolvedValue({
         logs: [],
         total: 0,
         page: 1,
@@ -681,8 +688,8 @@ describe('ExportService', () => {
   describe('mediaRecordsToCSV', () => {
     it('should generate CSV with correct headers and metadata formatter', async () => {
       const records = [mockMediaRecord]
-      mockDb.getMediaRecords.mockResolvedValue({
-        records,
+      mockMediaRepo.list.mockResolvedValue({
+        items: records,
         total: 1,
       })
 
@@ -699,8 +706,8 @@ describe('ExportService', () => {
         ...mockMediaRecord,
         metadata: { key: 'value' },
       }
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [record],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [record],
         total: 1,
         page: 1,
         limit: 1000,
@@ -719,8 +726,8 @@ describe('ExportService', () => {
         ...mockMediaRecord,
         metadata: { key: 'value with "quotes"', nested: { data: true } },
       }
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [record],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [record],
         total: 1,
         page: 1,
         limit: 1000,
@@ -739,8 +746,8 @@ describe('ExportService', () => {
         ...mockMediaRecord,
         metadata: 'plain string metadata' as unknown as Record<string, unknown>,
       }
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [record],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [record],
         total: 1,
         page: 1,
         limit: 1000,
@@ -754,8 +761,8 @@ describe('ExportService', () => {
     })
 
     it('should handle empty records array', async () => {
-      mockDb.getMediaRecords.mockResolvedValue({
-        records: [],
+      mockMediaRepo.list.mockResolvedValue({
+        items: [],
         total: 0,
         page: 1,
         limit: 1000,
