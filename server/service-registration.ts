@@ -15,6 +15,7 @@ import { ExportService } from './services/export-service.js'
 import { SettingsService } from './services/settings-service.js'
 import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import { JobRepository } from './repositories/job-repository.js'
+import { CapacityRepository } from './repositories/capacity-repository.js'
 import { LogRepository } from './repositories/log-repository.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
@@ -185,7 +186,9 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.CAPACITY_SERVICE, (c) => {
-    return new CapacityService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new CapacityService(new CapacityRepository(conn))
   })
 
   container.registerSingleton(TOKENS.MATERIAL_SERVICE, (c) => {
