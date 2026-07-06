@@ -3,6 +3,7 @@ import { createContainer } from '../container.js'
 import { resolve } from '../container.types.js'
 import type { DatabaseConnection } from '../database/connection.js'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
+import { MediaRepository } from '../repositories/media-repository.js'
 import { TOKENS } from '../service-registration.js'
 import { ConcurrencyManager } from '../services/concurrency-manager.js'
 import { RetryManager } from '../services/retry-manager.js'
@@ -37,6 +38,7 @@ describe('container typed tokens', () => {
     const eventBus = createMockEventBus()
     const settingsService = new SettingsService(fakeConnection)
     const externalApiLogRepository = new ExternalApiLogRepository(fakeConnection)
+    const mediaRepository = new MediaRepository(fakeConnection)
     const userService = new UserService(fakeConnection)
 
     container.register(TOKENS.CONCURRENCY_MANAGER, concurrencyManager)
@@ -44,6 +46,7 @@ describe('container typed tokens', () => {
     container.register(TOKENS.EVENT_BUS, eventBus)
     container.register(TOKENS.SETTINGS_SERVICE, settingsService)
     container.register(TOKENS.EXTERNAL_API_LOG_REPOSITORY, externalApiLogRepository)
+    container.register(TOKENS.MEDIA_REPOSITORY, mediaRepository)
     container.register(TOKENS.USER_SERVICE, userService)
 
     const resolvedConcurrencyManager: IConcurrencyManager = resolve(container, TOKENS.CONCURRENCY_MANAGER)
@@ -51,6 +54,7 @@ describe('container typed tokens', () => {
     const resolvedEventBus: IEventBus = resolve(container, TOKENS.EVENT_BUS)
     const resolvedSettingsService: SettingsService = resolve(container, TOKENS.SETTINGS_SERVICE)
     const resolvedExternalApiLogRepository: ExternalApiLogRepository = resolve(container, TOKENS.EXTERNAL_API_LOG_REPOSITORY)
+    const resolvedMediaRepository: MediaRepository = resolve(container, TOKENS.MEDIA_REPOSITORY)
     const resolvedUserService: UserService = resolve(container, TOKENS.USER_SERVICE)
 
     expect(resolvedConcurrencyManager).toBe(concurrencyManager)
@@ -58,6 +62,7 @@ describe('container typed tokens', () => {
     expect(resolvedEventBus).toBe(eventBus)
     expect(resolvedSettingsService).toBe(settingsService)
     expect(resolvedExternalApiLogRepository).toBe(externalApiLogRepository)
+    expect(resolvedMediaRepository).toBe(mediaRepository)
     expect(resolvedUserService).toBe(userService)
   })
 })

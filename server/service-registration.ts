@@ -14,6 +14,7 @@ import { WorkflowService, JobService, TaskService, LogService, MediaService, Web
 import { ExportService } from './services/export-service.js'
 import { SettingsService } from './services/settings-service.js'
 import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
+import { MediaRepository } from './repositories/media-repository.js'
 import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
@@ -54,6 +55,7 @@ export const TOKENS = {
   EXPORT_SERVICE: 'exportService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
+  MEDIA_REPOSITORY: 'mediaRepository',
   USER_SERVICE: 'userService',
 } as const
 
@@ -179,6 +181,10 @@ export async function registerServices(): Promise<void> {
     return new ExternalApiLogRepository(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
   })
 
+  container.registerSingleton(TOKENS.MEDIA_REPOSITORY, (c) => {
+    return new MediaRepository(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+  })
+
   container.registerSingleton(TOKENS.USER_SERVICE, (c) => {
     return new UserService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
   })
@@ -289,6 +295,10 @@ export function getSettingsService(): SettingsService {
 
 export function getExternalApiLogRepository(): ExternalApiLogRepository {
   return getGlobalContainer().resolve<ExternalApiLogRepository>(TOKENS.EXTERNAL_API_LOG_REPOSITORY)
+}
+
+export function getMediaRepository(): MediaRepository {
+  return getGlobalContainer().resolve<MediaRepository>(TOKENS.MEDIA_REPOSITORY)
 }
 
 export function getUserService(): UserService {

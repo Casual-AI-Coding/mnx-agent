@@ -1,13 +1,14 @@
-import { Router, Request, Response } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { getLogger } from '../lib/logger'
-import { ExternalApiLogRepository } from '../repositories/external-api-log.repository'
-import { MediaRepository } from '../repositories/media-repository'
-import { getConnection } from '../database/connection'
 import { saveMediaFile } from '../lib/media-storage'
-import { getDatabaseService } from '../service-registration.js'
+import {
+  getDatabaseService,
+  getExternalApiLogRepository,
+  getMediaRepository,
+} from '../service-registration.js'
 import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
 import { saveExternalProxyImages } from './external-proxy/external-proxy-media-save-helpers.js'
 import { isExternalProxyUrlAllowed } from './external-proxy/external-proxy-url-security-helpers.js'
@@ -41,7 +42,7 @@ async function refreshAllowedHostsIfNeeded(): Promise<void> {
 }
 
 const proxyRequestSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('POST'),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
@@ -110,7 +111,7 @@ router.post(
 )
 
 const submitTaskSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('POST'),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
@@ -142,8 +143,7 @@ router.post(
       return
     }
 
-    const conn = await getConnection()
-    const repo = new ExternalApiLogRepository(conn)
+    const repo = getExternalApiLogRepository()
 
     const maxConcurrentTasks = 3
     const activeTaskCount = await repo.getActiveTaskCount(req.user?.userId ?? '')
@@ -188,8 +188,7 @@ router.get(
       return
     }
 
-    const conn = await getConnection()
-    const repo = new ExternalApiLogRepository(conn)
+    const repo = getExternalApiLogRepository()
     const log = await repo.getById(taskId)
 
     if (!log) {
@@ -222,8 +221,7 @@ async function executeAsyncTask(
   mediaType?: ExternalProxyMediaType,
   userId?: string
 ): Promise<void> {
-  const conn = await getConnection()
-  const repo = new ExternalApiLogRepository(conn)
+  const repo = getExternalApiLogRepository()
   const startTime = performance.now()
 
   logger.info({
@@ -250,7 +248,7 @@ async function executeAsyncTask(
     let resultMediaId: string | null = null
     if (isSuccess && mediaType && isRecord(proxyResult.body)) {
       const images = extractAllImages(proxyResult.body)
-      const mediaRepo = new MediaRepository(conn)
+      const mediaRepo = getMediaRepository()
       resultMediaId = await saveExternalProxyImages({
         logId,
         images,
