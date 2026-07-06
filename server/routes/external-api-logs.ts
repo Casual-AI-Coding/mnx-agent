@@ -8,7 +8,7 @@ import {
   listExternalApiLogsQuerySchema,
   updateExternalApiLogSchema,
 } from '../validation/external-api-logs-schemas'
-import { getDatabaseService, getExternalApiLogRepository, getExternalApiLogService } from '../service-registration.js'
+import { getExternalApiLogRepository, getExternalApiLogService } from '../service-registration.js'
 import type { ServiceProvider, ExternalApiStatus } from '../database/types.js'
 
 const router = Router()
