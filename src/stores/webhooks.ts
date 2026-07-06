@@ -13,6 +13,7 @@ import {
   testWebhook as apiTestWebhook,
   getWebhookDeliveries,
 } from '@/lib/api/cron'
+import { withLoadingState } from './patterns/list-store'
 
 interface WebhooksState {
   webhooks: WebhookConfig[]
@@ -88,94 +89,46 @@ export const useWebhooksStore = create<WebhooksState>()((set, _get) => ({
   error: null,
 
   fetchWebhooks: async () => {
-    set({ loading: true, error: null })
-    try {
-      const response = await getWebhooks()
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to fetch webhooks')
-      }
-      const webhooks = response.data.webhooks.map((w) => transformWebhookResponse(w as unknown as WebhookApiResponse))
-      set({ webhooks, loading: false })
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Failed to fetch webhooks',
-        loading: false,
-      })
+    const response = await withLoadingState(set, () => getWebhooks())
+    if (!response) return
+    if (!response.success || !response.data) {
+      set({ error: response.error || 'Failed to fetch webhooks' })
+      return
     }
+    set({ webhooks: response.data.webhooks.map((w) => transformWebhookResponse(w as unknown as WebhookApiResponse)) })
   },
 
   addWebhook: async (data: CreateWebhookConfig) => {
-    set({ loading: true, error: null })
-    try {
-      const response = await apiCreateWebhook(data)
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to create webhook')
-      }
-      const newWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
-      set((state) => ({
-        webhooks: [...state.webhooks, newWebhook],
-        loading: false,
-      }))
-      return newWebhook
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Failed to create webhook',
-        loading: false,
-      })
-      throw err
-    }
+    const response = await withLoadingState(set, () => apiCreateWebhook(data))
+    if (!response) throw new Error('Failed to create webhook')
+    if (!response.success || !response.data) throw new Error(response.error || 'Failed to create webhook')
+    const newWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
+    set((state) => ({ webhooks: [...state.webhooks, newWebhook] }))
+    return newWebhook
   },
 
   updateWebhook: async (id: string, data: UpdateWebhookConfig) => {
-    set({ loading: true, error: null })
-    try {
-      const response = await apiUpdateWebhook(id, data)
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to update webhook')
-      }
-      const updatedWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
-      set((state) => ({
-        webhooks: state.webhooks.map((w) =>
-          w.id === id ? { ...w, ...updatedWebhook } : w
-        ),
-        loading: false,
-      }))
-      return updatedWebhook
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Failed to update webhook',
-        loading: false,
-      })
-      throw err
-    }
+    const response = await withLoadingState(set, () => apiUpdateWebhook(id, data))
+    if (!response) throw new Error('Failed to update webhook')
+    if (!response.success || !response.data) throw new Error(response.error || 'Failed to update webhook')
+    const updatedWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
+    set((state) => ({
+      webhooks: state.webhooks.map((w) => (w.id === id ? { ...w, ...updatedWebhook } : w)),
+    }))
+    return updatedWebhook
   },
 
   removeWebhook: async (id: string) => {
-    set({ loading: true, error: null })
-    try {
-      const response = await apiDeleteWebhook(id)
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to delete webhook')
-      }
-      set((state) => ({
-        webhooks: state.webhooks.filter((w) => w.id !== id),
-        loading: false,
-      }))
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Failed to delete webhook',
-        loading: false,
-      })
-      throw err
-    }
+    const response = await withLoadingState(set, () => apiDeleteWebhook(id))
+    if (!response) throw new Error('Failed to delete webhook')
+    if (!response.success) throw new Error(response.error || 'Failed to delete webhook')
+    set((state) => ({ webhooks: state.webhooks.filter((w) => w.id !== id) }))
   },
 
   testWebhook: async (id: string) => {
     try {
       const response = await apiTestWebhook(id)
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to test webhook')
-      }
+      if (!response.success || !response.data) throw new Error(response.error || 'Failed to test webhook')
       return response.data
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to test webhook')
@@ -183,19 +136,12 @@ export const useWebhooksStore = create<WebhooksState>()((set, _get) => ({
   },
 
   fetchDeliveries: async (webhookId: string) => {
-    set({ loading: true, error: null })
-    try {
-      const response = await getWebhookDeliveries(webhookId)
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to fetch deliveries')
-      }
-      const deliveries = response.data.deliveries.map((d) => transformDeliveryResponse(d as unknown as WebhookDeliveryApiResponse))
-      set({ deliveries, loading: false })
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Failed to fetch deliveries',
-        loading: false,
-      })
+    const response = await withLoadingState(set, () => getWebhookDeliveries(webhookId))
+    if (!response) return
+    if (!response.success || !response.data) {
+      set({ error: response.error || 'Failed to fetch deliveries' })
+      return
     }
+    set({ deliveries: response.data.deliveries.map((d) => transformDeliveryResponse(d as unknown as WebhookDeliveryApiResponse)) })
   },
 }))
