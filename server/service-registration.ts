@@ -23,6 +23,8 @@ import { PromptRepository } from './repositories/prompt-repository.js'
 import { PromptTemplateRepository } from './repositories/prompt-template-repository.js'
 import { SystemConfigRepository } from './repositories/system-config-repository.js'
 import { TemplateService } from './services/template-service.js'
+import { ExternalApiLogService } from './services/external-api-log-service.js'
+import { ServiceNodePermissionService } from './services/service-node-permission-service.js'
 import { SystemConfigService } from './services/system-config-service.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
@@ -35,7 +37,6 @@ import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
 import { createMisfireHandler } from './services/misfire-handler.js'
 import { RetryManager } from './services/retry-manager.js'
-import { ExternalApiLogService } from './services/external-api-log-service.js'
 import { DLQAutoRetryScheduler } from './services/dlq-auto-retry-scheduler.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
 import type { IMisfireHandler } from './services/interfaces/misfire-handler.interface.js'
@@ -71,6 +72,7 @@ export const TOKENS = {
   TEMPLATE_SERVICE: 'templateService',
   SYSTEM_CONFIG_SERVICE: 'systemConfigService',
   EXTERNAL_API_LOG_SERVICE: 'externalApiLogService',
+  SERVICE_NODE_PERMISSION_SERVICE: 'serviceNodePermissionService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
   MEDIA_REPOSITORY: 'mediaRepository',
@@ -253,6 +255,12 @@ export async function registerServices(): Promise<void> {
     return new ExternalApiLogService(c.resolve(TOKENS.EXTERNAL_API_LOG_REPOSITORY))
   })
 
+  container.registerSingleton(TOKENS.SERVICE_NODE_PERMISSION_SERVICE, (c) => {
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new ServiceNodePermissionService(new UserRepository(conn))
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -363,6 +371,10 @@ export function getTemplateService(): TemplateService {
 
 export function getExternalApiLogService(): ExternalApiLogService {
   return getGlobalContainer().resolve<ExternalApiLogService>(TOKENS.EXTERNAL_API_LOG_SERVICE)
+}
+
+export function getServiceNodePermissionService(): ServiceNodePermissionService {
+  return getGlobalContainer().resolve<ServiceNodePermissionService>(TOKENS.SERVICE_NODE_PERMISSION_SERVICE)
 }
 
 export function getSettingsService(): SettingsService {

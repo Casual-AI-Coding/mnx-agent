@@ -1,22 +1,22 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabaseService } from '../../service-registration.js'
+import { getServiceNodePermissionService } from '../../service-registration.js'
 import { VALID_ROLES } from '../../types/workflow'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const permissions = await db.getAllServiceNodePermissions()
+  const svc = getServiceNodePermissionService()
+  const permissions = await svc.getAll()
   successResponse(res, { permissions, total: permissions.length })
 }))
 
 router.get('/:service/:method', requireRole(['super', 'admin']), asyncHandler(async (req, res) => {
   const { service, method } = req.params
-  const db = getDatabaseService()
-  const permission = await db.getServiceNodePermission(service, method)
+  const svc = getServiceNodePermissionService()
+  const permission = await svc.get(service, method)
   
   if (!permission) {
     errorResponse(res, 'Permission not found', 404)
@@ -39,8 +39,8 @@ router.post('/', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
   
-  const db = getDatabaseService()
-  await db.upsertServiceNodePermission({
+  const svc = getServiceNodePermissionService()
+  await svc.upsert({
     service_name,
     method_name,
     display_name,
@@ -49,7 +49,7 @@ router.post('/', requireRole(['super']), asyncHandler(async (req, res) => {
     is_enabled,
   })
   
-  const permission = await db.getServiceNodePermission(service_name, method_name)
+  const permission = await svc.get(service_name, method_name)
   res.status(201).json({ success: true, data: permission })
 }))
 
@@ -62,8 +62,8 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
     return
   }
   
-  const db = getDatabaseService()
-  const allPermissions = await db.getAllServiceNodePermissions()
+  const svc = getServiceNodePermissionService()
+  const allPermissions = await svc.getAll()
   const existing = allPermissions.find(p => p.id === id)
   
   if (!existing) {
@@ -71,10 +71,10 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
     return
   }
   
-  await db.updateServiceNodePermission(id, { min_role, is_enabled })
+  await svc.update(id, { min_role, is_enabled })
   
   if (display_name !== undefined || category !== undefined) {
-    const conn = db.getConnection()
+    const conn = svc.getConnection()
     const updates: string[] = []
     const values: (string | number)[] = []
     let paramIndex = 1
@@ -99,7 +99,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
     }
   }
   
-  const updatedPermissions = await db.getAllServiceNodePermissions()
+  const updatedPermissions = await svc.getAll()
   const updated = updatedPermissions.find(p => p.id === id)
   
   successResponse(res, updated)
@@ -107,9 +107,9 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const db = getDatabaseService()
+  const svc = getServiceNodePermissionService()
   
-  const allPermissions = await db.getAllServiceNodePermissions()
+  const allPermissions = await svc.getAll()
   const existing = allPermissions.find(p => p.id === id)
   
   if (!existing) {
@@ -117,7 +117,7 @@ router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
   
-  await db.deleteServiceNodePermission(id)
+  await svc.delete(id)
   successResponse(res, { deleted: true })
 }))
 

@@ -32,6 +32,7 @@ import type { NotificationService } from './services/notification-service.js'
 import type { QueueProcessor } from './services/queue-processor.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
 import type { SettingsService } from './services/settings-service.js'
+import type { ServiceNodePermissionService } from "./services/service-node-permission-service.js"
 import type { TaskExecutor } from './services/task-executor.js'
 import type { WebSocketService } from './services/websocket-service.js'
 import type { WorkflowEngine } from './services/workflow/index.js'
@@ -65,6 +66,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.TEMPLATE_SERVICE]: TemplateService
   readonly [TOKENS.SYSTEM_CONFIG_SERVICE]: SystemConfigService
   readonly [TOKENS.EXTERNAL_API_LOG_SERVICE]: ExternalApiLogService
+  readonly [TOKENS.SERVICE_NODE_PERMISSION_SERVICE]: ServiceNodePermissionService
   readonly [TOKENS.SETTINGS_SERVICE]: SettingsService
   readonly [TOKENS.EXTERNAL_API_LOG_REPOSITORY]: ExternalApiLogRepository
   readonly [TOKENS.MEDIA_REPOSITORY]: MediaRepository

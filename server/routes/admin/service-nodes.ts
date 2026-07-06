@@ -1,15 +1,15 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabaseService } from '../../service-registration.js'
+import { getServiceNodePermissionService } from '../../service-registration.js'
 import { VALID_ROLES } from '../../types/workflow'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 
 const router = Router()
 
 router.get('/', requireRole(['super']), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const nodes = await db.getAllServiceNodePermissions()
+  const svc = getServiceNodePermissionService()
+  const nodes = await svc.getAll()
   successResponse(res, nodes)
 }))
 
@@ -22,8 +22,8 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
 
-  const db = getDatabaseService()
-  const existing = await db.getAllServiceNodePermissions()
+  const svc = getServiceNodePermissionService()
+  const existing = await svc.getAll()
   const node = existing.find(n => n.id === id)
   
   if (!node) {
@@ -31,9 +31,9 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
 
-  await db.updateServiceNodePermission(id, { min_role, is_enabled })
+  await svc.update(id, { min_role, is_enabled })
   
-  const updatedNodes = await db.getAllServiceNodePermissions()
+  const updatedNodes = await svc.getAll()
   const updated = updatedNodes.find(n => n.id === id)
 
   successResponse(res, updated)
@@ -41,9 +41,9 @@ router.patch('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
 
 router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const db = getDatabaseService()
+  const svc = getServiceNodePermissionService()
 
-  const existing = await db.getAllServiceNodePermissions()
+  const existing = await svc.getAll()
   const node = existing.find(n => n.id === id)
   
   if (!node) {
@@ -51,7 +51,7 @@ router.delete('/:id', requireRole(['super']), asyncHandler(async (req, res) => {
     return
   }
 
-  await db.deleteServiceNodePermission(id)
+  await svc.delete(id)
 
   successResponse(res, { message: 'Service node deleted' })
 }))
