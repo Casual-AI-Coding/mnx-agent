@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { executeTransformNode, type TransformExecutorDeps } from '../services/workflow/executors/transform-executor'
 import type { WorkflowNode } from '../services/workflow/types'
-import { vi } from 'vitest'
+import { createMockEventBus } from './helpers/mock-event-bus'
 
 describe('XSS Prevention in Transform Node', () => {
   const executorDeps: TransformExecutorDeps = {
     executionLogId: null,
     workflowId: null,
+    eventBus: createMockEventBus(),
   }
 
   describe('prototype pollution prevention', () => {

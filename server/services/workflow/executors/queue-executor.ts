@@ -1,11 +1,10 @@
 import type { WorkflowNode, TaskResult } from '../types.js'
-import type { DatabaseService } from '../../../database/service-async.js'
 import type { ITaskExecutor } from '../../../types/task.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import type { IEventBus } from '../../interfaces/event-bus.interface.js'
+import { getTaskService } from '../../../service-registration.js'
 
 export interface QueueExecutorDeps {
-  db: DatabaseService
   taskExecutor: ITaskExecutor | null
   serviceRegistry: ServiceNodeRegistry
   executionLogId: string | null
@@ -18,7 +17,7 @@ export async function executeQueueNode(
   config: Record<string, unknown>,
   deps: QueueExecutorDeps
 ): Promise<{ total: number; succeeded: number; failed: number }> {
-  const { db, taskExecutor, serviceRegistry, executionLogId, workflowId, eventBus } = deps
+  const { taskExecutor, serviceRegistry, executionLogId, workflowId, eventBus } = deps
   const jobId = config.jobId as string | undefined
   const taskType = config.taskType as string | undefined
   const limit = (config.limit as number) ?? 10
@@ -39,9 +38,9 @@ export async function executeQueueNode(
     }[] = []
 
     if (jobId) {
-      tasks = await db.getPendingTasksByJob(jobId, limit)
+      tasks = await getTaskService().getPendingByJobId(jobId, limit)
     } else if (taskType) {
-      tasks = await db.getPendingTasksByType(taskType, limit)
+      tasks = await getTaskService().getPendingByType(taskType, limit)
     }
 
     const total = tasks.length
@@ -50,7 +49,7 @@ export async function executeQueueNode(
 
     for (const task of tasks) {
       try {
-        await db.markTaskRunning(task.id)
+        await getTaskService().markRunning(task.id)
 
         const payload = JSON.parse(task.payload)
         let result: TaskResult
@@ -64,24 +63,17 @@ export async function executeQueueNode(
           ])) as TaskResult
         }
 
-        await db.markTaskCompleted(task.id, JSON.stringify(result))
+        await getTaskService().markCompleted(task.id, JSON.stringify(result))
         succeeded++
       } catch (error) {
         const errorMessage = (error as Error).message
-        await db.markTaskFailed(task.id, errorMessage)
+        await getTaskService().markFailed(task.id, errorMessage)
         failed++
 
         const newRetryCount = task.retry_count + 1
         if (newRetryCount >= task.max_retries) {
-          await db.createDeadLetterQueueItem({
-            original_task_id: task.id,
-            job_id: jobId ?? undefined,
-            task_type: task.task_type,
-            payload: JSON.parse(task.payload),
-            error_message: errorMessage,
-            retry_count: newRetryCount,
-            max_retries: task.max_retries,
-          })
+          await getTaskService().moveToDeadLetter(task.id, errorMessage)
+          continue
         }
       }
     }

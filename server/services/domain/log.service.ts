@@ -55,6 +55,18 @@ export class LogService implements ILogService {
     return detail
   }
 
+  async updateDetail(
+    id: string,
+    data: {
+      output_result?: string
+      error_message?: string
+      completed_at?: string
+      duration_ms?: number
+    }
+  ): Promise<void> {
+    await this.logRepo.updateDetail(id, data)
+  }
+
   async getDetails(logId: string): Promise<ExecutionLogDetail[]> {
     return this.logRepo.getDetailsByLogId(logId)
   }

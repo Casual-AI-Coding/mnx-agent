@@ -1,4 +1,6 @@
 import type { ServiceNodeRegistry } from './service-node-registry.js'
+import type { CreateCronJob, CreateExecutionLog, CreateMediaRecord, CreateTaskQueueItem, UpdateCronJob, UpdateExecutionLog, UpdateTaskQueueItem } from '../database/types.js'
+import type { MediaFilter, TaskQueryFilter } from './domain/interfaces/index.js'
 
 type CatalogCallable = (...args: never[]) => unknown
 
@@ -27,29 +29,29 @@ export interface MiniMaxServiceNodes {
 }
 
 export interface DatabaseServiceNodes {
-  readonly getPendingTasks: CatalogCallable
-  readonly createMediaRecord: CatalogCallable
-  readonly updateTask: CatalogCallable
-  readonly getTaskById: CatalogCallable
-  readonly getAllCronJobs: CatalogCallable
-  readonly getCronJobById: CatalogCallable
-  readonly createCronJob: CatalogCallable
-  readonly updateCronJob: CatalogCallable
-  readonly deleteCronJob: CatalogCallable
-  readonly toggleCronJobActive: CatalogCallable
-  readonly getActiveCronJobs: CatalogCallable
-  readonly getAllTasks: CatalogCallable
-  readonly createTask: CatalogCallable
-  readonly markTaskRunning: CatalogCallable
-  readonly markTaskCompleted: CatalogCallable
-  readonly markTaskFailed: CatalogCallable
-  readonly getQueueStats: CatalogCallable
-  readonly getAllExecutionLogs: CatalogCallable
-  readonly createExecutionLog: CatalogCallable
-  readonly updateExecutionLog: CatalogCallable
-  readonly getMediaRecords: CatalogCallable
-  readonly getMediaRecordById: CatalogCallable
-  readonly updateMediaRecord: CatalogCallable
+  readonly getPendingTasks: (jobId: string, limit?: number, ownerId?: string) => unknown
+  readonly createMediaRecord: (data: CreateMediaRecord, ownerId?: string) => unknown
+  readonly updateTask: (id: string, data: UpdateTaskQueueItem, ownerId?: string) => unknown
+  readonly getTaskById: (id: string, ownerId?: string) => unknown
+  readonly getAllCronJobs: (ownerId?: string) => unknown
+  readonly getCronJobById: (id: string, ownerId?: string) => unknown
+  readonly createCronJob: (data: CreateCronJob, ownerId?: string) => unknown
+  readonly updateCronJob: (id: string, data: UpdateCronJob, ownerId?: string) => unknown
+  readonly deleteCronJob: (id: string, ownerId?: string) => unknown
+  readonly toggleCronJobActive: (id: string, ownerId?: string) => unknown
+  readonly getActiveCronJobs: () => unknown
+  readonly getAllTasks: (filter?: TaskQueryFilter) => unknown
+  readonly createTask: (data: CreateTaskQueueItem, ownerId?: string) => unknown
+  readonly markTaskRunning: (id: string) => unknown
+  readonly markTaskCompleted: (id: string, result?: string, ownerId?: string) => unknown
+  readonly markTaskFailed: (id: string, error: string, ownerId?: string) => unknown
+  readonly getQueueStats: (jobId?: string) => unknown
+  readonly getAllExecutionLogs: (jobId?: string, limit?: number, ownerId?: string) => unknown
+  readonly createExecutionLog: (data: CreateExecutionLog, ownerId?: string) => unknown
+  readonly updateExecutionLog: (id: string, data: UpdateExecutionLog, ownerId?: string) => unknown
+  readonly getMediaRecords: (filter?: MediaFilter) => unknown
+  readonly getMediaRecordById: (id: string, ownerId?: string, includePublic?: boolean) => unknown
+  readonly updateMediaRecord: (id: string, data: Record<string, unknown>, ownerId?: string) => unknown
 }
 
 export interface CapacityServiceNodes {
@@ -89,6 +91,73 @@ export interface ServiceNodeCatalogDependencies {
   readonly queueProcessor: QueueServiceNodes
   readonly mediaStorage: MediaStorageServiceNodes
   readonly utils: UtilityServiceNodes
+}
+
+export interface DatabaseServiceNodeDependencies {
+  readonly jobService: {
+    getAll(ownerId?: string): Promise<unknown>
+    getById(id: string, ownerId?: string): Promise<unknown>
+    create(data: CreateCronJob, ownerId?: string): Promise<unknown>
+    update(id: string, data: UpdateCronJob, ownerId?: string): Promise<unknown>
+    delete(id: string, ownerId?: string): Promise<void>
+    toggle(id: string, ownerId?: string): Promise<unknown>
+    getActive(): Promise<unknown>
+  }
+  readonly taskService: {
+    getPendingByJobId(jobId: string, limit: number, ownerId?: string): Promise<unknown>
+    update(id: string, data: UpdateTaskQueueItem, ownerId?: string): Promise<unknown>
+    getById(id: string, ownerId?: string): Promise<unknown>
+    getAll(filter: TaskQueryFilter): Promise<unknown>
+    create(data: CreateTaskQueueItem, ownerId?: string): Promise<unknown>
+    markRunning(id: string): Promise<unknown>
+    markCompleted(id: string, result?: string, ownerId?: string): Promise<unknown>
+    markFailed(id: string, error: string, ownerId?: string): Promise<unknown>
+    getQueueStats(jobId?: string): Promise<unknown>
+  }
+  readonly logService: {
+    getAll(filter: { jobId?: string; limit?: number; ownerId?: string }): Promise<unknown>
+    create(data: CreateExecutionLog, ownerId?: string): Promise<unknown>
+    update(id: string, data: UpdateExecutionLog, ownerId?: string): Promise<unknown>
+  }
+  readonly mediaService: {
+    create(data: CreateMediaRecord, ownerId?: string): Promise<unknown>
+    getAll(filter: MediaFilter): Promise<unknown>
+    getById(id: string, ownerId?: string, includePublic?: boolean): Promise<unknown>
+    update(id: string, data: Record<string, unknown>, ownerId?: string): Promise<unknown>
+  }
+}
+
+export function createDatabaseServiceNodes(dependencies: DatabaseServiceNodeDependencies): DatabaseServiceNodes {
+  const { jobService, taskService, logService, mediaService } = dependencies
+
+  return {
+    getPendingTasks: (jobId: string, limit?: number, ownerId?: string) => taskService.getPendingByJobId(jobId, limit ?? 10, ownerId),
+    createMediaRecord: (data: CreateMediaRecord, ownerId?: string) => mediaService.create(data, ownerId),
+    updateTask: (id: string, data: UpdateTaskQueueItem, ownerId?: string) => taskService.update(id, data, ownerId),
+    getTaskById: (id: string, ownerId?: string) => taskService.getById(id, ownerId),
+    getAllCronJobs: (ownerId?: string) => jobService.getAll(ownerId),
+    getCronJobById: (id: string, ownerId?: string) => jobService.getById(id, ownerId),
+    createCronJob: (data: CreateCronJob, ownerId?: string) => jobService.create(data, ownerId),
+    updateCronJob: (id: string, data: UpdateCronJob, ownerId?: string) => jobService.update(id, data, ownerId),
+    deleteCronJob: async (id: string, ownerId?: string) => {
+      await jobService.delete(id, ownerId)
+      return true
+    },
+    toggleCronJobActive: (id: string, ownerId?: string) => jobService.toggle(id, ownerId),
+    getActiveCronJobs: () => jobService.getActive(),
+    getAllTasks: (filter: TaskQueryFilter = {}) => taskService.getAll(filter),
+    createTask: (data: CreateTaskQueueItem, ownerId?: string) => taskService.create(data, ownerId),
+    markTaskRunning: (id: string) => taskService.markRunning(id),
+    markTaskCompleted: (id: string, result?: string, ownerId?: string) => taskService.markCompleted(id, result, ownerId),
+    markTaskFailed: (id: string, error: string, ownerId?: string) => taskService.markFailed(id, error, ownerId),
+    getQueueStats: (jobId?: string) => taskService.getQueueStats(jobId),
+    getAllExecutionLogs: (jobId?: string, limit?: number, ownerId?: string) => logService.getAll({ jobId, limit, ownerId }),
+    createExecutionLog: (data: CreateExecutionLog, ownerId?: string) => logService.create(data, ownerId),
+    updateExecutionLog: (id: string, data: UpdateExecutionLog, ownerId?: string) => logService.update(id, data, ownerId),
+    getMediaRecords: (filter: MediaFilter = {}) => mediaService.getAll(filter),
+    getMediaRecordById: (id: string, ownerId?: string, includePublic?: boolean) => mediaService.getById(id, ownerId, includePublic),
+    updateMediaRecord: (id: string, data: Record<string, unknown>, ownerId?: string) => mediaService.update(id, data, ownerId),
+  }
 }
 
 export async function registerServiceNodeCatalog(

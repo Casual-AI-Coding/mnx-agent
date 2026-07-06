@@ -60,6 +60,16 @@ export interface ILogService {
    */
   createDetail(data: CreateExecutionLogDetail): Promise<ExecutionLogDetail>
 
+  updateDetail(
+    id: string,
+    data: {
+      output_result?: string
+      error_message?: string
+      completed_at?: string
+      duration_ms?: number
+    }
+  ): Promise<void>
+
   /**
    * Get all detail entries for a specific execution log
    */

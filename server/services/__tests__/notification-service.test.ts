@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../../database/types.js'
+import type { IWebhookService } from '../domain/interfaces/index.js'
 import { WEBHOOK_RATE_LIMITS } from '../../config/rate-limits.js'
 
 const loggerMock = vi.hoisted(() => ({
@@ -24,6 +24,9 @@ describe('NotificationService', () => {
     getWebhookConfigsByJobId: ReturnType<typeof vi.fn>
     getWebhookConfigById: ReturnType<typeof vi.fn>
     createWebhookDelivery: ReturnType<typeof vi.fn>
+    getByJobId: ReturnType<typeof vi.fn>
+    getById: ReturnType<typeof vi.fn>
+    createDelivery: ReturnType<typeof vi.fn>
   }
 
   const mockWebhookConfig: WebhookConfig = {
@@ -55,13 +58,19 @@ describe('NotificationService', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     
+    const getWebhookConfigsByJobId = vi.fn()
+    const getWebhookConfigById = vi.fn()
+    const createWebhookDelivery = vi.fn()
     mockDb = {
-      getWebhookConfigsByJobId: vi.fn(),
-      getWebhookConfigById: vi.fn(),
-      createWebhookDelivery: vi.fn()
+      getWebhookConfigsByJobId,
+      getWebhookConfigById,
+      createWebhookDelivery,
+      getByJobId: getWebhookConfigsByJobId,
+      getById: getWebhookConfigById,
+      createDelivery: createWebhookDelivery
     }
 
-    service = new NotificationService(mockDb as unknown as DatabaseService, { timeout: 5000 })
+    service = new NotificationService(mockDb as unknown as IWebhookService, { timeout: 5000 })
     mockFetch.mockReset()
   })
 
@@ -756,17 +765,17 @@ describe('NotificationService', () => {
 
   describe('constructor', () => {
     it('should use default timeout when not provided', () => {
-      const svc = new NotificationService(mockDb as unknown as DatabaseService)
+      const svc = new NotificationService(mockDb as unknown as IWebhookService)
       expect((svc as any).timeout).toBe(10000)
     })
 
     it('should use custom timeout when provided', () => {
-      const svc = new NotificationService(mockDb as unknown as DatabaseService, { timeout: 5000 })
+      const svc = new NotificationService(mockDb as unknown as IWebhookService, { timeout: 5000 })
       expect((svc as any).timeout).toBe(5000)
     })
 
     it('should initialize empty rate limiter map', () => {
-      const svc = new NotificationService(mockDb as unknown as DatabaseService)
+      const svc = new NotificationService(mockDb as unknown as IWebhookService)
       expect((svc as any).webhookRateLimiter.size).toBe(0)
     })
   })

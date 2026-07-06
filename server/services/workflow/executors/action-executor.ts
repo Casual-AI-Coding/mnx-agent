@@ -1,11 +1,10 @@
 import type { WorkflowNode } from '../types.js'
-import type { DatabaseService } from '../../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import type { IEventBus } from '../../interfaces/event-bus.interface.js'
 import { toLocalISODateString } from '../../../lib/date-utils.js'
+import { getLogService } from '../../../service-registration.js'
 
 export interface ActionExecutorDeps {
-  db: DatabaseService
   serviceRegistry: ServiceNodeRegistry
   executionLogId: string | null
   workflowId: string | null
@@ -19,7 +18,7 @@ export async function executeActionNode(
   config: Record<string, unknown>,
   deps: ActionExecutorDeps
 ): Promise<unknown> {
-  const { db, serviceRegistry, executionLogId, workflowId, dryRun, testData, eventBus } = deps
+  const { serviceRegistry, executionLogId, workflowId, dryRun, testData, eventBus } = deps
   const service = config.service as string
   const method = config.method as string
   const args = (config.args as unknown[]) ?? []
@@ -51,7 +50,7 @@ export async function executeActionNode(
   }
 
   if (executionLogId) {
-    detailId = await db.createExecutionLogDetail({
+    const detail = await getLogService().createDetail({
       log_id: executionLogId,
       node_id: node.id,
       node_type: 'action',
@@ -60,13 +59,14 @@ export async function executeActionNode(
       input_payload: JSON.stringify(args),
       started_at: toLocalISODateString(),
     })
+    detailId = detail.id
   }
 
   try {
     const result = await serviceRegistry.call(service, method, args)
 
     if (detailId) {
-      await db.updateExecutionLogDetail(detailId, {
+      await getLogService().updateDetail(detailId, {
         output_result: JSON.stringify(result),
         completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,
@@ -80,7 +80,7 @@ export async function executeActionNode(
     return result
   } catch (error) {
     if (detailId) {
-      await db.updateExecutionLogDetail(detailId, {
+      await getLogService().updateDetail(detailId, {
         error_message: (error as Error).message,
         completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,

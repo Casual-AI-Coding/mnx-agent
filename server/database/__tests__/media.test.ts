@@ -1,11 +1,25 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
-import { DatabaseService } from '../service-async.js'
-import type { CreateMediaRecord, MediaType, MediaSource } from '../types.js'
+import { MediaService } from '../../services/domain/media.service.js'
+import { MediaRepository } from '../../repositories/media-repository.js'
+import type { CreateMediaRecord, MediaRecord, MediaType, MediaSource } from '../types.js'
+import type { MediaFilter, MediaQueryResult } from '../../services/domain/interfaces/index.js'
 import { v4 as uuidv4 } from 'uuid'
 
+type MediaTestAdapter = {
+  createMediaRecord(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord>
+  getMediaRecordById(id: string, ownerId?: string): Promise<MediaRecord | null>
+  getMediaRecords(options: MediaFilter): Promise<MediaQueryResult>
+  updateMediaRecord(id: string, data: Partial<MediaRecord>, ownerId?: string): Promise<MediaRecord | null>
+  softDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean>
+  hardDeleteMediaRecord(id: string, ownerId?: string): Promise<boolean>
+  softDeleteMediaRecords(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }>
+  getMediaRecordsByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]>
+  togglePublicMediaRecord(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null>
+}
+
 describe('MediaRecord Database Service', () => {
-  let db: DatabaseService
+  let db: MediaTestAdapter
   let testOwnerId1: string
   let testOwnerId2: string
   let fileMarker: string
@@ -21,7 +35,18 @@ describe('MediaRecord Database Service', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
-    db = new DatabaseService(getConnection())
+    const mediaService = new MediaService(new MediaRepository(getConnection()))
+    db = {
+      createMediaRecord: (data, ownerId) => mediaService.create(data, ownerId),
+      getMediaRecordById: (id, ownerId) => mediaService.getById(id, ownerId),
+      getMediaRecords: options => mediaService.getAll(options),
+      updateMediaRecord: (id, data, ownerId) => mediaService.update(id, data, ownerId),
+      softDeleteMediaRecord: (id, ownerId) => mediaService.softDelete(id, ownerId),
+      hardDeleteMediaRecord: (id, ownerId) => mediaService.hardDelete(id, ownerId),
+      softDeleteMediaRecords: (ids, ownerId) => mediaService.softDeleteBatch(ids, ownerId),
+      getMediaRecordsByIds: (ids, ownerId) => mediaService.getByIds(ids, ownerId),
+      togglePublicMediaRecord: (id, isPublic, ownerId) => mediaService.togglePublic(id, isPublic, ownerId),
+    }
     fileMarker = getTestFileMarker(import.meta.url)
 
     const conn = getConnection()

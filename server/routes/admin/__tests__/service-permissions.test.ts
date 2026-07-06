@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../../__tests__/test-helpers.js'
-import { getDatabase } from '../../../database/service-async.js'
+import { ServiceNodePermissionService } from '../../../services/service-node-permission-service.js'
+import { UserRepository } from '../../../repositories/user-repository.js'
 import servicePermissionsRouter from '../service-permissions.js'
 
 const mockUser = {
@@ -18,14 +19,14 @@ const mockAuthMiddleware = (req: express.Request, _res: express.Response, next: 
 
 describe('Service Permissions API Routes', () => {
   let app: express.Application
-  let db: Awaited<ReturnType<typeof getDatabase>>
+  let db: ServiceNodePermissionService
   const fileMarker = getTestFileMarker(import.meta.url)
 
   const createTestPermissionName = (suffix: string) => `test_${fileMarker}_${suffix}`
 
   beforeAll(async () => {
     await setupTestDatabase()
-    db = await getDatabase()
+    db = new ServiceNodePermissionService(new UserRepository(getConnection()))
 
     app = express()
     app.use(express.json())
@@ -61,7 +62,7 @@ describe('Service Permissions API Routes', () => {
       serviceName = createTestPermissionName('get-service')
       methodName = createTestPermissionName('get-method')
 
-      await db.upsertServiceNodePermission({
+      await db.upsert({
         service_name: serviceName,
         method_name: methodName,
         display_name: 'Test Method',
@@ -172,7 +173,7 @@ describe('Service Permissions API Routes', () => {
       serviceName = createTestPermissionName('patch-service')
       methodName = createTestPermissionName('update-method')
 
-      await db.upsertServiceNodePermission({
+      await db.upsert({
         service_name: serviceName,
         method_name: methodName,
         display_name: 'Update Method',
@@ -180,7 +181,7 @@ describe('Service Permissions API Routes', () => {
         min_role: 'pro',
         is_enabled: true,
       })
-      const permission = await db.getServiceNodePermission(serviceName, methodName)
+      const permission = await db.get(serviceName, methodName)
       permissionId = permission!.id
     })
 
@@ -243,7 +244,7 @@ describe('Service Permissions API Routes', () => {
       serviceName = createTestPermissionName('delete-service')
       methodName = createTestPermissionName('delete-method')
 
-      await db.upsertServiceNodePermission({
+      await db.upsert({
         service_name: serviceName,
         method_name: methodName,
         display_name: 'Delete Method',
@@ -251,7 +252,7 @@ describe('Service Permissions API Routes', () => {
         min_role: 'pro',
         is_enabled: true,
       })
-      const permission = await db.getServiceNodePermission(serviceName, methodName)
+      const permission = await db.get(serviceName, methodName)
       permissionId = permission!.id
     })
 

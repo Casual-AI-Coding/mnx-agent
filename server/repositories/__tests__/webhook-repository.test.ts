@@ -147,7 +147,7 @@ describe('WebhookRepository', () => {
     })
 
     it('should return null when not found', async () => {
-      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+      vi.mocked(mockDb.query).mockResolvedValueOnce([])
 
       const repo = new WebhookRepository(mockDb)
       const result = await repo.getConfigById('non-existent')
@@ -205,6 +205,19 @@ describe('WebhookRepository', () => {
       const repo = new WebhookRepository(mockDb)
       const result = await repo.getConfigsByJobId('job-with-no-webhooks')
 
+      expect(result).toHaveLength(0)
+    })
+
+    it('should filter active webhooks by owner when owner is provided', async () => {
+      vi.mocked(mockDb.query).mockResolvedValueOnce([] as any)
+
+      const repo = new WebhookRepository(mockDb)
+      const result = await repo.getConfigsByJobId('job-1', 'owner-1')
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true AND owner_id = $2',
+        ['job-1', 'owner-1']
+      )
       expect(result).toHaveLength(0)
     })
   })

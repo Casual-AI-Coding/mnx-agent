@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getDatabaseService } from '../service-registration.js'
+import { getLogService } from '../service-registration.js'
 import type { AuditAction } from '../database/types'
 import { getLogger } from '../lib/logger'
 import { getCurrentTraceId } from '../services/audit-context.service.js'
@@ -127,7 +127,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
   res.end = function (this: Response, ...args: Parameters<typeof res.end>) {
     const duration = Date.now() - startTime
 
-    const db = getDatabaseService()
+    const logService = getLogService()
     const resourceType = extractResourceType(req.path)
     const resourceId = req.params.id || req.params.jobId || null
 
@@ -151,7 +151,7 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
 
     const traceId = getCurrentTraceId()
 
-    db.createAuditLog({
+    logService.createAuditLog({
       action: methodToAction(req.method),
       resource_type: resourceType,
       resource_id: resourceId,

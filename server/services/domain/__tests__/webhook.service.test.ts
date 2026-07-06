@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { WebhookService } from '../webhook.service.js'
-import type { DatabaseService } from '../../../database/service-async.js'
+import type { WebhookRepository } from '../../../repositories/webhook-repository.js'
 import type {
   WebhookConfig,
   WebhookDelivery,
@@ -12,15 +12,15 @@ import type {
 
 describe('WebhookService', () => {
   let service: WebhookService
-  let mockDb: {
-    getAllWebhookConfigs: ReturnType<typeof vi.fn>
-    getWebhookConfigById: ReturnType<typeof vi.fn>
-    getWebhookConfigsByJobId: ReturnType<typeof vi.fn>
-    createWebhookConfig: ReturnType<typeof vi.fn>
-    updateWebhookConfig: ReturnType<typeof vi.fn>
-    deleteWebhookConfig: ReturnType<typeof vi.fn>
-    getWebhookDeliveriesByWebhook: ReturnType<typeof vi.fn>
-    createWebhookDelivery: ReturnType<typeof vi.fn>
+  let mockRepo: {
+    getAllConfigs: ReturnType<typeof vi.fn>
+    getConfigById: ReturnType<typeof vi.fn>
+    getConfigsByJobId: ReturnType<typeof vi.fn>
+    createConfig: ReturnType<typeof vi.fn>
+    updateConfig: ReturnType<typeof vi.fn>
+    deleteConfig: ReturnType<typeof vi.fn>
+    getDeliveriesByWebhook: ReturnType<typeof vi.fn>
+    createDelivery: ReturnType<typeof vi.fn>
   }
 
   const mockWebhookConfig: WebhookConfig = {
@@ -51,44 +51,44 @@ describe('WebhookService', () => {
   }
 
   beforeEach(() => {
-    mockDb = {
-      getAllWebhookConfigs: vi.fn(),
-      getWebhookConfigById: vi.fn(),
-      getWebhookConfigsByJobId: vi.fn(),
-      createWebhookConfig: vi.fn(),
-      updateWebhookConfig: vi.fn(),
-      deleteWebhookConfig: vi.fn(),
-      getWebhookDeliveriesByWebhook: vi.fn(),
-      createWebhookDelivery: vi.fn()
+    mockRepo = {
+      getAllConfigs: vi.fn(),
+      getConfigById: vi.fn(),
+      getConfigsByJobId: vi.fn(),
+      createConfig: vi.fn(),
+      updateConfig: vi.fn(),
+      deleteConfig: vi.fn(),
+      getDeliveriesByWebhook: vi.fn(),
+      createDelivery: vi.fn()
     }
 
-    service = new WebhookService(mockDb as unknown as DatabaseService)
+    service = new WebhookService(mockRepo as unknown as WebhookRepository)
   })
 
   describe('getAll', () => {
     it('should return all webhook configs without owner filter', async () => {
       const configs = [mockWebhookConfig, { ...mockWebhookConfig, id: 'webhook-2' }]
-      mockDb.getAllWebhookConfigs.mockResolvedValue(configs)
+      mockRepo.getAllConfigs.mockResolvedValue(configs)
 
       const result = await service.getAll()
 
-      expect(mockDb.getAllWebhookConfigs).toHaveBeenCalledWith(undefined)
+      expect(mockRepo.getAllConfigs).toHaveBeenCalledWith(undefined)
       expect(result).toEqual(configs)
       expect(result).toHaveLength(2)
     })
 
     it('should return webhook configs filtered by owner', async () => {
       const configs = [mockWebhookConfig]
-      mockDb.getAllWebhookConfigs.mockResolvedValue(configs)
+      mockRepo.getAllConfigs.mockResolvedValue(configs)
 
       const result = await service.getAll('owner-1')
 
-      expect(mockDb.getAllWebhookConfigs).toHaveBeenCalledWith('owner-1')
+      expect(mockRepo.getAllConfigs).toHaveBeenCalledWith('owner-1')
       expect(result).toEqual(configs)
     })
 
     it('should return empty array when no configs exist', async () => {
-      mockDb.getAllWebhookConfigs.mockResolvedValue([])
+      mockRepo.getAllConfigs.mockResolvedValue([])
 
       const result = await service.getAll()
 
@@ -97,13 +97,13 @@ describe('WebhookService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getAllWebhookConfigs.mockRejectedValue(new Error('Database error'))
+      mockRepo.getAllConfigs.mockRejectedValue(new Error('Database error'))
 
       await expect(service.getAll()).rejects.toThrow('Database error')
     })
 
     it('should propagate database errors with owner filter', async () => {
-      mockDb.getAllWebhookConfigs.mockRejectedValue(new Error('Query failed'))
+      mockRepo.getAllConfigs.mockRejectedValue(new Error('Query failed'))
 
       await expect(service.getAll('owner-1')).rejects.toThrow('Query failed')
     })
@@ -111,34 +111,34 @@ describe('WebhookService', () => {
 
   describe('getById', () => {
     it('should return webhook config by ID', async () => {
-      mockDb.getWebhookConfigById.mockResolvedValue(mockWebhookConfig)
+      mockRepo.getConfigById.mockResolvedValue(mockWebhookConfig)
 
       const result = await service.getById('webhook-1')
 
-      expect(mockDb.getWebhookConfigById).toHaveBeenCalledWith('webhook-1', undefined)
+      expect(mockRepo.getConfigById).toHaveBeenCalledWith('webhook-1', undefined)
       expect(result).toEqual(mockWebhookConfig)
     })
 
     it('should return webhook config by ID with owner filter', async () => {
-      mockDb.getWebhookConfigById.mockResolvedValue(mockWebhookConfig)
+      mockRepo.getConfigById.mockResolvedValue(mockWebhookConfig)
 
       const result = await service.getById('webhook-1', 'owner-1')
 
-      expect(mockDb.getWebhookConfigById).toHaveBeenCalledWith('webhook-1', 'owner-1')
+      expect(mockRepo.getConfigById).toHaveBeenCalledWith('webhook-1', 'owner-1')
       expect(result).toEqual(mockWebhookConfig)
     })
 
     it('should return null when webhook not found', async () => {
-      mockDb.getWebhookConfigById.mockResolvedValue(null)
+      mockRepo.getConfigById.mockResolvedValue(null)
 
       const result = await service.getById('nonexistent')
 
-      expect(mockDb.getWebhookConfigById).toHaveBeenCalledWith('nonexistent', undefined)
+      expect(mockRepo.getConfigById).toHaveBeenCalledWith('nonexistent', undefined)
       expect(result).toBeNull()
     })
 
     it('should return null when webhook belongs to different owner', async () => {
-      mockDb.getWebhookConfigById.mockResolvedValue(null)
+      mockRepo.getConfigById.mockResolvedValue(null)
 
       const result = await service.getById('webhook-1', 'different-owner')
 
@@ -146,7 +146,7 @@ describe('WebhookService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getWebhookConfigById.mockRejectedValue(new Error('Query failed'))
+      mockRepo.getConfigById.mockRejectedValue(new Error('Query failed'))
 
       await expect(service.getById('webhook-1')).rejects.toThrow('Query failed')
     })
@@ -155,26 +155,26 @@ describe('WebhookService', () => {
   describe('getByJobId', () => {
     it('should return webhook configs by job ID', async () => {
       const configs = [mockWebhookConfig]
-      mockDb.getWebhookConfigsByJobId.mockResolvedValue(configs)
+      mockRepo.getConfigsByJobId.mockResolvedValue(configs)
 
       const result = await service.getByJobId('job-1')
 
-      expect(mockDb.getWebhookConfigsByJobId).toHaveBeenCalledWith('job-1')
+      expect(mockRepo.getConfigsByJobId).toHaveBeenCalledWith('job-1', undefined)
       expect(result).toEqual(configs)
     })
 
     it('should return webhook configs by job ID with owner filter', async () => {
       const configs = [mockWebhookConfig]
-      mockDb.getWebhookConfigsByJobId.mockResolvedValue(configs)
+      mockRepo.getConfigsByJobId.mockResolvedValue(configs)
 
       const result = await service.getByJobId('job-1', 'owner-1')
 
-      expect(mockDb.getWebhookConfigsByJobId).toHaveBeenCalledWith('job-1')
+      expect(mockRepo.getConfigsByJobId).toHaveBeenCalledWith('job-1', 'owner-1')
       expect(result).toEqual(configs)
     })
 
     it('should return empty array when no webhooks for job', async () => {
-      mockDb.getWebhookConfigsByJobId.mockResolvedValue([])
+      mockRepo.getConfigsByJobId.mockResolvedValue([])
 
       const result = await service.getByJobId('job-with-no-webhooks')
 
@@ -187,7 +187,7 @@ describe('WebhookService', () => {
         mockWebhookConfig,
         { ...mockWebhookConfig, id: 'webhook-2', url: 'https://example2.com/webhook' }
       ]
-      mockDb.getWebhookConfigsByJobId.mockResolvedValue(configs)
+      mockRepo.getConfigsByJobId.mockResolvedValue(configs)
 
       const result = await service.getByJobId('job-1')
 
@@ -195,7 +195,7 @@ describe('WebhookService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getWebhookConfigsByJobId.mockRejectedValue(new Error('Query failed'))
+      mockRepo.getConfigsByJobId.mockRejectedValue(new Error('Query failed'))
 
       await expect(service.getByJobId('job-1')).rejects.toThrow('Query failed')
     })
@@ -210,11 +210,11 @@ describe('WebhookService', () => {
         events: ['on_success'] as WebhookEvent[]
       }
       const newConfig = { ...mockWebhookConfig, ...createData, id: 'webhook-new' }
-      mockDb.createWebhookConfig.mockResolvedValue(newConfig)
+      mockRepo.createConfig.mockResolvedValue(newConfig)
 
       const result = await service.create(createData)
 
-      expect(mockDb.createWebhookConfig).toHaveBeenCalledWith(createData, undefined)
+      expect(mockRepo.createConfig).toHaveBeenCalledWith(createData, undefined)
       expect(result).toEqual(newConfig)
     })
 
@@ -226,11 +226,11 @@ describe('WebhookService', () => {
         events: ['on_success'] as WebhookEvent[]
       }
       const newConfig = { ...mockWebhookConfig, ...createData, id: 'webhook-new', owner_id: 'owner-2' }
-      mockDb.createWebhookConfig.mockResolvedValue(newConfig)
+      mockRepo.createConfig.mockResolvedValue(newConfig)
 
       const result = await service.create(createData, 'owner-2')
 
-      expect(mockDb.createWebhookConfig).toHaveBeenCalledWith(createData, 'owner-2')
+      expect(mockRepo.createConfig).toHaveBeenCalledWith(createData, 'owner-2')
       expect(result.owner_id).toBe('owner-2')
     })
 
@@ -244,7 +244,7 @@ describe('WebhookService', () => {
         secret: 'my-secret',
         is_active: true
       }
-      mockDb.createWebhookConfig.mockResolvedValue({ ...mockWebhookConfig, ...createData })
+      mockRepo.createConfig.mockResolvedValue({ ...mockWebhookConfig, ...createData })
 
       const result = await service.create(createData)
 
@@ -260,7 +260,7 @@ describe('WebhookService', () => {
         url: 'https://global.example.com/webhook',
         events: ['on_success'] as WebhookEvent[]
       }
-      mockDb.createWebhookConfig.mockResolvedValue({ ...mockWebhookConfig, ...createData })
+      mockRepo.createConfig.mockResolvedValue({ ...mockWebhookConfig, ...createData })
 
       const result = await service.create(createData)
 
@@ -273,7 +273,7 @@ describe('WebhookService', () => {
         url: 'https://test.com/webhook',
         events: ['on_success'] as WebhookEvent[]
       }
-      mockDb.createWebhookConfig.mockRejectedValue(new Error('Insert failed'))
+      mockRepo.createConfig.mockRejectedValue(new Error('Insert failed'))
 
       await expect(service.create(createData)).rejects.toThrow('Insert failed')
     })
@@ -286,26 +286,26 @@ describe('WebhookService', () => {
         url: 'https://updated.example.com/webhook'
       }
       const updatedConfig = { ...mockWebhookConfig, ...updateData }
-      mockDb.updateWebhookConfig.mockResolvedValue(updatedConfig)
+      mockRepo.updateConfig.mockResolvedValue(updatedConfig)
 
       const result = await service.update('webhook-1', updateData)
 
-      expect(mockDb.updateWebhookConfig).toHaveBeenCalledWith('webhook-1', updateData, undefined)
+      expect(mockRepo.updateConfig).toHaveBeenCalledWith('webhook-1', updateData, undefined)
       expect(result.name).toBe('Updated Webhook')
       expect(result.url).toBe('https://updated.example.com/webhook')
     })
 
     it('should update webhook config with owner filter', async () => {
       const updateData: UpdateWebhookConfig = { name: 'Updated' }
-      mockDb.updateWebhookConfig.mockResolvedValue({ ...mockWebhookConfig, ...updateData })
+      mockRepo.updateConfig.mockResolvedValue({ ...mockWebhookConfig, ...updateData })
 
       await service.update('webhook-1', updateData, 'owner-1')
 
-      expect(mockDb.updateWebhookConfig).toHaveBeenCalledWith('webhook-1', updateData, 'owner-1')
+      expect(mockRepo.updateConfig).toHaveBeenCalledWith('webhook-1', updateData, 'owner-1')
     })
 
     it('should throw error when webhook not found', async () => {
-      mockDb.updateWebhookConfig.mockResolvedValue(null)
+      mockRepo.updateConfig.mockResolvedValue(null)
 
       await expect(service.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
         'WebhookConfig not found: nonexistent'
@@ -313,7 +313,7 @@ describe('WebhookService', () => {
     })
 
     it('should throw error when webhook belongs to different owner', async () => {
-      mockDb.updateWebhookConfig.mockResolvedValue(null)
+      mockRepo.updateConfig.mockResolvedValue(null)
 
       await expect(service.update('webhook-1', { name: 'Updated' }, 'different-owner')).rejects.toThrow(
         'WebhookConfig not found: webhook-1'
@@ -321,7 +321,7 @@ describe('WebhookService', () => {
     })
 
     it('should update single field', async () => {
-      mockDb.updateWebhookConfig.mockResolvedValue({ ...mockWebhookConfig, is_active: false })
+      mockRepo.updateConfig.mockResolvedValue({ ...mockWebhookConfig, is_active: false })
 
       const result = await service.update('webhook-1', { is_active: false })
 
@@ -330,7 +330,7 @@ describe('WebhookService', () => {
 
     it('should update events array', async () => {
       const newEvents = ['on_failure'] as WebhookEvent[]
-      mockDb.updateWebhookConfig.mockResolvedValue({ ...mockWebhookConfig, events: newEvents })
+      mockRepo.updateConfig.mockResolvedValue({ ...mockWebhookConfig, events: newEvents })
 
       const result = await service.update('webhook-1', { events: newEvents })
 
@@ -338,7 +338,7 @@ describe('WebhookService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.updateWebhookConfig.mockRejectedValue(new Error('Update failed'))
+      mockRepo.updateConfig.mockRejectedValue(new Error('Update failed'))
 
       await expect(service.update('webhook-1', { name: 'Updated' })).rejects.toThrow('Update failed')
     })
@@ -346,29 +346,29 @@ describe('WebhookService', () => {
 
   describe('delete', () => {
     it('should delete an existing webhook config', async () => {
-      mockDb.deleteWebhookConfig.mockResolvedValue(true)
+      mockRepo.deleteConfig.mockResolvedValue(true)
 
       await service.delete('webhook-1')
 
-      expect(mockDb.deleteWebhookConfig).toHaveBeenCalledWith('webhook-1', undefined)
+      expect(mockRepo.deleteConfig).toHaveBeenCalledWith('webhook-1', undefined)
     })
 
     it('should delete webhook config with owner filter', async () => {
-      mockDb.deleteWebhookConfig.mockResolvedValue(true)
+      mockRepo.deleteConfig.mockResolvedValue(true)
 
       await service.delete('webhook-1', 'owner-1')
 
-      expect(mockDb.deleteWebhookConfig).toHaveBeenCalledWith('webhook-1', 'owner-1')
+      expect(mockRepo.deleteConfig).toHaveBeenCalledWith('webhook-1', 'owner-1')
     })
 
     it('should throw error when webhook not found', async () => {
-      mockDb.deleteWebhookConfig.mockResolvedValue(false)
+      mockRepo.deleteConfig.mockResolvedValue(false)
 
       await expect(service.delete('nonexistent')).rejects.toThrow('WebhookConfig not found: nonexistent')
     })
 
     it('should throw error when webhook belongs to different owner', async () => {
-      mockDb.deleteWebhookConfig.mockResolvedValue(false)
+      mockRepo.deleteConfig.mockResolvedValue(false)
 
       await expect(service.delete('webhook-1', 'different-owner')).rejects.toThrow(
         'WebhookConfig not found: webhook-1'
@@ -376,7 +376,7 @@ describe('WebhookService', () => {
     })
 
     it('should propagate database errors', async () => {
-      mockDb.deleteWebhookConfig.mockRejectedValue(new Error('Delete failed'))
+      mockRepo.deleteConfig.mockRejectedValue(new Error('Delete failed'))
 
       await expect(service.delete('webhook-1')).rejects.toThrow('Delete failed')
     })
@@ -385,34 +385,34 @@ describe('WebhookService', () => {
   describe('getDeliveries', () => {
     it('should return deliveries for webhook', async () => {
       const deliveries = [mockWebhookDelivery]
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue(deliveries)
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue(deliveries)
 
       const result = await service.getDeliveries('webhook-1')
 
-      expect(mockDb.getWebhookDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, undefined)
+      expect(mockRepo.getDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, undefined)
       expect(result).toEqual(deliveries)
     })
 
     it('should return deliveries with custom limit', async () => {
       const deliveries = [mockWebhookDelivery]
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue(deliveries)
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue(deliveries)
 
       await service.getDeliveries('webhook-1', 100)
 
-      expect(mockDb.getWebhookDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 100, undefined)
+      expect(mockRepo.getDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 100, undefined)
     })
 
     it('should return deliveries with owner filter', async () => {
       const deliveries = [mockWebhookDelivery]
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue(deliveries)
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue(deliveries)
 
       await service.getDeliveries('webhook-1', 50, 'owner-1')
 
-      expect(mockDb.getWebhookDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, 'owner-1')
+      expect(mockRepo.getDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, 'owner-1')
     })
 
     it('should return empty array when no deliveries', async () => {
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue([])
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue([])
 
       const result = await service.getDeliveries('webhook-1')
 
@@ -426,7 +426,7 @@ describe('WebhookService', () => {
         { ...mockWebhookDelivery, id: 'delivery-2' },
         { ...mockWebhookDelivery, id: 'delivery-3' }
       ]
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue(deliveries)
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue(deliveries)
 
       const result = await service.getDeliveries('webhook-1')
 
@@ -434,15 +434,15 @@ describe('WebhookService', () => {
     })
 
     it('should use default limit of 50', async () => {
-      mockDb.getWebhookDeliveriesByWebhook.mockResolvedValue([])
+      mockRepo.getDeliveriesByWebhook.mockResolvedValue([])
 
       await service.getDeliveries('webhook-1')
 
-      expect(mockDb.getWebhookDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, undefined)
+      expect(mockRepo.getDeliveriesByWebhook).toHaveBeenCalledWith('webhook-1', 50, undefined)
     })
 
     it('should propagate database errors', async () => {
-      mockDb.getWebhookDeliveriesByWebhook.mockRejectedValue(new Error('Query failed'))
+      mockRepo.getDeliveriesByWebhook.mockRejectedValue(new Error('Query failed'))
 
       await expect(service.getDeliveries('webhook-1')).rejects.toThrow('Query failed')
     })
@@ -457,11 +457,11 @@ describe('WebhookService', () => {
         response_status: 200,
         response_body: 'OK'
       }
-      mockDb.createWebhookDelivery.mockResolvedValue({ ...mockWebhookDelivery, ...createData })
+      mockRepo.createDelivery.mockResolvedValue({ ...mockWebhookDelivery, ...createData })
 
       const result = await service.createDelivery(createData)
 
-      expect(mockDb.createWebhookDelivery).toHaveBeenCalledWith(createData)
+      expect(mockRepo.createDelivery).toHaveBeenCalledWith(createData)
       expect(result.webhook_id).toBe('webhook-1')
     })
 
@@ -472,7 +472,7 @@ describe('WebhookService', () => {
         payload: { error: 'failed' },
         error_message: 'HTTP 500'
       }
-      mockDb.createWebhookDelivery.mockResolvedValue({ ...mockWebhookDelivery, ...createData })
+      mockRepo.createDelivery.mockResolvedValue({ ...mockWebhookDelivery, ...createData })
 
       const result = await service.createDelivery(createData)
 
@@ -486,7 +486,7 @@ describe('WebhookService', () => {
         event: 'on_success' as WebhookEvent,
         payload: {}
       }
-      mockDb.createWebhookDelivery.mockResolvedValue({
+      mockRepo.createDelivery.mockResolvedValue({
         ...mockWebhookDelivery,
         execution_log_id: 'log-1'
       })
@@ -502,11 +502,11 @@ describe('WebhookService', () => {
         event: 'on_start' as WebhookEvent,
         payload: {}
       }
-      mockDb.createWebhookDelivery.mockResolvedValue(mockWebhookDelivery)
+      mockRepo.createDelivery.mockResolvedValue(mockWebhookDelivery)
 
       await service.createDelivery(createData)
 
-      expect(mockDb.createWebhookDelivery).toHaveBeenCalledWith(createData)
+      expect(mockRepo.createDelivery).toHaveBeenCalledWith(createData)
     })
 
     it('should propagate database errors', async () => {
@@ -515,7 +515,7 @@ describe('WebhookService', () => {
         event: 'on_success' as WebhookEvent,
         payload: {}
       }
-      mockDb.createWebhookDelivery.mockRejectedValue(new Error('Insert failed'))
+      mockRepo.createDelivery.mockRejectedValue(new Error('Insert failed'))
 
       await expect(service.createDelivery(createData)).rejects.toThrow('Insert failed')
     })

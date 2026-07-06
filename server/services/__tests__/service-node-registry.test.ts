@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodePermission } from '../../database/types.js'
+import type { ServiceNodePermissionService } from '../service-node-permission-service.js'
 import { ServiceNodeRegistry, getServiceNodeRegistry, resetServiceNodeRegistry, type ServiceConfig, type ServiceMethodMeta } from '../service-node-registry.js'
 
 vi.mock('../../lib/logger.js', () => ({
@@ -15,6 +15,8 @@ describe('ServiceNodeRegistry', () => {
   let mockDb: {
     upsertServiceNodePermission: ReturnType<typeof vi.fn>
     getAllServiceNodePermissions: ReturnType<typeof vi.fn>
+    upsert: ReturnType<typeof vi.fn>
+    getAll: ReturnType<typeof vi.fn>
   }
 
   const createMockService = (methods: Record<string, unknown>) => methods
@@ -29,9 +31,13 @@ describe('ServiceNodeRegistry', () => {
     resetServiceNodeRegistry()
     vi.clearAllMocks()
 
+    const upsertServiceNodePermission = vi.fn().mockResolvedValue({})
+    const getAllServiceNodePermissions = vi.fn().mockResolvedValue([])
     mockDb = {
-      upsertServiceNodePermission: vi.fn().mockResolvedValue({}),
-      getAllServiceNodePermissions: vi.fn().mockResolvedValue([])
+      upsertServiceNodePermission,
+      getAllServiceNodePermissions,
+      upsert: upsertServiceNodePermission,
+      getAll: getAllServiceNodePermissions
     }
   })
 
@@ -41,14 +47,14 @@ describe('ServiceNodeRegistry', () => {
 
   describe('constructor', () => {
     it('should create registry instance with database service', () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       expect(registry).toBeDefined()
     })
   })
 
   describe('register', () => {
     it('should register a service and store its instance', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({
         doSomething: vi.fn().mockResolvedValue('result')
       })
@@ -63,7 +69,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should store method metadata', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       const methods: ServiceMethodMeta[] = [
         { name: 'method1', displayName: 'Method 1', category: 'cat1', description: 'desc1' },
@@ -80,7 +86,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should upsert permissions for each method in database', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       const methods: ServiceMethodMeta[] = [
         { name: 'doThing', displayName: 'Do Thing', category: 'actions' }
@@ -100,7 +106,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should use method minRole when syncing permissions', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       const methods: ServiceMethodMeta[] = [
         { name: 'adminOnly', displayName: 'Admin Only', category: 'actions', minRole: 'admin' }
@@ -120,7 +126,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should continue registering even if database upsert fails for one method', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       const methods: ServiceMethodMeta[] = [
         { name: 'successMethod', displayName: 'Success', category: 'cat' },
@@ -139,7 +145,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should allow registering multiple services', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const service1 = createMockService({})
       const service2 = createMockService({})
 
@@ -151,7 +157,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should overwrite existing service if registered again', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const service1 = createMockService({ fn1: vi.fn() })
       const service2 = createMockService({ fn2: vi.fn() })
 
@@ -166,7 +172,7 @@ describe('ServiceNodeRegistry', () => {
 
   describe('get', () => {
     it('should return registered service instance', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       await registry.register(createMockServiceConfig('myService', [], mockService))
 
@@ -174,7 +180,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should return undefined for unregistered service', () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry.get('nonexistent')).toBeUndefined()
     })
@@ -182,7 +188,7 @@ describe('ServiceNodeRegistry', () => {
 
   describe('call', () => {
     it('should call a registered method with arguments', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockFn = vi.fn().mockResolvedValue('result')
       const mockService = createMockService({ myMethod: mockFn })
       await registry.register(createMockServiceConfig('calc', [{ name: 'myMethod', displayName: 'My Method', category: 'math' }], mockService))
@@ -194,7 +200,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should throw error when service not registered', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       await expect(registry.call('unknownService', 'method', [])).rejects.toThrow(
         'Service "unknownService" not registered'
@@ -202,7 +208,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should throw error when method not found on service', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = createMockService({})
       await registry.register(createMockServiceConfig('myService', [], mockService))
 
@@ -212,7 +218,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should throw error when property is not a function', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = { notAFunction: 'string value' } as unknown as Record<string, unknown>
       await registry.register(createMockServiceConfig('myService', [], mockService))
 
@@ -222,7 +228,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should handle methods that return non-promise values', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockFn = vi.fn().mockReturnValue('sync result')
       const mockService = createMockService({ syncMethod: mockFn })
       await registry.register(createMockServiceConfig('myService', [{ name: 'syncMethod', displayName: 'Sync', category: 'c' }], mockService))
@@ -233,7 +239,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should handle methods that throw errors', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockFn = vi.fn().mockRejectedValue(new Error('Method failed'))
       const mockService = createMockService({ failingMethod: mockFn })
       await registry.register(createMockServiceConfig('myService', [{ name: 'failingMethod', displayName: 'Fail', category: 'c' }], mockService))
@@ -242,7 +248,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should bind context correctly to methods', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const mockService = {
         value: 42,
         getValue: function() { return this.value }
@@ -257,13 +263,13 @@ describe('ServiceNodeRegistry', () => {
 
   describe('getAllServices', () => {
     it('should return empty array when no services registered', () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry.getAllServices()).toEqual([])
     })
 
     it('should return array of all registered service names', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       await registry.register(createMockServiceConfig('service1', [], createMockService({})))
       await registry.register(createMockServiceConfig('service2', [], createMockService({})))
       await registry.register(createMockServiceConfig('service3', [], createMockService({})))
@@ -277,7 +283,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should not include services registered and then overwritten', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       await registry.register(createMockServiceConfig('sameName', [], createMockService({})))
       await registry.register(createMockServiceConfig('sameName', [], createMockService({})))
 
@@ -287,13 +293,13 @@ describe('ServiceNodeRegistry', () => {
 
   describe('getServiceMethods', () => {
     it('should return empty array for unregistered service', () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry.getServiceMethods('unknownService')).toEqual([])
     })
 
     it('should return all method metadata for registered service', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const methods: ServiceMethodMeta[] = [
         { name: 'methodA', displayName: 'Method A', category: 'cat1', description: 'A method' },
         { name: 'methodB', displayName: 'Method B', category: 'cat2' }
@@ -306,7 +312,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should return array of methods for registered service', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       await registry.register(createMockServiceConfig('myService', [
         { name: 'm1', displayName: 'M1', category: 'c' }
       ], createMockService({})))
@@ -367,7 +373,7 @@ describe('ServiceNodeRegistry', () => {
     ]
 
     it('should return all enabled nodes for user role', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue(mockPermissions)
 
       const result = await registry.getAvailableNodes('user')
@@ -377,7 +383,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should include pro nodes for pro user', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue(mockPermissions)
 
       const result = await registry.getAvailableNodes('pro')
@@ -388,7 +394,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should include all nodes for super user', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue(mockPermissions)
 
       const result = await registry.getAvailableNodes('super')
@@ -400,7 +406,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should exclude disabled nodes regardless of role', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue(mockPermissions)
 
       const result = await registry.getAvailableNodes('super')
@@ -409,7 +415,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should return empty array when no permissions match', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue([])
 
       const result = await registry.getAvailableNodes('user')
@@ -418,7 +424,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should handle unknown role as level 0 (user level)', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       mockDb.getAllServiceNodePermissions.mockResolvedValue(mockPermissions)
 
       const result = await registry.getAvailableNodes('unknownRole')
@@ -429,7 +435,7 @@ describe('ServiceNodeRegistry', () => {
     })
 
     it('should exclude enabled nodes whose min role is not recognized', async () => {
-      const registry = new ServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = new ServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       const permissionsWithUnknownRole: ServiceNodePermission[] = [
         ...mockPermissions,
         {
@@ -457,15 +463,21 @@ describe('Singleton Functions', () => {
   let mockDb: {
     upsertServiceNodePermission: ReturnType<typeof vi.fn>
     getAllServiceNodePermissions: ReturnType<typeof vi.fn>
+    upsert: ReturnType<typeof vi.fn>
+    getAll: ReturnType<typeof vi.fn>
   }
 
   beforeEach(() => {
     resetServiceNodeRegistry()
     vi.clearAllMocks()
 
+    const upsertServiceNodePermission = vi.fn().mockResolvedValue({})
+    const getAllServiceNodePermissions = vi.fn().mockResolvedValue([])
     mockDb = {
-      upsertServiceNodePermission: vi.fn().mockResolvedValue({}),
-      getAllServiceNodePermissions: vi.fn().mockResolvedValue([])
+      upsertServiceNodePermission,
+      getAllServiceNodePermissions,
+      upsert: upsertServiceNodePermission,
+      getAll: getAllServiceNodePermissions
     }
   })
 
@@ -475,22 +487,22 @@ describe('Singleton Functions', () => {
 
   describe('getServiceNodeRegistry', () => {
     it('should return a ServiceNodeRegistry instance', () => {
-      const registry = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry).toBeInstanceOf(ServiceNodeRegistry)
     })
 
     it('should return the same instance on multiple calls', () => {
-      const registry1 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
-      const registry2 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry1 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
+      const registry2 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry1).toBe(registry2)
     })
 
     it('should create new instance after reset', () => {
-      const registry1 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry1 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       resetServiceNodeRegistry()
-      const registry2 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry2 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
 
       expect(registry1).not.toBe(registry2)
     })
@@ -498,19 +510,19 @@ describe('Singleton Functions', () => {
 
   describe('resetServiceNodeRegistry', () => {
     it('should reset the singleton to null', () => {
-      const registry = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       expect(registry).toBeDefined()
 
       resetServiceNodeRegistry()
 
       // After reset, a new instance should be created
-      const newRegistry = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const newRegistry = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       expect(newRegistry).toBeDefined()
       expect(newRegistry).not.toBe(registry)
     })
 
     it('should allow re-registration after reset', async () => {
-      const registry1 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry1 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       await registry1.register({
         serviceName: 'testService',
         instance: { test: vi.fn() },
@@ -518,7 +530,7 @@ describe('Singleton Functions', () => {
       })
       resetServiceNodeRegistry()
 
-      const registry2 = getServiceNodeRegistry(mockDb as unknown as DatabaseService)
+      const registry2 = getServiceNodeRegistry(mockDb as unknown as ServiceNodePermissionService)
       await registry2.register({
         serviceName: 'testService',
         instance: { test: vi.fn() },

@@ -4,7 +4,8 @@
  * Manages registration and invocation of services used by workflow nodes.
  */
 
-import type { DatabaseService } from '../database/service-async.js'
+import { getServiceNodePermissionService } from '../service-registration.js'
+import type { ServiceNodePermissionService } from './service-node-permission-service.js'
 import type { ServiceNodePermission } from '../database/types.js'
 import { ROLE_HIERARCHY, VALID_ROLES, type UserRole } from '../types/workflow.js'
 import { getLogger } from '../lib/logger.js'
@@ -12,6 +13,14 @@ import { getLogger } from '../lib/logger.js'
 const logger = getLogger()
 
 type ServiceMethod = (this: object, ...args: unknown[]) => unknown
+
+function isServiceNodePermissionService(value: unknown): value is ServiceNodePermissionService {
+  return typeof value === 'object'
+    && value !== null
+    && 'getAll' in value
+    && 'upsert' in value
+    && 'get' in value
+}
 
 function isServiceMethod(value: unknown): value is ServiceMethod {
   return typeof value === 'function'
@@ -46,10 +55,11 @@ export interface ServiceConfig {
 export class ServiceNodeRegistry {
   private services = new Map<string, object>()
   private methodMetas = new Map<string, ServiceMethodMeta[]>()
-  private db: DatabaseService
 
-  constructor(db: DatabaseService) {
-    this.db = db
+  constructor(private readonly permissionService?: ServiceNodePermissionService) {}
+
+  private getPermissionService(): ServiceNodePermissionService {
+    return this.permissionService ?? getServiceNodePermissionService()
   }
 
   async register(config: ServiceConfig): Promise<void> {
@@ -59,7 +69,7 @@ export class ServiceNodeRegistry {
 
     for (const method of config.methods) {
       try {
-        await this.db.upsertServiceNodePermission({
+        await this.getPermissionService().upsert({
           service_name: config.serviceName,
           method_name: method.name,
           display_name: method.displayName,
@@ -105,7 +115,7 @@ export class ServiceNodeRegistry {
 
   async getAvailableNodes(userRole: string): Promise<ServiceNodePermission[]> {
     const userLevel = getRoleLevel(userRole) ?? 0
-    const allNodes = await this.db.getAllServiceNodePermissions()
+    const allNodes = await this.getPermissionService().getAll()
     
     return allNodes.filter(node => {
       if (!node.is_enabled) return false
@@ -131,17 +141,18 @@ let registryInstance: ServiceNodeRegistry | null = null
 /**
  * Get the singleton ServiceNodeRegistry instance
  *
- * @param db - Database service instance
+ * @param permissionService - Optional permission service instance for tests
  * @returns The ServiceNodeRegistry singleton
  *
  * @example
- * const db = await getDatabase()
- * const registry = getServiceNodeRegistry(db)
+ * const registry = getServiceNodeRegistry()
  * const nodes = await registry.getAvailableNodes('pro')
  */
-export function getServiceNodeRegistry(db: DatabaseService): ServiceNodeRegistry {
+export function getServiceNodeRegistry(permissionService?: unknown): ServiceNodeRegistry {
   if (!registryInstance) {
-    registryInstance = new ServiceNodeRegistry(db)
+    registryInstance = new ServiceNodeRegistry(
+      isServiceNodePermissionService(permissionService) ? permissionService : undefined
+    )
   }
   return registryInstance
 }

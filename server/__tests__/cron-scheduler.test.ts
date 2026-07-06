@@ -1,9 +1,11 @@
-import { CronScheduler } from '../services/cron-scheduler'
+import { CronScheduler, type WorkflowEngine as SchedulerWorkflowEngine } from '../services/cron-scheduler'
 import { CronJob, ExecutionStatus, MisfirePolicy } from '../database/types'
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest'
 import type { IEventBus } from '../services/interfaces/event-bus.interface'
 import type { IConcurrencyManager } from '../services/interfaces/concurrency-manager.interface'
 import { MisfireHandler } from '../services/misfire-handler'
+import { getGlobalContainer, resetContainer } from '../container'
+import { TOKENS } from '../service-registration'
 
 vi.mock('node-cron', () => {
   return {
@@ -61,6 +63,7 @@ describe('CronScheduler', () => {
   })
 
   beforeEach(() => {
+    resetContainer()
     vi.clearAllMocks()
 
     runningJobsSet = new Set<string>()
@@ -75,6 +78,21 @@ describe('CronScheduler', () => {
       getWorkflowTemplateById: vi.fn().mockResolvedValue(null),
       getWebhookConfigsByJobId: vi.fn().mockResolvedValue([]),
     }
+
+    const container = getGlobalContainer()
+    container.register(TOKENS.JOB_SERVICE, {
+      getActive: () => mockDb.getActiveCronJobs(),
+      getById: (id: string) => mockDb.getCronJobById(id),
+      update: (id: string, data: unknown) => mockDb.updateCronJob(id, data),
+      updateRunStats: (id: string, stats: unknown, ownerId?: string) => mockDb.updateCronJobRunStats(id, stats, ownerId),
+    })
+    container.register(TOKENS.LOG_SERVICE, {
+      create: (data: unknown, ownerId?: string) => mockDb.createExecutionLog(data, ownerId),
+      update: (id: string, data: unknown) => mockDb.updateExecutionLog(id, data),
+    })
+    container.register(TOKENS.WORKFLOW_SERVICE, {
+      getById: (id: string, ownerId?: string) => mockDb.getWorkflowTemplateById(id, ownerId),
+    })
 
     mockWorkflowEngine = {
       executeWorkflow: vi.fn().mockResolvedValue({
@@ -119,8 +137,7 @@ describe('CronScheduler', () => {
 
   const createScheduler = (options?: { timezone?: string; defaultTimeoutMs?: number }) => {
     const sched = new CronScheduler(
-      mockDb as any,
-      mockWorkflowEngine as any,
+      mockWorkflowEngine as unknown as SchedulerWorkflowEngine,
       null,
       null,
       mockEventBus,
@@ -138,6 +155,7 @@ describe('CronScheduler', () => {
 
   afterEach(() => {
     scheduler?.stopAll()
+    resetContainer()
   })
 
   // ============================================================================
@@ -247,8 +265,7 @@ describe('CronScheduler', () => {
       
       const customMisfireHandler = new MisfireHandler()
       const limitedScheduler = new CronScheduler(
-        mockDb as any,
-        mockWorkflowEngine as any,
+        mockWorkflowEngine as unknown as SchedulerWorkflowEngine,
         null,
         null,
         mockEventBus,
@@ -403,8 +420,7 @@ describe('CronScheduler', () => {
     it('should skip misfire handling when misfireHandler is not set', async () => {
       // Create scheduler WITHOUT misfireHandler
       const schedulerWithoutHandler = new CronScheduler(
-        mockDb as any,
-        mockWorkflowEngine as any,
+        mockWorkflowEngine as unknown as SchedulerWorkflowEngine,
         null,
         null,
         mockEventBus,
@@ -638,8 +654,7 @@ describe('CronScheduler', () => {
       
       const defaultMisfireHandler = new MisfireHandler()
       const defaultScheduler = new CronScheduler(
-        mockDb as any,
-        mockWorkflowEngine as any,
+        mockWorkflowEngine as unknown as SchedulerWorkflowEngine,
         null,
         null,
         mockEventBus,

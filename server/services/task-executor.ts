@@ -1,9 +1,7 @@
-import type { DatabaseService } from '../database/service-async.js'
 import { MiniMaxClient } from '../lib/minimax/index.js'
 import { TASK_TIMEOUTS, POLLING_CONFIG } from '../config/timeouts.js'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 
-export type { DatabaseService }
 export type { TaskResult }
 
 const DEFAULT_TIMEOUT = TASK_TIMEOUTS.SYNC_TASK_MS
@@ -20,7 +18,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, taskType: string
 
 export class TaskExecutor implements ITaskExecutor {
   private client: MiniMaxClient
-  private db: DatabaseService
 
   private readonly directMethodRegistry: Record<string, (payload: Record<string, unknown>) => Promise<unknown>> = {
     text: (payload) => this.client.chatCompletion(payload),
@@ -29,9 +26,8 @@ export class TaskExecutor implements ITaskExecutor {
     music: (payload) => this.client.musicGeneration(payload),
   }
 
-  constructor(client: MiniMaxClient, db: DatabaseService) {
+  constructor(client: MiniMaxClient) {
     this.client = client
-    this.db = db
   }
 
   async executeTask(taskType: string, payload: Record<string, unknown>): Promise<TaskResult> {
@@ -143,6 +139,6 @@ const deadline = startTime + POLLING_CONFIG.MAX_DURATION_MS
   }
 }
 
-export function createTaskExecutor(client: MiniMaxClient, db: DatabaseService): TaskExecutor {
-  return new TaskExecutor(client, db)
+export function createTaskExecutor(client: MiniMaxClient): TaskExecutor {
+  return new TaskExecutor(client)
 }

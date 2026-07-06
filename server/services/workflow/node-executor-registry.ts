@@ -1,5 +1,4 @@
-import type { WorkflowNode, WorkflowEdge, TaskResult } from './types.js'
-import type { DatabaseService } from '../../database/service-async.js'
+import type { WorkflowNode, WorkflowEdge } from './types.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
@@ -17,7 +16,6 @@ import { resolveNodeConfig } from './template-resolver.js'
 export type NodeType = 'action' | 'condition' | 'loop' | 'transform' | 'queue' | 'delay' | 'errorBoundary'
 
 export interface NodeExecutionContext {
-  db: DatabaseService
   serviceRegistry: ServiceNodeRegistry
   taskExecutor: ITaskExecutor | null
   executionLogId: string | null
@@ -65,9 +63,8 @@ class NodeExecutorRegistry {
 
 export const nodeExecutorRegistry = new NodeExecutorRegistry()
 
-nodeExecutorRegistry.register('action', async (node, config, nodeOutputs, context) => {
+nodeExecutorRegistry.register('action', async (node, config, _nodeOutputs, context) => {
   return executeActionNode(node, config, {
-    db: context.db,
     serviceRegistry: context.serviceRegistry,
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
@@ -114,9 +111,8 @@ nodeExecutorRegistry.register('transform', async (node, config, nodeOutputs, con
   })
 })
 
-nodeExecutorRegistry.register('queue', async (node, config, nodeOutputs, context) => {
+nodeExecutorRegistry.register('queue', async (node, config, _nodeOutputs, context) => {
   return executeQueueNode(node, config, {
-    db: context.db,
     taskExecutor: context.taskExecutor,
     serviceRegistry: context.serviceRegistry,
     executionLogId: context.executionLogId,
@@ -125,7 +121,7 @@ nodeExecutorRegistry.register('queue', async (node, config, nodeOutputs, context
   })
 })
 
-nodeExecutorRegistry.register('delay', async (node, config, nodeOutputs, context) => {
+nodeExecutorRegistry.register('delay', async (node, config, _nodeOutputs, context) => {
   return executeDelayNode(node, config, {
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,

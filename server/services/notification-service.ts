@@ -1,8 +1,8 @@
 import crypto from 'crypto'
 import logger from '../lib/logger.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
-import type { DatabaseService } from '../database/service-async.js'
 import type { WebhookConfig, WebhookEvent } from '../database/types.js'
+import type { IWebhookService } from './domain/interfaces/index.js'
 import { WEBHOOK_RATE_LIMITS } from '../config/rate-limits.js'
 
 export interface WebhookPayload {
@@ -13,12 +13,12 @@ export interface WebhookPayload {
 }
 
 export class NotificationService {
-  private db: DatabaseService
+  private webhookService: IWebhookService
   private timeout: number
   private webhookRateLimiter = new Map<string, { count: number; resetAt: number }>()
 
-  constructor(db: DatabaseService, options?: { timeout?: number }) {
-    this.db = db
+  constructor(webhookService: IWebhookService, options?: { timeout?: number }) {
+    this.webhookService = webhookService
     this.timeout = options?.timeout ?? 10000
   }
 
@@ -47,7 +47,7 @@ export class NotificationService {
     event: 'on_start' | 'on_success' | 'on_failure',
     data: unknown
   ): Promise<void> {
-    const configs = await this.db.getWebhookConfigsByJobId(jobId)
+    const configs = await this.webhookService.getByJobId(jobId)
     const relevantConfigs = configs.filter(config =>
       config.is_active && config.events.includes(event as WebhookEvent)
     )
@@ -171,7 +171,7 @@ export class NotificationService {
     errorMessage: string | null
   ): Promise<void> {
     try {
-      await this.db.createWebhookDelivery({
+      await this.webhookService.createDelivery({
         webhook_id: webhookId,
         execution_log_id: executionLogId,
         event: payload.event as WebhookEvent,
@@ -194,7 +194,7 @@ export class NotificationService {
 
   async testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const config = await this.db.getWebhookConfigById(webhookId)
+      const config = await this.webhookService.getById(webhookId)
       if (!config) {
         return { success: false, error: 'Webhook not found' }
       }

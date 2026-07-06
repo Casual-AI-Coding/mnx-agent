@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { QueueProcessor } from '../services/queue-processor'
+import { QueueProcessor, type CapacityChecker } from '../services/queue-processor'
 import { TaskStatus, TaskQueueRow } from '../database/types'
 import type { ITaskService } from '../services/domain/interfaces'
 import type { IEventBus } from '../services/interfaces/event-bus.interface'
 import type { IRetryManager } from '../services/interfaces/retry-manager.interface'
 import type { ITaskExecutor } from '../types/task'
+import { createMockEventBus } from './helpers/mock-event-bus'
 
 interface MockTaskService {
   getPendingByJobId: ReturnType<typeof vi.fn>
@@ -21,6 +22,7 @@ interface MockCapacityChecker {
   hasCapacity: ReturnType<typeof vi.fn>
   reserveCapacity: ReturnType<typeof vi.fn>
   decrementCapacity: ReturnType<typeof vi.fn>
+  getSafeExecutionLimit: ReturnType<typeof vi.fn>
 }
 
 const createMockTask = (retryCount: number = 0, maxRetries: number = 3, id: string = 'task-1'): TaskQueueRow => ({
@@ -74,14 +76,7 @@ describe('QueueProcessor', () => {
       getSafeExecutionLimit: vi.fn().mockResolvedValue(10),
     }
 
-    mockEventBus = {
-      emit: vi.fn(),
-      emitTaskCompleted: vi.fn(),
-      emitTaskFailed: vi.fn(),
-      emitTaskMovedToDLQ: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-    }
+    mockEventBus = createMockEventBus()
 
     mockRetryManager = {
       getRetryDelay: vi.fn().mockReturnValue(1000),
@@ -91,7 +86,7 @@ describe('QueueProcessor', () => {
     processor = new QueueProcessor(
       mockTaskService as unknown as ITaskService,
       mockTaskExecutor,
-      mockCapacityChecker as unknown,
+      mockCapacityChecker as unknown as CapacityChecker,
       mockEventBus,
       mockRetryManager
     )

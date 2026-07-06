@@ -1,36 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { WorkflowEngine } from '../workflow/index.js'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
 
 describe('WorkflowEngine - Loop Execution', () => {
   let engine: WorkflowEngine
-  let mockDb: Partial<DatabaseService>
   let mockRegistry: Partial<ServiceNodeRegistry>
 
   beforeEach(() => {
-    mockDb = {
-      createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      updateExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      createExecutionLogDetail: vi.fn().mockResolvedValue('detail-1'),
-      updateExecutionLogDetail: vi.fn().mockResolvedValue(undefined),
-    }
-
     mockRegistry = {
-      call: vi.fn().mockImplementation(async (service: string, method: string, args: unknown[]) => {
+      call: vi.fn().mockImplementation(async (_service: string, _method: string, _args: unknown[]) => {
         return { success: true, data: 'mock-result' }
       }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
   })
 
   describe('loop body execution via edges', () => {
     it('should find and execute body nodes connected via sourceHandle=body', async () => {
       let bodyCallCount = 0
       
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'bodyAction') {
           bodyCallCount++
         }
@@ -59,9 +50,9 @@ describe('WorkflowEngine - Loop Execution', () => {
 
     it('should set item and index context variables during array iteration', async () => {
       const capturedItems: unknown[] = []
-      const capturedIndices: number[] = []
+      const capturedIndices: unknown[] = []
       
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string, args: unknown[]) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string, args: unknown[]) => {
         if (method === 'bodyAction' && args && args.length > 0) {
           const config = args[0] as { item?: unknown; index?: number }
           capturedItems.push(config.item)
@@ -96,9 +87,7 @@ describe('WorkflowEngine - Loop Execution', () => {
 
   describe('array iteration', () => {
     it('should iterate over array from previous node output', async () => {
-      const processedItems: string[] = []
-      
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'getItems') {
           return ['item1', 'item2', 'item3']
         }
@@ -133,7 +122,7 @@ describe('WorkflowEngine - Loop Execution', () => {
     it('should limit iterations to array length', async () => {
       let callCount = 0
       
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'bodyAction') {
           callCount++
         }
@@ -164,7 +153,7 @@ describe('WorkflowEngine - Loop Execution', () => {
     it('should continue loop while condition is true', async () => {
       let iteration = 0
       
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'bodyAction') {
           iteration++
         }
@@ -193,7 +182,7 @@ describe('WorkflowEngine - Loop Execution', () => {
 
   describe('loop results', () => {
     it('should collect results from all iterations', async () => {
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'bodyAction') {
           return { processed: true }
         }
@@ -230,7 +219,7 @@ describe('WorkflowEngine - Loop Execution', () => {
     it('should execute multiple body nodes in order for each iteration', async () => {
       const executionOrder: string[] = []
       
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         executionOrder.push(method)
         return { success: true }
       })

@@ -20,7 +20,7 @@ export { buildExecutionLayers, buildExecutionOrder } from './topological-sort.js
 export { resolveNodeConfig, resolveValue, resolveTemplateString, getValueAtPath } from './template-resolver.js'
 
 export class WorkflowEngine {
-  private db: DatabaseService
+  private db: DatabaseService | null
   private serviceRegistry: ServiceNodeRegistry
   private taskExecutor: ITaskExecutor | null = null
   private executionLogId: string | null = null
@@ -45,7 +45,7 @@ export class WorkflowEngine {
     return this.runningExecutions.get(executionId)
   }
 
-  constructor(db: DatabaseService, serviceRegistry: ServiceNodeRegistry, taskExecutor: ITaskExecutor | undefined, eventBus: IEventBus) {
+  constructor(db: DatabaseService | null, serviceRegistry: ServiceNodeRegistry, taskExecutor: ITaskExecutor | undefined, eventBus: IEventBus) {
     this.db = db
     this.serviceRegistry = serviceRegistry
     this.taskExecutor = taskExecutor || null
@@ -67,8 +67,8 @@ export class WorkflowEngine {
     this.testData = options?.testData || {}
     this.dryRun = options?.dryRun || false
 
-    const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
-    const stateManager = supportsStatePersistence ? new ExecutionStateManager(this.db) : null
+    const supportsStatePersistence = this.db !== null && typeof (this.db as unknown as { run?: unknown }).run === 'function'
+    const stateManager = supportsStatePersistence && this.db !== null ? new ExecutionStateManager(this.db) : null
     let executionStateId: string | null = null
     let abortController: AbortController | null = null
 
@@ -114,7 +114,6 @@ export class WorkflowEngine {
         if (nodesInLayer.length === 0) continue
 
         const nodeExecutorDeps: NodeExecutorDeps = {
-          db: this.db,
           serviceRegistry: this.serviceRegistry,
           taskExecutor: this.taskExecutor,
           executionLogId: this.executionLogId,
@@ -214,8 +213,12 @@ export class WorkflowEngine {
   }
 
   async resumeExecution(executionId: string): Promise<void> {
-    const supportsStatePersistence = typeof (this.db as unknown as { run?: unknown }).run === 'function'
+    const supportsStatePersistence = this.db !== null && typeof (this.db as unknown as { run?: unknown }).run === 'function'
     if (!supportsStatePersistence) {
+      throw new Error('Execution state persistence is not supported')
+    }
+
+    if (this.db === null) {
       throw new Error('Execution state persistence is not supported')
     }
 

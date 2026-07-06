@@ -17,12 +17,12 @@ import { generateMediaToken, verifyMediaToken } from './lib/media-token'
 import { registerServices, TOKENS, getCronSchedulerService, getDLQAutoRetryScheduler } from './service-registration.js'
 import { getGlobalContainer } from './container.js'
 import { configureApiRoutes } from './bootstrap/api-routes.js'
-import { registerServiceNodeCatalog } from './services/service-node-catalog.js'
+import { createDatabaseServiceNodes, registerServiceNodeCatalog } from './services/service-node-catalog.js'
 import type { ServiceNodeRegistry } from './services/service-node-registry.js'
-import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
 import type { CapacityChecker } from './services/capacity-checker.js'
 import type { QueueProcessor } from './services/queue-processor.js'
+import type { JobService, LogService, MediaService, TaskService } from './services/domain/index.js'
 
 config()
 config({ path: '.env.local', override: true })
@@ -74,11 +74,16 @@ async function initializeServices() {
   await registerServices()
   
   const container = getGlobalContainer()
-  const dbService = container.resolve<DatabaseService>(TOKENS.DATABASE)
   const minimaxClient = container.resolve<MiniMaxClient>(TOKENS.MINIMAX_CLIENT)
   const capacityChecker = container.resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)
   const queueProcessor = container.resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)
   const serviceRegistry = container.resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)
+  const dbService = createDatabaseServiceNodes({
+    jobService: container.resolve<JobService>(TOKENS.JOB_SERVICE),
+    taskService: container.resolve<TaskService>(TOKENS.TASK_SERVICE),
+    logService: container.resolve<LogService>(TOKENS.LOG_SERVICE),
+    mediaService: container.resolve<MediaService>(TOKENS.MEDIA_SERVICE),
+  })
   await registerServiceNodeCatalog(serviceRegistry, {
     minimaxClient,
     dbService,

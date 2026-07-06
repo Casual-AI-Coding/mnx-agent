@@ -3,7 +3,10 @@ import express from 'express'
 import request from 'supertest'
 import { v4 as uuidv4 } from 'uuid'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
-import { getDatabaseService } from '../../service-registration.js'
+import { MaterialService } from '../../services/domain/material.service.js'
+import { MaterialRepository } from '../../repositories/material-repository.js'
+import { MaterialItemRepository } from '../../repositories/material-item-repository.js'
+import { PromptRepository } from '../../repositories/prompt-repository.js'
 import materialsRouter from '../materials.js'
 
 type AuthenticatedRequest = express.Request & {
@@ -17,6 +20,7 @@ type AuthenticatedRequest = express.Request & {
 describe('Materials API Routes', () => {
   let app: express.Application
   let ownerId: string
+  let materialService: MaterialService
 
   const mockAuthMiddleware = (req: AuthenticatedRequest, _res: express.Response, next: express.NextFunction) => {
     req.user = {
@@ -30,12 +34,16 @@ describe('Materials API Routes', () => {
   beforeAll(async () => {
     await setupTestDatabase()
     ownerId = getTestFileMarker(import.meta.url)
+    const conn = getConnection()
+    materialService = new MaterialService(
+      new MaterialRepository(conn),
+      new MaterialItemRepository(conn),
+      new PromptRepository(conn),
+    )
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
     app.use('/api/materials', materialsRouter)
-
-    const conn = getConnection()
     await conn.execute(
       `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -130,21 +138,20 @@ describe('Materials API Routes', () => {
   })
 
   it('returns aggregated detail structure', async () => {
-    const db = getDatabaseService()
-    const material = await db.createMaterial({
+    const material = await materialService.create({
       name: 'Detail Artist',
       material_type: 'artist',
       metadata: { scene: 'detail-test' },
     }, ownerId)
 
-    const item = await db.createMaterialItem({
+    const item = await materialService.createMaterialItem({
       material_id: material.id,
       name: 'Blue Night',
       item_type: 'song',
       metadata: { bpm: 120 },
     }, ownerId)
 
-    await db.createPrompt({
+    await materialService.createPrompt({
       target_type: 'material-main',
       target_id: material.id,
       slot_type: 'artist-style',
@@ -154,7 +161,7 @@ describe('Materials API Routes', () => {
       is_default: true,
     }, ownerId)
 
-    await db.createPrompt({
+    await materialService.createPrompt({
       target_type: 'material-item',
       target_id: item.id,
       slot_type: 'song-style',
@@ -176,7 +183,7 @@ describe('Materials API Routes', () => {
   })
 
   it('creates, updates, reorders and soft deletes material items', async () => {
-    const material = await getDatabaseService().createMaterial({
+    const material = await materialService.create({
       name: 'Item Artist',
       material_type: 'artist',
     }, ownerId)
@@ -260,7 +267,7 @@ describe('Materials API Routes', () => {
 
   it('rejects creating item under a material owned by another user', async () => {
     // Create material as ownerId (the default test user)
-    const material = await getDatabaseService().createMaterial({
+    const material = await materialService.create({
       name: 'Other User Material',
       material_type: 'artist',
     }, ownerId)
@@ -305,7 +312,7 @@ describe('Materials API Routes', () => {
   })
 
   it('allows creating item under a material owned by the same user', async () => {
-    const material = await getDatabaseService().createMaterial({
+    const material = await materialService.create({
       name: 'Same Owner Material',
       material_type: 'artist',
     }, ownerId)

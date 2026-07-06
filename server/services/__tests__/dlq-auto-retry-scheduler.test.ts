@@ -1,28 +1,55 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DLQAutoRetryScheduler } from '../dlq-auto-retry-scheduler.js'
 import { RETRY_TIMEOUTS } from '../../config/timeouts.js'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { DeadLetterQueueItem } from '../../database/types.js'
+import type { ITaskService } from '../domain/interfaces/task.interface.js'
 
 // Mock console.log to suppress output during tests
 vi.spyOn(console, 'log').mockImplementation(() => {})
 vi.spyOn(console, 'error').mockImplementation(() => {})
 
 describe('DLQAutoRetryScheduler', () => {
-  let mockDb: DatabaseService
+  let mockDb: ITaskService & {
+    getDeadLetterQueueItems: ReturnType<typeof vi.fn>
+    retryDeadLetterQueueItem: ReturnType<typeof vi.fn>
+    getDeadLetterQueueItemById: ReturnType<typeof vi.fn>
+    createDeadLetterQueueItem: ReturnType<typeof vi.fn>
+    updateDeadLetterQueueItem: ReturnType<typeof vi.fn>
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
 
-    // Create mock DatabaseService
+    const getDeadLetterQueueItems = vi.fn().mockResolvedValue([])
+    const retryDeadLetterQueueItem = vi.fn().mockResolvedValue({ id: 'task-1' })
     mockDb = {
-      getDeadLetterQueueItems: vi.fn().mockResolvedValue([]),
-      retryDeadLetterQueueItem: vi.fn().mockResolvedValue('task-1'),
+      getDeadLetterQueueItems,
+      retryDeadLetterQueueItem,
       getDeadLetterQueueItemById: vi.fn(),
       createDeadLetterQueueItem: vi.fn(),
       updateDeadLetterQueueItem: vi.fn(),
-    } as unknown as DatabaseService
+      create: vi.fn(),
+      getById: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      getAll: vi.fn(),
+      getPending: vi.fn(),
+      getByStatus: vi.fn(),
+      moveToDeadLetter: vi.fn(),
+      retryFromDeadLetter: retryDeadLetterQueueItem,
+      getDeadLetterQueue: getDeadLetterQueueItems,
+      getDeadLetterItemById: vi.fn(),
+      resolveDeadLetterItem: vi.fn(),
+      incrementRetryCount: vi.fn(),
+      getByJobId: vi.fn(),
+      markRunning: vi.fn(),
+      markCompleted: vi.fn(),
+      markFailed: vi.fn(),
+      getPendingByJobId: vi.fn(),
+      getPendingByType: vi.fn(),
+      getQueueStats: vi.fn(),
+    }
   })
 
   afterEach(() => {

@@ -3,7 +3,10 @@ import express from 'express'
 import request from 'supertest'
 import { v4 as uuidv4 } from 'uuid'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
-import { getDatabaseService } from '../../service-registration.js'
+import { MaterialService } from '../../services/domain/material.service.js'
+import { MaterialRepository } from '../../repositories/material-repository.js'
+import { MaterialItemRepository } from '../../repositories/material-item-repository.js'
+import { PromptRepository } from '../../repositories/prompt-repository.js'
 import promptsRouter from '../prompts.js'
 import type { PromptRecord } from '../../database/types.js'
 
@@ -19,6 +22,7 @@ describe('Prompts API Routes', () => {
   let app: express.Application
   let ownerId: string
   let materialId: string
+  let materialService: MaterialService
 
   const mockAuthMiddleware = (req: AuthenticatedRequest, _res: express.Response, next: express.NextFunction) => {
     req.user = {
@@ -32,12 +36,16 @@ describe('Prompts API Routes', () => {
   beforeAll(async () => {
     await setupTestDatabase()
     ownerId = getTestFileMarker(import.meta.url)
+    const conn = getConnection()
+    materialService = new MaterialService(
+      new MaterialRepository(conn),
+      new MaterialItemRepository(conn),
+      new PromptRepository(conn),
+    )
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
     app.use('/api/prompts', promptsRouter)
-
-    const conn = getConnection()
     await conn.execute(
       `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -110,7 +118,7 @@ describe('Prompts API Routes', () => {
     expect(first.status).toBe(201)
     expect(second.status).toBe(201)
 
-    const detail = await getDatabaseService().getMaterialDetail(materialId, ownerId)
+    const detail = await materialService.getMaterialDetail(materialId, ownerId)
     expect(detail).not.toBeNull()
     expect(detail?.materialPrompts.filter((item: PromptRecord) => item.is_default)).toHaveLength(1)
     expect(detail?.materialPrompts.find((item: PromptRecord) => item.id === second.body.data.id)?.is_default).toBe(true)
@@ -148,7 +156,7 @@ describe('Prompts API Routes', () => {
     expect(res.body.data.id).toBe(second.body.data.id)
     expect(res.body.data.is_default).toBe(true)
 
-    const detail = await getDatabaseService().getMaterialDetail(materialId, ownerId)
+    const detail = await materialService.getMaterialDetail(materialId, ownerId)
     expect(detail?.materialPrompts.find((item: PromptRecord) => item.id === first.body.data.id)?.is_default).toBe(false)
     expect(detail?.materialPrompts.find((item: PromptRecord) => item.id === second.body.data.id)?.is_default).toBe(true)
   })
@@ -162,7 +170,7 @@ describe('Prompts API Routes', () => {
     expect(deleteRes.status).toBe(200)
     expect(deleteRes.body.success).toBe(true)
 
-    const detail = await getDatabaseService().getMaterialDetail(materialId, ownerId)
+    const detail = await materialService.getMaterialDetail(materialId, ownerId)
     expect(detail?.materialPrompts).toHaveLength(1)
     expect(detail?.materialPrompts[0]?.id).toBe(second.body.data.id)
     expect(detail?.materialPrompts[0]?.is_default).toBe(true)
@@ -187,7 +195,7 @@ describe('Prompts API Routes', () => {
     expect(reorderRes.status).toBe(200)
     expect(reorderRes.body.success).toBe(true)
 
-    const detail = await getDatabaseService().getMaterialDetail(materialId, ownerId)
+    const detail = await materialService.getMaterialDetail(materialId, ownerId)
     expect(detail?.materialPrompts).toHaveLength(2)
     expect(detail?.materialPrompts[0]?.id).toBe(second.body.data.id)
     expect(detail?.materialPrompts[1]?.id).toBe(first.body.data.id)

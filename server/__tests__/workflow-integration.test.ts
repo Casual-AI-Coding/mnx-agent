@@ -6,19 +6,49 @@ import { WorkflowEngine } from '../services/workflow/index'
 import { CronScheduler } from '../services/cron-scheduler'
 import { getMiniMaxClient } from '../lib/minimax/index.js'
 import { CapacityChecker } from '../services/capacity-checker'
-import { TaskExecutor } from '../services/task-executor'
 import { saveMediaFile, saveFromUrl, deleteMediaFile, readMediaFile } from '../lib/media-storage'
 import { toCSV } from '../lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token'
 import { createMockEventBus } from './helpers/mock-event-bus'
 import { createMockConcurrencyManager } from './helpers/mock-concurrency-manager'
 import type { WorkflowTemplate } from '../database/types'
+import { WorkflowService } from '../services/domain/workflow.service.js'
+import { JobService } from '../services/domain/job.service.js'
+import { LogService } from '../services/domain/log.service.js'
+import { MediaService } from '../services/domain/media.service.js'
+import { ServiceNodePermissionService } from '../services/service-node-permission-service.js'
+import { WorkflowRepository } from '../repositories/workflow-repository.js'
+import { JobRepository } from '../repositories/job-repository.js'
+import { LogRepository } from '../repositories/log-repository.js'
+import { UserRepository } from '../repositories/user-repository.js'
+import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
+import { MediaRepository } from '../repositories/media-repository.js'
+import { getGlobalContainer, resetContainer } from '../container.js'
+import { TOKENS } from '../service-registration.js'
+import type { ICapacityService } from '../services/domain/interfaces/index.js'
+
+function createPhaseBCapacityService(): ICapacityService {
+  return {
+    getAll: vi.fn().mockResolvedValue([]),
+    getByService: vi.fn().mockResolvedValue(null),
+    upsert: vi.fn().mockImplementation((serviceType: string, data: { remaining_quota: number; total_quota: number }) => Promise.resolve({
+      id: serviceType,
+      service_type: serviceType,
+      remaining_quota: data.remaining_quota,
+      total_quota: data.total_quota,
+      reset_at: null,
+      last_updated: new Date().toISOString(),
+    })),
+    updateCapacity: vi.fn().mockResolvedValue(undefined),
+    decrementCapacity: vi.fn().mockResolvedValue(null),
+  }
+}
 
 async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
   const registry = getServiceNodeRegistry(db)
   const minimaxClient = getMiniMaxClient()
-  const taskExecutor = new TaskExecutor(minimaxClient, db)
-  const capacityChecker = new CapacityChecker(minimaxClient, db)
+  const capacityChecker = new CapacityChecker(minimaxClient, createPhaseBCapacityService())
+  const mediaService = new MediaService(new MediaRepository(getConnection()))
 
   await registry.register({
     serviceName: 'minimaxClient',
@@ -35,7 +65,10 @@ async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
 
   await registry.register({
     serviceName: 'db',
-    instance: db,
+    instance: {
+      createMediaRecord: (data: Parameters<MediaService['create']>[0]) => mediaService.create(data),
+      getMediaRecordById: (id: string) => mediaService.getById(id),
+    },
     methods: [
       { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
       { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
@@ -71,6 +104,7 @@ async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
 
 async function registerMockServices(db: Awaited<ReturnType<typeof getDatabase>>) {
   const registry = getServiceNodeRegistry(db)
+  const mediaService = new MediaService(new MediaRepository(getConnection()))
 
   const mockMinimaxClient = {
     chatCompletion: vi.fn().mockResolvedValue({
@@ -114,10 +148,11 @@ async function registerMockServices(db: Awaited<ReturnType<typeof getDatabase>>)
 
   await registry.register({
     serviceName: 'db',
-    instance: db,
+    instance: {
+      createMediaRecord: (data: Parameters<MediaService['create']>[0]) => mediaService.create(data),
+    },
     methods: [
       { name: 'createMediaRecord', displayName: 'Create Media Record', category: 'Database Media' },
-      { name: 'getTaskById', displayName: 'Get Task By ID', category: 'Database Task' },
     ],
   })
 
@@ -170,16 +205,19 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
   let db: Awaited<ReturnType<typeof getDatabase>>
   let registry: ReturnType<typeof getServiceNodeRegistry>
   let engine: WorkflowEngine
+  let workflowService: WorkflowService
+  let mediaService: MediaService
   let fileMarker: string
 
   const testWorkflows: WorkflowTemplate[] = []
-  const testJobIds: string[] = []
-
   beforeAll(async () => {
     await setupTestDatabase()
     fileMarker = getTestFileMarker(import.meta.url)
     resetServiceNodeRegistry()
     db = await getDatabase()
+    const conn = getConnection()
+    workflowService = new WorkflowService(new WorkflowRepository(conn))
+    mediaService = new MediaService(new MediaRepository(conn))
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
     engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
@@ -198,7 +236,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     resetServiceNodeRegistry()
     for (const workflow of testWorkflows) {
       try {
-        await db.deleteWorkflowTemplate(workflow.id, undefined)
+        await workflowService.delete(workflow.id, undefined)
       } catch {}
     }
     await teardownTestDatabase()
@@ -397,7 +435,7 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
 
       
       if (savedData?.id) {
-        const record = await db.getMediaRecordById(savedData.id)
+        const record = await mediaService.getById(savedData.id)
         expect(record).toBeDefined()
         expect(record?.type).toBe('image')
       }
@@ -489,7 +527,9 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
   let registry: ReturnType<typeof getServiceNodeRegistry>
   let engine: WorkflowEngine
   let scheduler: CronScheduler
-  let fileMarker: string
+  let workflowService: WorkflowService
+  let jobService: JobService
+  let logService: LogService
   let currentOwnerId: string
 
   async function ensurePhaseCTestUser(ownerId: string): Promise<void> {
@@ -532,7 +572,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     const startTime = Date.now()
 
     while (Date.now() - startTime < timeoutMs) {
-      const ownedLogs = await db.getAllExecutionLogs(jobId, 10, ownerId)
+      const ownedLogs = await logService.getAll({ jobId, limit: 10, ownerId })
       if (ownedLogs[0]) {
         return ownedLogs[0]
       }
@@ -545,14 +585,23 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
 
   beforeAll(async () => {
     await setupTestDatabase()
-    fileMarker = getTestFileMarker(import.meta.url)
     resetServiceNodeRegistry()
+    resetContainer()
     db = await getDatabase()
+    const conn = getConnection()
+    workflowService = new WorkflowService(new WorkflowRepository(conn))
+    jobService = new JobService(new JobRepository(conn))
+    logService = new LogService(new LogRepository(conn), new UserRepository(conn), new ExternalApiLogRepository(conn))
+    const serviceNodePermissionService = new ServiceNodePermissionService(new UserRepository(conn))
+    getGlobalContainer().register(TOKENS.WORKFLOW_SERVICE, workflowService)
+    getGlobalContainer().register(TOKENS.JOB_SERVICE, jobService)
+    getGlobalContainer().register(TOKENS.LOG_SERVICE, logService)
+    getGlobalContainer().register(TOKENS.SERVICE_NODE_PERMISSION_SERVICE, serviceNodePermissionService)
     await registerMockServices(db)
     registry = getServiceNodeRegistry(db)
     engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
     const mockConcurrencyManager = createMockConcurrencyManager()
-    scheduler = new CronScheduler(db, engine, null, null, createMockEventBus(), mockConcurrencyManager)
+    scheduler = new CronScheduler(engine, null, null, createMockEventBus(), mockConcurrencyManager)
   }, 30000)
 
   beforeEach(async () => {
@@ -569,13 +618,14 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
 
   afterAll(async () => {
     resetServiceNodeRegistry()
+    resetContainer()
     await teardownTestDatabase()
   })
 
   describe('C-1: Scheduled Image Generation + Save', () => {
     it('should trigger workflow via cron and save results', async () => {
       
-      const template = await db.createWorkflowTemplate({
+      const template = await workflowService.create({
         name: 'Test Cron Image Generation',
         description: 'E2E test for scheduled image generation',
         nodes_json: JSON.stringify([
@@ -622,7 +672,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
       expect(template.owner_id).toBe(currentOwnerId)
 
       
-      const job = await db.createCronJob({
+      const job = await jobService.create({
         name: 'Test Cron Job',
         cron_expression: '* * * * *',
         workflow_id: template.id,
@@ -644,14 +694,14 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
       expect(latestLog?.tasks_succeeded).toBe(2)
 
       
-      await db.deleteCronJob(job.id, currentOwnerId)
-      await db.deleteWorkflowTemplate(template.id, currentOwnerId)
+      await jobService.delete(job.id, currentOwnerId)
+      await workflowService.delete(template.id, currentOwnerId)
     }, 60000)
   })
 
   describe('C-2: Full Pipeline with Logs', () => {
     it('should execute full pipeline and create detailed logs', async () => {
-      const template = await db.createWorkflowTemplate({
+      const template = await workflowService.create({
         name: 'Test Full Pipeline',
         description: 'E2E test for complete workflow execution',
         nodes_json: JSON.stringify([
@@ -697,7 +747,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
 
       expect(template.owner_id).toBe(currentOwnerId)
 
-      const job = await db.createCronJob({
+      const job = await jobService.create({
         name: 'Test Full Pipeline Job',
         cron_expression: '0 0 1 1 *',
         workflow_id: template.id,
@@ -718,7 +768,7 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
       expect(latestLog?.tasks_executed).toBe(2)
 
       
-      const details = await db.getExecutionLogDetailsByLogId(latestLog!.id)
+      const details = await logService.getDetails(latestLog!.id)
       expect(details.length).toBe(2)
 
       
@@ -727,8 +777,8 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
       expect(nodeIds).toContain('save-result')
 
       
-      await db.deleteCronJob(job.id, currentOwnerId)
-      await db.deleteWorkflowTemplate(template.id, currentOwnerId)
+      await jobService.delete(job.id, currentOwnerId)
+      await workflowService.delete(template.id, currentOwnerId)
     }, 60000)
   })
 })

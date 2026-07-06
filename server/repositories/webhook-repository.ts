@@ -74,11 +74,12 @@ export class WebhookRepository extends BaseRepository<WebhookConfig, CreateWebho
     return this.getById(id, ownerId)
   }
 
-  async getConfigsByJobId(jobId: string): Promise<WebhookConfig[]> {
-    const rows = await this.conn.query<WebhookConfigRow>(
-      'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true',
-      [jobId]
-    )
+  async getConfigsByJobId(jobId: string, ownerId?: string): Promise<WebhookConfig[]> {
+    const sql = ownerId
+      ? 'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true AND owner_id = $2'
+      : 'SELECT * FROM webhook_configs WHERE job_id = $1 AND is_active = true'
+    const params = ownerId ? [jobId, ownerId] : [jobId]
+    const rows = await this.conn.query<WebhookConfigRow>(sql, params)
     return rows.map(rowToWebhookConfig)
   }
 

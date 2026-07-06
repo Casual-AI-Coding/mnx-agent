@@ -1,7 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron'
 import { CronExpressionParser } from 'cron-parser'
-import type { DatabaseService } from '../database/service-async.js'
 import type { WorkflowResult } from './workflow/types.js'
+import type { UpdateExecutionLog } from '../database/types.js'
 import type { ITaskExecutor } from '../types/task.js'
 import type { NotificationService } from './notification-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
@@ -15,8 +15,7 @@ import {
 import { TASK_TIMEOUTS } from '../config/timeouts.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
 import { getLogger } from '../lib/logger.js'
-
-export type { DatabaseService }
+import { getJobService, getLogService, getWorkflowService } from '../service-registration.js'
 
 export interface TestExecutionOptions {
   testData?: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
@@ -57,7 +56,6 @@ interface ExecutionStats {
 
 export class CronScheduler {
   private jobs: Map<string, ScheduledTask> = new Map()
-  private db: DatabaseService
   private workflowEngine: WorkflowEngine
   private taskExecutor: ITaskExecutor | null = null
   private notificationService: NotificationService | null = null
@@ -69,7 +67,6 @@ export class CronScheduler {
   private log = getLogger().child({ component: 'CronScheduler' })
 
   constructor(
-    db: DatabaseService,
     workflowEngine: WorkflowEngine,
     taskExecutor: ITaskExecutor | null,
     notificationService: NotificationService | null,
@@ -78,7 +75,6 @@ export class CronScheduler {
     misfireHandler?: IMisfireHandler,
     options?: CronSchedulerOptions
   ) {
-    this.db = db
     this.workflowEngine = workflowEngine
     this.taskExecutor = taskExecutor
     this.notificationService = notificationService
@@ -98,7 +94,7 @@ export class CronScheduler {
   }
 
   async init(): Promise<void> {
-    const activeJobs = await this.db.getActiveCronJobs()
+    const activeJobs = await getJobService().getActive()
     
     for (const job of activeJobs) {
       try {
@@ -134,7 +130,7 @@ export class CronScheduler {
     // Calculate and save next_run_at
     const nextRun = this.calculateNextRun(job.cron_expression)
     if (nextRun) {
-      await this.db.updateCronJob(job.id, { next_run_at: toLocalISODateString(nextRun) })
+      await getJobService().update(job.id, { next_run_at: toLocalISODateString(nextRun) })
     }
 
     const task = cron.schedule(
@@ -144,7 +140,7 @@ export class CronScheduler {
         // Update next_run_at after execution
         const nextRunAfter = this.calculateNextRun(job.cron_expression)
         if (nextRunAfter) {
-          await this.db.updateCronJob(job.id, { next_run_at: toLocalISODateString(nextRunAfter) })
+          await getJobService().update(job.id, { next_run_at: toLocalISODateString(nextRunAfter) })
         }
       },
       { timezone: this.timezone }
@@ -186,7 +182,7 @@ export class CronScheduler {
   }
 
   private async handleExecutionStart(job: CronJob): Promise<ExecutionContext> {
-    const log = await this.db.createExecutionLog({
+    const log = await getLogService().create({
       job_id: job.id,
       trigger_type: TriggerType.CRON,
       status: ExecutionStatus.RUNNING,
@@ -225,7 +221,7 @@ export class CronScheduler {
       throw new Error(`Job ${job.id} has no workflow_id configured`)
     }
 
-    const template = await this.db.getWorkflowTemplateById(job.workflow_id, job.owner_id ?? undefined)
+    const template = await getWorkflowService().getById(job.workflow_id, job.owner_id ?? undefined)
     if (!template) {
       throw new Error(`Workflow template ${job.workflow_id} not found`)
     }
@@ -258,7 +254,7 @@ export class CronScheduler {
       error_summary: executionData.result.error ?? null,
     })
 
-    await this.db.updateCronJobRunStats(job.id, {
+    await getJobService().updateRunStats(job.id, {
       success: executionData.result.success,
       tasksExecuted: stats.tasksExecuted,
       tasksSucceeded: stats.tasksSucceeded,
@@ -313,7 +309,7 @@ export class CronScheduler {
         error_summary: errorMessage,
       })
 
-      await this.db.updateCronJobRunStats(job.id, {
+      await getJobService().updateRunStats(job.id, {
         success: false,
         tasksExecuted: 0,
         tasksSucceeded: 0,
@@ -337,13 +333,13 @@ export class CronScheduler {
 
   private async updateExecutionLog(
     logId: string | null,
-    update: Parameters<DatabaseService['updateExecutionLog']>[1]
+    update: UpdateExecutionLog
   ): Promise<void> {
     if (!logId) {
       return
     }
 
-    await this.db.updateExecutionLog(logId, update)
+    await getLogService().update(logId, update)
   }
 
   private async notifyJobEvent(
@@ -393,7 +389,7 @@ export class CronScheduler {
   async rescheduleJob(jobId: string): Promise<boolean> {
     this.unscheduleJob(jobId)
 
-    const job = await this.db.getCronJobById(jobId)
+    const job = await getJobService().getById(jobId)
     
     if (!job) {
       this.log.warn('Job not found in database: %s', jobId)
@@ -473,7 +469,7 @@ export class CronScheduler {
   }
 
   async executeJobNow(jobId: string): Promise<void> {
-    const job = await this.db.getCronJobById(jobId)
+    const job = await getJobService().getById(jobId)
     if (!job) {
       throw new Error(`Job ${jobId} not found`)
     }

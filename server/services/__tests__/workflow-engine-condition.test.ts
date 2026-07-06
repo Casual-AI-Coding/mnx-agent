@@ -1,30 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { WorkflowEngine, WorkflowNode, WorkflowEdge } from '../workflow/index.js'
-import type { DatabaseService } from '../../database/service-async.js'
+import { WorkflowEngine } from '../workflow/index.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
 
 describe('WorkflowEngine - Condition Branching', () => {
   let engine: WorkflowEngine
-  let mockDb: Partial<DatabaseService>
   let mockRegistry: Partial<ServiceNodeRegistry>
 
   beforeEach(() => {
-    mockDb = {
-      createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      updateExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      createExecutionLogDetail: vi.fn().mockResolvedValue('detail-1'),
-      updateExecutionLogDetail: vi.fn().mockResolvedValue(undefined),
-    }
-
     mockRegistry = {
-      call: vi.fn().mockImplementation(async (service: string, method: string, args: unknown[]) => {
+      call: vi.fn().mockImplementation(async (_service: string, _method: string, _args: unknown[]) => {
         // Default mock returns success
         return { success: true, data: 'mock-result' }
       }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
   })
 
   describe('true branch execution', () => {
@@ -62,7 +53,7 @@ it('should execute nodes on true branch when condition evaluates to true', async
 
     it('should evaluate condition using resolved template values', async () => {
       // Workflow: start -> condition (using start output) -> true/false branches
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'getValue') {
           return 'yes'  // truthy value
         }
@@ -150,7 +141,7 @@ it('should execute nodes on true branch when condition evaluates to true', async
 
   describe('complex condition evaluation', () => {
     it('should correctly evaluate numeric comparisons', async () => {
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'getNumber') {
           return 10
         }
@@ -179,7 +170,7 @@ it('should execute nodes on true branch when condition evaluates to true', async
     })
 
     it('should correctly evaluate string contains', async () => {
-      mockRegistry.call = vi.fn().mockImplementation(async (service: string, method: string) => {
+      mockRegistry.call = vi.fn().mockImplementation(async (_service: string, method: string) => {
         if (method === 'getText') {
           return 'hello world'
         }

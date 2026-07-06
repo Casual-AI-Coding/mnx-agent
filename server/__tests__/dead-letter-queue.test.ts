@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
-import { DatabaseService } from '../database/service-async.js'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from './test-helpers.js'
+import { TaskService } from '../services/domain/task.service.js'
+import { TaskRepository } from '../repositories/task-repository.js'
+import { DeadLetterRepository } from '../repositories/deadletter-repository.js'
 import type {
   DeadLetterQueueItem,
   CreateDeadLetterQueueItem,
@@ -8,20 +10,41 @@ import type {
 } from '../database/types.js'
 import { v4 as uuidv4 } from 'uuid'
 
+type DeadLetterQueueTestAdapter = {
+  createDeadLetterQueueItem(data: CreateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem>
+  getDeadLetterQueueItems(ownerId?: string, limit?: number): Promise<DeadLetterQueueItem[]>
+  getDeadLetterQueueItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null>
+  updateDeadLetterQueueItem(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null>
+  retryDeadLetterQueueItem(id: string, ownerId?: string): Promise<string>
+  getTaskById(id: string, ownerId?: string): ReturnType<TaskService['getById']>
+}
+
 describe('Dead Letter Queue CRUD Operations', () => {
-  let db: DatabaseService
+  let db: DeadLetterQueueTestAdapter
   let testUser1Id: string
   let testUser2Id: string
   let fileMarker: string
 
   beforeAll(async () => {
     await setupTestDatabase()
-    db = new DatabaseService(getConnection())
+    const conn = getConnection()
+    const taskService = new TaskService(new TaskRepository(conn), new DeadLetterRepository(conn))
+    const deadLetterRepo = new DeadLetterRepository(conn)
+    db = {
+      createDeadLetterQueueItem: (data, ownerId) => deadLetterRepo.create(data, ownerId),
+      getDeadLetterQueueItems: (ownerId, limit) => taskService.getDeadLetterQueue(ownerId, limit),
+      getDeadLetterQueueItemById: (id, ownerId) => taskService.getDeadLetterItemById(id, ownerId),
+      updateDeadLetterQueueItem: (id, data, ownerId) => deadLetterRepo.update(id, data, ownerId),
+      retryDeadLetterQueueItem: async (id, ownerId) => {
+        const task = await taskService.retryFromDeadLetter(id, ownerId)
+        return task.id
+      },
+      getTaskById: (id, ownerId) => taskService.getById(id, ownerId),
+    }
     fileMarker = getTestFileMarker(import.meta.url)
     testUser1Id = uuidv4()
     testUser2Id = uuidv4()
 
-    const conn = getConnection()
     const now = new Date().toISOString()
     await conn.execute(
       `INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at)

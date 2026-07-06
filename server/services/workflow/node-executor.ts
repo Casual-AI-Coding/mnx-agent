@@ -1,5 +1,4 @@
 import type { TaskResult, WorkflowNode, WorkflowEdge } from './types.js'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
@@ -9,7 +8,6 @@ import {
   type NodeExecutionContext,
   type NodeType
 } from './node-executor-registry.js'
-import { resolveNodeConfig } from './template-resolver.js'
 
 export { nodeExecutorRegistry, executeNodeWithRegistry }
 export type { NodeExecutionContext }
@@ -17,7 +15,6 @@ export type { NodeExecutionContext }
 const DEFAULT_NODE_TIMEOUT_MS = 300000
 
 export interface NodeExecutorDeps {
-  db: DatabaseService
   serviceRegistry: ServiceNodeRegistry
   taskExecutor: ITaskExecutor | null
   executionLogId: string | null
@@ -40,7 +37,6 @@ export async function executeNode(
   const retryPolicy = node.retryPolicy
 
   const context: NodeExecutionContext = {
-    db: deps.db,
     serviceRegistry: deps.serviceRegistry,
     taskExecutor: deps.taskExecutor,
     executionLogId: deps.executionLogId,

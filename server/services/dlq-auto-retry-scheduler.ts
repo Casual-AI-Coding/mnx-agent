@@ -1,6 +1,6 @@
 // server/services/dlq-auto-retry-scheduler.ts
 
-import type { DatabaseService } from '../database/service-async.js'
+import type { ITaskService } from './domain/interfaces/task.interface.js'
 import { RETRY_TIMEOUTS } from '../config/timeouts.js'
 import type { AutoRetryConfig, IDLQAutoRetryScheduler } from './interfaces/dlq-auto-retry-scheduler.interface.js'
 import { getLogger } from '../lib/logger.js'
@@ -8,15 +8,15 @@ import { getLogger } from '../lib/logger.js'
 const logger = getLogger()
 
 export class DLQAutoRetryScheduler implements IDLQAutoRetryScheduler {
-  private db: DatabaseService
+  private taskService: ITaskService
   private config: AutoRetryConfig
   private timer: NodeJS.Timeout | null = null
 
   constructor(
-    db: DatabaseService,
+    taskService: ITaskService,
     config?: Partial<AutoRetryConfig>
   ) {
-    this.db = db
+    this.taskService = taskService
     this.config = {
       enabled: config?.enabled ?? true,
       initialDelayMs: config?.initialDelayMs ?? RETRY_TIMEOUTS.BASE_DELAY_MS * 60,
@@ -52,7 +52,7 @@ export class DLQAutoRetryScheduler implements IDLQAutoRetryScheduler {
 
   private async processAutoRetry(): Promise<void> {
     try {
-      const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 10)
+      const dlqItems = await this.taskService.getDeadLetterQueue(undefined, 10)
       
       for (const item of dlqItems) {
         if (item.resolved_at) continue
@@ -74,11 +74,11 @@ export class DLQAutoRetryScheduler implements IDLQAutoRetryScheduler {
           continue
         }
 
-          logger.info(`[DLQAutoRetryScheduler] Auto-retrying DLQ item ${item.id} (attempt ${retryCount + 1}/${this.config.maxAttempts})`)
+        logger.info(`[DLQAutoRetryScheduler] Auto-retrying DLQ item ${item.id} (attempt ${retryCount + 1}/${this.config.maxAttempts})`)
         
         try {
-          const taskId = await this.db.retryDeadLetterQueueItem(item.id, item.owner_id ?? undefined)
-          logger.info(`[DLQAutoRetryScheduler] DLQ item ${item.id} requeued as task ${taskId}`)
+          const newTask = await this.taskService.retryFromDeadLetter(item.id, item.owner_id ?? undefined)
+          logger.info(`[DLQAutoRetryScheduler] DLQ item ${item.id} requeued as task ${newTask.id}`)
         } catch (error) {
           logger.error(error, `[DLQAutoRetryScheduler] Failed to retry DLQ item ${item.id}`)
         }
@@ -94,7 +94,7 @@ export class DLQAutoRetryScheduler implements IDLQAutoRetryScheduler {
     pendingRetryCount: number
     config: AutoRetryConfig
   }> {
-    const dlqItems = await this.db.getDeadLetterQueueItems(undefined, 1000)
+    const dlqItems = await this.taskService.getDeadLetterQueue(undefined, 1000)
     const pendingRetry = dlqItems.filter(item => 
       !item.resolved_at && (item.retry_count ?? 0) < this.config.maxAttempts
     )
@@ -109,8 +109,8 @@ export class DLQAutoRetryScheduler implements IDLQAutoRetryScheduler {
 }
 
 export function createDLQAutoRetryScheduler(
-  db: DatabaseService,
+  taskService: ITaskService,
   config?: Partial<AutoRetryConfig>
 ): DLQAutoRetryScheduler {
-  return new DLQAutoRetryScheduler(db, config)
+  return new DLQAutoRetryScheduler(taskService, config)
 }

@@ -1,8 +1,8 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ExportService, ExportOptions } from '../export-service.js'
 import type { LogRepository } from '../../repositories/log-repository.js'
 import type { MediaRepository } from '../../repositories/media-repository.js'
 import type { ExecutionLog, MediaRecord } from '../../database/types.js'
-import * as csvUtils from '../../lib/csv-utils.js'
 import { getExportService } from '../../service-registration.js'
 
 // Mock the csv-utils module
@@ -123,9 +123,10 @@ describe('ExportService', () => {
   })
 
   describe('constructor', () => {
-    it('should create an instance with provided database', () => {
-      const db = { getExecutionLogsPaginated: vi.fn() } as unknown as DatabaseService
-      const instance = new ExportService(db)
+    it('should create an instance with provided repositories', () => {
+      const logRepo = { getPaginated: vi.fn() } as unknown as LogRepository
+      const mediaRepo = { list: vi.fn() } as unknown as MediaRepository
+      const instance = new ExportService(logRepo, mediaRepo)
       expect(instance).toBeInstanceOf(ExportService)
     })
   })
@@ -790,13 +791,10 @@ describe('ExportService DI', () => {
     expect(service1).toBe(service2)
   })
 
-  it('should create ExportService with database dependency', () => {
-    const mockDb = {
-      getExecutionLogsPaginated: vi.fn(),
-      getMediaRecords: vi.fn(),
-    } as unknown as DatabaseService
-
-    const service = new ExportService(mockDb)
+  it('should create ExportService with repository dependencies', () => {
+    const logRepo = { getPaginated: vi.fn() } as unknown as LogRepository
+    const mediaRepo = { list: vi.fn() } as unknown as MediaRepository
+    const service = new ExportService(logRepo, mediaRepo)
     expect(service).toBeInstanceOf(ExportService)
   })
 })

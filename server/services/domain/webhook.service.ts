@@ -2,34 +2,33 @@
  * WebhookService Implementation
  * 
  * Domain service handling all WebhookConfig and WebhookDelivery operations.
- * Delegates to DatabaseService for data access.
  */
 
-import type { DatabaseService } from '../../database/service-async.js'
 import type { WebhookConfig, WebhookDelivery, CreateWebhookConfig, UpdateWebhookConfig, CreateWebhookDelivery } from '../../database/types.js'
 import type { IWebhookService } from './interfaces/index.js'
+import type { WebhookRepository } from '../../repositories/webhook-repository.js'
 
 export class WebhookService implements IWebhookService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly repo: WebhookRepository) {}
 
   async getAll(ownerId?: string): Promise<WebhookConfig[]> {
-    return this.db.getAllWebhookConfigs(ownerId)
+    return this.repo.getAllConfigs(ownerId)
   }
 
   async getById(id: string, ownerId?: string): Promise<WebhookConfig | null> {
-    return this.db.getWebhookConfigById(id, ownerId)
+    return this.repo.getConfigById(id, ownerId)
   }
 
   async getByJobId(jobId: string, ownerId?: string): Promise<WebhookConfig[]> {
-    return this.db.getWebhookConfigsByJobId(jobId)
+    return this.repo.getConfigsByJobId(jobId, ownerId)
   }
 
   async create(data: CreateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
-    return this.db.createWebhookConfig(data, ownerId)
+    return this.repo.createConfig(data, ownerId)
   }
 
   async update(id: string, data: UpdateWebhookConfig, ownerId?: string): Promise<WebhookConfig> {
-    const result = await this.db.updateWebhookConfig(id, data, ownerId)
+    const result = await this.repo.updateConfig(id, data, ownerId)
     if (!result) {
       throw new Error(`WebhookConfig not found: ${id}`)
     }
@@ -37,17 +36,17 @@ export class WebhookService implements IWebhookService {
   }
 
   async delete(id: string, ownerId?: string): Promise<void> {
-    const deleted = await this.db.deleteWebhookConfig(id, ownerId)
+    const deleted = await this.repo.deleteConfig(id, ownerId)
     if (!deleted) {
       throw new Error(`WebhookConfig not found: ${id}`)
     }
   }
 
   async getDeliveries(webhookId: string, limit: number = 50, ownerId?: string): Promise<WebhookDelivery[]> {
-    return this.db.getWebhookDeliveriesByWebhook(webhookId, limit, ownerId)
+    return this.repo.getDeliveriesByWebhook(webhookId, limit, ownerId)
   }
 
   async createDelivery(data: CreateWebhookDelivery): Promise<WebhookDelivery> {
-    return this.db.createWebhookDelivery(data)
+    return this.repo.createDelivery(data)
   }
 }

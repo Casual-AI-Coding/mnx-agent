@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TaskExecutor } from '../services/task-executor'
-import type { DatabaseService } from '../services/task-executor'
 import type { MiniMaxClient } from '../lib/minimax/index.js'
 
 class TestableTaskExecutor extends TaskExecutor {
@@ -16,7 +15,6 @@ class TestableTaskExecutor extends TaskExecutor {
 describe('TaskExecutor', () => {
   let executor: TestableTaskExecutor
   let mockClient: Partial<MiniMaxClient>
-  let mockDb: Partial<DatabaseService>
   beforeEach(() => {
     mockClient = {
       chatCompletion: vi.fn().mockResolvedValue({ result: 'chat response' }),
@@ -29,12 +27,7 @@ describe('TaskExecutor', () => {
       videoGenerationStatus: vi.fn().mockResolvedValue({ status: 'completed' }),
     }
 
-    mockDb = {
-      getCapacityRecord: vi.fn().mockResolvedValue(null),
-      upsertCapacityRecord: vi.fn().mockResolvedValue(undefined),
-    }
-
-    executor = new TestableTaskExecutor(mockClient as MiniMaxClient, mockDb as DatabaseService)
+    executor = new TestableTaskExecutor(mockClient as MiniMaxClient)
   })
 
   afterEach(() => {

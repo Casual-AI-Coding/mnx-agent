@@ -1,22 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { WorkflowEngine } from '../workflow/index.js'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
 
 describe('WorkflowEngine - Node Timeout', () => {
   let engine: WorkflowEngine
-  let mockDb: Partial<DatabaseService>
   let mockRegistry: Partial<ServiceNodeRegistry>
 
   beforeEach(() => {
-    mockDb = {
-      createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      updateExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      createExecutionLogDetail: vi.fn().mockResolvedValue('detail-1'),
-      updateExecutionLogDetail: vi.fn().mockResolvedValue(undefined),
-    }
-
     mockRegistry = {
       call: vi.fn().mockImplementation(async () => {
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -24,7 +15,7 @@ describe('WorkflowEngine - Node Timeout', () => {
       }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
   })
 
   describe('default timeout', () => {

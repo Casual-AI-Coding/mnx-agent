@@ -1,8 +1,25 @@
 import { WorkflowEngine, WorkflowGraph } from '../services/workflow/index'
+import { WorkflowNodeType } from '../types/workflow'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
-import type { DatabaseService } from '../database/service-async'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEventBus } from './helpers/mock-event-bus'
+
+type TestWorkflowNode = Omit<WorkflowGraph['nodes'][number], 'position'> & { position?: WorkflowGraph['nodes'][number]['position'] }
+type TestWorkflowGraph = Omit<WorkflowGraph, 'nodes'> & { nodes: TestWorkflowNode[] }
+
+function normalizeWorkflow(workflow: TestWorkflowGraph): WorkflowGraph {
+  return {
+    ...workflow,
+    nodes: workflow.nodes.map((node, index) => ({
+      ...node,
+      position: node.position ?? { x: index, y: 0 },
+    })),
+  }
+}
+
+async function executeTestWorkflow(engine: WorkflowEngine, workflow: TestWorkflowGraph) {
+  return engine.executeWorkflow(JSON.stringify(normalizeWorkflow(workflow)))
+}
 
 /**
  * 阶段 A 验证：最小验证集
@@ -11,7 +28,7 @@ import { createMockEventBus } from './helpers/mock-event-bus'
 
 function createMockServiceRegistry(): ServiceNodeRegistry {
   return {
-    call: vi.fn(async (serviceName: string, method: string, args: unknown[]) => {
+    call: vi.fn(async (serviceName: string, method: string, _args: unknown[]) => {
       // Mock MiniMax API responses
       if (serviceName === 'minimaxClient') {
         if (method === 'chatCompletion') {
@@ -50,31 +67,22 @@ function createMockServiceRegistry(): ServiceNodeRegistry {
   } as unknown as ServiceNodeRegistry
 }
 
-function createMockDb(): DatabaseService {
-  return {
-    createExecutionLogDetail: vi.fn().mockResolvedValue('detail-id'),
-    updateExecutionLogDetail: vi.fn().mockResolvedValue(undefined),
-  } as unknown as DatabaseService
-}
-
 describe('Workflow Engine - Stage A Verification', () => {
   let engine: WorkflowEngine
   let mockRegistry: ServiceNodeRegistry
-  let mockDb: DatabaseService
 
   beforeEach(() => {
     mockRegistry = createMockServiceRegistry()
-    mockDb = createMockDb()
-    engine = new WorkflowEngine(mockDb, mockRegistry, createMockEventBus())
+    engine = new WorkflowEngine(null, mockRegistry, undefined, createMockEventBus())
   })
 
   describe('A-1: Single Action Node', () => {
     it('should execute a single action node', async () => {
-      const workflow: WorkflowGraph = {
+      const workflow: TestWorkflowGraph = {
         nodes: [
           {
             id: 'text-node',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Generate Text',
               config: {
@@ -88,7 +96,7 @@ describe('Workflow Engine - Stage A Verification', () => {
         edges: [],
       }
 
-      const result = await engine.executeWorkflow(JSON.stringify(workflow))
+      const result = await executeTestWorkflow(engine, workflow)
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBe(1)
@@ -104,11 +112,11 @@ describe('Workflow Engine - Stage A Verification', () => {
 
   describe('A-2: Action + Transform', () => {
     it('should pass data between nodes using template variables', async () => {
-      const workflow: WorkflowGraph = {
+      const workflow: TestWorkflowGraph = {
         nodes: [
           {
             id: 'text-node',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Generate Text',
               config: {
@@ -120,7 +128,7 @@ describe('Workflow Engine - Stage A Verification', () => {
           },
           {
             id: 'extract-node',
-            type: 'transform',
+            type: WorkflowNodeType.Transform,
             data: {
               label: 'Extract Content',
               config: {
@@ -134,7 +142,7 @@ describe('Workflow Engine - Stage A Verification', () => {
         edges: [{ id: 'e1', source: 'text-node', target: 'extract-node' }],
       }
 
-      const result = await engine.executeWorkflow(JSON.stringify(workflow))
+      const result = await executeTestWorkflow(engine, workflow)
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBe(2)
@@ -147,11 +155,11 @@ describe('Workflow Engine - Stage A Verification', () => {
 
   describe('A-3: Action + DB', () => {
     it('should call multiple services in sequence', async () => {
-      const workflow: WorkflowGraph = {
+      const workflow: TestWorkflowGraph = {
         nodes: [
           {
             id: 'image-node',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Generate Image',
               config: {
@@ -163,7 +171,7 @@ describe('Workflow Engine - Stage A Verification', () => {
           },
           {
             id: 'save-node',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Save to DB',
               config: {
@@ -182,7 +190,7 @@ describe('Workflow Engine - Stage A Verification', () => {
         edges: [{ id: 'e1', source: 'image-node', target: 'save-node' }],
       }
 
-      const result = await engine.executeWorkflow(JSON.stringify(workflow))
+      const result = await executeTestWorkflow(engine, workflow)
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBe(2)
@@ -206,11 +214,11 @@ describe('Workflow Engine - Stage A Verification', () => {
 
   describe('A-4: Capacity Check + Action', () => {
     it('should check capacity before action', async () => {
-      const workflow: WorkflowGraph = {
+      const workflow: TestWorkflowGraph = {
         nodes: [
           {
             id: 'check-capacity',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Check Capacity',
               config: {
@@ -222,7 +230,7 @@ describe('Workflow Engine - Stage A Verification', () => {
           },
           {
             id: 'image-node',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Generate Image',
               config: {
@@ -236,7 +244,7 @@ describe('Workflow Engine - Stage A Verification', () => {
         edges: [{ id: 'e1', source: 'check-capacity', target: 'image-node' }],
       }
 
-      const result = await engine.executeWorkflow(JSON.stringify(workflow))
+      const result = await executeTestWorkflow(engine, workflow)
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBe(2)
@@ -249,11 +257,11 @@ describe('Workflow Engine - Stage A Verification', () => {
 
   describe('A-5: Complex DAG', () => {
     it('should execute nodes in correct topological order', async () => {
-      const workflow: WorkflowGraph = {
+      const workflow: TestWorkflowGraph = {
         nodes: [
           {
             id: 'node-a',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Node A',
               config: {
@@ -265,7 +273,7 @@ describe('Workflow Engine - Stage A Verification', () => {
           },
           {
             id: 'node-b',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Node B',
               config: {
@@ -277,7 +285,7 @@ describe('Workflow Engine - Stage A Verification', () => {
           },
           {
             id: 'node-c',
-            type: 'action',
+            type: WorkflowNodeType.Action,
             data: {
               label: 'Node C',
               config: {
@@ -294,7 +302,7 @@ describe('Workflow Engine - Stage A Verification', () => {
         ],
       }
 
-      const result = await engine.executeWorkflow(JSON.stringify(workflow))
+      const result = await executeTestWorkflow(engine, workflow)
 
       expect(result.success).toBe(true)
       expect(result.nodeResults.size).toBe(3)

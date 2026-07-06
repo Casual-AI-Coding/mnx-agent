@@ -1,21 +1,27 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { WorkflowEngine } from '../workflow/index.js'
-import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { TaskQueueItem } from '../../database/types.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
+import { getGlobalContainer, resetContainer } from '../../container.js'
+import { TOKENS } from '../../service-registration.js'
+
+interface QueueTaskMocks {
+  getPendingTasksByJob: ReturnType<typeof vi.fn>
+  getPendingTasksByType: ReturnType<typeof vi.fn>
+  markTaskRunning: ReturnType<typeof vi.fn>
+  markTaskCompleted: ReturnType<typeof vi.fn>
+  markTaskFailed: ReturnType<typeof vi.fn>
+  createDeadLetterQueueItem: ReturnType<typeof vi.fn>
+}
 
 describe('WorkflowEngine - Queue Node', () => {
   let engine: WorkflowEngine
-  let mockDb: Partial<DatabaseService>
+  let queueTaskMocks: QueueTaskMocks
   let mockRegistry: Partial<ServiceNodeRegistry>
 
   beforeEach(() => {
-    mockDb = {
-      createExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      updateExecutionLog: vi.fn().mockResolvedValue({ id: 'log-1' }),
-      createExecutionLogDetail: vi.fn().mockResolvedValue('detail-1'),
-      updateExecutionLogDetail: vi.fn().mockResolvedValue(undefined),
+    queueTaskMocks = {
       getPendingTasksByJob: vi.fn().mockResolvedValue([]),
       getPendingTasksByType: vi.fn().mockResolvedValue([]),
       markTaskRunning: vi.fn().mockImplementation(async (id: string) => ({
@@ -33,11 +39,32 @@ describe('WorkflowEngine - Queue Node', () => {
       createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
     }
 
+    getGlobalContainer().register(TOKENS.TASK_SERVICE, {
+      getPendingByJobId: (jobId: string, limit: number) =>
+        (queueTaskMocks.getPendingTasksByJob as unknown as (jobId: string, limit: number) => Promise<TaskQueueItem[]>)(jobId, limit),
+      getPendingByType: (taskType: string, limit: number) =>
+        (queueTaskMocks.getPendingTasksByType as unknown as (taskType: string, limit: number) => Promise<TaskQueueItem[]>)(taskType, limit),
+      markRunning: (id: string) =>
+        (queueTaskMocks.markTaskRunning as unknown as (id: string) => Promise<TaskQueueItem>)(id),
+      markCompleted: (id: string, result?: string) =>
+        (queueTaskMocks.markTaskCompleted as unknown as (id: string, result?: string) => Promise<TaskQueueItem>)(id, result),
+      markFailed: (id: string, error: string) =>
+        (queueTaskMocks.markTaskFailed as unknown as (id: string, error: string) => Promise<TaskQueueItem>)(id, error),
+      moveToDeadLetter: (id: string, error: string) =>
+        (queueTaskMocks.createDeadLetterQueueItem as unknown as (data: { task_id: string; error_message: string }) => Promise<{ id: string }>)(
+          { task_id: id, error_message: error }
+        ),
+    })
+
     mockRegistry = {
       call: vi.fn().mockResolvedValue({ success: true }),
     }
 
-    engine = new WorkflowEngine(mockDb as DatabaseService, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+  })
+
+  afterEach(() => {
+    resetContainer()
   })
 
   describe('queue processing', () => {
@@ -75,7 +102,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
 
       const workflow = JSON.stringify({
         nodes: [
@@ -87,9 +114,9 @@ describe('WorkflowEngine - Queue Node', () => {
       const result = await engine.executeWorkflow(workflow)
 
       expect(result.success).toBe(true)
-      expect(mockDb.getPendingTasksByJob).toHaveBeenCalledWith('job-1', 10)
-      expect(mockDb.markTaskRunning).toHaveBeenCalledTimes(2)
-      expect(mockDb.markTaskCompleted).toHaveBeenCalledTimes(2)
+      expect(queueTaskMocks.getPendingTasksByJob).toHaveBeenCalledWith('job-1', 10)
+      expect(queueTaskMocks.markTaskRunning).toHaveBeenCalledTimes(2)
+      expect(queueTaskMocks.markTaskCompleted).toHaveBeenCalledTimes(2)
     })
 
     it('should process tasks by type when no jobId specified', async () => {
@@ -111,7 +138,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByType = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByType = vi.fn().mockResolvedValue(mockTasks)
 
       const workflow = JSON.stringify({
         nodes: [
@@ -123,7 +150,7 @@ describe('WorkflowEngine - Queue Node', () => {
       const result = await engine.executeWorkflow(workflow)
 
       expect(result.success).toBe(true)
-      expect(mockDb.getPendingTasksByType).toHaveBeenCalledWith('voice_sync', 5)
+      expect(queueTaskMocks.getPendingTasksByType).toHaveBeenCalledWith('voice_sync', 5)
     })
 
     it('should return summary of processed tasks', async () => {
@@ -145,7 +172,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
 
       const workflow = JSON.stringify({
         nodes: [
@@ -187,7 +214,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
       mockRegistry.call = vi.fn().mockResolvedValue({ choices: [{ message: { content: 'Response' } }] })
 
       const workflow = JSON.stringify({
@@ -225,7 +252,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
       mockRegistry.call = vi.fn().mockRejectedValue(new Error('Task failed'))
 
       const workflow = JSON.stringify({
@@ -238,7 +265,7 @@ describe('WorkflowEngine - Queue Node', () => {
       const result = await engine.executeWorkflow(workflow)
 
       expect(result.success).toBe(true)
-      expect(mockDb.markTaskFailed).toHaveBeenCalledWith('task-1', 'Task failed')
+      expect(queueTaskMocks.markTaskFailed).toHaveBeenCalledWith('task-1', 'Task failed')
       const queueResult = result.nodeResults.get('queue')
       expect(queueResult?.data).toMatchObject({
         total: 1,
@@ -268,7 +295,7 @@ describe('WorkflowEngine - Queue Node', () => {
         },
       ]
 
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue(mockTasks)
       mockRegistry.call = vi.fn().mockRejectedValue(new Error('Task failed'))
 
       const workflow = JSON.stringify({
@@ -281,14 +308,14 @@ describe('WorkflowEngine - Queue Node', () => {
       const result = await engine.executeWorkflow(workflow)
 
       expect(result.success).toBe(true)
-      expect(mockDb.markTaskFailed).toHaveBeenCalledWith('task-1', 'Task failed')
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
+      expect(queueTaskMocks.markTaskFailed).toHaveBeenCalledWith('task-1', 'Task failed')
+      expect(queueTaskMocks.createDeadLetterQueueItem).toHaveBeenCalled()
     })
   })
 
   describe('empty queue', () => {
     it('should handle empty queue gracefully', async () => {
-      mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue([])
+      queueTaskMocks.getPendingTasksByJob = vi.fn().mockResolvedValue([])
 
       const workflow = JSON.stringify({
         nodes: [

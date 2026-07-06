@@ -30,6 +30,7 @@ import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
 import { UserRepository } from './repositories/user-repository.js'
 import { WorkflowRepository } from './repositories/workflow-repository.js'
+import { WebhookRepository } from './repositories/webhook-repository.js'
 import { DeadLetterRepository } from './repositories/deadletter-repository.js'
 import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
@@ -38,6 +39,8 @@ import { ConcurrencyManager } from './services/concurrency-manager.js'
 import { createMisfireHandler } from './services/misfire-handler.js'
 import { RetryManager } from './services/retry-manager.js'
 import { DLQAutoRetryScheduler } from './services/dlq-auto-retry-scheduler.js'
+import type { IWebhookService } from './services/domain/interfaces/index.js'
+import type { ITaskService } from './services/domain/interfaces/task.interface.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
 import type { IMisfireHandler } from './services/interfaces/misfire-handler.interface.js'
 import type { IRetryManager } from './services/interfaces/retry-manager.interface.js'
@@ -89,7 +92,7 @@ export async function registerServices(): Promise<void> {
   container.register(TOKENS.MINIMAX_CLIENT, minimaxClient)
 
   container.registerSingleton(TOKENS.TASK_EXECUTOR, (c) => {
-    return new TaskExecutor(c.resolve(TOKENS.MINIMAX_CLIENT), c.resolve(TOKENS.DATABASE))
+    return new TaskExecutor(c.resolve(TOKENS.MINIMAX_CLIENT))
   })
 
   container.registerSingleton(TOKENS.CAPACITY_CHECKER, (c) => {
@@ -97,7 +100,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.SERVICE_NODE_REGISTRY, (c) => {
-    return getServiceNodeRegistry(c.resolve(TOKENS.DATABASE))
+    return getServiceNodeRegistry(c.resolve(TOKENS.SERVICE_NODE_PERMISSION_SERVICE))
   })
 
   container.registerSingleton(TOKENS.CONCURRENCY_MANAGER, () => {
@@ -123,12 +126,11 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c): NotificationService => {
-    return new NotificationService(c.resolve(TOKENS.DATABASE))
+    return new NotificationService(c.resolve<IWebhookService>(TOKENS.WEBHOOK_SERVICE))
   })
 
   container.registerSingleton(TOKENS.CRON_SCHEDULER, (c): CronScheduler => {
     const scheduler = new CronScheduler(
-      c.resolve(TOKENS.DATABASE),
       c.resolve(TOKENS.WORKFLOW_ENGINE),
       c.resolve(TOKENS.TASK_EXECUTOR),
       c.resolve(TOKENS.NOTIFICATION_SERVICE),
@@ -160,7 +162,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.DLQ_AUTO_RETRY_SCHEDULER, (c) => {
-    return new DLQAutoRetryScheduler(c.resolve(TOKENS.DATABASE))
+    return new DLQAutoRetryScheduler(c.resolve<ITaskService>(TOKENS.TASK_SERVICE))
   })
 
   container.registerSingleton(TOKENS.JOB_SERVICE, (c) => {
@@ -195,7 +197,8 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.WEBHOOK_SERVICE, (c) => {
-    return new WebhookService(c.resolve(TOKENS.DATABASE))
+    const conn = c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection()
+    return new WebhookService(new WebhookRepository(conn))
   })
 
   container.registerSingleton(TOKENS.CAPACITY_SERVICE, (c) => {

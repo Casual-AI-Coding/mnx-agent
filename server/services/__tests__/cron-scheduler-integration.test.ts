@@ -2,11 +2,29 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { CronScheduler } from '../cron-scheduler'
 import { WorkflowEngine } from '../workflow/index'
 import { QueueProcessor } from '../queue-processor'
-import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../service-node-registry'
 import type { IConcurrencyManager } from '../interfaces/concurrency-manager.interface'
 import type { IRetryManager } from '../interfaces/retry-manager.interface'
+import type { ITaskService } from '../domain/interfaces/index.js'
+import type { TaskQueueItem } from '../../database/types.js'
+import { getGlobalContainer, resetContainer } from '../../container.js'
+import { TOKENS } from '../../service-registration.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus'
+
+interface SchedulerWorkflowMocks {
+  getActiveCronJobs: ReturnType<typeof vi.fn>
+  getCronJobById: ReturnType<typeof vi.fn>
+  updateCronJob: ReturnType<typeof vi.fn>
+  createExecutionLog: ReturnType<typeof vi.fn>
+  updateExecutionLog: ReturnType<typeof vi.fn>
+  getPendingTasksByJob: ReturnType<typeof vi.fn>
+  getPendingTasksByType: ReturnType<typeof vi.fn>
+  markTaskRunning: ReturnType<typeof vi.fn>
+  markTaskCompleted: ReturnType<typeof vi.fn>
+  markTaskFailed: ReturnType<typeof vi.fn>
+  createDeadLetterQueueItem: ReturnType<typeof vi.fn>
+  getWorkflowTemplateById: ReturnType<typeof vi.fn>
+}
 
 function createMockConcurrencyManager(): IConcurrencyManager {
   return {
@@ -26,8 +44,33 @@ function createMockRetryManager(): IRetryManager {
   }
 }
 
+function createMockTaskService(): ITaskService {
+  return {
+    create: vi.fn(),
+    getById: vi.fn(),
+    update: vi.fn().mockImplementation((id: string, data: Partial<TaskQueueItem>) => Promise.resolve({ id, ...data })),
+    delete: vi.fn(),
+    getAll: vi.fn(),
+    getPending: vi.fn().mockResolvedValue([]),
+    getByStatus: vi.fn().mockResolvedValue([]),
+    moveToDeadLetter: vi.fn().mockResolvedValue(undefined),
+    retryFromDeadLetter: vi.fn(),
+    getDeadLetterQueue: vi.fn().mockResolvedValue([]),
+    getDeadLetterItemById: vi.fn().mockResolvedValue(null),
+    resolveDeadLetterItem: vi.fn(),
+    incrementRetryCount: vi.fn(),
+    getByJobId: vi.fn().mockResolvedValue([]),
+    markRunning: vi.fn().mockResolvedValue({ id: 'task-1', status: 'running' }),
+    markCompleted: vi.fn().mockResolvedValue({ id: 'task-1', status: 'completed' }),
+    markFailed: vi.fn().mockResolvedValue({ id: 'task-1', status: 'failed' }),
+    getPendingByJobId: vi.fn().mockResolvedValue([]),
+    getPendingByType: vi.fn().mockResolvedValue([]),
+    getQueueStats: vi.fn().mockResolvedValue({ pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }),
+  }
+}
+
 describe('CronScheduler Integration with TaskExecutor', () => {
-  let mockDb: Partial<DatabaseService>
+  let schedulerMocks: SchedulerWorkflowMocks
   let mockRegistry: Partial<ServiceNodeRegistry>
   let mockTaskExecutor: {
     executeTask: ReturnType<typeof vi.fn>
@@ -39,8 +82,9 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resetContainer()
 
-    mockDb = {
+    schedulerMocks = {
       getActiveCronJobs: vi.fn().mockResolvedValue([]),
       getCronJobById: vi.fn().mockResolvedValue(null),
       updateCronJob: vi.fn().mockResolvedValue(undefined),
@@ -66,17 +110,14 @@ describe('CronScheduler Integration with TaskExecutor', () => {
     mockEventBus = createMockEventBus()
     mockConcurrencyManager = createMockConcurrencyManager()
     
-    // WorkflowEngine constructor: db, serviceRegistry, taskExecutor, eventBus
     workflowEngine = new WorkflowEngine(
-      mockDb as DatabaseService,
+      null,
       mockRegistry as ServiceNodeRegistry,
       mockTaskExecutor as any,
       mockEventBus
     )
     
-    // CronScheduler constructor: db, workflowEngine, taskExecutor, notificationService, eventBus, concurrencyManager, misfireHandler?, options?
     cronScheduler = new CronScheduler(
-      mockDb as DatabaseService,
       workflowEngine as any,
       mockTaskExecutor as any,
       null, // notificationService
@@ -92,6 +133,7 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
   afterEach(() => {
     cronScheduler?.stopAll()
+    resetContainer()
   })
 
   describe('TaskExecutor integration', () => {
@@ -107,7 +149,7 @@ describe('CronScheduler Integration with TaskExecutor', () => {
         edges: [],
       })
 
-      mockDb.getWorkflowTemplateById = vi.fn().mockResolvedValue({
+      schedulerMocks.getWorkflowTemplateById = vi.fn().mockResolvedValue({
         id: 'wf-1',
         nodes_json: workflowJson,
         edges_json: '[]',
@@ -122,7 +164,6 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 })
 
 describe('QueueProcessor Dead Letter Queue', () => {
-  let mockDb: Partial<DatabaseService>
   let mockTaskExecutor: { executeTask: ReturnType<typeof vi.fn> }
   let mockCapacityChecker: {
     hasCapacity: ReturnType<typeof vi.fn>
@@ -132,22 +173,11 @@ describe('QueueProcessor Dead Letter Queue', () => {
   }
   let mockEventBus: ReturnType<typeof createMockEventBus>
   let mockRetryManager: IRetryManager
+  let mockTaskService: ITaskService
   let queueProcessor: QueueProcessor
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mockDb = {
-      getPendingTasks: vi.fn().mockResolvedValue([]),
-      getPendingTasksByJob: vi.fn().mockResolvedValue([]),
-      getPendingTasksByType: vi.fn().mockResolvedValue([]),
-      updateTask: vi.fn().mockResolvedValue(undefined),
-      markTaskRunning: vi.fn().mockResolvedValue({ id: 'task-1', status: 'running' }),
-      markTaskCompleted: vi.fn().mockResolvedValue({ id: 'task-1', status: 'completed' }),
-      markTaskFailed: vi.fn().mockResolvedValue({ id: 'task-1', status: 'failed' }),
-      createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
-      getQueueStats: vi.fn().mockResolvedValue({ pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }),
-    }
 
     mockTaskExecutor = {
       executeTask: vi.fn(),
@@ -162,10 +192,10 @@ describe('QueueProcessor Dead Letter Queue', () => {
 
     mockEventBus = createMockEventBus()
     mockRetryManager = createMockRetryManager()
+    mockTaskService = createMockTaskService()
 
-    // QueueProcessor constructor: db, taskExecutor, capacityChecker, eventBus, retryManager
     queueProcessor = new QueueProcessor(
-      mockDb as DatabaseService,
+      mockTaskService,
       mockTaskExecutor as any,
       mockCapacityChecker as any,
       mockEventBus,
@@ -190,25 +220,15 @@ describe('QueueProcessor Dead Letter Queue', () => {
       owner_id: 'user-1',
     }
 
-    mockDb.getPendingTasks = vi.fn().mockResolvedValue([failedTask])
+    mockTaskService.getPendingByJobId = vi.fn().mockResolvedValue([failedTask])
     mockTaskExecutor.executeTask = vi.fn().mockRejectedValue(new Error('API Error'))
 
     const result = await queueProcessor.processQueue('job-1', { batchSize: 10 })
 
     expect(result.tasksExecuted).toBe(1)
     expect(result.tasksFailed).toBe(1)
-    expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledTimes(1)
-    expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        original_task_id: 'task-1',
-        job_id: 'job-1',
-        task_type: 'image',
-        error_message: 'API Error',
-        retry_count: 3,
-        max_retries: 3,
-      }),
-      'user-1'
-    )
+    expect(mockTaskService.moveToDeadLetter).toHaveBeenCalledTimes(1)
+    expect(mockTaskService.moveToDeadLetter).toHaveBeenCalledWith('task-1', 'API Error', 'user-1')
   })
 
   it('should emit DLQ event when task is moved to dead letter queue', async () => {
@@ -230,7 +250,7 @@ describe('QueueProcessor Dead Letter Queue', () => {
       owner_id: null,
     }
 
-    mockDb.getPendingTasks = vi.fn().mockResolvedValue([failedTask])
+    mockTaskService.getPendingByJobId = vi.fn().mockResolvedValue([failedTask])
     mockTaskExecutor.executeTask = vi.fn().mockRejectedValue(new Error('Synthesis failed'))
 
     await queueProcessor.processQueue('job-1', { batchSize: 10 })
@@ -267,28 +287,20 @@ describe('QueueProcessor Dead Letter Queue', () => {
 
     expect(result.tasksExecuted).toBe(1)
     expect(result.tasksFailed).toBe(1)
-    expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
+    expect(mockTaskService.moveToDeadLetter).toHaveBeenCalled()
   })
 })
 
 describe('WorkflowEngine with TaskExecutor', () => {
-  let mockDb: Partial<DatabaseService>
   let mockRegistry: Partial<ServiceNodeRegistry>
   let mockTaskExecutor: { executeTask: ReturnType<typeof vi.fn> }
   let mockEventBus: ReturnType<typeof createMockEventBus>
+  let mockTaskService: ITaskService
   let workflowEngine: WorkflowEngine
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mockDb = {
-      getPendingTasksByJob: vi.fn().mockResolvedValue([]),
-      getPendingTasksByType: vi.fn().mockResolvedValue([]),
-      markTaskRunning: vi.fn().mockResolvedValue({ id: 'task-1', status: 'running' }),
-      markTaskCompleted: vi.fn().mockResolvedValue({ id: 'task-1', status: 'completed' }),
-      markTaskFailed: vi.fn().mockResolvedValue({ id: 'task-1', status: 'failed' }),
-      createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
-    }
+    resetContainer()
 
     mockRegistry = {
       call: vi.fn(),
@@ -299,14 +311,19 @@ describe('WorkflowEngine with TaskExecutor', () => {
     }
 
     mockEventBus = createMockEventBus()
+    mockTaskService = createMockTaskService()
+    getGlobalContainer().register(TOKENS.TASK_SERVICE, mockTaskService)
     
-    // WorkflowEngine constructor: db, serviceRegistry, taskExecutor, eventBus
     workflowEngine = new WorkflowEngine(
-      mockDb as DatabaseService,
+      null,
       mockRegistry as ServiceNodeRegistry,
       mockTaskExecutor as any,
       mockEventBus
     )
+  })
+
+  afterEach(() => {
+    resetContainer()
   })
 
   it('should use TaskExecutor directly when available for queue nodes', async () => {
@@ -326,7 +343,7 @@ describe('WorkflowEngine with TaskExecutor', () => {
       owner_id: null,
     }
 
-    mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue([queueTask])
+    mockTaskService.getPendingByJobId = vi.fn().mockResolvedValue([queueTask])
     mockTaskExecutor.executeTask = vi.fn().mockResolvedValue({
       success: true,
       data: { result: 'success' },
@@ -355,9 +372,8 @@ describe('WorkflowEngine with TaskExecutor', () => {
   })
 
   it('should fall back to serviceRegistry when TaskExecutor is not available', async () => {
-    // WorkflowEngine without TaskExecutor: db, serviceRegistry, undefined, eventBus
     const workflowEngineWithoutExecutor = new WorkflowEngine(
-      mockDb as DatabaseService,
+      null,
       mockRegistry as ServiceNodeRegistry,
       undefined,
       mockEventBus
@@ -379,7 +395,7 @@ describe('WorkflowEngine with TaskExecutor', () => {
       owner_id: null,
     }
 
-    mockDb.getPendingTasksByJob = vi.fn().mockResolvedValue([queueTask])
+    mockTaskService.getPendingByJobId = vi.fn().mockResolvedValue([queueTask])
     mockRegistry.call = vi.fn().mockResolvedValue({ success: true, data: { result: 'success' }, durationMs: 100 })
 
     const workflowJson = JSON.stringify({

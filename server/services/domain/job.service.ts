@@ -144,7 +144,7 @@ export class JobService implements IJobService {
     return this.jobRepo.getAllTags()
   }
 
-  async updateRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null> {
+  async updateRunStats(id: string, stats: RunStats, ownerId?: string): Promise<CronJob | null> {
     return this.jobRepo.updateRunStats(id, stats, ownerId)
   }
 

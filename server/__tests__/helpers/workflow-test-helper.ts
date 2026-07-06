@@ -1,8 +1,19 @@
 import type { DatabaseService } from '../../database/service-async'
 import type { ServiceNodeRegistry } from '../../services/service-node-registry'
-import { WorkflowEngine } from '../../services/workflow-engine'
+import { WorkflowEngine } from '../../services/workflow/index'
 import { CronScheduler } from '../../services/cron-scheduler'
+import { WorkflowService } from '../../services/domain/workflow.service'
+import { JobService } from '../../services/domain/job.service'
+import { LogService } from '../../services/domain/log.service'
+import { WorkflowRepository } from '../../repositories/workflow-repository'
+import { JobRepository } from '../../repositories/job-repository'
+import { LogRepository } from '../../repositories/log-repository'
+import { UserRepository } from '../../repositories/user-repository'
+import { ExternalApiLogRepository } from '../../repositories/external-api-log.repository'
+import { getGlobalContainer } from '../../container'
+import { TOKENS } from '../../service-registration'
 import { createMockEventBus } from './mock-event-bus'
+import { createMockConcurrencyManager } from './mock-concurrency-manager'
 
 export interface TestWorkflowFixture {
   id: string
@@ -17,18 +28,28 @@ export interface TestJobFixture {
 }
 
 export class WorkflowTestHelper {
-  private db: DatabaseService
-  private registry: ServiceNodeRegistry
   private engine: WorkflowEngine
+  private workflowService: WorkflowService
+  private jobService: JobService
+  private logService: LogService
   private scheduler: CronScheduler | null = null
 
   private workflows: TestWorkflowFixture[] = []
   private jobs: TestJobFixture[] = []
 
   constructor(db: DatabaseService, registry: ServiceNodeRegistry) {
-    this.db = db
-    this.registry = registry
-    this.engine = new WorkflowEngine(db, registry, createMockEventBus())
+    const connection = db.getConnection()
+    this.workflowService = new WorkflowService(new WorkflowRepository(connection))
+    this.jobService = new JobService(new JobRepository(connection))
+    this.logService = new LogService(
+      new LogRepository(connection),
+      new UserRepository(connection),
+      new ExternalApiLogRepository(connection)
+    )
+    getGlobalContainer().register(TOKENS.WORKFLOW_SERVICE, this.workflowService)
+    getGlobalContainer().register(TOKENS.JOB_SERVICE, this.jobService)
+    getGlobalContainer().register(TOKENS.LOG_SERVICE, this.logService)
+    this.engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
   }
 
   async createTestWorkflow(config: {
@@ -37,7 +58,7 @@ export class WorkflowTestHelper {
     nodes: unknown[]
     edges: unknown[]
   }): Promise<TestWorkflowFixture> {
-    const workflow = await this.db.createWorkflowTemplate({
+    const workflow = await this.workflowService.create({
       id: config.id,
       name: config.name,
       description: `Test workflow: ${config.name}`,
@@ -55,7 +76,7 @@ export class WorkflowTestHelper {
     workflow_id: string
     cron_expression?: string
   }): Promise<TestJobFixture> {
-    const job = await this.db.createCronJob({
+    const job = await this.jobService.create({
       name: config.name,
       cron_expression: config.cron_expression || '0 0 1 1 *',
       workflow_id: config.workflow_id,
@@ -68,14 +89,20 @@ export class WorkflowTestHelper {
 
   async executeWorkflow(workflowJson: string): Promise<{
     success: boolean
-    nodeResults: Map<string, { success: boolean; data: unknown }>
+    nodeResults: Map<string, { success: boolean; data?: unknown }>
   }> {
     return this.engine.executeWorkflow(workflowJson)
   }
 
   async executeJob(jobId: string): Promise<void> {
     if (!this.scheduler) {
-      this.scheduler = new CronScheduler(this.db)
+      this.scheduler = new CronScheduler(
+        this.engine,
+        null,
+        null,
+        createMockEventBus(),
+        createMockConcurrencyManager()
+      )
     }
     await this.scheduler.executeJobNow(jobId)
   }
@@ -87,7 +114,7 @@ export class WorkflowTestHelper {
     tasks_succeeded: number
     tasks_failed: number
   } | null> {
-    const logs = await this.db.getAllExecutionLogs(undefined, 1, 1)
+    const logs = await this.logService.getAll({ limit: 1 })
     return logs[0] || null
   }
 
@@ -98,19 +125,19 @@ export class WorkflowTestHelper {
     success: boolean
     error_message: string | null
   }>> {
-    return this.db.getExecutionLogDetailsByLogId(logId)
+    return this.logService.getDetails(logId)
   }
 
   async cleanup(): Promise<void> {
     for (const job of this.jobs) {
       try {
-        await this.db.deleteCronJob(job.id, undefined)
+        await this.jobService.delete(job.id, undefined)
       } catch {}
     }
 
     for (const workflow of this.workflows) {
       try {
-        await this.db.deleteWorkflowTemplate(workflow.id, null)
+        await this.workflowService.delete(workflow.id, undefined)
       } catch {}
     }
 
