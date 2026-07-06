@@ -2,23 +2,23 @@
  * JobService Implementation
  * 
  * Domain service handling all CronJob-related operations.
- * Delegates to DatabaseService for data access.
+ * Depends directly on JobRepository, not the DatabaseService God Facade.
  */
 
-import type { DatabaseService } from '../../database/service-async.js'
 import type { CronJob, CreateCronJob, UpdateCronJob, RunStats } from '../../database/types.js'
 import type { IJobService } from './interfaces/index.js'
+import type { JobRepository } from '../../repositories/index.js'
 import { validateCronExpression } from '../../utils/cron-validator.js'
 
 export class JobService implements IJobService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly jobRepo: JobRepository) {}
 
   async getAll(ownerId?: string): Promise<CronJob[]> {
-    return this.db.getAllCronJobs(ownerId)
+    return this.jobRepo.getAll(ownerId)
   }
 
   async getById(id: string, ownerId?: string): Promise<CronJob | null> {
-    return this.db.getCronJobById(id, ownerId)
+    return this.jobRepo.getById(id, ownerId)
   }
 
   async create(data: CreateCronJob, ownerId?: string): Promise<CronJob> {
@@ -26,12 +26,12 @@ export class JobService implements IJobService {
       throw new Error('Invalid cron expression')
     }
     
-    const existing = await this.db.getAllCronJobs(ownerId)
+    const existing = await this.jobRepo.getAll(ownerId)
     if (existing.some(j => j.name === data.name)) {
       throw new Error(`Job with name "${data.name}" already exists`)
     }
     
-    return this.db.createCronJob(data, ownerId)
+    return this.jobRepo.create(data, ownerId)
   }
 
   async update(id: string, data: UpdateCronJob, ownerId?: string): Promise<CronJob> {
@@ -39,7 +39,7 @@ export class JobService implements IJobService {
       throw new Error('Invalid cron expression')
     }
     
-    const result = await this.db.updateCronJob(id, data, ownerId)
+    const result = await this.jobRepo.update(id, data, ownerId)
     if (!result) {
       throw new Error(`CronJob not found: ${id}`)
     }
@@ -47,14 +47,14 @@ export class JobService implements IJobService {
   }
 
   async delete(id: string, ownerId?: string): Promise<void> {
-    const deleted = await this.db.deleteCronJob(id, ownerId)
+    const deleted = await this.jobRepo.delete(id, ownerId)
     if (!deleted) {
       throw new Error(`CronJob not found: ${id}`)
     }
   }
 
   async toggle(id: string, ownerId?: string): Promise<CronJob> {
-    const result = await this.db.toggleCronJobActive(id, ownerId)
+    const result = await this.jobRepo.toggleActive(id, ownerId)
     if (!result) {
       throw new Error(`CronJob not found: ${id}`)
     }
@@ -62,58 +62,58 @@ export class JobService implements IJobService {
   }
 
   async toggleActive(id: string, active: boolean, ownerId?: string): Promise<CronJob | null> {
-    const job = await this.db.getCronJobById(id, ownerId)
+    const job = await this.jobRepo.getById(id, ownerId)
     if (!job) {
       throw new Error(`CronJob not found: ${id}`)
     }
     
     if (active) {
-      const dependencies = await this.db.getJobDependencies(id)
+      const dependencies = await this.jobRepo.getDependencies(id)
       for (const depJobId of dependencies) {
-        const depJob = await this.db.getCronJobById(depJobId, ownerId)
+        const depJob = await this.jobRepo.getById(depJobId, ownerId)
         if (!depJob?.is_active) {
           throw new Error(`Dependency ${depJobId} is not active`)
         }
       }
     }
     
-    return this.db.toggleCronJobActive(id, ownerId)
+    return this.jobRepo.toggleActive(id, ownerId)
   }
 
   async getActive(): Promise<CronJob[]> {
-    return this.db.getActiveCronJobs()
+    return this.jobRepo.getActive()
   }
 
   async getWithTag(tag: string): Promise<CronJob[]> {
-    return this.db.getJobsByTag(tag)
+    return this.jobRepo.getByTag(tag)
   }
 
   async addTag(jobId: string, tag: string): Promise<void> {
-    await this.db.addJobTag(jobId, tag)
+    await this.jobRepo.addTag(jobId, tag)
   }
 
   async removeTag(jobId: string, tag: string): Promise<void> {
-    await this.db.removeJobTag(jobId, tag)
+    await this.jobRepo.removeTag(jobId, tag)
   }
 
   async addDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    await this.db.addJobDependency(jobId, dependsOnJobId)
+    await this.jobRepo.addDependency(jobId, dependsOnJobId)
   }
 
   async removeDependency(jobId: string, dependsOnJobId: string): Promise<void> {
-    await this.db.removeJobDependency(jobId, dependsOnJobId)
+    await this.jobRepo.removeDependency(jobId, dependsOnJobId)
   }
 
   async getTags(jobId: string): Promise<string[]> {
-    return this.db.getJobTags(jobId)
+    return this.jobRepo.getTags(jobId)
   }
 
   async getDependencies(jobId: string): Promise<string[]> {
-    return this.db.getJobDependencies(jobId)
+    return this.jobRepo.getDependencies(jobId)
   }
 
   async getDependents(jobId: string): Promise<string[]> {
-    return this.db.getJobDependents(jobId)
+    return this.jobRepo.getDependents(jobId)
   }
 
   async hasCircularDependency(jobId: string, dependsOnJobId: string): Promise<boolean> {
@@ -131,7 +131,7 @@ export class JobService implements IJobService {
       }
       visited.add(current)
 
-      const dependencies = await this.db.getJobDependencies(current)
+      const dependencies = await this.jobRepo.getDependencies(current)
       if (dependencies?.length) {
         queue.push(...dependencies)
       }
@@ -141,14 +141,14 @@ export class JobService implements IJobService {
   }
 
   async getAllTags(): Promise<{ tag: string; count: number }[]> {
-    return this.db.getAllTags()
+    return this.jobRepo.getAllTags()
   }
 
   async updateRunStats(id: string, stats: RunStats, ownerId: string): Promise<CronJob | null> {
-    return this.db.updateCronJobRunStats(id, stats, ownerId)
+    return this.jobRepo.updateRunStats(id, stats, ownerId)
   }
 
   async updateLastRun(id: string, nextRun: string, ownerId?: string): Promise<CronJob | null> {
-    return this.db.updateCronJobLastRun(id, nextRun, ownerId)
+    return this.jobRepo.updateLastRun(id, nextRun, ownerId)
   }
 }
