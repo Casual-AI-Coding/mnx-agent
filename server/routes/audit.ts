@@ -1,15 +1,15 @@
 import { Router } from 'express'
 import { validateQuery } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { getDatabaseService } from '../service-registration.js'
+import { getLogService } from '../service-registration.js'
 import { listAuditLogsQuerySchema } from '../validation/audit-schemas'
-import type { AuditAction } from '../database/types'
-import { successResponse, errorResponse } from '../middleware/api-response'
+import { successResponse } from '../middleware/api-response'
 import { withEntityNotFound } from '../utils/index.js'
 
 const router = Router()
 
 router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req, res) => {
+  const query = listAuditLogsQuerySchema.parse(req.query)
   const {
     action,
     resource_type,
@@ -24,11 +24,11 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     limit,
     sort_by,
     sort_order,
-  } = req.query
+  } = query
 
   // Non-admin users can only see their own audit logs
   const effectiveUserId = req.user?.role === 'admin' || req.user?.role === 'super'
-    ? (user_id as string | undefined)
+    ? user_id
     : req.user?.userId
 
   let responseStatusFilter: number | undefined
@@ -40,75 +40,74 @@ router.get('/', validateQuery(listAuditLogsQuerySchema), asyncHandler(async (req
     responseStatusFilter = Number(response_status)
   }
 
-  const db = getDatabaseService()
-  const result = await db.getAuditLogs({
-    action: action as AuditAction | undefined,
-    resource_type: resource_type as string | undefined,
-    resource_id: resource_id as string | undefined,
+  const logService = getLogService()
+  const result = await logService.getAuditLogs({
+    action,
+    resource_type,
+    resource_id,
     user_id: effectiveUserId,
     response_status: responseStatusFilter,
-    request_path: request_path as string | undefined,
-    start_date: start_date as string | undefined,
-    end_date: end_date as string | undefined,
-    page: Number(page),
-    limit: Number(limit),
-    sort_by: sort_by as 'created_at' | 'duration_ms' | undefined,
-    sort_order: sort_order as 'asc' | 'desc' | undefined,
+    request_path,
+    start_date,
+    end_date,
+    page,
+    limit,
+    sort_by,
+    sort_order,
   })
 
-  const currentLimit = Number(limit)
   successResponse(res, {
     logs: result.logs,
     pagination: {
-      page: Number(page),
-      limit: currentLimit,
+      page,
+      limit,
       total: result.total,
-      totalPages: Math.ceil(result.total / currentLimit),
+      totalPages: Math.ceil(result.total / limit),
     },
   })
 }))
 
 router.get('/stats', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getLogService()
   
   // Non-admin users can only see stats for their own audit logs
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const stats = await db.getAuditStats(userId)
+  const stats = await logService.getAuditStats(userId)
   successResponse(res, stats)
 }))
 
 router.get('/paths', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getLogService()
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const paths = await db.getUniqueRequestPaths(userId)
+  const paths = await logService.getUniqueRequestPaths(userId)
   successResponse(res, { paths })
 }))
 
 router.get('/users', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getLogService()
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const users = await db.getUniqueAuditUsers(userId)
+  const users = await logService.getUniqueAuditUsers(userId)
   successResponse(res, { users })
 }))
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getLogService()
 
   // Non-admin users can only see their own audit logs
   const ownerId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const log = await db.getAuditLogById(req.params.id, ownerId)
+  const log = await logService.getAuditLogById(req.params.id, ownerId)
   if (!withEntityNotFound(log, res, 'Audit log')) return
   successResponse(res, log)
 }))
