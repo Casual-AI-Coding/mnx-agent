@@ -152,6 +152,15 @@ export abstract class BaseRepository<T, CreateDto = Partial<T>, UpdateDto = Part
     return uuidv4()
   }
 
+  protected async softDeleteById(id: string, ownerId: string): Promise<boolean> {
+    const now = toLocalISODateString()
+    const result = await this.conn.execute(
+      `UPDATE ${this.tableName} SET is_deleted = true, deleted_at = $1, updated_at = $1 WHERE ${this.getIdColumn()} = $2 AND owner_id = $3 AND is_deleted = false`,
+      [now, id, ownerId]
+    )
+    return result.changes > 0
+  }
+
   isPostgres(): boolean {
     return this.conn.isPostgres()
   }

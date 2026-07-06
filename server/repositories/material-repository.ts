@@ -203,14 +203,7 @@ export class MaterialRepository extends BaseRepository<Material> {
   }
 
   async softDelete(id: string, ownerId: string): Promise<boolean> {
-    const now = toLocalISODateString()
-    const result = await this.conn.execute(
-      `UPDATE materials
-       SET is_deleted = $1, deleted_at = $2, updated_at = $2
-       WHERE id = $3 AND owner_id = $4 AND is_deleted = false`,
-      [true, now, id, ownerId]
-    )
-    return result.changes > 0
+    return this.softDeleteById(id, ownerId)
   }
 
   async listWithItemCount(filter: {
