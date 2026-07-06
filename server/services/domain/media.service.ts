@@ -1,30 +1,28 @@
 /**
  * MediaService Implementation
- * 
+ *
  * Domain service handling all MediaRecord-related operations.
- * Delegates to DatabaseService for data access.
+ * Depends on MediaRepository for data access — no DatabaseService facade.
  */
 
-import type { DatabaseService } from '../../database/service-async.js'
+import type { MediaRepository } from '../../repositories/media-repository.js'
 import type { MediaRecord, CreateMediaRecord } from '../../database/types.js'
 import type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces/index.js'
 
 export class MediaService implements IMediaService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly mediaRepo: MediaRepository) {}
 
   async getById(id: string, ownerId?: string, includePublic?: boolean): Promise<MediaRecord | null> {
-    return this.db.getMediaRecordById(id, ownerId, includePublic)
+    return this.mediaRepo.getById(id, ownerId, includePublic)
   }
 
   async getAll(filter: MediaFilter): Promise<MediaQueryResult> {
-    const limit = filter.limit ?? 20
-    const offset = filter.offset ?? 0
-    return this.db.getMediaRecords({
+    const result = await this.mediaRepo.list({
       type: filter.type,
       source: filter.source,
       search: filter.search,
-      limit,
-      offset,
+      limit: filter.limit ?? 20,
+      offset: filter.offset ?? 0,
       includeDeleted: filter.includeDeleted,
       visibilityOwnerId: filter.visibilityOwnerId,
       favoriteFilter: filter.favoriteFilter,
@@ -32,10 +30,11 @@ export class MediaService implements IMediaService {
       favoriteUserId: filter.favoriteUserId,
       role: filter.role,
     })
+    return { records: result.items, total: result.total }
   }
 
   async create(data: CreateMediaRecord, ownerId?: string): Promise<MediaRecord> {
-    return this.db.createMediaRecord(data, ownerId)
+    return this.mediaRepo.create(data, ownerId)
   }
 
   async update(id: string, data: Partial<MediaRecord>, ownerId?: string): Promise<MediaRecord | null> {
@@ -46,34 +45,34 @@ export class MediaService implements IMediaService {
     if (data.metadata !== undefined) {
       updateData.metadata = data.metadata as Record<string, unknown> | null
     }
-    return this.db.updateMediaRecord(id, updateData, ownerId)
+    return this.mediaRepo.update(id, updateData, ownerId)
   }
 
   async softDelete(id: string, ownerId?: string): Promise<boolean> {
-    return this.db.softDeleteMediaRecord(id, ownerId)
+    return this.mediaRepo.softDelete(id, ownerId)
   }
 
   async hardDelete(id: string, ownerId?: string): Promise<boolean> {
-    return this.db.hardDeleteMediaRecord(id, ownerId)
+    return this.mediaRepo.hardDelete(id, ownerId)
   }
 
   async getByIds(ids: string[], ownerId?: string): Promise<MediaRecord[]> {
-    return this.db.getMediaRecordsByIds(ids, ownerId)
+    return this.mediaRepo.getByIds(ids, ownerId)
   }
 
   async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
-    return this.db.toggleFavorite(userId, mediaId)
+    return this.mediaRepo.toggleFavorite(userId, mediaId)
   }
 
   async togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {
-    return this.db.togglePublicMediaRecord(id, isPublic, ownerId)
+    return this.mediaRepo.togglePublic(id, isPublic, ownerId)
   }
 
   async batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number> {
-    return this.db.batchTogglePublicMediaRecords(ids, isPublic, userId)
+    return this.mediaRepo.batchTogglePublic(ids, isPublic, userId)
   }
 
   async softDeleteBatch(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }> {
-    return this.db.softDeleteMediaRecords(ids, ownerId)
+    return this.mediaRepo.softDeleteBatch(ids, ownerId)
   }
 }

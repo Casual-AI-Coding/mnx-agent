@@ -172,7 +172,9 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.MEDIA_SERVICE, (c) => {
-    return new MediaService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new MediaService(new MediaRepository(conn))
   })
 
   container.registerSingleton(TOKENS.WEBHOOK_SERVICE, (c) => {
