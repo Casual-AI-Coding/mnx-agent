@@ -4,7 +4,12 @@ import { asyncHandler } from '../../middleware/asyncHandler'
 import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import { withEntityNotFound } from '../../utils/index.js'
-import { getDatabaseService, getLogService, getTaskService, getExecutionStateManagerInstance } from '../../service-registration.js'
+import {
+  getExecutionStateManagerInstance,
+  getLogService,
+  getTaskService,
+  getWorkflowService,
+} from '../../service-registration.js'
 import { WorkflowEngine } from '../../services/workflow/index'
 import {
   executionLogQuerySchema,
@@ -157,14 +162,14 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
 }))
 
 router.get('/workflow/templates', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const workflowService = getWorkflowService()
   const ownerId = buildOwnerFilter(req).params[0]
-  const templates: WorkflowTemplate[] = await db.getMarkedWorkflowTemplates(ownerId)
+  const templates: WorkflowTemplate[] = await workflowService.getMarkeds(ownerId)
   successResponse(res, { templates, total: templates.length })
 }))
 
 router.post('/workflow/templates', validate(createWorkflowTemplateSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const workflowService = getWorkflowService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   try {
     JSON.parse(req.body.nodes_json)
@@ -173,7 +178,7 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
     errorResponse(res, 'nodes_json and edges_json must be valid JSON', 400)
     return
   }
-  const template = await db.createWorkflowTemplate({
+  const template = await workflowService.create({
     name: req.body.name,
     description: req.body.description,
     nodes_json: req.body.nodes_json,
@@ -184,9 +189,9 @@ router.post('/workflow/templates', validate(createWorkflowTemplateSchema), async
 }))
 
 router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), validate(updateWorkflowTemplateSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const workflowService = getWorkflowService()
   const ownerId = buildOwnerFilter(req).params[0]
-  const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
+  const template = await workflowService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(template, res, 'Template')) return
   if (req.body.nodes_json) {
     try { JSON.parse(req.body.nodes_json) } catch {
@@ -200,16 +205,16 @@ router.put('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSch
       return
     }
   }
-  const updatedTemplate = await db.updateWorkflowTemplate(req.params.id, req.body, ownerId)
+  const updatedTemplate = await workflowService.update(req.params.id, req.body, ownerId)
   successResponse(res, updatedTemplate)
 }))
 
 router.delete('/workflow/templates/:id', validateParams(workflowTemplateIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const workflowService = getWorkflowService()
   const ownerId = buildOwnerFilter(req).params[0]
-  const template = await db.getWorkflowTemplateById(req.params.id, ownerId)
+  const template = await workflowService.getById(req.params.id, ownerId)
   if (!withEntityNotFound(template, res, 'Template')) return
-  await db.deleteWorkflowTemplate(req.params.id, ownerId)
+  await workflowService.delete(req.params.id, ownerId)
   successResponse(res, { deleted: true })
 }))
 
