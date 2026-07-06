@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Bell,
   Clock,
   Coins,
   FileText,
@@ -118,6 +119,7 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
         { path: '/user-management', label: t('sidebar.userManagement', '用户管理'), icon: Users },
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
         { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Server },
+        { path: '/announcements', label: t('sidebar.announcements', '公告管理'), icon: Bell },
       ],
     },
   ]

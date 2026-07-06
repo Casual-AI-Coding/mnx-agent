@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import HistoryPanel from './HistoryPanel'
+import AnnouncementBanner from './AnnouncementBanner'
 import { AudioPlayer } from '@/components/media/AudioPlayer'
 import { useSettingsStore } from '@/settings/store'
 import { useAudioStore } from '@/stores/audio'
@@ -118,6 +119,7 @@ export default function AppLayout() {
         style={{ marginLeft: isDesktopLayout ? (isSidebarCollapsed ? 60 : sidebarWidth) : 0 }}
       >
         <div className="p-4 lg:p-6">
+          <AnnouncementBanner />
           <Outlet />
         </div>
       </main>

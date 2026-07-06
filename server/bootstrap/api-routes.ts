@@ -4,6 +4,7 @@ import { auditMiddleware } from '../middleware/audit-middleware.js'
 import { authenticateJWT } from '../middleware/auth-middleware.js'
 import { cronRateLimiter, mediaRateLimiter } from '../middleware/rateLimit.js'
 import { updateAuditContextUserIdMiddleware } from '../services/audit-context.service.js'
+import adminAnnouncementsRouter from '../routes/admin/announcements.js'
 import adminServiceNodesRouter from '../routes/admin/service-nodes.js'
 import adminServicePermissionsRouter from '../routes/admin/service-permissions.js'
 import adminWorkflowsRouter from '../routes/admin/workflows.js'
@@ -75,6 +76,7 @@ export function configureApiRoutes(app: ApiMountTarget): void {
   app.use('/api/templates', templatesRouter)
   app.use('/api/workflows', workflowsRouter)
   app.use('/api/admin/service-nodes', adminServiceNodesRouter)
+  app.use('/api/admin/announcements', adminAnnouncementsRouter)
   app.use('/api/admin/workflows', adminWorkflowsRouter)
   app.use('/api/admin/service-permissions', adminServicePermissionsRouter)
   app.use('/api/stats', statsRouter)

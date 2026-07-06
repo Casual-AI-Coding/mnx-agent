@@ -40,6 +40,7 @@ const DeadLetterQueue = lazy(() => import('@/pages/DeadLetterQueue'))
 const WebhookManagement = lazy(() => import('@/pages/CronManagement/WebhookManagement'))
 const WorkflowMarketplace = lazy(() => import('@/pages/WorkflowMarketplace'))
 const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
+const Announcements = lazy(() => import('@/pages/Admin/Announcements'))
 const MaterialManagement = lazy(() => import('@/pages/MaterialManagement'))
 const ArtistMaterialEditor = lazy(() => import('@/pages/ArtistMaterialEditor'))
 const OpenAIImage2 = lazy(() => import('@/pages/OpenAIImage2'))
@@ -374,6 +375,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="系统配置">
               <SystemConfig />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="announcements"
+          element={
+            <RouteWithErrorBoundary pageName="公告管理">
+              <Announcements />
             </RouteWithErrorBoundary>
           }
         />
