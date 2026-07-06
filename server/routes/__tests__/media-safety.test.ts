@@ -26,19 +26,14 @@ vi.mock('axios', () => ({
 
 vi.mock('../../service-registration.js', () => ({
   getMediaService: () => mocks.mediaService,
+  getExternalApiLogRepository: () => ({
+    queryLogs: mocks.queryLogs,
+    getById: mocks.getLogById,
+  }),
 }))
 
 vi.mock('../../database/connection.js', () => ({
   getConnection: () => ({}),
-}))
-
-vi.mock('../../repositories/external-api-log.repository.js', () => ({
-  ExternalApiLogRepository: vi.fn(function ExternalApiLogRepositoryMock() {
-    return {
-    queryLogs: mocks.queryLogs,
-      getById: mocks.getLogById,
-    }
-  }),
 }))
 
 vi.mock('../../middleware/validate', () => ({
