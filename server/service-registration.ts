@@ -35,6 +35,7 @@ import type { IEventBus } from './services/interfaces/event-bus.interface.js'
 import { ConcurrencyManager } from './services/concurrency-manager.js'
 import { createMisfireHandler } from './services/misfire-handler.js'
 import { RetryManager } from './services/retry-manager.js'
+import { ExternalApiLogService } from './services/external-api-log-service.js'
 import { DLQAutoRetryScheduler } from './services/dlq-auto-retry-scheduler.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
 import type { IMisfireHandler } from './services/interfaces/misfire-handler.interface.js'
@@ -69,6 +70,7 @@ export const TOKENS = {
   EXPORT_SERVICE: 'exportService',
   TEMPLATE_SERVICE: 'templateService',
   SYSTEM_CONFIG_SERVICE: 'systemConfigService',
+  EXTERNAL_API_LOG_SERVICE: 'externalApiLogService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
   MEDIA_REPOSITORY: 'mediaRepository',
@@ -247,6 +249,10 @@ export async function registerServices(): Promise<void> {
     return new SystemConfigService(new SystemConfigRepository(conn))
   })
 
+  container.registerSingleton(TOKENS.EXTERNAL_API_LOG_SERVICE, (c) => {
+    return new ExternalApiLogService(c.resolve(TOKENS.EXTERNAL_API_LOG_REPOSITORY))
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -353,6 +359,10 @@ export function getSystemConfigService(): SystemConfigService {
 
 export function getTemplateService(): TemplateService {
   return getGlobalContainer().resolve<TemplateService>(TOKENS.TEMPLATE_SERVICE)
+}
+
+export function getExternalApiLogService(): ExternalApiLogService {
+  return getGlobalContainer().resolve<ExternalApiLogService>(TOKENS.EXTERNAL_API_LOG_SERVICE)
 }
 
 export function getSettingsService(): SettingsService {

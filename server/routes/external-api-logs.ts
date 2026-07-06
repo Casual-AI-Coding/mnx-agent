@@ -8,7 +8,7 @@ import {
   listExternalApiLogsQuerySchema,
   updateExternalApiLogSchema,
 } from '../validation/external-api-logs-schemas'
-import { getDatabaseService, getExternalApiLogRepository } from '../service-registration.js'
+import { getDatabaseService, getExternalApiLogRepository, getExternalApiLogService } from '../service-registration.js'
 import type { ServiceProvider, ExternalApiStatus } from '../database/types.js'
 
 const router = Router()
@@ -31,8 +31,8 @@ router.get('/', validateQuery(listExternalApiLogsQuerySchema), asyncHandler(asyn
     ? (user_id as string | undefined)
     : req.user?.userId
 
-  const db = getDatabaseService()
-  const result = await db.getExternalApiLogs({
+  const logService = getExternalApiLogService()
+  const result = await logService.queryLogs({
     service_provider: service_provider as ServiceProvider | undefined,
     status: status as ExternalApiStatus | undefined,
     operation: operation as string | undefined,
@@ -58,28 +58,28 @@ router.get('/', validateQuery(listExternalApiLogsQuerySchema), asyncHandler(asyn
 }))
 
 router.get('/stats', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getExternalApiLogService()
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const stats = await db.getExternalApiLogStats(userId)
+  const stats = await logService.getStats(userId)
   successResponse(res, stats)
 }))
 
 router.get('/operations', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const logService = getExternalApiLogService()
   const userId = req.user?.role === 'admin' || req.user?.role === 'super'
     ? undefined
     : req.user?.userId
 
-  const operations = await db.getUniqueExternalApiOperations(userId)
+  const operations = await logService.getUniqueOperations(userId)
   successResponse(res, { operations })
 }))
 
 router.get('/providers', asyncHandler(async (_req, res) => {
-  const db = getDatabaseService()
-  const providers = await db.getUniqueExternalApiProviders()
+  const logService = getExternalApiLogService()
+  const providers = await logService.getUniqueServiceProviders()
   successResponse(res, { providers })
 }))
 
@@ -135,8 +135,8 @@ router.patch('/:id', validate(updateExternalApiLogSchema), asyncHandler(async (r
 }))
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
-  const log = await db.getExternalApiLogById(Number(req.params.id))
+  const logService = getExternalApiLogService()
+  const log = await logService.getById(req.params.id)
   
   if (req.user?.role !== 'admin' && req.user?.role !== 'super') {
     if (log && log.user_id !== req.user?.userId) {

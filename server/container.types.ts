@@ -3,6 +3,7 @@ import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
 import { TOKENS } from './service-registration.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
+import type { ExternalApiLogService } from './services/external-api-log-service.js'
 import type { MediaRepository } from './repositories/media-repository.js'
 import type { WorkflowRepository } from './repositories/workflow-repository.js'
 import type { UserService } from './services/user-service.js'
@@ -63,6 +64,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.EXPORT_SERVICE]: ExportService
   readonly [TOKENS.TEMPLATE_SERVICE]: TemplateService
   readonly [TOKENS.SYSTEM_CONFIG_SERVICE]: SystemConfigService
+  readonly [TOKENS.EXTERNAL_API_LOG_SERVICE]: ExternalApiLogService
   readonly [TOKENS.SETTINGS_SERVICE]: SettingsService
   readonly [TOKENS.EXTERNAL_API_LOG_REPOSITORY]: ExternalApiLogRepository
   readonly [TOKENS.MEDIA_REPOSITORY]: MediaRepository
