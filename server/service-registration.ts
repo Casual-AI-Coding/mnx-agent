@@ -14,7 +14,9 @@ import { WorkflowService, JobService, TaskService, LogService, MediaService, Web
 import { ExportService } from './services/export-service.js'
 import { SettingsService } from './services/settings-service.js'
 import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
+import { LogRepository } from './repositories/log-repository.js'
 import { MediaRepository } from './repositories/media-repository.js'
+import { UserRepository } from './repositories/user-repository.js'
 import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
@@ -150,7 +152,13 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.LOG_SERVICE, (c) => {
-    return new LogService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new LogService(
+      new LogRepository(conn),
+      new UserRepository(conn),
+      c.resolve(TOKENS.EXTERNAL_API_LOG_REPOSITORY)
+    )
   })
 
   container.registerSingleton(TOKENS.MEDIA_SERVICE, (c) => {
