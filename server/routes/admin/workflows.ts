@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { requireRole } from '../../middleware/auth-middleware'
-import { getDatabaseService, getUserService } from '../../service-registration.js'
+import { getUserService, getWorkflowService } from '../../service-registration.js'
 import { successResponse, errorResponse } from '../../middleware/api-response'
 import type { TokenPayload } from '../../services/user-service.js'
 
@@ -25,8 +25,8 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
     return
   }
 
-  const db = getDatabaseService()
-  const workflow = await db.getWorkflowTemplateById(id)
+  const workflowService = getWorkflowService()
+  const workflow = await workflowService.getById(id)
 
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
@@ -41,7 +41,7 @@ router.post('/:id/grant', requireRole(['super']), asyncHandler(async (req, res) 
     return
   }
 
-  await db.createWorkflowPermission({
+  await workflowService.createPermission({
     workflow_id: id,
     user_id: userId,
     granted_by: grantedBy,
@@ -59,15 +59,15 @@ router.delete('/:id/revoke', requireRole(['super']), asyncHandler(async (req, re
     return
   }
 
-  const db = getDatabaseService()
-  const workflow = await db.getWorkflowTemplateById(id)
+  const workflowService = getWorkflowService()
+  const workflow = await workflowService.getById(id)
 
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
     return
   }
 
-  await db.deleteWorkflowPermission(id, userId)
+  await workflowService.deletePermission(id, userId)
   successResponse(res, null)
 }))
 
@@ -80,30 +80,30 @@ router.patch('/:id/visibility', requireRole(['super']), asyncHandler(async (req,
     return
   }
 
-  const db = getDatabaseService()
-  const workflow = await db.getWorkflowTemplateById(id)
+  const workflowService = getWorkflowService()
+  const workflow = await workflowService.getById(id)
 
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
     return
   }
 
-  await db.updateWorkflowTemplate(id, { is_public: isPublic })
+  await workflowService.update(id, { is_public: isPublic })
   successResponse(res, null)
 }))
 
 router.get('/:id/permissions', requireRole(['super']), asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const db = getDatabaseService()
-  const workflow = await db.getWorkflowTemplateById(id)
+  const workflowService = getWorkflowService()
+  const workflow = await workflowService.getById(id)
 
   if (!workflow) {
     errorResponse(res, 'Workflow not found', 404)
     return
   }
 
-  const permissions = await db.getWorkflowPermissions(id)
+  const permissions = await workflowService.getPermissions(id)
   successResponse(res, permissions)
 }))
 

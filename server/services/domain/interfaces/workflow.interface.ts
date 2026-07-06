@@ -68,4 +68,18 @@ export interface IWorkflowService {
   deleteVersion(versionId: string): Promise<void>
 
   hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean>
+
+  createPermission(data: { workflow_id: string; user_id: string; granted_by?: string | null }): Promise<void>
+
+  deletePermission(workflowId: string, userId: string): Promise<void>
+
+  getPermissions(workflowId: string): Promise<Array<{
+    id: string
+    workflow_id: string
+    user_id: string
+    granted_by: string | null
+    created_at: string
+    username: string
+    email: string | null
+  }>>
 }

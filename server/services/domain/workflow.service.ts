@@ -84,4 +84,16 @@ export class WorkflowService implements IWorkflowService {
   async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> {
     return this.workflowRepo.hasPermission(workflowId, userId)
   }
+
+  async createPermission(data: { workflow_id: string; user_id: string; granted_by?: string | null }): Promise<void> {
+    return this.workflowRepo.createPermission(data)
+  }
+
+  async deletePermission(workflowId: string, userId: string): Promise<void> {
+    return this.workflowRepo.deletePermission(workflowId, userId)
+  }
+
+  async getPermissions(workflowId: string) {
+    return this.workflowRepo.getPermissions(workflowId)
+  }
 }
