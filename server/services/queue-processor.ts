@@ -1,4 +1,4 @@
-import type { DatabaseService } from '../database/service-async.js'
+import type { ITaskService } from './domain/interfaces/index.js'
 import { TaskStatus, TaskQueueItem } from '../database/types'
 import type { TaskResult, ITaskExecutor } from '../types/task.js'
 import type { IEventBus } from './interfaces/event-bus.interface.js'
@@ -6,7 +6,7 @@ import type { IRetryManager } from './interfaces/retry-manager.interface.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
 import { getLogger } from '../lib/logger.js'
 
-export type { DatabaseService }
+export type { ITaskService }
 export type { ITaskExecutor }
 
 export interface QueueOptions {
@@ -31,7 +31,7 @@ export interface CapacityChecker {
 }
 
 export class QueueProcessor {
-  private db: DatabaseService
+  private taskService: ITaskService
   private taskExecutor: ITaskExecutor
   private capacityChecker: CapacityChecker
   private eventBus: IEventBus
@@ -39,13 +39,13 @@ export class QueueProcessor {
   private log = getLogger().child({ component: 'QueueProcessor' })
 
   constructor(
-    db: DatabaseService,
+    taskService: ITaskService,
     taskExecutor: ITaskExecutor,
     capacityChecker: CapacityChecker,
     eventBus: IEventBus,
     retryManager: IRetryManager
   ) {
-    this.db = db
+    this.taskService = taskService
     this.taskExecutor = taskExecutor
     this.capacityChecker = capacityChecker
     this.eventBus = eventBus
@@ -118,11 +118,11 @@ export class QueueProcessor {
   }
 
   async getPendingTasks(jobId: string, limit: number): Promise<TaskQueueItem[]> {
-    return await this.db.getPendingTasks(jobId, limit)
+    return await this.taskService.getPendingByJobId(jobId, limit)
   }
 
   async cancelPendingTasks(jobId: string): Promise<number> {
-    const pendingTasks = await this.db.getPendingTasks(jobId, 1000)
+    const pendingTasks = await this.taskService.getPendingByJobId(jobId, 1000)
     const pendingTaskIds = pendingTasks
       .filter(task => task.status === TaskStatus.PENDING)
       .map(task => task.id)
@@ -131,16 +131,21 @@ export class QueueProcessor {
       return 0
     }
 
-    return await this.db.updateTasksStatusBatch(pendingTaskIds, TaskStatus.CANCELLED)
+    let cancelled = 0
+    for (const taskId of pendingTaskIds) {
+      await this.taskService.update(taskId, { status: TaskStatus.CANCELLED })
+      cancelled++
+    }
+    return cancelled
   }
 
   async retryFailedTasks(jobId: string): Promise<number> {
-    const pendingTasks = await this.db.getPendingTasks(jobId, 1000)
+    const pendingTasks = await this.taskService.getPendingByJobId(jobId, 1000)
     let retriedCount = 0
 
     for (const task of pendingTasks) {
       if (task.status === TaskStatus.FAILED) {
-        await this.db.updateTask(task.id, {
+        await this.taskService.update(task.id, {
           status: TaskStatus.PENDING,
           retry_count: 0,
           error_message: null,
@@ -155,7 +160,7 @@ export class QueueProcessor {
   private async executeTaskWithLifecycle(task: TaskQueueItem): Promise<TaskResult> {
     const startTime = Date.now()
 
-    await this.db.updateTask(task.id, {
+    await this.taskService.update(task.id, {
       status: TaskStatus.RUNNING,
       started_at: toLocalISODateString(),
     })
@@ -164,7 +169,7 @@ export class QueueProcessor {
       const payload = JSON.parse(task.payload)
       const result = await this.taskExecutor.executeTask(task.task_type, payload)
 
-      await this.db.updateTask(task.id, {
+      await this.taskService.update(task.id, {
         status: TaskStatus.COMPLETED,
         completed_at: toLocalISODateString(),
         result: JSON.stringify(result.data),
@@ -177,7 +182,7 @@ export class QueueProcessor {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown task execution error'
 
-      await this.db.updateTask(task.id, {
+      await this.taskService.update(task.id, {
         status: TaskStatus.FAILED,
         completed_at: toLocalISODateString(),
         error_message: errorMessage,
@@ -194,7 +199,7 @@ export class QueueProcessor {
   }
 
   private async requeueTask(task: TaskQueueItem): Promise<void> {
-    await this.db.updateTask(task.id, {
+    await this.taskService.update(task.id, {
       status: TaskStatus.PENDING,
       retry_count: task.retry_count + 1,
       started_at: null,
@@ -203,16 +208,7 @@ export class QueueProcessor {
 
   private async moveToDeadLetterQueue(task: TaskQueueItem, error: string): Promise<void> {
     try {
-      const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload
-      await this.db.createDeadLetterQueueItem({
-        original_task_id: task.id,
-        job_id: task.job_id ?? undefined,
-        task_type: task.task_type,
-        payload: payload,
-        error_message: error,
-        retry_count: task.retry_count,
-        max_retries: task.max_retries,
-      }, task.owner_id ?? undefined)
+      await this.taskService.moveToDeadLetter(task.id, error, task.owner_id ?? undefined)
 
       this.eventBus.emitTaskMovedToDLQ(task, error)
     } catch (err) {
@@ -227,7 +223,7 @@ export class QueueProcessor {
     failed: number
     cancelled: number
   }> {
-    const stats = await this.db.getQueueStats(jobId)
+    const stats = await this.taskService.getQueueStats(jobId)
     const { total: _total, ...result } = stats
     return result
   }
@@ -310,7 +306,7 @@ export class QueueProcessor {
     }
 
     const safeLimit = await this.capacityChecker.getSafeExecutionLimit('image')
-    const pendingTasks = await this.db.getPendingTasksByType('image_generation', safeLimit, ownerId)
+    const pendingTasks = await this.taskService.getPendingByType('image_generation', safeLimit, ownerId)
 
     if (pendingTasks.length === 0) {
       return {
@@ -367,26 +363,26 @@ export class QueueProcessor {
 }
 
 export function createQueueProcessor(
-  db: DatabaseService,
+  taskService: ITaskService,
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   eventBus: IEventBus,
   retryManager: IRetryManager
 ): QueueProcessor {
-  return new QueueProcessor(db, taskExecutor, capacityChecker, eventBus, retryManager)
+  return new QueueProcessor(taskService, taskExecutor, capacityChecker, eventBus, retryManager)
 }
 
 let queueProcessorInstance: QueueProcessor | null = null
 
 export function getQueueProcessor(
-  db: DatabaseService,
+  taskService: ITaskService,
   taskExecutor: ITaskExecutor,
   capacityChecker: CapacityChecker,
   eventBus: IEventBus,
   retryManager: IRetryManager
 ): QueueProcessor {
   if (!queueProcessorInstance) {
-    queueProcessorInstance = createQueueProcessor(db, taskExecutor, capacityChecker, eventBus, retryManager)
+    queueProcessorInstance = createQueueProcessor(taskService, taskExecutor, capacityChecker, eventBus, retryManager)
   }
   return queueProcessorInstance
 }

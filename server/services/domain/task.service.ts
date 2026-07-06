@@ -138,4 +138,18 @@ export class TaskService implements ITaskService {
   async markFailed(id: string, error: string, ownerId?: string): Promise<TaskQueueItem | null> {
     return this.taskRepo.markFailed(id, error, ownerId)
   }
+
+  async getPendingByJobId(jobId: string, limit: number, ownerId?: string): Promise<TaskQueueItem[]> {
+    return this.taskRepo.getPendingByJob(jobId, limit, ownerId)
+  }
+
+  async getPendingByType(taskType: string, limit: number, ownerId?: string): Promise<TaskQueueItem[]> {
+    return this.taskRepo.getPendingByType(taskType, limit, ownerId)
+  }
+
+  async getQueueStats(jobId?: string): Promise<{
+    pending: number; running: number; completed: number; failed: number; cancelled: number; total: number
+  }> {
+    return this.taskRepo.getQueueStats(jobId)
+  }
 }

@@ -100,7 +100,7 @@ export async function registerServices(): Promise<void> {
 
   container.registerSingleton(TOKENS.QUEUE_PROCESSOR, (c) => {
     return new QueueProcessor(
-      c.resolve(TOKENS.DATABASE),
+      c.resolve(TOKENS.TASK_SERVICE),
       c.resolve(TOKENS.TASK_EXECUTOR),
       c.resolve(TOKENS.CAPACITY_CHECKER),
       c.resolve(TOKENS.EVENT_BUS),

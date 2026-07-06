@@ -104,4 +104,22 @@ export interface ITaskService {
    * Mark a task as failed
    */
   markFailed(id: string, error: string, ownerId?: string): Promise<TaskQueueItem | null>
+
+  /**
+   * Get pending tasks filtered by job ID with limit
+   */
+  getPendingByJobId(jobId: string, limit: number, ownerId?: string): Promise<TaskQueueItem[]>
+
+  /**
+   * Get pending tasks filtered by task type with limit
+   */
+  getPendingByType(taskType: string, limit: number, ownerId?: string): Promise<TaskQueueItem[]>
+
+  /**
+   * Get queue statistics optionally filtered by job ID
+   */
+  getQueueStats(jobId?: string): Promise<{
+    pending: number; running: number; completed: number
+    failed: number; cancelled: number; total: number
+  }>
 }

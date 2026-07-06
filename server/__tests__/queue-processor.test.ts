@@ -1,19 +1,20 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { QueueProcessor } from '../services/queue-processor'
 import { TaskStatus, TaskQueueRow } from '../database/types'
-import type { DatabaseService } from '../database'
+import type { ITaskService } from '../services/domain/interfaces'
 import type { IEventBus } from '../services/interfaces/event-bus.interface'
 import type { IRetryManager } from '../services/interfaces/retry-manager.interface'
 import type { ITaskExecutor } from '../types/task'
 
-interface MockDatabaseService {
-  getPendingTasks: ReturnType<typeof vi.fn>
+interface MockTaskService {
+  getPendingByJobId: ReturnType<typeof vi.fn>
   getQueueStats: ReturnType<typeof vi.fn>
-  updateTask: ReturnType<typeof vi.fn>
-  updateTaskStatus: ReturnType<typeof vi.fn>
-  getDatabase: ReturnType<typeof vi.fn>
-  createDeadLetterQueueItem: ReturnType<typeof vi.fn>
-  updateTasksStatusBatch: ReturnType<typeof vi.fn>
+  update: ReturnType<typeof vi.fn>
+  markRunning: ReturnType<typeof vi.fn>
+  markCompleted: ReturnType<typeof vi.fn>
+  markFailed: ReturnType<typeof vi.fn>
+  moveToDeadLetter: ReturnType<typeof vi.fn>
+  getPendingByType: ReturnType<typeof vi.fn>
 }
 
 interface MockCapacityChecker {
@@ -40,27 +41,22 @@ const createMockTask = (retryCount: number = 0, maxRetries: number = 3, id: stri
 
 describe('QueueProcessor', () => {
   let processor: QueueProcessor
-  let mockDb: MockDatabaseService
+  let mockTaskService: MockTaskService
   let mockTaskExecutor: ITaskExecutor
   let mockCapacityChecker: MockCapacityChecker
   let mockEventBus: IEventBus
   let mockRetryManager: IRetryManager
-  let mockDatabaseRun: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    mockDatabaseRun = vi.fn()
-    mockDb = {
-      getPendingTasks: vi.fn().mockResolvedValue([]),
+    mockTaskService = {
+      getPendingByJobId: vi.fn().mockResolvedValue([]),
       getQueueStats: vi.fn().mockResolvedValue({ pending: 0, running: 0, completed: 0, failed: 0, cancelled: 0, total: 0 }),
-      updateTask: vi.fn().mockResolvedValue(undefined),
-      updateTaskStatus: vi.fn().mockResolvedValue(undefined),
-      getDatabase: vi.fn().mockReturnValue({
-        prepare: vi.fn().mockReturnValue({
-          run: mockDatabaseRun
-        })
-      }),
-      createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
-      updateTasksStatusBatch: vi.fn().mockResolvedValue(1),
+      update: vi.fn().mockResolvedValue(undefined),
+      markRunning: vi.fn().mockResolvedValue(undefined),
+      markCompleted: vi.fn().mockResolvedValue(undefined),
+      markFailed: vi.fn().mockResolvedValue(undefined),
+      moveToDeadLetter: vi.fn().mockResolvedValue(undefined),
+      getPendingByType: vi.fn().mockResolvedValue([]),
     }
 
     mockTaskExecutor = {
@@ -93,9 +89,9 @@ describe('QueueProcessor', () => {
     }
 
     processor = new QueueProcessor(
-      mockDb as any as DatabaseService,
+      mockTaskService as unknown as ITaskService,
       mockTaskExecutor,
-      mockCapacityChecker as any,
+      mockCapacityChecker as unknown,
       mockEventBus,
       mockRetryManager
     )
@@ -108,7 +104,7 @@ describe('QueueProcessor', () => {
   describe('Exponential Backoff', () => {
     it('should use retryManager for retry delay', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Task failed',
@@ -126,7 +122,7 @@ describe('QueueProcessor', () => {
   describe('Retry Logic', () => {
     it('should requeue task with incremented retry count on failure', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Task failed',
@@ -136,7 +132,7 @@ describe('QueueProcessor', () => {
       const result = await processor.processQueue('job-1')
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDb.updateTask).toHaveBeenCalledWith('task-1', {
+      expect(mockTaskService.update).toHaveBeenCalledWith('task-1', {
         status: TaskStatus.PENDING,
         retry_count: 1,
         started_at: null
@@ -145,7 +141,7 @@ describe('QueueProcessor', () => {
 
     it('should not requeue when skipFailed is true', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Task failed',
@@ -155,14 +151,14 @@ describe('QueueProcessor', () => {
       const result = await processor.processQueue('job-1', { skipFailed: true })
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDb.updateTask).not.toHaveBeenCalledWith('task-1', expect.objectContaining({
+      expect(mockTaskService.update).not.toHaveBeenCalledWith('task-1', expect.objectContaining({
         retry_count: expect.any(Number)
       }))
     })
 
     it('should not requeue when max retries reached', async () => {
       const task = createMockTask(3, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Task failed',
@@ -172,16 +168,16 @@ describe('QueueProcessor', () => {
       const result = await processor.processQueue('job-1')
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalled()
     })
 
     it('should mark task as RUNNING when execution starts', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({
+      expect(mockTaskService.update).toHaveBeenCalledWith('task-1', expect.objectContaining({
         status: TaskStatus.RUNNING,
         started_at: expect.any(String)
       }))
@@ -189,11 +185,11 @@ describe('QueueProcessor', () => {
 
     it('should mark task as COMPLETED on success', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({
+      expect(mockTaskService.update).toHaveBeenCalledWith('task-1', expect.objectContaining({
         status: TaskStatus.COMPLETED,
         completed_at: expect.any(String),
         result: expect.any(String)
@@ -202,7 +198,7 @@ describe('QueueProcessor', () => {
 
     it('should reserve capacity on successful task', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
 
       await processor.processQueue('job-1')
 
@@ -211,7 +207,7 @@ describe('QueueProcessor', () => {
 
     it('should reserve capacity atomically before executing task', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
 
       await processor.processQueue('job-1')
 
@@ -222,7 +218,7 @@ describe('QueueProcessor', () => {
 
     it('should NOT decrement capacity on failed task', async () => {
       const task = createMockTask(0, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Failed',
@@ -239,7 +235,7 @@ describe('QueueProcessor', () => {
   describe('Dead Letter Queue', () => {
     it('should move task to dead letter queue after max retries exceeded', async () => {
       const task = createMockTask(3, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Task failed after retries',
@@ -248,12 +244,12 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalled()
     })
 
     it('should include error message in dead letter queue entry', async () => {
       const task = createMockTask(3, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Specific error message',
@@ -262,17 +258,16 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error_message: 'Specific error message'
-        }),
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalledWith(
+        'task-1',
+        'Specific error message',
         undefined
       )
     })
 
     it('should use default error message when task has no error', async () => {
       const task = createMockTask(3, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         durationMs: 100
@@ -280,17 +275,16 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error_message: 'Max retries exceeded'
-        }),
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalledWith(
+        'task-1',
+        'Max retries exceeded',
         undefined
       )
     })
 
     it('should include retry count in dead letter queue entry', async () => {
       const task = createMockTask(5, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Failed',
@@ -299,23 +293,22 @@ describe('QueueProcessor', () => {
 
       await processor.processQueue('job-1')
 
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          retry_count: 5
-        }),
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalledWith(
+        'task-1',
+        'Failed',
         undefined
       )
     })
 
     it('should handle database error when moving to dead letter queue gracefully', async () => {
       const task = createMockTask(3, 3)
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Failed',
         durationMs: 100
       })
-      mockDb.createDeadLetterQueueItem.mockRejectedValueOnce(new Error('Database error'))
+      mockTaskService.moveToDeadLetter.mockRejectedValueOnce(new Error('Database error'))
 
       const result = await processor.processQueue('job-1')
       
@@ -325,7 +318,7 @@ describe('QueueProcessor', () => {
 
   describe('Queue Processing', () => {
     it('should return empty result when no pending tasks', async () => {
-      mockDb.getPendingTasks.mockResolvedValueOnce([])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([])
 
       const result = await processor.processQueue('job-1')
 
@@ -342,7 +335,7 @@ describe('QueueProcessor', () => {
       const task2 = createMockTask(0, 3, 'task-2')
       const task3 = createMockTask(0, 3, 'task-3')
       
-      mockDb.getPendingTasks.mockResolvedValueOnce([task1, task2, task3])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task1, task2, task3])
       const executionOrder: string[] = []
       
       mockTaskExecutor.executeTask = vi.fn().mockImplementation(async (_type, payload) => {
@@ -364,7 +357,7 @@ describe('QueueProcessor', () => {
         createMockTask(0, 3, 'task-5')
       ]
       
-      mockDb.getPendingTasks.mockResolvedValueOnce(tasks.slice(0, 2))
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce(tasks.slice(0, 2))
 
       const result = await processor.processQueue('job-1', { batchSize: 2 })
 
@@ -375,7 +368,7 @@ describe('QueueProcessor', () => {
       const task1 = createMockTask(0, 3, 'task-1')
       const task2 = createMockTask(0, 3, 'task-2')
       
-      mockDb.getPendingTasks.mockResolvedValueOnce([task1, task2])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task1, task2])
       mockCapacityChecker.reserveCapacity = vi.fn()
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false)
@@ -389,7 +382,7 @@ describe('QueueProcessor', () => {
 
     it('should return success when all tasks succeed', async () => {
       const task = createMockTask(0, 3, 'task-1')
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
 
       const result = await processor.processQueue('job-1')
 
@@ -400,7 +393,7 @@ describe('QueueProcessor', () => {
 
     it('should return failure when some tasks fail', async () => {
       const task = createMockTask(0, 3, 'task-1')
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockResolvedValueOnce({
         success: false,
         error: 'Failed',
@@ -416,7 +409,7 @@ describe('QueueProcessor', () => {
 
     it('should handle task execution errors gracefully', async () => {
       const task = createMockTask(0, 3, 'task-1')
-      mockDb.getPendingTasks.mockResolvedValueOnce([task])
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce([task])
       mockTaskExecutor.executeTask = vi.fn().mockRejectedValueOnce(new Error('Execution error'))
 
       const result = await processor.processQueue('job-1')
@@ -427,7 +420,7 @@ describe('QueueProcessor', () => {
 
   describe('Queue Stats', () => {
     it('should return correct queue statistics', async () => {
-      mockDb.getQueueStats.mockResolvedValueOnce({
+      mockTaskService.getQueueStats.mockResolvedValueOnce({
         pending: 1,
         running: 1,
         completed: 1,
@@ -445,7 +438,7 @@ describe('QueueProcessor', () => {
         failed: 1,
         cancelled: 1
       })
-      expect(mockDb.getQueueStats).toHaveBeenCalledWith('job-1')
+      expect(mockTaskService.getQueueStats).toHaveBeenCalledWith('job-1')
     })
   })
 
@@ -457,13 +450,15 @@ describe('QueueProcessor', () => {
         { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.RUNNING, retry_count: 0, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, owner_id: null },
       ]
       
-      mockDb.getPendingTasks.mockResolvedValueOnce(tasks)
-      mockDb.updateTasksStatusBatch.mockResolvedValueOnce(2)
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce(tasks)
+      mockTaskService.update.mockResolvedValue(undefined)
 
       const count = await processor.cancelPendingTasks('job-1')
 
       expect(count).toBe(2)
-      expect(mockDb.updateTasksStatusBatch).toHaveBeenCalledWith(['1', '2'], TaskStatus.CANCELLED)
+      expect(mockTaskService.update).toHaveBeenCalledTimes(2)
+      expect(mockTaskService.update).toHaveBeenCalledWith('1', { status: TaskStatus.CANCELLED })
+      expect(mockTaskService.update).toHaveBeenCalledWith('2', { status: TaskStatus.CANCELLED })
     })
   })
 
@@ -475,18 +470,18 @@ describe('QueueProcessor', () => {
         { id: '3', job_id: 'job-1', task_type: 'text', payload: '{}', priority: 1, status: TaskStatus.FAILED, retry_count: 2, max_retries: 3, created_at: new Date().toISOString(), started_at: null, completed_at: null, result: null, error_message: 'Error', owner_id: null },
       ]
       
-      mockDb.getPendingTasks.mockResolvedValueOnce(tasks)
+      mockTaskService.getPendingByJobId.mockResolvedValueOnce(tasks)
 
       const count = await processor.retryFailedTasks('job-1')
 
       expect(count).toBe(2)
-      expect(mockDb.updateTask).toHaveBeenCalledTimes(2)
-      expect(mockDb.updateTask).toHaveBeenCalledWith('1', {
+      expect(mockTaskService.update).toHaveBeenCalledTimes(2)
+      expect(mockTaskService.update).toHaveBeenCalledWith('1', {
         status: TaskStatus.PENDING,
         retry_count: 0,
         error_message: null
       })
-      expect(mockDb.updateTask).toHaveBeenCalledWith('3', {
+      expect(mockTaskService.update).toHaveBeenCalledWith('3', {
         status: TaskStatus.PENDING,
         retry_count: 0,
         error_message: null
@@ -535,7 +530,7 @@ describe('QueueProcessor', () => {
       const result = await processor.processBatch('job-1', batch)
 
       expect(result.tasksFailed).toBe(1)
-      expect(mockDb.createDeadLetterQueueItem).toHaveBeenCalled()
+      expect(mockTaskService.moveToDeadLetter).toHaveBeenCalled()
     })
   })
 })
