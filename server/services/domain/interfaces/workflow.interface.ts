@@ -66,4 +66,6 @@ export interface IWorkflowService {
    * Delete a workflow version
    */
   deleteVersion(versionId: string): Promise<void>
+
+  hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean>
 }

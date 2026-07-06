@@ -8,8 +8,8 @@ interface ServiceNodePermission {
   min_role: string
 }
 
-interface DatabaseService {
-  getServiceNodePermission(service: string, method: string): Promise<ServiceNodePermission | null>
+interface PermissionChecker {
+  get(service: string, method: string): Promise<ServiceNodePermission | null>
 }
 
 interface WorkflowNode {
@@ -29,7 +29,7 @@ interface WorkflowNodesJson {
 export async function validateWorkflowNodePermissions(
   nodesJson: WorkflowNodesJson,
   userRole: string,
-  db: DatabaseService,
+  permissionStore: PermissionChecker,
   res: Response
 ): Promise<boolean> {
   const actionNodes = (nodesJson.nodes || []).filter(n => n.type === 'action')
@@ -41,7 +41,7 @@ export async function validateWorkflowNodePermissions(
 
     if (!service || !method) continue
 
-    const permission = await db.getServiceNodePermission(service, method)
+    const permission = await permissionStore.get(service, method)
 
     if (!permission) {
       res.status(400).json({

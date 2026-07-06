@@ -80,4 +80,8 @@ export class WorkflowService implements IWorkflowService {
     }
     await this.workflowRepo.deleteVersion(versionId)
   }
+
+  async hasWorkflowPermission(workflowId: string, userId: string): Promise<boolean> {
+    return this.workflowRepo.hasPermission(workflowId, userId)
+  }
 }

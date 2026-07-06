@@ -164,7 +164,7 @@ router.post('/workflow/validate', validate(workflowValidateSchema), asyncHandler
 router.get('/workflow/templates', asyncHandler(async (req, res) => {
   const workflowService = getWorkflowService()
   const ownerId = buildOwnerFilter(req).params[0]
-  const templates: WorkflowTemplate[] = await workflowService.getMarkeds(ownerId)
+  const templates: WorkflowTemplate[] = await workflowService.getMarked(ownerId)
   successResponse(res, { templates, total: templates.length })
 }))
 

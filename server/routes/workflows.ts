@@ -3,7 +3,7 @@ import { validate, validateParams } from '../middleware/validate'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { successResponse, errorResponse, deletedResponse, createdResponse } from '../middleware/api-response'
 import {
-  getDatabaseService,
+  getServiceNodePermissionService,
   getEventBus,
   getServiceNodeRegistryService,
   getWorkflowEngineService,
@@ -67,7 +67,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }))
 
 router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const db = getServiceNodePermissionService()
   const workflowService = getWorkflowService()
   const user = getAuthenticatedUser(req)
 
@@ -81,7 +81,7 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
     workflow.owner_id === user.userId ||
     user.role === 'super' ||
     workflow.is_public ||
-    await db.hasWorkflowPermission(req.params.id, user.userId)
+    await getWorkflowService().hasWorkflowPermission(req.params.id, user.userId)
 
   if (!hasAccess) {
     errorResponse(res, 'You do not have access to this workflow', 403)
@@ -92,7 +92,7 @@ router.get('/:id', validateParams(workflowIdParamsSchema), asyncHandler(async (r
 }))
 
 router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const db = getServiceNodePermissionService()
   const workflowService = getWorkflowService()
   const userRole = getAuthenticatedUser(req).role
   const ownerId = getOwnerIdForInsert(req) ?? undefined
@@ -114,7 +114,7 @@ router.post('/', validate(createWorkflowSchema), asyncHandler(async (req, res) =
 }))
 
 router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const db = getServiceNodePermissionService()
   const workflowService = getWorkflowService()
   const user = getAuthenticatedUser(req)
 
@@ -133,7 +133,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
   if (req.body.nodes_json) {
     const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
     if (!parsed) return
-    if (!(await validateWorkflowNodePermissions(parsed, user.role, db, res))) return
+    if (!(await validateWorkflowNodePermissions(parsed, user.role, getServiceNodePermissionService(), res))) return
   }
 
   const workflow = await workflowService.update(req.params.id, req.body)
@@ -141,7 +141,7 @@ router.put('/:id', validateParams(workflowIdParamsSchema), validate(updateWorkfl
 }))
 
 router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWorkflowSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const db = getServiceNodePermissionService()
   const workflowService = getWorkflowService()
   const user = getAuthenticatedUser(req)
 
@@ -160,7 +160,7 @@ router.patch('/:id', validateParams(workflowIdParamsSchema), validate(partialWor
   if (req.body.nodes_json) {
     const parsed = parseJsonField<{ nodes: Array<{ type: string; data?: { config?: { service?: string; method?: string } } }> }>(req.body.nodes_json, res, 'nodes_json')
     if (!parsed) return
-    if (!(await validateWorkflowNodePermissions(parsed, user.role, db, res))) return
+    if (!(await validateWorkflowNodePermissions(parsed, user.role, getServiceNodePermissionService(), res))) return
   }
 
   const workflow = await workflowService.update(req.params.id, req.body)
