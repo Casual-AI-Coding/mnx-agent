@@ -20,6 +20,8 @@ import { LogRepository } from './repositories/log-repository.js'
 import { MaterialRepository } from './repositories/material-repository.js'
 import { MaterialItemRepository } from './repositories/material-item-repository.js'
 import { PromptRepository } from './repositories/prompt-repository.js'
+import { PromptTemplateRepository } from './repositories/prompt-template-repository.js'
+import { TemplateService } from './services/template-service.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
 import { UserRepository } from './repositories/user-repository.js'
@@ -63,6 +65,7 @@ export const TOKENS = {
   CAPACITY_SERVICE: 'capacityService',
   MATERIAL_SERVICE: 'materialService',
   EXPORT_SERVICE: 'exportService',
+  TEMPLATE_SERVICE: 'templateService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
   MEDIA_REPOSITORY: 'mediaRepository',
@@ -229,6 +232,12 @@ export async function registerServices(): Promise<void> {
     return new UserService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
   })
 
+  container.registerSingleton(TOKENS.TEMPLATE_SERVICE, (c) => {
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new TemplateService(new PromptTemplateRepository(conn))
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -327,6 +336,10 @@ export function getMaterialService(): MaterialService {
 
 export function getExportService(): ExportService {
   return getGlobalContainer().resolve<ExportService>(TOKENS.EXPORT_SERVICE)
+}
+
+export function getTemplateService(): TemplateService {
+  return getGlobalContainer().resolve<TemplateService>(TOKENS.TEMPLATE_SERVICE)
 }
 
 export function getSettingsService(): SettingsService {
