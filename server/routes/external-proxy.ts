@@ -5,9 +5,9 @@ import { successResponse, errorResponse } from '../middleware/api-response'
 import { getLogger } from '../lib/logger'
 import { saveMediaFile } from '../lib/media-storage'
 import {
-  getDatabaseService,
   getExternalApiLogRepository,
   getMediaRepository,
+  getSystemConfigService,
 } from '../service-registration.js'
 import { executeExternalProxyRequest } from './external-proxy/external-proxy-forward-helpers.js'
 import { saveExternalProxyImages } from './external-proxy/external-proxy-media-save-helpers.js'
@@ -38,7 +38,9 @@ export function isUrlAllowed(urlString: string): boolean {
 }
 
 async function refreshAllowedHostsIfNeeded(): Promise<void> {
-  await ensureExternalProxyAllowedHostsFresh(getDatabaseService())
+  await ensureExternalProxyAllowedHostsFresh({
+    getSystemConfigByKey: (key: string) => getSystemConfigService().getByKey(key),
+  })
 }
 
 const proxyRequestSchema = z.object({
