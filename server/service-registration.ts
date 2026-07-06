@@ -18,6 +18,8 @@ import { JobRepository } from './repositories/job-repository.js'
 import { LogRepository } from './repositories/log-repository.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { UserRepository } from './repositories/user-repository.js'
+import { TaskRepository } from './repositories/task-repository.js'
+import { DeadLetterRepository } from './repositories/deadletter-repository.js'
 import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
@@ -151,7 +153,12 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.TASK_SERVICE, (c) => {
-    return new TaskService(c.resolve(TOKENS.DATABASE))
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new TaskService(
+      new TaskRepository(conn),
+      new DeadLetterRepository(conn)
+    )
   })
 
   container.registerSingleton(TOKENS.LOG_SERVICE, (c) => {
