@@ -1,8 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { successResponse, errorResponse } from '../../middleware/api-response'
-import { getDatabaseService } from '../../service-registration.js'
-import { getCronSchedulerService } from '../../service-registration.js'
+import { getCronSchedulerService, getDatabaseService, getTaskService } from '../../service-registration.js'
 import { toLocalISODateString } from '../../lib/date-utils.js'
 import jobsRouter from './jobs'
 import queueRouter from './queue'
@@ -13,10 +12,10 @@ const router = Router()
 
 router.get('/health', asyncHandler(async (_req, res) => {
   try {
-    const db = getDatabaseService()
+    const taskService = getTaskService()
     const scheduler = getCronSchedulerService()
 
-    const taskCounts = await db.getTaskCountsByStatus()
+    const taskCounts = await taskService.getQueueStats()
 
     const health = {
       status: 'healthy',
@@ -27,7 +26,7 @@ router.get('/health', asyncHandler(async (_req, res) => {
         timezone: scheduler.getTimezone(),
       },
       database: {
-        connected: await db.isConnected(),
+        connected: await getDatabaseService().isConnected(),
       },
       queue: {
         pending: taskCounts.pending,

@@ -3,7 +3,7 @@ import { validate, validateQuery, validateParams } from '../../middleware/valida
 import { asyncHandler } from '../../middleware/asyncHandler'
 import { authenticateJWT } from '../../middleware/auth-middleware'
 import { successResponse, errorResponse } from '../../middleware/api-response'
-import { getDatabaseService, getWebhookService, getNotificationServiceInstance } from '../../service-registration.js'
+import { getJobService, getWebhookService, getNotificationServiceInstance } from '../../service-registration.js'
 import {
   createWebhookSchema,
   updateWebhookSchema,
@@ -26,12 +26,12 @@ router.get('/webhooks', asyncHandler(async (req, res) => {
 }))
 
 router.post('/webhooks', validate(createWebhookSchema), asyncHandler(async (req, res) => {
-  const db = getDatabaseService()
+  const jobService = getJobService()
   const webhookService = getWebhookService()
   const ownerId = getOwnerIdForInsert(req) ?? undefined
   const webhookData = req.body
 
-  const job = await db.getCronJobById(webhookData.job_id, ownerId)
+  const job = await jobService.getById(webhookData.job_id, ownerId)
   if (!withEntityNotFound(job, res, 'Job')) return
 
   const webhook = await webhookService.create({
