@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { CapacityChecker } from '../services/capacity-checker'
-import type { DatabaseService } from '../database/service-async'
+import type { ICapacityService } from './domain/interfaces/index.js'
 import type { MiniMaxClient } from '../lib/minimax/index.js'
 import type { CapacityRecord } from '../database/types'
 import { SimpleCache } from '../lib/cache'
 
 type GetBalanceMock = ReturnType<typeof vi.fn<() => Promise<unknown>>>
 type GetCodingPlanRemainsMock = ReturnType<typeof vi.fn<(productId?: string) => Promise<unknown>>>
-type GetCapacityRecordMock = ReturnType<typeof vi.fn<(serviceType: string) => Promise<CapacityRecord | null>>>
+type GetByServiceMock = ReturnType<typeof vi.fn<(serviceType: string) => Promise<CapacityRecord | null>>>
 type UpsertCapacityRecordMock = ReturnType<
   typeof vi.fn<(serviceType: string, data: unknown) => Promise<unknown>>
 >
@@ -22,10 +22,10 @@ class TestableCapacityChecker extends CapacityChecker {
 describe('CapacityChecker', () => {
   let checker: TestableCapacityChecker
   let mockClient: Partial<MiniMaxClient>
-  let mockDb: Partial<DatabaseService>
+  let mockCapSvc: Partial<ICapacityService>
   let mockGetBalance: GetBalanceMock
   let mockGetCodingPlanRemains: GetCodingPlanRemainsMock
-  let mockGetCapacityRecord: GetCapacityRecordMock
+  let mockGetByService: GetByServiceMock
   let mockUpsertCapacityRecord: UpsertCapacityRecordMock
   let mockDecrementCapacity: DecrementCapacityMock
 
@@ -42,19 +42,19 @@ describe('CapacityChecker', () => {
       getCodingPlanRemains: (productId?: string) => mockGetCodingPlanRemains(productId),
     }
 
-    mockGetCapacityRecord = vi.fn<(serviceType: string) => Promise<CapacityRecord | null>>().mockResolvedValue(null)
+    mockGetByService = vi.fn<(serviceType: string) => Promise<CapacityRecord | null>>().mockResolvedValue(null)
     mockUpsertCapacityRecord = vi.fn<(serviceType: string, data: unknown) => Promise<unknown>>().mockResolvedValue(undefined)
     mockDecrementCapacity = vi.fn<(serviceType: string, amount?: number) => Promise<CapacityRecord | null>>().mockResolvedValue(null)
 
-    mockDb = {
-      getCapacityRecord: (serviceType: string) => mockGetCapacityRecord(serviceType),
-      upsertCapacityRecord: (serviceType: string, data: unknown) => mockUpsertCapacityRecord(serviceType, data),
+    mockCapSvc = {
+      getByService: (serviceType: string) => mockGetByService(serviceType),
+      upsert: (serviceType: string, data: unknown) => mockUpsertCapacityRecord(serviceType, data),
       decrementCapacity: (serviceType: string, amount?: number) => mockDecrementCapacity(serviceType, amount),
     }
 
     checker = new TestableCapacityChecker(
       mockClient as MiniMaxClient,
-      mockDb as DatabaseService
+      mockCapSvc as ICapacityService
     )
   })
 
@@ -222,7 +222,7 @@ describe('CapacityChecker', () => {
     })
 
     it('should return false when capacity record has zero remaining quota', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 0,
@@ -237,7 +237,7 @@ describe('CapacityChecker', () => {
     })
 
     it('should return true when capacity record has remaining quota', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 50,
@@ -260,7 +260,7 @@ describe('CapacityChecker', () => {
     })
 
     it('should return remaining quota from capacity record', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 250,
@@ -347,7 +347,7 @@ describe('CapacityChecker', () => {
     })
 
     it('should return false when remaining capacity is zero', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 0,
@@ -364,7 +364,7 @@ describe('CapacityChecker', () => {
 
   describe('getSafeExecutionLimit', () => {
     it('should return minimum of remaining capacity and rate limit', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 200,
@@ -379,7 +379,7 @@ describe('CapacityChecker', () => {
     })
 
     it('should consider balance when calculating safe limit', async () => {
-      mockGetCapacityRecord.mockResolvedValueOnce({
+      mockGetByService.mockResolvedValueOnce({
         id: '1',
         service_type: 'text',
         remaining_quota: 500,
@@ -420,7 +420,7 @@ describe('CapacityChecker', () => {
 
     it('should poll until capacity becomes available', async () => {
       let callCount = 0
-      mockGetCapacityRecord.mockImplementation(async () => {
+      mockGetByService.mockImplementation(async () => {
         callCount++
         if (callCount < 3) {
           return {

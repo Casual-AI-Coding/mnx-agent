@@ -83,7 +83,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.CAPACITY_CHECKER, (c) => {
-    return new CapacityChecker(c.resolve(TOKENS.MINIMAX_CLIENT), c.resolve(TOKENS.DATABASE))
+    return new CapacityChecker(c.resolve(TOKENS.MINIMAX_CLIENT), c.resolve(TOKENS.CAPACITY_SERVICE))
   })
 
   container.registerSingleton(TOKENS.SERVICE_NODE_REGISTRY, (c) => {

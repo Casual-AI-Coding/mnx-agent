@@ -1,6 +1,6 @@
 import { MiniMaxClient } from '../lib/minimax/index.js'
 import { CapacityRecord, CreateCapacityRecord } from '../database/types'
-import type { DatabaseService } from '../database/service-async.js'
+import type { ICapacityService } from './domain/interfaces/index.js'
 import { SimpleCache } from '../lib/cache.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
 import { RATE_LIMITS_BY_SERVICE } from '../config/rate-limits.js'
@@ -44,12 +44,12 @@ function parseBalanceValue(value: unknown): number {
 
 export class CapacityChecker {
   private client: MiniMaxClient
-  private db: DatabaseService
+  private capacityService: ICapacityService
   private balanceCache: SimpleCache<BalanceResult>
 
-  constructor(client: MiniMaxClient, db: DatabaseService) {
+  constructor(client: MiniMaxClient, capacityService: ICapacityService) {
     this.client = client
-    this.db = db
+    this.capacityService = capacityService
     this.balanceCache = new SimpleCache<BalanceResult>()
   }
 
@@ -114,7 +114,7 @@ export class CapacityChecker {
       return true
     }
 
-    const reserved = await this.db.decrementCapacity(serviceType)
+    const reserved = await this.capacityService.decrementCapacity(serviceType)
     return reserved !== null
   }
 
@@ -184,12 +184,12 @@ export class CapacityChecker {
    * @returns true if capacity was successfully decremented, false if insufficient capacity or service not found
    */
   async decrementCapacity(serviceType: string): Promise<boolean> {
-    const result = await this.db.decrementCapacity(serviceType, 1)
+    const result = await this.capacityService.decrementCapacity(serviceType, 1)
     return result !== null
   }
 
   private async fetchCapacityRecord(serviceType: string): Promise<CapacityRecord | null> {
-    return await this.db.getCapacityRecord(serviceType)
+    return await this.capacityService.getByService(serviceType)
   }
 
   private async saveCapacityRecord(
@@ -204,7 +204,7 @@ export class CapacityChecker {
       total_quota: totalQuota,
       reset_at: resetAt ?? null,
     }
-    await this.db.upsertCapacityRecord(serviceType, record)
+    await this.capacityService.upsert(serviceType, record)
   }
 
   private delay(ms: number): Promise<void> {
@@ -212,6 +212,6 @@ export class CapacityChecker {
   }
 }
 
-export function createCapacityChecker(client: MiniMaxClient, db: DatabaseService): CapacityChecker {
-  return new CapacityChecker(client, db)
+export function createCapacityChecker(client: MiniMaxClient, capacityService: ICapacityService): CapacityChecker {
+  return new CapacityChecker(client, capacityService)
 }
