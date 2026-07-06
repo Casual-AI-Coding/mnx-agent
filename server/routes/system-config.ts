@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
-import { getDatabaseService } from '../service-registration.js'
+import { getSystemConfigService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
@@ -45,16 +45,16 @@ const createConfigSchema = z.object({
 
 // GET /api/system-config - Get all system configs
 router.get('/', asyncHandler(async (_req, res) => {
-  const db = getDatabaseService()
-  const configs = await db.getAllSystemConfigs()
+  const db = getSystemConfigService()
+  const configs = await db.getAll()
   successResponse(res, configs)
 }))
 
 // GET /api/system-config/:key - Get a single config by key
 router.get('/:key', asyncHandler(async (req, res) => {
   const { key } = req.params
-  const db = getDatabaseService()
-  const config = await db.getSystemConfigByKey(key)
+  const db = getSystemConfigService()
+  const config = await db.getByKey(key)
 
   if (!withEntityNotFound(config, res, 'Configuration')) return
   
@@ -64,20 +64,20 @@ router.get('/:key', asyncHandler(async (req, res) => {
 // POST /api/system-config - Create a new config
 router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => {
   const { key, value, description, value_type } = req.body
-  const db = getDatabaseService()
+  const db = getSystemConfigService()
   const validationError = validateRuntimeConfig(key, value)
   if (validationError) {
     errorResponse(res, validationError, 400)
     return
   }
   
-  const existing = await db.getSystemConfigByKey(key)
+  const existing = await db.getByKey(key)
   if (existing) {
     errorResponse(res, 'Configuration key already exists', 400)
     return
   }
   
-  const config = await db.createSystemConfig({
+  const config = await db.create({
     key,
     value,
     description: description ?? null,
@@ -92,14 +92,14 @@ router.post('/', validate(createConfigSchema), asyncHandler(async (req, res) => 
 router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res) => {
   const { key } = req.params
   const { value, description } = req.body
-  const db = getDatabaseService()
+  const db = getSystemConfigService()
   const validationError = validateRuntimeConfig(key, value)
   if (validationError) {
     errorResponse(res, validationError, 400)
     return
   }
   
-  const config = await db.updateSystemConfig(key, {
+  const config = await db.update(key, {
     value,
     description,
   }, req.user?.userId)
@@ -114,9 +114,9 @@ router.patch('/:key', validate(updateConfigSchema), asyncHandler(async (req, res
 // DELETE /api/system-config/:key - Delete a config
 router.delete('/:key', asyncHandler(async (req, res) => {
   const { key } = req.params
-  const db = getDatabaseService()
+  const db = getSystemConfigService()
   
-  const deleted = await db.deleteSystemConfig(key)
+  const deleted = await db.delete(key)
   if (!withEntityNotFound(deleted, res, 'Configuration')) return
   markRuntimeConfigStale(key)
   

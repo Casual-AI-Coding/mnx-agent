@@ -21,7 +21,9 @@ import { MaterialRepository } from './repositories/material-repository.js'
 import { MaterialItemRepository } from './repositories/material-item-repository.js'
 import { PromptRepository } from './repositories/prompt-repository.js'
 import { PromptTemplateRepository } from './repositories/prompt-template-repository.js'
+import { SystemConfigRepository } from './repositories/system-config-repository.js'
 import { TemplateService } from './services/template-service.js'
+import { SystemConfigService } from './services/system-config-service.js'
 import { MediaRepository } from './repositories/media-repository.js'
 import { TaskRepository } from './repositories/task-repository.js'
 import { UserRepository } from './repositories/user-repository.js'
@@ -66,6 +68,7 @@ export const TOKENS = {
   MATERIAL_SERVICE: 'materialService',
   EXPORT_SERVICE: 'exportService',
   TEMPLATE_SERVICE: 'templateService',
+  SYSTEM_CONFIG_SERVICE: 'systemConfigService',
   SETTINGS_SERVICE: 'settingsService',
   EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
   MEDIA_REPOSITORY: 'mediaRepository',
@@ -238,6 +241,12 @@ export async function registerServices(): Promise<void> {
     return new TemplateService(new PromptTemplateRepository(conn))
   })
 
+  container.registerSingleton(TOKENS.SYSTEM_CONFIG_SERVICE, (c) => {
+    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
+    const conn = db.getConnection()
+    return new SystemConfigService(new SystemConfigRepository(conn))
+  })
+
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
   container.register(TOKENS.EVENT_BUS, cronEvents)
 }
@@ -336,6 +345,10 @@ export function getMaterialService(): MaterialService {
 
 export function getExportService(): ExportService {
   return getGlobalContainer().resolve<ExportService>(TOKENS.EXPORT_SERVICE)
+}
+
+export function getSystemConfigService(): SystemConfigService {
+  return getGlobalContainer().resolve<SystemConfigService>(TOKENS.SYSTEM_CONFIG_SERVICE)
 }
 
 export function getTemplateService(): TemplateService {

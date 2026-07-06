@@ -21,6 +21,7 @@ import type {
 import type { ExecutionStateManager } from './services/execution-state-manager.js'
 import type { ExportService } from './services/export-service.js'
 import type { TemplateService } from './services/template-service.js'
+import type { SystemConfigService } from './services/system-config-service.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
 import type { IDLQAutoRetryScheduler } from './services/interfaces/dlq-auto-retry-scheduler.interface.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
@@ -61,6 +62,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.MATERIAL_SERVICE]: MaterialService
   readonly [TOKENS.EXPORT_SERVICE]: ExportService
   readonly [TOKENS.TEMPLATE_SERVICE]: TemplateService
+  readonly [TOKENS.SYSTEM_CONFIG_SERVICE]: SystemConfigService
   readonly [TOKENS.SETTINGS_SERVICE]: SettingsService
   readonly [TOKENS.EXTERNAL_API_LOG_REPOSITORY]: ExternalApiLogRepository
   readonly [TOKENS.MEDIA_REPOSITORY]: MediaRepository
