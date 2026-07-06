@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { WorkflowService } from './workflow.service.js'
-import type { DatabaseService } from '../../database/service-async.js'
+import type { WorkflowRepository } from '../../repositories/workflow-repository.js'
 import type {
   WorkflowTemplate,
   WorkflowVersion,
@@ -11,20 +11,20 @@ import type {
 
 describe('WorkflowService', () => {
   let service: WorkflowService
-  let mockDb: {
-    getWorkflowTemplateById: ReturnType<typeof vi.fn>
-    getAllWorkflowTemplates: ReturnType<typeof vi.fn>
-    getWorkflowTemplatesPaginated: ReturnType<typeof vi.fn>
-    getMarkedWorkflowTemplates: ReturnType<typeof vi.fn>
-    createWorkflowTemplate: ReturnType<typeof vi.fn>
-    updateWorkflowTemplate: ReturnType<typeof vi.fn>
-    deleteWorkflowTemplate: ReturnType<typeof vi.fn>
-    getWorkflowVersionsByTemplate: ReturnType<typeof vi.fn>
-    getActiveWorkflowVersion: ReturnType<typeof vi.fn>
-    createWorkflowVersion: ReturnType<typeof vi.fn>
-    activateWorkflowVersion: ReturnType<typeof vi.fn>
-    deleteWorkflowVersion: ReturnType<typeof vi.fn>
-    getWorkflowVersionById: ReturnType<typeof vi.fn>
+  let mockRepo: {
+    getTemplateById: ReturnType<typeof vi.fn>
+    getAllTemplates: ReturnType<typeof vi.fn>
+    getTemplatesPaginated: ReturnType<typeof vi.fn>
+    getPublicTemplates: ReturnType<typeof vi.fn>
+    createTemplate: ReturnType<typeof vi.fn>
+    updateTemplate: ReturnType<typeof vi.fn>
+    deleteTemplate: ReturnType<typeof vi.fn>
+    getVersionsByTemplate: ReturnType<typeof vi.fn>
+    getActiveVersion: ReturnType<typeof vi.fn>
+    createVersion: ReturnType<typeof vi.fn>
+    activateVersion: ReturnType<typeof vi.fn>
+    deleteVersion: ReturnType<typeof vi.fn>
+    getVersionById: ReturnType<typeof vi.fn>
   }
 
   const mockTemplate: WorkflowTemplate = {
@@ -54,62 +54,62 @@ describe('WorkflowService', () => {
   }
 
   beforeEach(() => {
-    mockDb = {
-      getWorkflowTemplateById: vi.fn(),
-      getAllWorkflowTemplates: vi.fn(),
-      getWorkflowTemplatesPaginated: vi.fn(),
-      getMarkedWorkflowTemplates: vi.fn(),
-      createWorkflowTemplate: vi.fn(),
-      updateWorkflowTemplate: vi.fn(),
-      deleteWorkflowTemplate: vi.fn(),
-      getWorkflowVersionsByTemplate: vi.fn(),
-      getActiveWorkflowVersion: vi.fn(),
-      createWorkflowVersion: vi.fn(),
-      activateWorkflowVersion: vi.fn(),
-      deleteWorkflowVersion: vi.fn(),
-      getWorkflowVersionById: vi.fn(),
+    mockRepo = {
+      getTemplateById: vi.fn(),
+      getAllTemplates: vi.fn(),
+      getTemplatesPaginated: vi.fn(),
+      getPublicTemplates: vi.fn(),
+      createTemplate: vi.fn(),
+      updateTemplate: vi.fn(),
+      deleteTemplate: vi.fn(),
+      getVersionsByTemplate: vi.fn(),
+      getActiveVersion: vi.fn(),
+      createVersion: vi.fn(),
+      activateVersion: vi.fn(),
+      deleteVersion: vi.fn(),
+      getVersionById: vi.fn(),
     }
-    service = new WorkflowService(mockDb as unknown as DatabaseService)
+    service = new WorkflowService(mockRepo as unknown as WorkflowRepository)
   })
 
   describe('getById', () => {
     it('should return template by id', async () => {
-      mockDb.getWorkflowTemplateById.mockResolvedValue(mockTemplate)
+      mockRepo.getTemplateById.mockResolvedValue(mockTemplate)
       const result = await service.getById('template-1', 'owner-1')
-      expect(mockDb.getWorkflowTemplateById).toHaveBeenCalledWith('template-1', 'owner-1')
+      expect(mockRepo.getTemplateById).toHaveBeenCalledWith('template-1', 'owner-1')
       expect(result).toEqual(mockTemplate)
     })
 
     it('should return null if not found', async () => {
-      mockDb.getWorkflowTemplateById.mockResolvedValue(null)
+      mockRepo.getTemplateById.mockResolvedValue(null)
       const result = await service.getById('nonexistent')
       expect(result).toBeNull()
     })
 
     it('should call db without ownerId when not provided', async () => {
-      mockDb.getWorkflowTemplateById.mockResolvedValue(mockTemplate)
+      mockRepo.getTemplateById.mockResolvedValue(mockTemplate)
       await service.getById('template-1')
-      expect(mockDb.getWorkflowTemplateById).toHaveBeenCalledWith('template-1', undefined)
+      expect(mockRepo.getTemplateById).toHaveBeenCalledWith('template-1', undefined)
     })
   })
 
   describe('getAll', () => {
     it('should return all templates with ownerId filter', async () => {
-      mockDb.getAllWorkflowTemplates.mockResolvedValue([mockTemplate])
+      mockRepo.getAllTemplates.mockResolvedValue([mockTemplate])
       const result = await service.getAll('owner-1')
-      expect(mockDb.getAllWorkflowTemplates).toHaveBeenCalledWith('owner-1')
+      expect(mockRepo.getAllTemplates).toHaveBeenCalledWith('owner-1')
       expect(result).toEqual([mockTemplate])
     })
 
     it('should return all templates without ownerId filter', async () => {
-      mockDb.getAllWorkflowTemplates.mockResolvedValue([mockTemplate])
+      mockRepo.getAllTemplates.mockResolvedValue([mockTemplate])
       const result = await service.getAll()
-      expect(mockDb.getAllWorkflowTemplates).toHaveBeenCalledWith(undefined)
+      expect(mockRepo.getAllTemplates).toHaveBeenCalledWith(undefined)
       expect(result).toEqual([mockTemplate])
     })
 
     it('should return empty array when no templates', async () => {
-      mockDb.getAllWorkflowTemplates.mockResolvedValue([])
+      mockRepo.getAllTemplates.mockResolvedValue([])
       const result = await service.getAll('owner-1')
       expect(result).toEqual([])
     })
@@ -119,7 +119,7 @@ describe('WorkflowService', () => {
         mockTemplate,
         { ...mockTemplate, id: 'template-2', name: 'Second Workflow' },
       ]
-      mockDb.getAllWorkflowTemplates.mockResolvedValue(templates)
+      mockRepo.getAllTemplates.mockResolvedValue(templates)
       const result = await service.getAll('owner-1')
       expect(result).toHaveLength(2)
       expect(result[0].id).toBe('template-1')
@@ -130,12 +130,12 @@ describe('WorkflowService', () => {
   describe('getPaginated', () => {
     it('should return paginated templates with correct offset calculation', async () => {
       const paginatedResult = { templates: [mockTemplate], total: 10 }
-      mockDb.getWorkflowTemplatesPaginated.mockResolvedValue(paginatedResult)
+      mockRepo.getTemplatesPaginated.mockResolvedValue(paginatedResult)
 
       const result = await service.getPaginated(2, 5, 'owner-1')
 
       // offset = (page - 1) * limit = (2 - 1) * 5 = 5
-      expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith({
+      expect(mockRepo.getTemplatesPaginated).toHaveBeenCalledWith({
         ownerId: 'owner-1',
         limit: 5,
         offset: 5,
@@ -145,12 +145,12 @@ describe('WorkflowService', () => {
 
     it('should calculate offset for first page', async () => {
       const paginatedResult = { templates: [mockTemplate], total: 1 }
-      mockDb.getWorkflowTemplatesPaginated.mockResolvedValue(paginatedResult)
+      mockRepo.getTemplatesPaginated.mockResolvedValue(paginatedResult)
 
       const result = await service.getPaginated(1, 10, 'owner-1')
 
       // offset = (1 - 1) * 10 = 0
-      expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith({
+      expect(mockRepo.getTemplatesPaginated).toHaveBeenCalledWith({
         ownerId: 'owner-1',
         limit: 10,
         offset: 0,
@@ -160,11 +160,11 @@ describe('WorkflowService', () => {
 
     it('should work without ownerId', async () => {
       const paginatedResult = { templates: [], total: 0 }
-      mockDb.getWorkflowTemplatesPaginated.mockResolvedValue(paginatedResult)
+      mockRepo.getTemplatesPaginated.mockResolvedValue(paginatedResult)
 
       const result = await service.getPaginated(1, 20)
 
-      expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith({
+      expect(mockRepo.getTemplatesPaginated).toHaveBeenCalledWith({
         ownerId: undefined,
         limit: 20,
         offset: 0,
@@ -175,12 +175,12 @@ describe('WorkflowService', () => {
 
     it('should handle large page numbers', async () => {
       const paginatedResult = { templates: [], total: 100 }
-      mockDb.getWorkflowTemplatesPaginated.mockResolvedValue(paginatedResult)
+      mockRepo.getTemplatesPaginated.mockResolvedValue(paginatedResult)
 
       await service.getPaginated(10, 10)
 
       // offset = (10 - 1) * 10 = 90
-      expect(mockDb.getWorkflowTemplatesPaginated).toHaveBeenCalledWith({
+      expect(mockRepo.getTemplatesPaginated).toHaveBeenCalledWith({
         ownerId: undefined,
         limit: 10,
         offset: 90,
@@ -190,16 +190,16 @@ describe('WorkflowService', () => {
 
   describe('getMarked', () => {
     it('should return marked templates with ownerId', async () => {
-      mockDb.getMarkedWorkflowTemplates.mockResolvedValue([mockTemplate])
+      mockRepo.getPublicTemplates.mockResolvedValue([mockTemplate])
       const result = await service.getMarked('owner-1')
-      expect(mockDb.getMarkedWorkflowTemplates).toHaveBeenCalledWith('owner-1')
+      expect(mockRepo.getPublicTemplates).toHaveBeenCalledWith('owner-1')
       expect(result).toEqual([mockTemplate])
     })
 
     it('should return marked templates without ownerId', async () => {
-      mockDb.getMarkedWorkflowTemplates.mockResolvedValue([])
+      mockRepo.getPublicTemplates.mockResolvedValue([])
       const result = await service.getMarked()
-      expect(mockDb.getMarkedWorkflowTemplates).toHaveBeenCalledWith(undefined)
+      expect(mockRepo.getPublicTemplates).toHaveBeenCalledWith(undefined)
       expect(result).toEqual([])
     })
   })
@@ -213,14 +213,14 @@ describe('WorkflowService', () => {
         edges_json: '{"edges":["edge1"]}',
         is_public: false,
       }
-      mockDb.createWorkflowTemplate.mockResolvedValue({
+      mockRepo.createTemplate.mockResolvedValue({
         ...mockTemplate,
         name: 'New Workflow',
       })
 
       const result = await service.create(createData, 'owner-1')
 
-      expect(mockDb.createWorkflowTemplate).toHaveBeenCalledWith(
+      expect(mockRepo.createTemplate).toHaveBeenCalledWith(
         {
           name: 'New Workflow',
           description: 'Description',
@@ -240,7 +240,7 @@ describe('WorkflowService', () => {
         edges_json: '{}',
         is_public: true,
       }
-      mockDb.createWorkflowTemplate.mockResolvedValue({
+      mockRepo.createTemplate.mockResolvedValue({
         ...mockTemplate,
         name: 'Public Workflow',
         is_public: true,
@@ -249,7 +249,7 @@ describe('WorkflowService', () => {
 
       const result = await service.create(createData)
 
-      expect(mockDb.createWorkflowTemplate).toHaveBeenCalledWith(
+      expect(mockRepo.createTemplate).toHaveBeenCalledWith(
         {
           name: 'Public Workflow',
           nodes_json: '{}',
@@ -267,7 +267,7 @@ describe('WorkflowService', () => {
         nodes_json: '{}',
         edges_json: '{}',
       }
-      mockDb.createWorkflowTemplate.mockRejectedValue(new Error('Name required'))
+      mockRepo.createTemplate.mockRejectedValue(new Error('Name required'))
 
       await expect(service.create(createData)).rejects.toThrow('Name required')
     })
@@ -280,7 +280,7 @@ describe('WorkflowService', () => {
         edges_json: '{"edges":[]}',
         is_public: true,
       }
-      mockDb.createWorkflowTemplate.mockResolvedValue({
+      mockRepo.createTemplate.mockResolvedValue({
         ...mockTemplate,
         ...createData,
       })
@@ -296,14 +296,14 @@ describe('WorkflowService', () => {
   describe('update', () => {
     it('should update template', async () => {
       const updateData: UpdateWorkflowTemplate = { name: 'Updated Name' }
-      mockDb.updateWorkflowTemplate.mockResolvedValue({
+      mockRepo.updateTemplate.mockResolvedValue({
         ...mockTemplate,
         name: 'Updated Name',
       })
 
       const result = await service.update('template-1', updateData, 'owner-1')
 
-      expect(mockDb.updateWorkflowTemplate).toHaveBeenCalledWith(
+      expect(mockRepo.updateTemplate).toHaveBeenCalledWith(
         'template-1',
         updateData,
         'owner-1'
@@ -312,15 +312,15 @@ describe('WorkflowService', () => {
     })
 
     it('should return null when updating non-existent template', async () => {
-      mockDb.updateWorkflowTemplate.mockResolvedValue(null)
+      mockRepo.updateTemplate.mockResolvedValue(null)
       const result = await service.update('nonexistent', { name: 'Updated' })
       expect(result).toBeNull()
     })
 
     it('should update without ownerId', async () => {
-      mockDb.updateWorkflowTemplate.mockResolvedValue(mockTemplate)
+      mockRepo.updateTemplate.mockResolvedValue(mockTemplate)
       await service.update('template-1', { description: 'New desc' })
-      expect(mockDb.updateWorkflowTemplate).toHaveBeenCalledWith(
+      expect(mockRepo.updateTemplate).toHaveBeenCalledWith(
         'template-1',
         { description: 'New desc' },
         undefined
@@ -333,7 +333,7 @@ describe('WorkflowService', () => {
         description: 'New description',
         is_public: true,
       }
-      mockDb.updateWorkflowTemplate.mockResolvedValue({
+      mockRepo.updateTemplate.mockResolvedValue({
         ...mockTemplate,
         ...updateData,
       })
@@ -348,26 +348,26 @@ describe('WorkflowService', () => {
 
   describe('delete', () => {
     it('should delete template', async () => {
-      mockDb.deleteWorkflowTemplate.mockResolvedValue(true)
+      mockRepo.deleteTemplate.mockResolvedValue(true)
       await service.delete('template-1', 'owner-1')
-      expect(mockDb.deleteWorkflowTemplate).toHaveBeenCalledWith('template-1', 'owner-1')
+      expect(mockRepo.deleteTemplate).toHaveBeenCalledWith('template-1', 'owner-1')
     })
 
     it('should throw if template not found', async () => {
-      mockDb.deleteWorkflowTemplate.mockResolvedValue(false)
+      mockRepo.deleteTemplate.mockResolvedValue(false)
       await expect(service.delete('nonexistent')).rejects.toThrow(
         'WorkflowTemplate not found: nonexistent'
       )
     })
 
     it('should delete without ownerId', async () => {
-      mockDb.deleteWorkflowTemplate.mockResolvedValue(true)
+      mockRepo.deleteTemplate.mockResolvedValue(true)
       await service.delete('template-1')
-      expect(mockDb.deleteWorkflowTemplate).toHaveBeenCalledWith('template-1', undefined)
+      expect(mockRepo.deleteTemplate).toHaveBeenCalledWith('template-1', undefined)
     })
 
     it('should throw with correct id in error message', async () => {
-      mockDb.deleteWorkflowTemplate.mockResolvedValue(false)
+      mockRepo.deleteTemplate.mockResolvedValue(false)
       await expect(service.delete('missing-123')).rejects.toThrow(
         'WorkflowTemplate not found: missing-123'
       )
@@ -377,16 +377,16 @@ describe('WorkflowService', () => {
   describe('getVersions', () => {
     it('should return all versions for a template', async () => {
       const versions = [mockVersion, { ...mockVersion, id: 'version-2', version_number: 2 }]
-      mockDb.getWorkflowVersionsByTemplate.mockResolvedValue(versions)
+      mockRepo.getVersionsByTemplate.mockResolvedValue(versions)
 
       const result = await service.getVersions('template-1')
 
-      expect(mockDb.getWorkflowVersionsByTemplate).toHaveBeenCalledWith('template-1')
+      expect(mockRepo.getVersionsByTemplate).toHaveBeenCalledWith('template-1')
       expect(result).toHaveLength(2)
     })
 
     it('should return empty array when no versions', async () => {
-      mockDb.getWorkflowVersionsByTemplate.mockResolvedValue([])
+      mockRepo.getVersionsByTemplate.mockResolvedValue([])
       const result = await service.getVersions('template-1')
       expect(result).toEqual([])
     })
@@ -394,20 +394,20 @@ describe('WorkflowService', () => {
 
   describe('getActiveVersion', () => {
     it('should return active version', async () => {
-      mockDb.getActiveWorkflowVersion.mockResolvedValue(mockVersion)
+      mockRepo.getActiveVersion.mockResolvedValue(mockVersion)
       const result = await service.getActiveVersion('template-1')
-      expect(mockDb.getActiveWorkflowVersion).toHaveBeenCalledWith('template-1')
+      expect(mockRepo.getActiveVersion).toHaveBeenCalledWith('template-1')
       expect(result).toEqual(mockVersion)
     })
 
     it('should return null when no active version', async () => {
-      mockDb.getActiveWorkflowVersion.mockResolvedValue(null)
+      mockRepo.getActiveVersion.mockResolvedValue(null)
       const result = await service.getActiveVersion('template-1')
       expect(result).toBeNull()
     })
 
     it('should return null when db returns undefined', async () => {
-      mockDb.getActiveWorkflowVersion.mockResolvedValue(undefined)
+      mockRepo.getActiveVersion.mockResolvedValue(undefined)
       const result = await service.getActiveVersion('template-1')
       expect(result).toBeNull()
     })
@@ -422,7 +422,7 @@ describe('WorkflowService', () => {
         nodes_json: '{"nodes":[]}',
         edges_json: '{"edges":[]}',
       }
-      mockDb.createWorkflowVersion.mockResolvedValue({
+      mockRepo.createVersion.mockResolvedValue({
         ...mockVersion,
         id: 'version-2',
         version_number: 2,
@@ -431,7 +431,7 @@ describe('WorkflowService', () => {
 
       const result = await service.createVersion(createData)
 
-      expect(mockDb.createWorkflowVersion).toHaveBeenCalledWith(createData)
+      expect(mockRepo.createVersion).toHaveBeenCalledWith(createData)
       expect(result.version_number).toBe(2)
     })
 
@@ -447,7 +447,7 @@ describe('WorkflowService', () => {
         created_by: 'user-2',
         is_active: false,
       }
-      mockDb.createWorkflowVersion.mockResolvedValue({
+      mockRepo.createVersion.mockResolvedValue({
         ...mockVersion,
         ...createData,
         id: 'version-3',
@@ -463,44 +463,44 @@ describe('WorkflowService', () => {
 
   describe('activateVersion', () => {
     it('should activate version and return updated version', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValue(mockVersion)
-      mockDb.activateWorkflowVersion.mockResolvedValue(undefined)
-      mockDb.getWorkflowVersionById.mockResolvedValue({
+      mockRepo.getVersionById.mockResolvedValue(mockVersion)
+      mockRepo.activateVersion.mockResolvedValue(undefined)
+      mockRepo.getVersionById.mockResolvedValue({
         ...mockVersion,
         is_active: true,
       })
 
       const result = await service.activateVersion('version-1')
 
-      expect(mockDb.getWorkflowVersionById).toHaveBeenCalledWith('version-1')
-      expect(mockDb.activateWorkflowVersion).toHaveBeenCalledWith('version-1', 'template-1')
+      expect(mockRepo.getVersionById).toHaveBeenCalledWith('version-1')
+      expect(mockRepo.activateVersion).toHaveBeenCalledWith('version-1', 'template-1')
       expect(result?.is_active).toBe(true)
     })
 
     it('should return null if version not found', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValue(null)
+      mockRepo.getVersionById.mockResolvedValue(null)
       const result = await service.activateVersion('nonexistent')
       expect(result).toBeNull()
-      expect(mockDb.activateWorkflowVersion).not.toHaveBeenCalled()
+      expect(mockRepo.activateVersion).not.toHaveBeenCalled()
     })
 
     it('should call getWorkflowVersionById twice', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValueOnce(mockVersion)
-      mockDb.activateWorkflowVersion.mockResolvedValue(undefined)
-      mockDb.getWorkflowVersionById.mockResolvedValueOnce({
+      mockRepo.getVersionById.mockResolvedValueOnce(mockVersion)
+      mockRepo.activateVersion.mockResolvedValue(undefined)
+      mockRepo.getVersionById.mockResolvedValueOnce({
         ...mockVersion,
         is_active: true,
       })
 
       await service.activateVersion('version-1')
 
-      expect(mockDb.getWorkflowVersionById).toHaveBeenCalledTimes(2)
+      expect(mockRepo.getVersionById).toHaveBeenCalledTimes(2)
     })
 
     it('should return null if updated version not found after activation', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValueOnce(mockVersion)
-      mockDb.activateWorkflowVersion.mockResolvedValue(undefined)
-      mockDb.getWorkflowVersionById.mockResolvedValueOnce(null)
+      mockRepo.getVersionById.mockResolvedValueOnce(mockVersion)
+      mockRepo.activateVersion.mockResolvedValue(undefined)
+      mockRepo.getVersionById.mockResolvedValueOnce(null)
 
       const result = await service.activateVersion('version-1')
 
@@ -510,25 +510,25 @@ describe('WorkflowService', () => {
 
   describe('deleteVersion', () => {
     it('should delete version', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValue(mockVersion)
-      mockDb.deleteWorkflowVersion.mockResolvedValue(undefined)
+      mockRepo.getVersionById.mockResolvedValue(mockVersion)
+      mockRepo.deleteVersion.mockResolvedValue(undefined)
 
       await service.deleteVersion('version-1')
 
-      expect(mockDb.getWorkflowVersionById).toHaveBeenCalledWith('version-1')
-      expect(mockDb.deleteWorkflowVersion).toHaveBeenCalledWith('version-1')
+      expect(mockRepo.getVersionById).toHaveBeenCalledWith('version-1')
+      expect(mockRepo.deleteVersion).toHaveBeenCalledWith('version-1')
     })
 
     it('should throw if version not found', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValue(null)
+      mockRepo.getVersionById.mockResolvedValue(null)
       await expect(service.deleteVersion('nonexistent')).rejects.toThrow(
         'WorkflowVersion not found: nonexistent'
       )
-      expect(mockDb.deleteWorkflowVersion).not.toHaveBeenCalled()
+      expect(mockRepo.deleteVersion).not.toHaveBeenCalled()
     })
 
     it('should throw with correct id in error message', async () => {
-      mockDb.getWorkflowVersionById.mockResolvedValue(null)
+      mockRepo.getVersionById.mockResolvedValue(null)
       await expect(service.deleteVersion('missing-456')).rejects.toThrow(
         'WorkflowVersion not found: missing-456'
       )
