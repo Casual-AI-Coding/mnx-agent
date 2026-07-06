@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.2] - 2026-07-07
+
+### 🏗️ 代码重构
+
+- **DatabaseService God Facade 完全消除** — 全部 8 个域服务（Job/Task/Media/Workflow/Capacity/Material/Log/Export Service）从 DatabaseService 解耦为直接仓储依赖，DatabaseService 从 ~450 行精简为仅保留 init()/run() 的最小门面；路由层全部 16 个模块从 `getDatabaseService()` 切换为领域服务 getter（涉及 `server/services/domain/*.service.ts`, `server/database/service-async.ts`, `server/routes/*.ts`）
+- **新增 4 个独立领域服务** — ExternalApiLogService、SystemConfigService、TemplateService、ServiceNodePermissionService 各封装对应仓储，消除 4 组 `getDatabaseService()` 调用（涉及 `server/services/external-api-log-service.ts`, `server/services/system-config-service.ts`, `server/services/template-service.ts`, `server/services/service-node-permission-service.ts`）
+- **基础设施服务领域依赖化** — QueueProcessor → ITaskService、CapacityChecker → ICapacityService、CronScheduler → 领域服务组合、DLQAutoRetryScheduler → ITaskService、NotificationService → IWebhookService、TaskExecutor 去 DatabaseService、ServiceNodeRegistry → ServiceNodePermissionService（涉及 `server/services/queue-processor.ts`, `server/services/capacity-checker.ts`, `server/services/cron-scheduler.ts`, `server/services/dlq-auto-retry-scheduler.ts`, `server/services/notification-service.ts`, `server/services/task-executor.ts`）
+- **容器 DI 统一** — 容器 token 类型契约收紧（`container.types.ts`），UserService 注册到容器，service-registration 更新为领域服务接线（涉及 `server/container.types.ts`, `server/service-registration.ts`）
+- **BaseRepository softDelete 提取** — `softDeleteById(id, ownerId)` 提取为公共方法，material-repository/material-item-repository 委托实现（涉及 `server/repositories/base-repository.ts`, `server/repositories/material-repository.ts`, `server/repositories/material-item-repository.ts`）
+- **配置边界收紧** — 环境配置解析在 `config/index.ts` 中收紧类型边界，消除宽松类型断言（涉及 `server/config/index.ts`, `server/config/__tests__/config-validation.test.ts`）
+- **前端 Zustand Store withLoadingState 模式** — 创建 `list-store.ts` 消除重复 try/catch 样板；webhooks store 首个应用（30% 代码减少）（涉及 `src/stores/patterns/list-store.ts`, `src/stores/webhooks.ts`）
+- **前端 API Client DI 重构** — Provider 接口层（AuthProvider/SettingsProvider/NavigationProvider）、Zustand 适配器、构造函数 DI 注入；消除硬编码 `window.location.href`；Region 类型安全映射（domestic→cn, international→intl）（涉及 `src/lib/api/client.ts`, `src/lib/api/providers/`）
+- **ServiceNodeCatalog 类型收紧** — DatabaseServiceNodes 从泛型 `CatalogCallable` 升级为具体函数签名（含参数类型）；新增 `DatabaseServiceNodeDependencies` 窄接口组合（涉及 `server/services/service-node-catalog.ts`）
+
+### 🐛 问题修复
+
+- **Migration 038 — system_config 表创建** — 修复升级数据库上因 migration_001 已执行导致 `system_config` 表从未实际创建的问题，新增 `migration_038_create_system_config_table` 在 037 前执行（涉及 `server/database/migrations/038_create_system_config_table.ts`, `server/database/migrations-async.ts`）
+
+### 🧪 测试完善
+
+- **容器类型契约测试** — 覆盖 container token 类型完整性（`server/__tests__/container-types.test.ts`）
+- **DI 契约测试** — 为每个迁移路由新增 DI 契约测试覆盖容器解析完整性：settings、workflows、external-api-logs、auth、users、admin-workflows、media、external-proxy、stats-audit-log-service（`server/routes/__tests__/*di-contract*.test.ts`, `server/services/domain/*-contract*.test.ts`）
+- **领域服务仓储化测试适配** — material-service 测试 mock 从 DatabaseService 切换为仓储；media-safety 测试适配仓储化路由；webhook-service 测试适配仓储构造函数
+
+### 📝 文档更新
+
+- **18 份架构契约文档** — 涵盖容器 token 契约、配置边界契约、全部路由 DI 契约、全部服务仓储化计划的架构记录（`docs/superpowers/plans/2026-07-06-*.md`）
+
+### Backward Compatibility
+
+- ✅ 所有 API 端点、路由路径、响应格式不变
+- ✅ DatabaseService 消除为内部重构，`getDatabaseService()` 签名不变
+- ✅ 容器 token 类型契约为收紧变更，外部使用者无需修改
+- ✅ 前端 Store 模式 / API Client DI 为内部重构，组件层无感知
+- ✅ ServiceNodeCatalog 类型签名为收紧化，调用方已同步适配
+- ✅ 基础设施服务迁移为内部依赖变更，运行时行为等价
+
 ## [2.6.1] - 2026-07-06
 
 ### 🐛 问题修复
