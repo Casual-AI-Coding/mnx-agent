@@ -1,29 +1,39 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import type { AxiosRequestConfig } from 'axios'
-import { useSettingsStore } from '@/settings/store'
-import { useAuthStore } from '@/stores/auth'
-import { API_HOSTS } from '@/types'
+import { API_HOSTS, type Region } from '@/types'
 import { TIMEOUTS } from '@/lib/config'
 import { refreshToken } from './auth'
 import { ApiError } from './errors'
+import type { AuthProvider, SettingsProvider, NavigationProvider } from './providers/types'
 
 class InternalAPIClient {
   private client: AxiosInstance
   private isRefreshing = false
   private refreshSubscribers: Array<{ resolve: (token: string) => void; reject: (e: unknown) => void }> = []
-  private authWaitTimeout = 5000 // 最多等待 5 秒
-  private hydrationRefreshPromise: Promise<void> | null = null // 防止 hydration 时 token 刷新竞态
-  private readonly subscriberTimeout = 10000 // 等待 refresh 的超时时间
+  private authWaitTimeout = 5000
+  private hydrationRefreshPromise: Promise<void> | null = null
+  private readonly subscriberTimeout = 10000
 
-  /**
-   * 执行 token 刷新（hydration 阶段专用）
-   * 所有调用者共享同一个 Promise，避免竞态
-   */
-  private async doHydrationRefresh(updateAccessToken: (token: string) => void): Promise<void> {
+  constructor(
+    private readonly auth: AuthProvider,
+    private readonly settings: SettingsProvider,
+    private readonly navigation: NavigationProvider,
+  ) {
+    this.client = axios.create({
+      baseURL: '/api',
+      timeout: TIMEOUTS.API_REQUEST,
+      withCredentials: true,
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    this.setupInterceptors()
+  }
+
+  private async doHydrationRefresh(): Promise<void> {
     try {
       const response = await refreshToken()
       if (response.success && response.data?.accessToken) {
-        updateAccessToken(response.data.accessToken)
+        this.auth.updateAccessToken(response.data.accessToken)
       }
     } catch (err) {
       console.warn('[API Client] Failed to refresh token during hydration:', err)
@@ -32,23 +42,19 @@ class InternalAPIClient {
 
   private async waitForAuth(): Promise<void> {
     const start = Date.now()
-    
-    while (!useAuthStore.getState().isHydrated) {
+
+    while (!this.auth.isHydrated()) {
       if (Date.now() - start > this.authWaitTimeout) {
         console.warn('[API Client] Auth hydration timeout')
         break
       }
       await new Promise(r => setTimeout(r, 50))
     }
-    
-    const { isAuthenticated, accessToken, updateAccessToken } = useAuthStore.getState()
-    if (isAuthenticated && !accessToken) {
-      // 使用共享 Promise 防止多个并发请求同时触发刷新
+
+    if (this.auth.isAuthenticated() && !this.auth.getAccessToken()) {
       if (!this.hydrationRefreshPromise) {
-        this.hydrationRefreshPromise = this.doHydrationRefresh(updateAccessToken)
-          .finally(() => {
-            this.hydrationRefreshPromise = null
-          })
+        this.hydrationRefreshPromise = this.doHydrationRefresh()
+          .finally(() => { this.hydrationRefreshPromise = null })
       }
       await Promise.race([
         this.hydrationRefreshPromise,
@@ -59,24 +65,17 @@ class InternalAPIClient {
     }
   }
 
-  constructor() {
-    this.client = axios.create({
-      baseURL: '/api',
-      timeout: TIMEOUTS.API_REQUEST,
-      withCredentials: true,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
+  private setupInterceptors(): void {
     this.client.interceptors.request.use(async (config) => {
       await this.waitForAuth()
-      
-      const { settings } = useSettingsStore.getState()
-      const { minimaxKey: apiKey, region } = settings.api
-      const { accessToken } = useAuthStore.getState()
+
+      const apiKey = this.settings.getApiKey()
+      const settingsRegion = this.settings.getRegion()
+      const region: Region = settingsRegion === 'domestic' ? 'cn' : 'intl'
+      const accessToken = this.auth.getAccessToken()
+
       config.headers['X-API-Key'] = apiKey
-      config.headers['X-Region'] = region
+      config.headers['X-Region'] = settingsRegion
       config.headers['X-API-Host'] = API_HOSTS[region]
       if (accessToken) {
         config.headers['Authorization'] = `Bearer ${accessToken}`
@@ -91,8 +90,8 @@ class InternalAPIClient {
 
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           if (originalRequest.url?.includes('/auth/refresh')) {
-            useAuthStore.getState().logout()
-            window.location.href = '/login'
+            this.auth.logout()
+            this.navigation.redirectToLogin()
             return Promise.reject(error)
           }
 
@@ -125,7 +124,7 @@ class InternalAPIClient {
             const response = await refreshToken()
             if (response.success && response.data?.accessToken) {
               const newToken = response.data.accessToken
-              useAuthStore.getState().updateAccessToken(newToken)
+              this.auth.updateAccessToken(newToken)
               this.refreshSubscribers.forEach((s) => s.resolve(newToken))
               this.refreshSubscribers = []
               this.isRefreshing = false
@@ -136,12 +135,11 @@ class InternalAPIClient {
             // refreshToken threw or returned success=false
           }
 
-          // Failure: reject all waiting subscribers, logout, redirect
           this.refreshSubscribers.forEach((s) => s.reject(new Error('Token refresh failed')))
           this.refreshSubscribers = []
           this.isRefreshing = false
-          useAuthStore.getState().logout()
-          window.location.href = '/login'
+          this.auth.logout()
+          this.navigation.redirectToLogin()
           return Promise.reject(error)
         }
 
@@ -187,7 +185,12 @@ class InternalAPIClient {
   }
 }
 
-export const apiClient = new InternalAPIClient()
+import { createAuthProvider, createSettingsProvider, createBrowserNavigationProvider } from './providers/adapters'
 
-// Export the axios instance for direct use if needed
+export const apiClient = new InternalAPIClient(
+  createAuthProvider(),
+  createSettingsProvider(),
+  createBrowserNavigationProvider(),
+)
+
 export const internalAxios = apiClient.client_
