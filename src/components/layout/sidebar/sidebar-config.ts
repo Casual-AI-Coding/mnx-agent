@@ -30,6 +30,7 @@ import {
   Webhook,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
+import { frontendEnvironment, type FeatureFlags } from '@/lib/frontend-environment'
 import { UserRole } from '@/stores/auth'
 import type { SidebarNavItem } from './NavItem.js'
 
@@ -48,27 +49,40 @@ export interface SidebarSection {
   minRole: UserRole
 }
 
-export function getDebugItems(t: TFunction): SidebarNavItem[] {
-  return [
+export function getDebugItems(
+  t: TFunction,
+  featureFlags: FeatureFlags = frontendEnvironment.featureFlags
+): SidebarNavItem[] {
+  const items: SidebarNavItem[] = [
     { path: '/text', label: t('sidebar.textGeneration', '文本生成'), icon: MessageSquare },
     { path: '/voice', label: t('sidebar.voiceSync', '同步语音'), icon: Mic },
     { path: '/voice-async', label: t('sidebar.voiceAsync', '异步语音'), icon: MicOff },
     { path: '/image', label: t('sidebar.imageGeneration', '图片生成'), icon: Image },
     { path: '/music', label: t('sidebar.musicGeneration', '音乐生成'), icon: Music },
-    { path: '/lyrics', label: t('sidebar.lyricsGeneration', '歌词生成'), icon: FileText },
     { path: '/video', label: t('sidebar.videoGeneration', '视频生成'), icon: Video },
     { path: '/video-agent', label: t('sidebar.videoAgent', '视频Agent'), icon: Film },
   ]
+
+  if (featureFlags.lyricsGeneration) {
+    items.splice(5, 0, { path: '/lyrics', label: t('sidebar.lyricsGeneration', '歌词生成'), icon: FileText })
+  }
+
+  return items
 }
 
-export function getMenuSections(t: TFunction): SidebarSection[] {
-  return [
+export function getMenuSections(
+  t: TFunction,
+  featureFlags: FeatureFlags = frontendEnvironment.featureFlags
+): SidebarSection[] {
+  const sections: SidebarSection[] = [
     {
       id: 'externalDebug',
       label: '外部调试',
       icon: Globe,
       minRole: UserRole.ADMIN,
-      items: [{ path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image }],
+      items: featureFlags.openAIImage2Debug
+        ? [{ path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image }]
+        : [],
     },
     {
       id: 'resources',
@@ -123,4 +137,6 @@ export function getMenuSections(t: TFunction): SidebarSection[] {
       ],
     },
   ]
+
+  return sections.filter(section => section.items.length > 0)
 }
