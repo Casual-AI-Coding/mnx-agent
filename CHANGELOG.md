@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.1] - 2026-07-07
+
+### ✨ Added
+
+- **前端 Feature Flags 服务** — 新增统一前端环境解析与功能开关服务，支持通过 `VITE_FEATURE_*` 控制浏览器侧功能入口（涉及 `src/lib/frontend-environment.ts`, `.env.example`）
+
+### 🔄 Changed
+
+- **侧边栏调试入口按功能开关渲染** — 歌词生成和 OpenAI Image-2 外部调试入口支持动态隐藏，空菜单分组自动过滤（涉及 `src/components/layout/sidebar/sidebar-config.ts`）
+- **歌词 API 客户端统一化** — 改用统一 `apiClient.post()` 调用并复用 `TIMEOUTS.LYRICS_GENERATION` 超时配置，保持请求路径与响应契约不变（涉及 `src/lib/api/lyrics.ts`）
+
+### 🧪 测试完善
+
+- **前端功能开关测试覆盖** — 覆盖环境变量解析、默认值、非法布尔值降级和侧边栏开关行为（`src/lib/__tests__/frontend-environment.test.ts`, `src/components/layout/sidebar/sidebar-config.test.ts`）
+- **媒体与歌词客户端测试覆盖** — 覆盖 PinButton 点击/禁用/状态样式与歌词 API 请求契约（`src/components/media/PinButton.test.tsx`, `src/lib/api/__tests__/lyrics.test.ts`）
+
+### 📝 文档更新
+
+- **v2 需求状态复核** — 同步 R-004、R-008、R-023、R-024 完成状态与范围说明，路线图当前版本更新到 v2.8.1（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ 新增 `VITE_FEATURE_*` 功能开关默认保持现有入口可见
+- ✅ 侧边栏仅根据配置隐藏入口，不影响既有路由和 API
+- ✅ 歌词 API 客户端请求路径、请求体和响应契约保持兼容
+- ✅ 新增测试与文档更新不影响运行时行为
+
 ## [2.8.0] - 2026-07-07
 
 ### ✨ Added
