@@ -12,6 +12,7 @@ import type { IConcurrencyManager } from '../services/interfaces/concurrency-man
 import type { IEventBus } from '../services/interfaces/event-bus.interface.js'
 import type { IRetryManager } from '../services/interfaces/retry-manager.interface.js'
 import { SettingsService } from '../services/settings-service.js'
+import { BackupService } from '../services/backup-service.js'
 import { createMockEventBus } from './helpers/mock-event-bus.js'
 
 const fakeConnection: DatabaseConnection = {
@@ -40,6 +41,7 @@ describe('container typed tokens', () => {
     const externalApiLogRepository = new ExternalApiLogRepository(fakeConnection)
     const mediaRepository = new MediaRepository(fakeConnection)
     const userService = new UserService(fakeConnection)
+    const backupService = new BackupService()
 
     container.register(TOKENS.CONCURRENCY_MANAGER, concurrencyManager)
     container.register(TOKENS.RETRY_MANAGER, retryManager)
@@ -48,6 +50,7 @@ describe('container typed tokens', () => {
     container.register(TOKENS.EXTERNAL_API_LOG_REPOSITORY, externalApiLogRepository)
     container.register(TOKENS.MEDIA_REPOSITORY, mediaRepository)
     container.register(TOKENS.USER_SERVICE, userService)
+    container.register(TOKENS.BACKUP_SERVICE, backupService)
 
     const resolvedConcurrencyManager: IConcurrencyManager = resolve(container, TOKENS.CONCURRENCY_MANAGER)
     const resolvedRetryManager: IRetryManager = resolve(container, TOKENS.RETRY_MANAGER)
@@ -56,6 +59,7 @@ describe('container typed tokens', () => {
     const resolvedExternalApiLogRepository: ExternalApiLogRepository = resolve(container, TOKENS.EXTERNAL_API_LOG_REPOSITORY)
     const resolvedMediaRepository: MediaRepository = resolve(container, TOKENS.MEDIA_REPOSITORY)
     const resolvedUserService: UserService = resolve(container, TOKENS.USER_SERVICE)
+    const resolvedBackupService: BackupService = resolve(container, TOKENS.BACKUP_SERVICE)
 
     expect(resolvedConcurrencyManager).toBe(concurrencyManager)
     expect(resolvedRetryManager).toBe(retryManager)
@@ -64,5 +68,6 @@ describe('container typed tokens', () => {
     expect(resolvedExternalApiLogRepository).toBe(externalApiLogRepository)
     expect(resolvedMediaRepository).toBe(mediaRepository)
     expect(resolvedUserService).toBe(userService)
+    expect(resolvedBackupService).toBe(backupService)
   })
 })

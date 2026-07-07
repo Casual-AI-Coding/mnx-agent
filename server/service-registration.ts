@@ -12,6 +12,7 @@ import { NotificationService } from './services/notification-service.js'
 import { ExecutionStateManager } from './services/execution-state-manager.js'
 import { WorkflowService, JobService, TaskService, LogService, MediaService, WebhookService, CapacityService, MaterialService } from './services/domain/index.js'
 import { ExportService } from './services/export-service.js'
+import { BackupService } from './services/backup-service.js'
 import { SettingsService } from './services/settings-service.js'
 import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import { JobRepository } from './repositories/job-repository.js'
@@ -72,6 +73,7 @@ export const TOKENS = {
   CAPACITY_SERVICE: 'capacityService',
   MATERIAL_SERVICE: 'materialService',
   EXPORT_SERVICE: 'exportService',
+  BACKUP_SERVICE: 'backupService',
   TEMPLATE_SERVICE: 'templateService',
   SYSTEM_CONFIG_SERVICE: 'systemConfigService',
   EXTERNAL_API_LOG_SERVICE: 'externalApiLogService',
@@ -226,6 +228,10 @@ export async function registerServices(): Promise<void> {
     )
   })
 
+  container.registerSingleton(TOKENS.BACKUP_SERVICE, () => {
+    return new BackupService()
+  })
+
   container.registerSingleton(TOKENS.SETTINGS_SERVICE, (c) => {
     return new SettingsService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
   })
@@ -362,6 +368,10 @@ export function getMaterialService(): MaterialService {
 
 export function getExportService(): ExportService {
   return getGlobalContainer().resolve<ExportService>(TOKENS.EXPORT_SERVICE)
+}
+
+export function getBackupService(): BackupService {
+  return getGlobalContainer().resolve<BackupService>(TOKENS.BACKUP_SERVICE)
 }
 
 export function getSystemConfigService(): SystemConfigService {

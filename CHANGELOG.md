@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.0] - 2026-07-07
+
+### ✨ Added
+
+- **云端备份基础设施** — 新增 `BackupService`，支持本地 media 文件 + 数据库快照创建、环境变量配置解析、`pg_dump` 数据库备份、快照保留期清理（涉及 `server/services/backup-service.ts`）
+- **Backblaze B2 / Cloudflare R2 云端上传** — `BackupService` 支持通过 rclone 将完整快照同步到 B2/R2 远端，包含 provider/bucket/prefix 配置、环境变量校验与配置错误语义化异常（`BackupConfigError`）（涉及 `server/services/backup-service.ts`）
+- **容器 DI 注册** — `TOKENS.BACKUP_SERVICE` token、`container.types.ts` 类型契约、单例注册与 `getBackupService()` getter，为后续定时备份路由就绪（涉及 `server/service-registration.ts`, `server/container.types.ts`）
+- **Shell 脚本云端备份增强** — `media-snapshot-backup.sh` 新增 `MEDIA_SOURCE_DIR`/`MEDIA_BACKUP_ROOT`/`DB_NAME`/`MEDIA_BACKUP_RETENTION_DAYS` 环境变量覆盖，新增 `MEDIA_BACKUP_CLOUD_ENABLED`/`PROVIDER`/`REMOTE`/`BUCKET`/`PREFIX` 云端上传支持与配置校验（涉及 `scripts/media-snapshot-backup.sh`）
+
+### 🧪 测试完善
+
+- **BackupService 单元测试** — 覆盖本地快照 + 云端上传全命令链、禁云时的本地模式、B2 环境变量配置解析（`server/services/__tests__/backup-service.test.ts`）
+- **备份脚本集成测试** — 模拟 rsync/pg_dump/rclone，验证 cloud-enabled 模式下 rclone 同步命令生成（`server/__tests__/media-snapshot-backup-script.test.ts`）
+- **容器类型契约测试更新** — BackupService token 注册与解析验证（`server/__tests__/container-types.test.ts`）
+
+### 📝 文档更新
+
+- **版本规划更新** — v2-roadmap R-003（云端备份）标记为已完成，下一版本更新为待定（`docs/roadmap/v2-roadmap.md`, `docs/roadmap/requirement-pools.md`）
+
+### Backward Compatibility
+
+- ✅ `BackupService` 为全新模块，不影响现有系统行为
+- ✅ 容器 token 新增为增量注册，不影响现有解析
+- ✅ Shell 脚本环境变量覆盖为向后兼容增强，未设环境变量时行为完全等价
+- ✅ 云端上传为增量功能，未配置 `MEDIA_BACKUP_CLOUD_ENABLED=true` 时不执行上传
+
 ## [2.7.1] - 2026-07-07
 
 ### ✨ Added

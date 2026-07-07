@@ -5,7 +5,6 @@ import { TOKENS } from './service-registration.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import type { ExternalApiLogService } from './services/external-api-log-service.js'
 import type { MediaRepository } from './repositories/media-repository.js'
-import type { WorkflowRepository } from './repositories/workflow-repository.js'
 import type { UserService } from './services/user-service.js'
 import type { CapacityChecker } from './services/capacity-checker.js'
 import type { CronScheduler } from './services/cron-scheduler.js'
@@ -21,6 +20,7 @@ import type {
 } from './services/domain/index.js'
 import type { ExecutionStateManager } from './services/execution-state-manager.js'
 import type { ExportService } from './services/export-service.js'
+import type { BackupService } from './services/backup-service.js'
 import type { TemplateService } from './services/template-service.js'
 import type { SystemConfigService } from './services/system-config-service.js'
 import type { IConcurrencyManager } from './services/interfaces/concurrency-manager.interface.js'
@@ -63,6 +63,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.CAPACITY_SERVICE]: CapacityService
   readonly [TOKENS.MATERIAL_SERVICE]: MaterialService
   readonly [TOKENS.EXPORT_SERVICE]: ExportService
+  readonly [TOKENS.BACKUP_SERVICE]: BackupService
   readonly [TOKENS.TEMPLATE_SERVICE]: TemplateService
   readonly [TOKENS.SYSTEM_CONFIG_SERVICE]: SystemConfigService
   readonly [TOKENS.EXTERNAL_API_LOG_SERVICE]: ExternalApiLogService
