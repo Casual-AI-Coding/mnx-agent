@@ -6,7 +6,14 @@
 
 export type { IJobService } from './job.interface.js'
 export type { ITaskService, TaskQueryFilter, TaskQueryResult } from './task.interface.js'
-export type { IMediaService, MediaFilter, MediaQueryResult } from './media.interface.js'
+export type {
+  IMediaService,
+  MediaFilter,
+  MediaQueryResult,
+  MediaUpdateInput,
+  ToggleFavoriteResult,
+  TogglePinResult,
+} from './media.interface.js'
 export type { ILogService, LogFilter, LogStats } from './log.interface.js'
 export type { IWebhookService } from './webhook.interface.js'
 export type { IWorkflowService } from './workflow.interface.js'

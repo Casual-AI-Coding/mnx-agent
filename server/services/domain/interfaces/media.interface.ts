@@ -6,6 +6,21 @@
 
 import type { MediaRecord, CreateMediaRecord } from '../../../database/types.js'
 
+export interface MediaUpdateInput {
+  original_name?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
+export interface ToggleFavoriteResult {
+  isFavorite: boolean
+  action: 'added' | 'removed'
+}
+
+export interface TogglePinResult {
+  isPinned: boolean
+  action: 'added' | 'removed'
+}
+
 /**
  * MediaFilter
  */
@@ -51,7 +66,7 @@ export interface IMediaService {
   /**
    * Update an existing media record
    */
-  update(id: string, data: Partial<MediaRecord>, ownerId?: string): Promise<MediaRecord | null>
+  update(id: string, data: MediaUpdateInput, ownerId?: string): Promise<MediaRecord | null>
 
   /**
    * Soft delete a media record
@@ -74,6 +89,8 @@ export interface IMediaService {
   togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null>
 
   batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number>
+
+  toggleFavorite(userId: string, mediaId: string): Promise<ToggleFavoriteResult>
 
   togglePin(userId: string, mediaId: string): Promise<{ isPinned: boolean; action: 'added' | 'removed' }>
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MediaService } from './media.service.js'
 import type { MediaRepository } from '../../repositories/media-repository.js'
 import type { MediaRecord, CreateMediaRecord } from '../../database/types.js'
+import type { IMediaService, MediaUpdateInput } from './interfaces/index.js'
 
 describe('MediaService', () => {
   let service: MediaService
@@ -238,6 +239,18 @@ describe('MediaService', () => {
       await service.update('media-1', {})
       expect(mockRepo.update).toHaveBeenCalledWith('media-1', {}, undefined)
     })
+
+    it('通过领域更新输入限制可变字段', async () => {
+      const updateData: MediaUpdateInput = {
+        original_name: null,
+        metadata: { mood: 'calm' },
+      }
+      mockRepo.update.mockResolvedValue({ ...mockMediaRecord, ...updateData })
+
+      await service.update('media-1', updateData, 'owner-1')
+
+      expect(mockRepo.update).toHaveBeenCalledWith('media-1', updateData, 'owner-1')
+    })
   })
 
   describe('softDelete', () => {
@@ -303,6 +316,16 @@ describe('MediaService', () => {
   })
 
   describe('toggleFavorite', () => {
+    it('通过 IMediaService 契约暴露收藏切换能力', async () => {
+      const mediaService: IMediaService = service
+      const mockResult = { isFavorite: true, action: 'added' as const }
+      mockRepo.toggleFavorite.mockResolvedValue(mockResult)
+
+      const result = await mediaService.toggleFavorite('user-1', 'media-1')
+
+      expect(result).toEqual(mockResult)
+    })
+
     it('should toggle favorite and return added action', async () => {
       const mockResult = { isFavorite: true, action: 'added' as const }
       mockRepo.toggleFavorite.mockResolvedValue(mockResult)

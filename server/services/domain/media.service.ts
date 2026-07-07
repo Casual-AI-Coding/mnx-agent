@@ -7,7 +7,7 @@
 
 import type { MediaRepository } from '../../repositories/media-repository.js'
 import type { MediaRecord, CreateMediaRecord } from '../../database/types.js'
-import type { IMediaService, MediaFilter, MediaQueryResult } from './interfaces/index.js'
+import type { IMediaService, MediaFilter, MediaQueryResult, MediaUpdateInput } from './interfaces/index.js'
 
 export class MediaService implements IMediaService {
   constructor(private readonly mediaRepo: MediaRepository) {}
@@ -38,13 +38,13 @@ export class MediaService implements IMediaService {
     return this.mediaRepo.create(data, ownerId)
   }
 
-  async update(id: string, data: Partial<MediaRecord>, ownerId?: string): Promise<MediaRecord | null> {
-    const updateData: { original_name?: string | null; metadata?: Record<string, unknown> | null } = {}
+  async update(id: string, data: MediaUpdateInput, ownerId?: string): Promise<MediaRecord | null> {
+    const updateData: MediaUpdateInput = {}
     if (data.original_name !== undefined) {
       updateData.original_name = data.original_name
     }
     if (data.metadata !== undefined) {
-      updateData.metadata = data.metadata as Record<string, unknown> | null
+      updateData.metadata = data.metadata
     }
     return this.mediaRepo.update(id, updateData, ownerId)
   }
