@@ -11,10 +11,7 @@ interface ApiResponse<T> {
 export async function generateLyrics(
   request: LyricsGenerationRequest
 ): Promise<ApiResponse<LyricsGenerationResponse>> {
-  const response = await apiClient.client_.post<ApiResponse<LyricsGenerationResponse>>(
-    '/lyrics/generate',
-    request,
-    { timeout: 60000 }
-  )
-  return response.data
+  return apiClient.post<ApiResponse<LyricsGenerationResponse>>('/lyrics/generate', request, {
+    timeout: TIMEOUTS.LYRICS_GENERATION,
+  })
 }
