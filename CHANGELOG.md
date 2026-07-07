@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.1] - 2026-07-07
+
+### ✨ Added
+
+- **媒体资源置顶功能** — 新增 `user_media_pins` 表（migration_040），支持用户对媒体资源进行置顶/取消置顶操作；后端新增 pin/unpin API 端点，置顶资源在列表中优先排序（涉及 `server/database/migrations/040_create_user_media_pins.ts`, `server/services/domain/interfaces/media.interface.ts`, `server/services/domain/media.service.ts`, `server/routes/media.ts`, `server/repositories/media-repository.ts`）
+- **PinButton 组件** — 列表视图和卡片视图中集成 PinButton，支持点击切换置顶状态，视觉反馈（星标图标 + 置顶态高亮）（涉及 `src/components/media/PinButton.tsx`, `src/components/media/MediaCard.tsx`, `src/components/media/MediaTableView.tsx`, `src/components/media/AnimatedMediaGrid.tsx`, `src/components/media/TimelineItem.tsx`）
+- **置顶排序逻辑** — useMediaManagement 新增 pinnedFirst 排序模式，置顶资源始终显示在列表顶部（涉及 `src/hooks/useMediaManagement.ts`, `src/pages/MediaManagement.tsx`）
+- **`is_pinned` 字段** — MediaRecord 和 MediaRecordRow 共享类型新增 `is_pinned` 可选字段（`packages/shared-types/entities/media.ts`）
+- **API 路由支持** — `mediaRouteHelpers.updatePinStatus()` 封装 pin/unpin 请求，`src/lib/api/media.ts` 新增 pinMedia/unpinMedia API 方法（涉及 `server/routes/media/media-route-helpers.ts`, `src/lib/api/media.ts`）
+
+### 🐛 问题修复
+
+- **前端置顶状态同步** — 修复 pin/unpin 操作后列表状态刷新不及时的问题，操作后仅更新受影响项的本地状态而非全量刷新（`src/hooks/media/media-management-helpers.ts`）
+- **MediaTableView 视图修正** — 修复置顶按钮在紧凑布局下的溢出问题（`src/components/media/MediaTableView.tsx`）
+
+### 🧪 测试完善
+
+- **置顶 API 集成测试** — 覆盖 pin/unpin 操作、置顶状态查询、重复置顶幂等性、取消置顶、权限校验（`server/routes/__tests__/media.test.ts`）
+- **媒体仓库单元测试** — 新增 pin 相关查询和排序的单元测试（`server/repositories/__tests__/media-repository.test.ts`）
+- **media-management-helpers 测试更新** — 适配 `usePinMedia` 新增函数的测试用例（`src/hooks/media/media-management-helpers.test.ts`）
+
+### 📝 文档更新
+
+- **版本规划更新** — v2-roadmap R-017（资源置顶）标记为已完成（`docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ 新增 user_media_pins 表与已有表无冲突
+- ✅ 新增 API 端点，不影响现有端点行为
+- ✅ 置顶为增量 UI 功能，未置顶用户无感知
+- ✅ PinButton 仅在置顶功能启用时渲染
+
 ## [2.7.0] - 2026-07-07
 
 ### ✨ Added
