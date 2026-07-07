@@ -8,6 +8,7 @@ import {
   batchDownloadMedia,
   updateMedia,
   toggleFavorite,
+  togglePin,
   togglePublic,
   batchTogglePublic,
 } from '@/lib/api/media'
@@ -104,6 +105,7 @@ export interface UseMediaManagementReturn {
   handlePageChange: (page: number) => void
   handleRename: (id: string, newName: string) => Promise<void>
   handleToggleFavorite: (mediaId: string) => Promise<void>
+  handleTogglePin: (mediaId: string) => Promise<void>
   handleTabChange: (tab: string) => void
 }
 
@@ -541,6 +543,32 @@ export function useMediaManagement(): UseMediaManagementReturn {
     }
   }, [records])
 
+  const handleTogglePin = useCallback(async (mediaId: string) => {
+    const currentPinned = records.find(r => r.id === mediaId)?.is_pinned
+      ?? timelineRecords.find(r => r.id === mediaId)?.is_pinned
+      ?? false
+    const newPinned = !currentPinned
+
+    setRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: newPinned }))
+    setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: newPinned }))
+
+    try {
+      const result = await togglePin(mediaId)
+
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: result.data.isPinned }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: result.data.isPinned }))
+
+      await fetchMedia(false, paginationRef.current.page)
+      toastSuccess(result.data.action === 'added' ? '已置顶' : '已取消置顶')
+    } catch (error) {
+      setRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: currentPinned }))
+      setTimelineRecords(prev => applyMediaPatch(prev, mediaId, { is_pinned: currentPinned }))
+
+      console.error('Toggle pin failed:', error)
+      toastError('操作失败，请重试')
+    }
+  }, [fetchMedia, records, timelineRecords])
+
   const handleTogglePublic = useCallback(async (mediaId: string) => {
     const currentPublic = records.find(r => r.id === mediaId)?.is_public ?? false
     const newPublic = !currentPublic
@@ -675,7 +703,8 @@ pageInput,
     handlePreview,
     handlePageChange,
     handleRename,
-    handleToggleFavorite,
-    handleTabChange,
-  }
+	    handleToggleFavorite,
+    handleTogglePin,
+	    handleTabChange,
+	  }
 }

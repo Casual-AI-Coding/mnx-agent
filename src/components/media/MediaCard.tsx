@@ -1,5 +1,5 @@
 import { useState, memo } from 'react'
-import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock, Play } from 'lucide-react'
+import { Eye, Download, Trash2, CheckSquare, Square, Pencil, Star, Globe, Lock, Play, Pin } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -8,7 +8,6 @@ import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { cn } from '@/lib/utils'
 import type { MediaRecord } from '@/types/media'
 import { MediaCardPreview } from './MediaCardPreview'
-import { PublicButton } from './PublicButton'
 import { extractLyricsSnippet } from '@/lib/utils/lyrics'
 
 interface MediaCardProps {
@@ -21,6 +20,7 @@ interface MediaCardProps {
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePin?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
   userRole?: string
@@ -36,6 +36,7 @@ export const MediaCard = memo(function MediaCard({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePin,
   onTogglePublic,
   currentUserId,
   userRole,
@@ -56,7 +57,6 @@ export const MediaCard = memo(function MediaCard({
   const isOwn = record.owner_id === currentUserId
   const isAdminOrSuper = userRole === 'admin' || userRole === 'super'
   const canManage = isOwn || (!record.owner_id && isAdminOrSuper)
-  const isOthersPublic = record.is_public && !canManage
   return (
     <div
       className={`relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
@@ -227,6 +227,30 @@ export const MediaCard = memo(function MediaCard({
             title={record.is_favorite ? '取消收藏' : '收藏'}
           >
             <Star className={cn('w-4 h-4 transition-transform duration-150', record.is_favorite && 'fill-current')} />
+          </div>
+        </div>
+      )}
+
+      {onTogglePin && (
+        <div
+          className={`absolute top-11 right-2 z-20 transition-opacity duration-200 ${
+            record.is_pinned ? 'opacity-100' : showActions ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div
+            className={cn(
+              'w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90',
+              record.is_pinned
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                : 'bg-card/50 text-foreground/70 hover:text-primary hover:bg-card/70'
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onTogglePin(record.id)
+            }}
+            title={record.is_pinned ? '取消置顶' : '置顶'}
+          >
+            <Pin className={cn('w-4 h-4 transition-transform duration-150', record.is_pinned && 'fill-current')} />
           </div>
         </div>
       )}

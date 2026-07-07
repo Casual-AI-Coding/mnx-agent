@@ -176,6 +176,24 @@ export async function toggleFavorite(mediaId: string): Promise<{
   }>(`/media/${mediaId}/favorite`)
 }
 
+export async function togglePin(mediaId: string): Promise<{
+  success: boolean
+  data: {
+    mediaId: string
+    isPinned: boolean
+    action: 'added' | 'removed'
+  }
+}> {
+  return apiClient.patch<{
+    success: boolean
+    data: {
+      mediaId: string
+      isPinned: boolean
+      action: 'added' | 'removed'
+    }
+  }>(`/media/${mediaId}/pin`)
+}
+
 export async function togglePublic(id: string, isPublic: boolean): Promise<{
   success: boolean
   data: MediaRecord

@@ -43,6 +43,8 @@ export type {
   MediaRecordRow,
   FavoriteRecord,
   FavoriteRecordRow,
+  PinRecord,
+  PinRecordRow,
 } from '@mnx/shared-types/entities'
 
 export type {

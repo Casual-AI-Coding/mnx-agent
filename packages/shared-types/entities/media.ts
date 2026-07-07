@@ -22,6 +22,7 @@ export interface MediaRecord {
   updated_at: string
   deleted_at: string | null
   is_favorite?: boolean
+  is_pinned?: boolean
 }
 
 export interface CreateMediaRecord {
@@ -60,6 +61,7 @@ export interface MediaRecordRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  is_pinned?: boolean
 }
 
 export interface FavoriteRecord {
@@ -72,6 +74,24 @@ export interface FavoriteRecord {
 }
 
 export interface FavoriteRecordRow {
+  id: number
+  user_id: string
+  media_id: string
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PinRecord {
+  id: number
+  user_id: string
+  media_id: string
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PinRecordRow {
   id: number
   user_id: string
   media_id: string

@@ -28,6 +28,7 @@ export class MediaService implements IMediaService {
       favoriteFilter: filter.favoriteFilter,
       publicFilter: filter.publicFilter,
       favoriteUserId: filter.favoriteUserId,
+      pinnedUserId: filter.pinnedUserId,
       role: filter.role,
     })
     return { records: result.items, total: result.total }
@@ -62,6 +63,10 @@ export class MediaService implements IMediaService {
 
   async toggleFavorite(userId: string, mediaId: string): Promise<{ isFavorite: boolean; action: 'added' | 'removed' }> {
     return this.mediaRepo.toggleFavorite(userId, mediaId)
+  }
+
+  async togglePin(userId: string, mediaId: string): Promise<{ isPinned: boolean; action: 'added' | 'removed' }> {
+    return this.mediaRepo.togglePin(userId, mediaId)
   }
 
   async togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {

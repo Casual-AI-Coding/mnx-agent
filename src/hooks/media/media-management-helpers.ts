@@ -65,7 +65,7 @@ export function mergeSignedUrlResults(
 export function applyMediaPatch(
   records: readonly MediaRecord[],
   id: string,
-  patch: Readonly<Partial<Pick<MediaRecord, 'original_name' | 'is_favorite' | 'is_public'>>>
+  patch: Readonly<Partial<Pick<MediaRecord, 'original_name' | 'is_favorite' | 'is_pinned' | 'is_public'>>>
 ): MediaRecord[] {
   return records.map(record => (record.id === id ? { ...record, ...patch } : record))
 }
@@ -73,7 +73,7 @@ export function applyMediaPatch(
 export function applyMediaPatchByIds(
   records: readonly MediaRecord[],
   ids: ReadonlySet<string>,
-  patch: Readonly<Partial<Pick<MediaRecord, 'original_name' | 'is_favorite' | 'is_public'>>>
+  patch: Readonly<Partial<Pick<MediaRecord, 'original_name' | 'is_favorite' | 'is_pinned' | 'is_public'>>>
 ): MediaRecord[] {
   return records.map(record => (ids.has(record.id) ? { ...record, ...patch } : record))
 }

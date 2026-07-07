@@ -7,10 +7,11 @@ import mediaRouter from '../media.js'
 describe('Media API Routes', () => {
   let app: express.Application
   let fileMarker: string
+  let currentUserId: string
 
   const mockAuthMiddleware = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.user = {
-      userId: fileMarker,
+      userId: currentUserId,
       username: 'media-api-test',
       role: 'user' as const,
     }
@@ -30,6 +31,7 @@ describe('Media API Routes', () => {
   beforeAll(async () => {
     await setupTestDatabase()
     fileMarker = getTestFileMarker(import.meta.url)
+    currentUserId = fileMarker
     app = express()
     app.use(express.json())
     app.use(mockAuthMiddleware)
@@ -46,6 +48,7 @@ describe('Media API Routes', () => {
 
   beforeEach(async () => {
     const conn = getConnection()
+    currentUserId = fileMarker
     await conn.execute(`DELETE FROM media_records WHERE owner_id = $1`, [fileMarker])
     createdRecordIds.clear()
   })
@@ -175,6 +178,34 @@ describe('Media API Routes', () => {
       expect(withDeleted.body.data.records.length).toBe(1)
       expect(withDeleted.body.data.records[0].is_deleted).toBe(true)
     })
+
+    it('should order pinned records before newer unpinned records', async () => {
+      const pinnedRes = await createMedia({
+        filename: 'older-pinned.png',
+        filepath: '/older-pinned.png',
+        type: 'image',
+        size_bytes: 100,
+      })
+      await createMedia({
+        filename: 'newer-unpinned.png',
+        filepath: '/newer-unpinned.png',
+        type: 'image',
+        size_bytes: 200,
+      })
+
+      const pinRes = await request(app).patch(`/api/media/${pinnedRes.body.data.id}/pin`)
+      expect(pinRes.status).toBe(200)
+
+      const listRes = await request(app).get('/api/media?publicFilter=private')
+
+      expect(listRes.status).toBe(200)
+      expect(listRes.body.data.records).toHaveLength(2)
+      expect(listRes.body.data.records[0]).toMatchObject({
+        id: pinnedRes.body.data.id,
+        is_pinned: true,
+      })
+      expect(listRes.body.data.records[1].is_pinned).toBe(false)
+    })
   })
 
   describe('GET /api/media/:id', () => {
@@ -264,6 +295,59 @@ describe('Media API Routes', () => {
       })
 
       expect(res.status).toBe(400)
+    })
+  })
+
+  describe('PATCH /api/media/:id/pin', () => {
+    it('should pin and unpin an owned media record', async () => {
+      const createRes = await createMedia({
+        filename: 'pin-toggle.png',
+        filepath: '/pin-toggle.png',
+        type: 'image',
+        size_bytes: 100,
+      })
+
+      const pinRes = await request(app).patch(`/api/media/${createRes.body.data.id}/pin`)
+
+      expect(pinRes.status).toBe(200)
+      expect(pinRes.body.success).toBe(true)
+      expect(pinRes.body.data).toEqual({
+        mediaId: createRes.body.data.id,
+        isPinned: true,
+        action: 'added',
+      })
+
+      const unpinRes = await request(app).patch(`/api/media/${createRes.body.data.id}/pin`)
+
+      expect(unpinRes.status).toBe(200)
+      expect(unpinRes.body.data).toEqual({
+        mediaId: createRes.body.data.id,
+        isPinned: false,
+        action: 'removed',
+      })
+    })
+
+    it('should return 404 for a missing media record', async () => {
+      const res = await request(app).patch('/api/media/missing-media-id/pin')
+
+      expect(res.status).toBe(404)
+      expect(res.body.success).toBe(false)
+    })
+
+    it('should return 404 when another user pins a media record', async () => {
+      const createRes = await createMedia({
+        filename: 'other-owner-pin.png',
+        filepath: '/other-owner-pin.png',
+        type: 'image',
+        size_bytes: 100,
+        is_public: true,
+      })
+      currentUserId = `${fileMarker}-other`
+
+      const res = await request(app).patch(`/api/media/${createRes.body.data.id}/pin`)
+
+      expect(res.status).toBe(404)
+      expect(res.body.success).toBe(false)
     })
   })
 

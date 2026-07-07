@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.0] - 2026-07-07
+
+### ✨ Added
+
+- **公告管理系统** — 新增公告数据库表（migration_039），支持多级 severity（info/success/warning/error）、状态管理（draft/published/archived）和发布时间窗口；Admin 公告 CRUD API（创建/更新/软删除/列表查询）；全站 `GET /api/admin/announcements/active` 端点供认证用户读取当前有效公告（涉及 `server/database/migrations/039_create_announcements.ts`, `server/routes/admin/announcements.ts`, `server/bootstrap/api-routes.ts`）
+- **全局公告横幅** — AnnouncementBanner 组件挂载在 AppLayout 中，根据 severity 渲染不同颜色的公告卡片（含暗色模式适配），无有效公告时不渲染，支持 `aria-live="polite"` 无障碍（涉及 `src/components/layout/AnnouncementBanner.tsx`, `src/components/layout/AppLayout.tsx`）
+- **公告管理页面** — 完整管理 UI：创建表单、severity 选择、时间窗设置、列表管理（发布/归档/删除操作），super 角色独占（涉及 `src/pages/Admin/Announcements.tsx`, `src/App.tsx`, `src/components/layout/sidebar/sidebar-config.ts`）
+
+### 🧪 测试完善
+
+- **公告 API 集成测试** — 覆盖创建/列表/时间窗校验/角色权限/active 端点过滤/更新/软删除（`server/routes/admin/__tests__/announcements.test.ts`）
+- **公告迁移测试** — 确认 migration_039 注册与表结构完整性（`server/database/__tests__/announcements-migration.test.ts`）
+- **公告横幅组件测试** — 覆盖公告渲染和空态隐藏行为（`src/components/layout/AnnouncementBanner.test.tsx`）
+- **AppLayout 集成测试** — 确认公告横幅在布局中渲染（`src/components/layout/AppLayout.test.tsx`）
+
+### 📝 文档更新
+
+- **需求池更新** — R-001（公告管理）标记为已完成，状态和现状描述更新（`docs/roadmap/requirement-pools.md`）
+- **版本规划更新** — v2-roadmap 当前版本更新为 v2.7.0，下一版本更新为资源置顶（`docs/roadmap/v2-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ 新增 announcements 表与已有表无冲突
+- ✅ 新增 API 端点，不影响现有端点行为
+- ✅ 公告横幅为增量渲染，无公告时返回 null，无性能开销
+- ✅ 公告管理页面仅 super 角色可见，普通用户无感知
+
 ## [2.6.2] - 2026-07-07
 
 ### 🏗️ 代码重构

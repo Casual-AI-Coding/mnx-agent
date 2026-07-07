@@ -14,6 +14,7 @@ export interface MediaListQueryInput {
   readonly favoriteFilter?: readonly FavoriteFilter[]
   readonly publicFilter?: readonly PublicFilter[]
   readonly favoriteUserId?: string
+  readonly pinnedUserId?: string
   readonly role?: MediaListRole
   readonly isPostgres: boolean
 }
@@ -22,6 +23,7 @@ export interface MediaListQuery {
   readonly selectClause: string
   readonly joinClause: string
   readonly whereClause: string
+  readonly orderByClause: string
   readonly params: readonly MediaListQueryParam[]
   readonly pagination: {
     readonly clause: string
@@ -35,6 +37,7 @@ interface MediaListQueryState {
   readonly whereConditions: readonly string[]
   readonly params: readonly MediaListQueryParam[]
   readonly paramIndex: number
+  readonly orderByClause: string
 }
 
 interface MediaListFilterFlags {
@@ -77,6 +80,13 @@ function appendConditionWithParam(
   }
 }
 
+function appendJoinClause(existing: string, addition: string): string {
+  if (existing.length === 0) {
+    return addition
+  }
+  return `${existing} ${addition}`
+}
+
 function buildFavoriteClause(
   state: MediaListQueryState,
   favoriteUserId: string | undefined,
@@ -92,7 +102,7 @@ function buildFavoriteClause(
     return {
       ...state,
       selectClause,
-      joinClause: `INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex} AND f.is_deleted = false`,
+      joinClause: appendJoinClause(state.joinClause, `INNER JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex} AND f.is_deleted = false`),
       params: [...state.params, favoriteUserId],
       paramIndex: state.paramIndex + 1,
     }
@@ -101,7 +111,7 @@ function buildFavoriteClause(
   const result: MediaListQueryState = {
     ...state,
     selectClause,
-    joinClause: `LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex}`,
+    joinClause: appendJoinClause(state.joinClause, `LEFT JOIN user_media_favorites f ON m.id = f.media_id AND f.user_id = $${state.paramIndex}`),
     params: [...state.params, favoriteUserId],
     paramIndex: state.paramIndex + 1,
   }
@@ -111,6 +121,21 @@ function buildFavoriteClause(
   }
 
   return result
+}
+
+function buildPinClause(state: MediaListQueryState, pinnedUserId: string | undefined): MediaListQueryState {
+  if (!pinnedUserId) {
+    return state
+  }
+
+  return {
+    ...state,
+    selectClause: `${state.selectClause}, CASE WHEN p.id IS NOT NULL AND p.is_deleted = false THEN true ELSE false END as is_pinned`,
+    joinClause: appendJoinClause(state.joinClause, `LEFT JOIN user_media_pins p ON m.id = p.media_id AND p.user_id = $${state.paramIndex}`),
+    params: [...state.params, pinnedUserId],
+    paramIndex: state.paramIndex + 1,
+    orderByClause: 'is_pinned DESC, m.created_at DESC',
+  }
 }
 
 function buildVisibilityClause(
@@ -252,9 +277,11 @@ export function buildMediaListQuery(input: MediaListQueryInput): MediaListQuery 
     whereConditions: [],
     params: [],
     paramIndex: 1,
+    orderByClause: 'm.created_at DESC',
   }
 
   state = buildFavoriteClause(state, input.favoriteUserId, flags)
+  state = buildPinClause(state, input.pinnedUserId)
   state = buildVisibilityClause(state, input.visibilityOwnerId, flags)
   state = buildPublicFilterClause(state, input, flags)
   state = buildDeletedClause(state, input)
@@ -266,6 +293,7 @@ export function buildMediaListQuery(input: MediaListQueryInput): MediaListQuery 
     selectClause: state.selectClause,
     joinClause: state.joinClause,
     whereClause: buildWhereClause(state.whereConditions),
+    orderByClause: state.orderByClause,
     params: state.params,
     pagination: buildPaginationClause(state.paramIndex, input.limit, input.offset),
   }

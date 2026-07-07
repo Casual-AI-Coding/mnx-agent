@@ -7,6 +7,7 @@ import { TYPE_VARIANTS, TYPE_LABELS, SOURCE_LABELS } from '@/lib/constants/media
 import { formatFileSize, formatDate, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
 import { FavoriteButton } from './FavoriteButton'
+import { PinButton } from './PinButton'
 import { PublicButton } from './PublicButton'
 import { updateMedia } from '@/lib/api/media'
 import type { MediaRecord } from '@/types/media'
@@ -22,6 +23,7 @@ interface MediaTableViewProps {
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePin?: (mediaId: string) => void
   onTogglePublic?: (mediaId: string) => void
   currentUserId?: string
   userRole?: string
@@ -38,6 +40,7 @@ export const MediaTableView = memo(function MediaTableView({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePin,
   onTogglePublic,
   currentUserId,
   userRole,
@@ -254,14 +257,21 @@ export const MediaTableView = memo(function MediaTableView({
                   >
                     <Download className="w-4 h-4" />
                   </Button>
-                  {onToggleFavorite && (
-                    <FavoriteButton
+	                  {onToggleFavorite && (
+	                    <FavoriteButton
                       mediaId={record.id}
                       isFavorite={record.is_favorite ?? false}
                       onToggle={onToggleFavorite}
-                    />
-                  )}
-                  {onTogglePublic && (
+	                    />
+	                  )}
+	                  {onTogglePin && (
+	                    <PinButton
+	                      mediaId={record.id}
+	                      isPinned={record.is_pinned ?? false}
+	                      onToggle={onTogglePin}
+	                    />
+	                  )}
+	                  {onTogglePublic && (
                     <PublicButton
                       isPublic={record.is_public}
                       ownerId={record.owner_id}

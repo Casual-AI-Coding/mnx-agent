@@ -17,6 +17,7 @@ interface AnimatedMediaGridProps {
   onDelete: (record: MediaRecord) => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePin?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
   userRole?: string
@@ -32,6 +33,7 @@ export function AnimatedMediaGrid({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePin,
   onTogglePublic,
   currentUserId,
   userRole,
@@ -59,9 +61,10 @@ export function AnimatedMediaGrid({
               onPreview={() => onPreview(record)}
               onDownload={() => onDownload(record)}
               onDelete={() => onDelete(record)}
-              onRename={onRename}
-              onToggleFavorite={onToggleFavorite}
-              onTogglePublic={onTogglePublic}
+	              onRename={onRename}
+	              onToggleFavorite={onToggleFavorite}
+	              onTogglePin={onTogglePin}
+	              onTogglePublic={onTogglePublic}
               currentUserId={currentUserId}
               userRole={userRole}
             />

@@ -211,6 +211,29 @@ router.patch('/:id/favorite', validateParams(mediaIdParamsSchema), asyncHandler(
   })
 }))
 
+router.patch('/:id/pin', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
+  const db = getMediaService()
+  const userId = req.user?.userId
+  if (!userId) {
+    errorResponse(res, 'Unauthorized', 401)
+    return
+  }
+
+  const ownerId = buildOwnerFilter(req).params[0]
+  const record = await db.getById(req.params.id, ownerId, true)
+  if (!record || record.is_deleted || (record.owner_id && record.owner_id !== userId)) {
+    errorResponse(res, 'Media record not found', 404)
+    return
+  }
+
+  const result = await db.togglePin(userId, req.params.id)
+  successResponse(res, {
+    mediaId: req.params.id,
+    isPinned: result.isPinned,
+    action: result.action,
+  })
+}))
+
 router.patch('/:id/public', validateParams(mediaIdParamsSchema), asyncHandler(async (req, res) => {
   const db = getMediaService()
   const { id } = req.params

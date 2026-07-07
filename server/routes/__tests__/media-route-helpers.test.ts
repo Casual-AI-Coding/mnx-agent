@@ -37,6 +37,7 @@ describe('media-route-helpers', () => {
       favoriteFilter: ['favorite', 'non-favorite'],
       publicFilter: ['private', 'others-public'],
       favoriteUserId: 'user-1',
+      pinnedUserId: 'user-1',
       role: 'pro',
     })
   })

@@ -22,6 +22,7 @@ export interface MediaListServiceOptions {
   readonly favoriteFilter?: ('favorite' | 'non-favorite')[]
   readonly publicFilter?: ('private' | 'public' | 'others-public')[]
   readonly favoriteUserId?: string
+  readonly pinnedUserId?: string
   readonly role?: MediaRouteRole
 }
 
@@ -100,6 +101,7 @@ export function buildMediaListRouteOptions(input: MediaListRouteInput): MediaLis
       favoriteFilter: query.favoriteFilter,
       publicFilter: query.publicFilter,
       favoriteUserId: input.userId,
+      pinnedUserId: input.userId,
       role: input.role,
     },
   }

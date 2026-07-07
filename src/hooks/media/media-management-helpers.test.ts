@@ -107,9 +107,9 @@ describe('media-management-helpers', () => {
   it('applyMediaPatch updates only the matching record', () => {
     const records = [makeRecord('keep', 'image'), makeRecord('rename', 'music')]
 
-    expect(applyMediaPatch(records, 'rename', { original_name: '新名称.mp3', is_favorite: true })).toEqual([
+    expect(applyMediaPatch(records, 'rename', { original_name: '新名称.mp3', is_favorite: true, is_pinned: true })).toEqual([
       records[0],
-      { ...records[1], original_name: '新名称.mp3', is_favorite: true },
+      { ...records[1], original_name: '新名称.mp3', is_favorite: true, is_pinned: true },
     ])
   })
 

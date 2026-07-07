@@ -20,6 +20,7 @@ export interface MediaFilter {
   favoriteFilter?: ('favorite' | 'non-favorite')[]
   publicFilter?: ('private' | 'public' | 'others-public')[]
   favoriteUserId?: string
+  pinnedUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
 }
 
@@ -73,6 +74,8 @@ export interface IMediaService {
   togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null>
 
   batchTogglePublic(ids: string[], isPublic: boolean, userId?: string): Promise<number>
+
+  togglePin(userId: string, mediaId: string): Promise<{ isPinned: boolean; action: 'added' | 'removed' }>
 
   softDeleteBatch(ids: string[], ownerId?: string): Promise<{ deleted: number; failed: number }>
 }

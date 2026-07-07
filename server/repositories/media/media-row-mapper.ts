@@ -19,10 +19,12 @@ export interface MediaRecordDatabaseRow {
   readonly updated_at: string
   readonly deleted_at: string | null
   readonly is_favorite?: boolean
+  readonly is_pinned?: boolean
 }
 
 export interface MediaListDatabaseRow extends MediaRecordDatabaseRow {
   readonly is_favorite?: boolean
+  readonly is_pinned?: boolean
 }
 
 function parseMediaType(value: string): MediaType {
@@ -187,12 +189,13 @@ function parseMediaRecordDatabaseRow(value: unknown): MediaRecordDatabaseRow {
     updated_at: readStringOrDefault(value, 'updated_at', ''),
     deleted_at: readNullableString(value, 'deleted_at'),
     is_favorite: readOptionalBoolean(value, 'is_favorite'),
+    is_pinned: readOptionalBoolean(value, 'is_pinned'),
   }
 }
 
 export function mapMediaRecordRow(value: unknown): MediaRecord {
   const row = parseMediaRecordDatabaseRow(value)
-  const { is_favorite: _isFavorite, ...recordRow } = row
+  const { is_favorite: _isFavorite, is_pinned: _isPinned, ...recordRow } = row
   return {
     ...recordRow,
     type: parseMediaType(row.type),
@@ -203,14 +206,14 @@ export function mapMediaRecordRow(value: unknown): MediaRecord {
   }
 }
 
-export function mapMediaListRow(value: unknown, includeFavorite: boolean): MediaRecord {
+export function mapMediaListRow(value: unknown, includeFavorite: boolean, includePinned: boolean): MediaRecord {
   const row = parseMediaRecordDatabaseRow(value)
   const record = mapMediaRecordRow(row)
-  if (!includeFavorite) {
-    return record
-  }
+  const favoriteProjection = includeFavorite ? { is_favorite: row.is_favorite ?? false } : {}
+  const pinnedProjection = includePinned ? { is_pinned: row.is_pinned ?? false } : {}
   return {
     ...record,
-    is_favorite: row.is_favorite ?? false,
+    ...favoriteProjection,
+    ...pinnedProjection,
   }
 }

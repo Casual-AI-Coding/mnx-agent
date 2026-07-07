@@ -7,6 +7,7 @@ import { TYPE_VARIANTS, TYPE_LABELS, TYPE_GRADIENTS } from '@/lib/constants/medi
 import { formatFileSize, getTypeIcon } from '@/lib/utils/media'
 import { MediaCardPreview } from './MediaCardPreview'
 import { FavoriteButton } from './FavoriteButton'
+import { PinButton } from './PinButton'
 import { PublicButton } from './PublicButton'
 import type { MediaRecord } from '@/types/media'
 
@@ -20,6 +21,7 @@ interface TimelineItemProps {
   onDelete: () => void
   onRename?: (id: string, newName: string) => void
   onToggleFavorite?: (mediaId: string) => void
+  onTogglePin?: (mediaId: string) => void
   onTogglePublic?: (id: string, isPublic: boolean) => void
   currentUserId?: string
   userRole?: string
@@ -35,6 +37,7 @@ export const TimelineItem = memo(function TimelineItem({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePin,
   onTogglePublic,
   currentUserId,
   userRole,
@@ -203,7 +206,14 @@ export const TimelineItem = memo(function TimelineItem({
             onToggle={onToggleFavorite}
           />
         )}
-{onTogglePublic && (
+	{onTogglePin && (
+	          <PinButton
+	            mediaId={record.id}
+	            isPinned={record.is_pinned ?? false}
+	            onToggle={onTogglePin}
+	          />
+	        )}
+	{onTogglePublic && (
             <PublicButton
               isPublic={record.is_public}
               ownerId={record.owner_id}

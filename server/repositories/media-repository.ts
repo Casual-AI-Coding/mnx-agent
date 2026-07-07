@@ -5,6 +5,8 @@ import type {
   CreateMediaRecord,
   FavoriteRecord,
   FavoriteRecordRow,
+  PinRecord,
+  PinRecordRow,
 } from '../database/types.js'
 import { BaseRepository } from './base-repository.js'
 import { buildMediaListQuery } from './media/media-list-query-builder.js'
@@ -24,6 +26,7 @@ export interface MediaListOptions {
   favoriteFilter?: ('favorite' | 'non-favorite')[]
   publicFilter?: ('private' | 'public' | 'others-public')[]
   favoriteUserId?: string
+  pinnedUserId?: string
   role?: 'user' | 'pro' | 'admin' | 'super'
 }
 
@@ -60,7 +63,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
   }
 
   async list(options: MediaListOptions = {}): Promise<{ items: MediaRecord[]; total: number }> {
-    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, visibilityOwnerId, favoriteFilter, publicFilter, favoriteUserId, role } = options
+    const { type, source, search, limit = 50, offset = 0, includeDeleted = false, visibilityOwnerId, favoriteFilter, publicFilter, favoriteUserId, pinnedUserId, role } = options
     const query = buildMediaListQuery({
       type,
       source,
@@ -72,6 +75,7 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
       favoriteFilter,
       publicFilter,
       favoriteUserId,
+      pinnedUserId,
       role,
       isPostgres: this.isPostgres(),
     })
@@ -83,12 +87,12 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
     const total = parseInt(countRows[0]?.count ?? '0', 10)
 
     const rows = await this.conn.query<MediaListDatabaseRow>(
-      `SELECT ${query.selectClause} FROM media_records m ${query.joinClause} ${query.whereClause} ORDER BY m.created_at DESC ${query.pagination.clause}`,
+      `SELECT ${query.selectClause} FROM media_records m ${query.joinClause} ${query.whereClause} ORDER BY ${query.orderByClause} ${query.pagination.clause}`,
       [...query.params, ...query.pagination.params]
     )
 
     return {
-      items: rows.map(row => mapMediaListRow(row, Boolean(favoriteUserId))),
+      items: rows.map(row => mapMediaListRow(row, Boolean(favoriteUserId), Boolean(pinnedUserId))),
       total,
     }
   }
@@ -316,6 +320,71 @@ export class MediaRepository extends BaseRepository<MediaRecord, CreateMediaReco
 
     await this.updateFavorite(existing.id, true)
     return { isFavorite: false, action: 'removed' }
+  }
+
+  async findPin(userId: string, mediaId: string): Promise<PinRecord | null> {
+    const rows = await this.conn.query<PinRecordRow>(
+      `SELECT id, user_id, media_id, is_deleted, created_at, updated_at
+       FROM user_media_pins
+       WHERE user_id = $1 AND media_id = $2`,
+      [userId, mediaId]
+    )
+    return rows.length > 0 ? rows[0] : null
+  }
+
+  async insertPin(userId: string, mediaId: string): Promise<PinRecord> {
+    const now = toLocalISODateString()
+    await this.conn.execute(
+      `INSERT INTO user_media_pins (user_id, media_id, is_deleted, created_at, updated_at)
+       VALUES ($1, $2, FALSE, $3, $3)`,
+      [userId, mediaId, now]
+    )
+    const result = await this.findPin(userId, mediaId)
+    if (!result) {
+      throw new Error(`Failed to insert pin for user ${userId} and media ${mediaId}`)
+    }
+    return result
+  }
+
+  async updatePin(id: number, isDeleted: boolean): Promise<void> {
+    const now = toLocalISODateString()
+    await this.conn.execute(
+      `UPDATE user_media_pins
+       SET is_deleted = $1, updated_at = $2
+       WHERE id = $3`,
+      [isDeleted, now, id]
+    )
+  }
+
+  async togglePin(userId: string, mediaId: string): Promise<{ isPinned: boolean; action: 'added' | 'removed' }> {
+    const existing = await this.findPin(userId, mediaId)
+
+    if (!existing) {
+      try {
+        await this.insertPin(userId, mediaId)
+        return { isPinned: true, action: 'added' }
+      } catch (error: unknown) {
+        if (isUniqueViolationError(error)) {
+          const raceExisting = await this.findPin(userId, mediaId)
+          if (raceExisting) {
+            if (raceExisting.is_deleted) {
+              await this.updatePin(raceExisting.id, false)
+              return { isPinned: true, action: 'added' }
+            }
+            return { isPinned: true, action: 'added' }
+          }
+        }
+        throw error
+      }
+    }
+
+    if (existing.is_deleted) {
+      await this.updatePin(existing.id, false)
+      return { isPinned: true, action: 'added' }
+    }
+
+    await this.updatePin(existing.id, true)
+    return { isPinned: false, action: 'removed' }
   }
 
   async togglePublic(id: string, isPublic: boolean, ownerId?: string): Promise<MediaRecord | null> {

@@ -30,6 +30,7 @@ interface MediaGridProps {
   onDelete: (record: AnimatedMediaGridProps['records'][number]) => void
   onRename: AnimatedMediaGridProps['onRename']
   onToggleFavorite: AnimatedMediaGridProps['onToggleFavorite']
+  onTogglePin: AnimatedMediaGridProps['onTogglePin']
   onTogglePublic: AnimatedMediaGridProps['onTogglePublic']
   currentUserId?: string
   userRole?: string
@@ -66,6 +67,7 @@ export function MediaGrid({
   onDelete,
   onRename,
   onToggleFavorite,
+  onTogglePin,
   onTogglePublic,
   currentUserId,
   userRole,
@@ -109,9 +111,10 @@ export function MediaGrid({
             onPreview={onPreview}
             onDownload={onDownload}
             onDelete={onDelete}
-            onRename={onRename}
-            onToggleFavorite={onToggleFavorite}
-            onTogglePublic={onTogglePublic}
+	            onRename={onRename}
+	            onToggleFavorite={onToggleFavorite}
+	            onTogglePin={onTogglePin}
+	            onTogglePublic={onTogglePublic}
             currentUserId={currentUserId}
             userRole={userRole}
           />
@@ -149,9 +152,10 @@ export function MediaGrid({
                           onPreview={() => onPreview(record)}
                           onDownload={() => onDownload(record)}
                           onDelete={() => onDelete(record)}
-                          onRename={onRename}
-                          onToggleFavorite={onToggleFavorite}
-            onTogglePublic={onTogglePublic ? (mediaId: string) => onTogglePublic(mediaId, false) : undefined}
+	                          onRename={onRename}
+	                          onToggleFavorite={onToggleFavorite}
+	                          onTogglePin={onTogglePin}
+	            onTogglePublic={onTogglePublic ? (mediaId: string) => onTogglePublic(mediaId, false) : undefined}
                           currentUserId={currentUserId}
                           userRole={userRole}
                         />
@@ -183,9 +187,10 @@ export function MediaGrid({
             onPreview={onPreview}
             onDownload={onDownload}
             onDelete={onDelete}
-            onRename={onRename}
-            onToggleFavorite={onToggleFavorite}
-            onTogglePublic={onTogglePublic ? (mediaId: string) => onTogglePublic(mediaId, false) : undefined}
+	            onRename={onRename}
+	            onToggleFavorite={onToggleFavorite}
+	            onTogglePin={onTogglePin}
+	            onTogglePublic={onTogglePublic ? (mediaId: string) => onTogglePublic(mediaId, false) : undefined}
             currentUserId={currentUserId}
             userRole={userRole}
           />

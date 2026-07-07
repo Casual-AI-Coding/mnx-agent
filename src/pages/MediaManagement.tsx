@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/Button'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
 import { useState } from 'react'
@@ -54,7 +53,6 @@ export default function MediaManagement() {
   }
 
   const {
-    records,
     pagination,
     isLoading,
     isInitialLoad,
@@ -63,7 +61,6 @@ export default function MediaManagement() {
     searchQuery,
     setSearchQuery,
     activeTab,
-    setActiveTab,
     deleteDialog,
     setDeleteDialog,
     lightboxOpen,
@@ -99,6 +96,7 @@ export default function MediaManagement() {
     handlePageChange,
     handleRename,
     handleToggleFavorite,
+    handleTogglePin,
     handleTogglePublic,
     handleBatchTogglePublic,
     handleManualSearch,
@@ -109,8 +107,6 @@ export default function MediaManagement() {
     togglePublicFilter,
     lyricsPreviewRecord,
     setLyricsPreviewRecord,
-    audioPreviewRecord,
-    setAudioPreviewRecord,
   } = useMediaManagement()
 
   return (
@@ -159,6 +155,7 @@ export default function MediaManagement() {
         onDelete={(record) => setDeleteDialog({ isOpen: true, record })}
         onRename={handleRename}
         onToggleFavorite={handleToggleFavorite}
+        onTogglePin={handleTogglePin}
         onTogglePublic={handleTogglePublic}
         currentUserId={currentUser?.id}
         userRole={currentUser?.role}

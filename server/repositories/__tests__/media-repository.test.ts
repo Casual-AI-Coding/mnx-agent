@@ -140,6 +140,31 @@ describe('MediaRepository', () => {
         expect.arrayContaining(['user-1'])
       )
     })
+
+    it('should project pin state and order pinned records first for the current user', async () => {
+      vi.mocked(mockDb.query)
+        .mockResolvedValueOnce([{ count: '2' }] as never)
+        .mockResolvedValueOnce([
+          { id: 'media-1', filename: 'pinned.png', type: 'image' as MediaType, is_pinned: true },
+          { id: 'media-2', filename: 'plain.png', type: 'image' as MediaType, is_pinned: false },
+        ] as never)
+
+      const repo = new MediaRepository(mockDb)
+      const result = await repo.list({
+        pinnedUserId: 'user-1',
+      })
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('LEFT JOIN user_media_pins'),
+        expect.arrayContaining(['user-1'])
+      )
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('ORDER BY is_pinned DESC'),
+        expect.arrayContaining(['user-1'])
+      )
+      expect(result.items[0]).toMatchObject({ id: 'media-1', is_pinned: true })
+      expect(result.items[1]).toMatchObject({ id: 'media-2', is_pinned: false })
+    })
   })
 
   describe('list() public filters', () => {
