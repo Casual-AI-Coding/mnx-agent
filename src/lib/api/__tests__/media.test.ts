@@ -7,7 +7,7 @@ import {
   getMediaTypeLabel,
   listMedia,
 } from '../media'
-import type { MediaListResponse } from '../media'
+import type { MediaListResponse } from '../media-types'
 
 vi.mock('../client', () => ({
   apiClient: {
