@@ -419,7 +419,7 @@ DeadLetterRepository
 
 使用 `GIT_MASTER=1` 运行 git-master Phase 0 命令，并确认仓库采用中文 semantic 提交风格。
 
-- [ ] **步骤 2：提交文档**
+- [x] **步骤 2：提交文档**
 
 Commit message:
 
@@ -428,7 +428,7 @@ GIT_MASTER=1 git add docs/superpowers/specs/2026-07-07-service-registration-comp
 GIT_MASTER=1 git commit -m "docs(architecture): 规划服务注册装配边界升级" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 3：提交实现**
+- [x] **步骤 3：提交实现**
 
 Commit message:
 
@@ -437,7 +437,7 @@ GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/
 GIT_MASTER=1 git commit -m "refactor(server): 收敛服务注册仓储装配" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 4：提交后验证工作区**
+- [x] **步骤 4：提交后验证工作区**
 
 运行：`GIT_MASTER=1 git status --short`
 
