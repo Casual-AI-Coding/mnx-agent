@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DatabaseConnection } from '../../database/connection.js'
 import type { DatabaseService } from '../../database/service-async.js'
 import { CapacityRepository } from '../../repositories/capacity-repository.js'
+import { AdminUserRepository } from '../../repositories/admin-user-repository.js'
 import { DeadLetterRepository } from '../../repositories/deadletter-repository.js'
 import { ExternalApiLogRepository } from '../../repositories/external-api-log.repository.js'
 import { InvitationCodeRepository } from '../../repositories/invitation-code-repository.js'
@@ -18,6 +19,7 @@ import { UserRepository } from '../../repositories/user-repository.js'
 import { WebhookRepository } from '../../repositories/webhook-repository.js'
 import { WorkflowRepository } from '../../repositories/workflow-repository.js'
 import {
+  createAdminUserRepository,
   createCapacityRepository,
   createExternalApiLogRepository,
   createExportRepositories,
@@ -64,8 +66,9 @@ describe('repository factories', () => {
     expect(createSystemConfigRepository(database)).toBeInstanceOf(SystemConfigRepository)
     expect(createExternalApiLogRepository(database)).toBeInstanceOf(ExternalApiLogRepository)
     expect(createInvitationCodeRepository(database)).toBeInstanceOf(InvitationCodeRepository)
+    expect(createAdminUserRepository(database)).toBeInstanceOf(AdminUserRepository)
     expect(getDatabaseConnection(database)).toBe(connection)
-    expect(database.getConnection).toHaveBeenCalledTimes(10)
+    expect(database.getConnection).toHaveBeenCalledTimes(11)
   })
 
   it('creates grouped repositories for services with multiple repository dependencies', () => {

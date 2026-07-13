@@ -2,6 +2,7 @@ import type { Container } from '../container.js'
 import { getDatabase, type DatabaseService } from '../database/service-async.js'
 import { getMiniMaxClient } from '../lib/minimax/index.js'
 import { AnnouncementService } from '../services/announcement-service.js'
+import { AdminUserService } from '../services/admin-user-service.js'
 import { DatabasePoolStatsService } from '../services/database-pool-stats-service.js'
 import { CapacityChecker } from '../services/capacity-checker.js'
 import { ConcurrencyManager } from '../services/concurrency-manager.js'
@@ -38,6 +39,7 @@ import { ExternalApiLogService } from '../services/external-api-log-service.js'
 import { InvitationCodeService } from '../services/invitation-code-service.js'
 import type { IWebhookService } from '../services/domain/interfaces/index.js'
 import {
+  createAdminUserRepository,
   createAnnouncementRepository,
   createCapacityRepository,
   createExternalApiLogRepository,
@@ -210,6 +212,10 @@ export async function registerServiceDependencies(container: Container): Promise
 
   container.registerSingleton(TOKENS.USER_SERVICE, (c) => {
     return new UserService(getDatabaseConnection(c.resolve<DatabaseService>(TOKENS.DATABASE)))
+  })
+
+  container.registerSingleton(TOKENS.ADMIN_USER_SERVICE, (c) => {
+    return new AdminUserService(createAdminUserRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.TEMPLATE_SERVICE, (c) => {

@@ -1,5 +1,6 @@
 import type { DatabaseConnection } from '../database/connection.js'
 import type { DatabaseService } from '../database/service-async.js'
+import { AdminUserRepository } from '../repositories/admin-user-repository.js'
 import { AnnouncementRepository } from '../repositories/announcement-repository.js'
 import { CapacityRepository } from '../repositories/capacity-repository.js'
 import { DeadLetterRepository } from '../repositories/deadletter-repository.js'
@@ -22,6 +23,10 @@ type RepositoryDatabase = Pick<DatabaseService, 'getConnection'>
 
 function getConnection(database: RepositoryDatabase): DatabaseConnection {
   return database.getConnection()
+}
+
+export function createAdminUserRepository(database: RepositoryDatabase): AdminUserRepository {
+  return new AdminUserRepository(getConnection(database))
 }
 
 export function createAnnouncementRepository(database: RepositoryDatabase): AnnouncementRepository {

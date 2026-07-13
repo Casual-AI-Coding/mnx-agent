@@ -3,6 +3,7 @@ import type { DatabaseService } from '../database/service-async.js'
 import type { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
 import type { MediaRepository } from '../repositories/media-repository.js'
 import { AnnouncementService } from '../services/announcement-service.js'
+import type { AdminUserService } from '../services/admin-user-service.js'
 import { DatabasePoolStatsService } from '../services/database-pool-stats-service.js'
 import { CapacityChecker } from '../services/capacity-checker.js'
 import { CronScheduler } from '../services/cron-scheduler.js'
@@ -181,4 +182,8 @@ export function getMediaRepository(): MediaRepository {
 
 export function getUserService(): UserService {
   return getGlobalContainer().resolve<UserService>(TOKENS.USER_SERVICE)
+}
+
+export function getAdminUserService(): AdminUserService {
+  return getGlobalContainer().resolve<AdminUserService>(TOKENS.ADMIN_USER_SERVICE)
 }

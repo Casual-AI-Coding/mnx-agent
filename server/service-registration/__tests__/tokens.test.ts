@@ -41,6 +41,7 @@ describe('service registration tokens', () => {
       EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
       MEDIA_REPOSITORY: 'mediaRepository',
       USER_SERVICE: 'userService',
+      ADMIN_USER_SERVICE: 'adminUserService',
     })
   })
 })
