@@ -4,6 +4,7 @@ import { AnnouncementRepository } from '../repositories/announcement-repository.
 import { CapacityRepository } from '../repositories/capacity-repository.js'
 import { DeadLetterRepository } from '../repositories/deadletter-repository.js'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
+import { InvitationCodeRepository } from '../repositories/invitation-code-repository.js'
 import { JobRepository } from '../repositories/job-repository.js'
 import { LogRepository } from '../repositories/log-repository.js'
 import { MaterialItemRepository } from '../repositories/material-item-repository.js'
@@ -25,6 +26,10 @@ function getConnection(database: RepositoryDatabase): DatabaseConnection {
 
 export function createAnnouncementRepository(database: RepositoryDatabase): AnnouncementRepository {
   return new AnnouncementRepository(getConnection(database))
+}
+
+export function createInvitationCodeRepository(database: RepositoryDatabase): InvitationCodeRepository {
+  return new InvitationCodeRepository(getConnection(database))
 }
 
 export function createWorkflowRepository(database: RepositoryDatabase): WorkflowRepository {

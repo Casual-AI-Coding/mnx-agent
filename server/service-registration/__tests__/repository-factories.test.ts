@@ -4,6 +4,7 @@ import type { DatabaseService } from '../../database/service-async.js'
 import { CapacityRepository } from '../../repositories/capacity-repository.js'
 import { DeadLetterRepository } from '../../repositories/deadletter-repository.js'
 import { ExternalApiLogRepository } from '../../repositories/external-api-log.repository.js'
+import { InvitationCodeRepository } from '../../repositories/invitation-code-repository.js'
 import { JobRepository } from '../../repositories/job-repository.js'
 import { LogRepository } from '../../repositories/log-repository.js'
 import { MaterialItemRepository } from '../../repositories/material-item-repository.js'
@@ -20,6 +21,7 @@ import {
   createCapacityRepository,
   createExternalApiLogRepository,
   createExportRepositories,
+  createInvitationCodeRepository,
   createJobRepository,
   createLogRepositories,
   createMaterialRepositories,
@@ -61,8 +63,9 @@ describe('repository factories', () => {
     expect(createTemplateRepository(database)).toBeInstanceOf(PromptTemplateRepository)
     expect(createSystemConfigRepository(database)).toBeInstanceOf(SystemConfigRepository)
     expect(createExternalApiLogRepository(database)).toBeInstanceOf(ExternalApiLogRepository)
+    expect(createInvitationCodeRepository(database)).toBeInstanceOf(InvitationCodeRepository)
     expect(getDatabaseConnection(database)).toBe(connection)
-    expect(database.getConnection).toHaveBeenCalledTimes(9)
+    expect(database.getConnection).toHaveBeenCalledTimes(10)
   })
 
   it('creates grouped repositories for services with multiple repository dependencies', () => {
