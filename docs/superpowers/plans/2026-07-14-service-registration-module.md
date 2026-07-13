@@ -236,28 +236,28 @@ npm run test:server -- \
 
 ## 任务 4：原子提交
 
-- [ ] **步骤 1：提交设计和计划**
+- [x] **步骤 1：提交设计和计划**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/specs/2026-07-14-service-registration-module-design.md docs/superpowers/plans/2026-07-14-service-registration-module.md
 GIT_MASTER=1 git commit -m "docs(architecture): 规划服务注册模块化边界" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 2：提交 token 模块与类型契约**
+- [x] **步骤 2：提交 token 模块与类型契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/tokens.ts server/service-registration/__tests__/tokens.test.ts server/container.types.ts
 GIT_MASTER=1 git commit -m "refactor(container): 分离服务注册 token 契约" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 3：提交注册器、getter 与兼容门面**
+- [x] **步骤 3：提交注册器、getter 与兼容门面**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration.ts server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/composition-contract.test.ts
 GIT_MASTER=1 git commit -m "refactor(server): 拆分服务注册编排与解析门面" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 4：提交后检查**
+- [x] **步骤 4：提交后检查**
 
 运行：`GIT_MASTER=1 git status --short`。
 
