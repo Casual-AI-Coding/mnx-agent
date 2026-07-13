@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest'
+import { TOKENS } from '../tokens.js'
+
+describe('service registration tokens', () => {
+  it('preserves every public dependency token value', () => {
+    expect(TOKENS).toEqual({
+      DATABASE: 'database',
+      MINIMAX_CLIENT: 'minimaxClient',
+      TASK_EXECUTOR: 'taskExecutor',
+      CAPACITY_CHECKER: 'capacityChecker',
+      QUEUE_PROCESSOR: 'queueProcessor',
+      WORKFLOW_ENGINE: 'workflowEngine',
+      CRON_SCHEDULER: 'cronScheduler',
+      SERVICE_NODE_REGISTRY: 'serviceNodeRegistry',
+      WEBSOCKET_SERVICE: 'websocketService',
+      NOTIFICATION_SERVICE: 'notificationService',
+      EXECUTION_STATE_MANAGER: 'executionStateManager',
+      WORKFLOW_SERVICE: 'workflowService',
+      EVENT_BUS: 'eventBus',
+      CONCURRENCY_MANAGER: 'concurrencyManager',
+      MISFIRE_HANDLER: 'misfireHandler',
+      RETRY_MANAGER: 'retryManager',
+      DLQ_AUTO_RETRY_SCHEDULER: 'dlqAutoRetryScheduler',
+      JOB_SERVICE: 'jobService',
+      TASK_SERVICE: 'taskService',
+      LOG_SERVICE: 'logService',
+      MEDIA_SERVICE: 'mediaService',
+      WEBHOOK_SERVICE: 'webhookService',
+      CAPACITY_SERVICE: 'capacityService',
+      MATERIAL_SERVICE: 'materialService',
+      EXPORT_SERVICE: 'exportService',
+      BACKUP_SERVICE: 'backupService',
+      TEMPLATE_SERVICE: 'templateService',
+      SYSTEM_CONFIG_SERVICE: 'systemConfigService',
+      EXTERNAL_API_LOG_SERVICE: 'externalApiLogService',
+      SERVICE_NODE_PERMISSION_SERVICE: 'serviceNodePermissionService',
+      SETTINGS_SERVICE: 'settingsService',
+      EXTERNAL_API_LOG_REPOSITORY: 'externalApiLogRepository',
+      MEDIA_REPOSITORY: 'mediaRepository',
+      USER_SERVICE: 'userService',
+    })
+  })
+})

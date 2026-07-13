@@ -1,7 +1,7 @@
 import type { Container } from './container.js'
 import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
-import { TOKENS } from './service-registration.js'
+import { TOKENS } from './service-registration/tokens.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import type { ExternalApiLogService } from './services/external-api-log-service.js'
 import type { MediaRepository } from './repositories/media-repository.js'
