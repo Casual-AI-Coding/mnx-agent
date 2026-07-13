@@ -26,7 +26,7 @@
 - 创建：`server/services/__tests__/service-node-permission-service.test.ts`
 - 修改：`server/repositories/__tests__/user-repository.test.ts` 或创建 `server/repositories/__tests__/service-node-permission-repository.test.ts`
 
-- [ ] **步骤 1：写服务 RED 测试**
+- [x] **步骤 1：写服务 RED 测试**
 
 构造仅具备 `updateServiceNodePermission` 的结构化仓储替身；调用：
 
@@ -41,7 +41,7 @@ await service.update('permission-1', {
 
 断言仓储接收四个字段，并断言 `service.getConnection` 不存在。
 
-- [ ] **步骤 2：运行服务测试确认 RED**
+- [x] **步骤 2：运行服务测试确认 RED**
 
 运行：
 
@@ -51,7 +51,7 @@ rtk npm run test:server -- "server/services/__tests__/service-node-permission-se
 
 预期：因完整更新契约或连接泄露删除尚未实现而失败。
 
-- [ ] **步骤 3：写仓储 RED 测试**
+- [x] **步骤 3：写仓储 RED 测试**
 
 使用结构化 `DatabaseConnection` 记录器调用：
 
@@ -66,7 +66,7 @@ await repository.updateServiceNodePermission('permission-1', {
 
 断言 SQL 仅包含固定四字段、值以参数传递且最后参数为权限 id；再调用空对象并断言没有执行 SQL。
 
-- [ ] **步骤 4：运行仓储测试确认 RED**
+- [x] **步骤 4：运行仓储测试确认 RED**
 
 运行：
 
@@ -82,7 +82,7 @@ rtk npm run test:server -- "server/repositories/__tests__/service-node-permissio
 - 修改：`server/repositories/user-repository.ts:280-306`
 - 修改：`server/services/service-node-permission-service.ts:16-33`
 
-- [ ] **步骤 1：扩展仓储更新白名单**
+- [x] **步骤 1：扩展仓储更新白名单**
 
 将方法输入扩展为：
 
@@ -97,11 +97,11 @@ rtk npm run test:server -- "server/repositories/__tests__/service-node-permissio
 
 按 `display_name`、`category`、`min_role`、`is_enabled` 的固定顺序生成参数化字段；保留布尔值的数据库方言转换；空输入直接返回。
 
-- [ ] **步骤 2：扩展服务更新并删除连接泄露**
+- [x] **步骤 2：扩展服务更新并删除连接泄露**
 
 让 `ServiceNodePermissionService.update()` 使用相同输入并委托仓储，删除 `getConnection()` 及其 `DatabaseConnection` 类型导入。
 
-- [ ] **步骤 3：运行 RED 测试确认 GREEN**
+- [x] **步骤 3：运行 RED 测试确认 GREEN**
 
 运行：
 
@@ -118,7 +118,7 @@ rtk npm run test:server -- "server/services/__tests__/service-node-permission-se
 - 修改：`server/routes/admin/service-permissions.ts:56-106`
 - 保留：`server/routes/admin/__tests__/service-permissions.test.ts`
 
-- [ ] **步骤 1：写 Route RED 契约**
+- [x] **步骤 1：写 Route RED 契约**
 
 读取路由源码，断言包含 `svc.update(id, { display_name, category, min_role, is_enabled })`，且不包含：
 
@@ -135,7 +135,7 @@ rtk npm run test:server -- "server/routes/admin/__tests__/service-permissions-di
 
 预期：当前 Route 仍访问连接并拼接 SQL，测试失败。
 
-- [ ] **步骤 2：移除 Route 内 SQL**
+- [x] **步骤 2：移除 Route 内 SQL**
 
 保留既有查询和 404 分支，将原先两段更新改为：
 
@@ -145,7 +145,7 @@ await svc.update(id, { display_name, category, min_role, is_enabled })
 
 随后再次读取 `getAll()` 并以既有 `successResponse(res, updated)` 返回。不要修改角色、错误文本、状态码或 GET/POST/DELETE 路由。
 
-- [ ] **步骤 3：运行 Route GREEN 测试和真实路由集成测试**
+- [x] **步骤 3：运行 Route GREEN 测试和真实路由集成测试**
 
 运行：
 
@@ -159,7 +159,7 @@ rtk npm run test:server -- "server/routes/admin/__tests__/service-permissions-di
 
 **文件：** 本计划所列所有改动文件。
 
-- [ ] **步骤 1：运行完整针对性验证**
+- [x] **步骤 1：运行完整针对性验证**
 
 运行：
 
@@ -170,11 +170,11 @@ rtk npm run build
 
 预期：明确列出的测试文件通过，构建退出码为零。
 
-- [ ] **步骤 2：执行静态检查**
+- [x] **步骤 2：执行静态检查**
 
 对改动 TypeScript 文件运行 LSP diagnostics；扫描类型逃逸与忽略指令；运行 `GIT_MASTER=1 git diff --check`。
 
-- [ ] **步骤 3：按原子单元提交**
+- [x] **步骤 3：按原子单元提交**
 
 依赖顺序：设计计划文档 -> 服务与仓储实现及其测试 -> Route 与其契约/集成测试 -> 计划状态同步。
 
