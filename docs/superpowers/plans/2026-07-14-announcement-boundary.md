@@ -385,42 +385,42 @@ npm run test:server -- \
 
 ## 任务 5：原子提交
 
-- [ ] **步骤 1：提交设计与计划**
+- [x] **步骤 1：提交设计与计划**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/specs/2026-07-14-announcement-boundary-design.md docs/superpowers/plans/2026-07-14-announcement-boundary.md
 GIT_MASTER=1 git commit -m "docs(architecture): 规划公告管理分层边界" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 2：提交公告类型、应用服务与单测**
+- [x] **步骤 2：提交公告类型、应用服务与单测**
 
 ```bash
 GIT_MASTER=1 git add server/services/announcement-types.ts server/services/announcement-service.ts server/services/__tests__/announcement-service.test.ts
 GIT_MASTER=1 git commit -m "feat(server): 新增公告应用服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 3：提交公告 Repository 与单测**
+- [x] **步骤 3：提交公告 Repository 与单测**
 
 ```bash
 GIT_MASTER=1 git add server/repositories/announcement-repository.ts server/repositories/__tests__/announcement-repository.test.ts
 GIT_MASTER=1 git commit -m "feat(server): 新增公告持久化仓储" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 4：提交公告服务 token 契约**
+- [x] **步骤 4：提交公告服务 token 契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/tokens.ts server/service-registration/__tests__/tokens.test.ts server/container.types.ts
 GIT_MASTER=1 git commit -m "refactor(container): 登记公告服务 token 契约" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 5：提交 DI 装配与契约**
+- [x] **步骤 5：提交 DI 装配与契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/announcement-di-contract.test.ts
 GIT_MASTER=1 git commit -m "refactor(container): 装配公告管理服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 6：提交 Route 边界迁移**
+- [x] **步骤 6：提交 Route 边界迁移**
 
 ```bash
 GIT_MASTER=1 git add server/routes/admin/announcements.ts server/routes/admin/__tests__/announcements-di-contract.test.ts
