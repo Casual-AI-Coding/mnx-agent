@@ -50,7 +50,7 @@
 - 新增：`server/services/invitation-code-types.ts`
 - 新增：`server/services/invitation-code-service.ts`
 
-- [ ] **步骤 1：写失败测试**
+- [x] **步骤 1：写失败测试**
 
 ```typescript
 import { describe, expect, it } from 'vitest'
@@ -81,13 +81,13 @@ describe('InvitationCodeService', () => {
 })
 ```
 
-- [ ] **步骤 2：确认 RED**
+- [x] **步骤 2：确认 RED**
 
 运行：`npm run test:server -- server/services/__tests__/invitation-code-service.test.ts`
 
 预期：失败原因是 `invitation-code-service.js` 尚不存在。
 
-- [ ] **步骤 3：实现最小类型和服务**
+- [x] **步骤 3：实现最小类型和服务**
 
 ```typescript
 export interface InvitationCode {
@@ -139,7 +139,7 @@ export class InvitationCodeService {
 }
 ```
 
-- [ ] **步骤 4：确认 GREEN**
+- [x] **步骤 4：确认 GREEN**
 
 运行：`npm run test:server -- server/services/__tests__/invitation-code-service.test.ts`
 
@@ -156,7 +156,7 @@ export class InvitationCodeService {
 - 保留：`server/services/user-service.ts`
 - 保留：`server/services/__tests__/user-service-race.test.ts`
 
-- [ ] **步骤 1：写 Repository 失败测试**
+- [x] **步骤 1：写 Repository 失败测试**
 
 测试必须验证以下可观察契约：
 
@@ -168,13 +168,13 @@ expect(update.sql).toContain('WHERE id = $2 AND created_by = $3')
 expect(deactivate.sql).toContain('SET is_active = false')
 ```
 
-- [ ] **步骤 2：确认 RED**
+- [x] **步骤 2：确认 RED**
 
 运行：`npm run test:server -- server/repositories/__tests__/invitation-code-repository.test.ts`
 
 预期：失败原因是 `invitation-code-repository.js` 尚不存在。
 
-- [ ] **步骤 3：实现参数化 Repository**
+- [x] **步骤 3：实现参数化 Repository**
 
 Repository 的公开方法与边界：
 
@@ -202,7 +202,7 @@ await this.connection.execute(
 
 `update()` 仅接受 `max_uses`、`expires_at` 和 `is_active` 三个可选字段；当调用方已有字段时，以参数化占位符构造 SET 子句，并以 `id` 与 `creatorId` 限制更新。`deactivate()` 返回 `changes > 0`。不得把注册兑换条件更新移入该 Repository，也不得修改 `UserService`。
 
-- [ ] **步骤 4：确认 GREEN 与兑换隔离**
+- [x] **步骤 4：确认 GREEN 与兑换隔离**
 
 运行：
 
@@ -228,7 +228,7 @@ npm run test:server -- \
 - 新增：`server/service-registration/__tests__/invitation-code-di-contract.test.ts`
 - 修改：`server/service-registration/__tests__/tokens.test.ts`
 
-- [ ] **步骤 1：写 DI 失败契约**
+- [x] **步骤 1：写 DI 失败契约**
 
 ```typescript
 expect(tokens).toContain("INVITATION_CODE_SERVICE: 'invitationCodeService'")
@@ -238,13 +238,13 @@ expect(registrations).toContain('new InvitationCodeService')
 expect(getters).toContain('export function getInvitationCodeService')
 ```
 
-- [ ] **步骤 2：确认 RED**
+- [x] **步骤 2：确认 RED**
 
 运行：`npm run test:server -- server/service-registration/__tests__/invitation-code-di-contract.test.ts`
 
 预期：失败原因是邀请码管理 token、注册和 getter 尚未存在。
 
-- [ ] **步骤 3：实现 token、factory、注册与 getter**
+- [x] **步骤 3：实现 token、factory、注册与 getter**
 
 ```typescript
 // 服务 token
@@ -266,7 +266,7 @@ export function getInvitationCodeService(): InvitationCodeService {
 }
 ```
 
-- [ ] **步骤 4：确认 GREEN**
+- [x] **步骤 4：确认 GREEN**
 
 运行：
 
@@ -287,7 +287,7 @@ npm run test:server -- \
 - 修改：`server/routes/invitation-codes.ts`
 - 新增：`server/routes/__tests__/invitation-codes-di-contract.test.ts`
 
-- [ ] **步骤 1：写 Route 失败契约**
+- [x] **步骤 1：写 Route 失败契约**
 
 ```typescript
 expect(source).toContain('getInvitationCodeService')
@@ -298,13 +298,13 @@ expect(source).not.toContain('UPDATE invitation_codes')
 expect(source).not.toContain('new InvitationCodeRepository')
 ```
 
-- [ ] **步骤 2：确认 RED**
+- [x] **步骤 2：确认 RED**
 
 运行：`npm run test:server -- server/routes/__tests__/invitation-codes-di-contract.test.ts`
 
 预期：现有 Route 因直接连接和 SQL 而失败。
 
-- [ ] **步骤 3：替换为服务调用**
+- [x] **步骤 3：替换为服务调用**
 
 保留 `router.use(requireRole(['super']))`、两个 Zod schema、`validate()` 和既有 response helper。替换方式：
 
@@ -321,7 +321,7 @@ router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, re
 
 对 PATCH，服务返回 `null` 时保留 `邀请码不存在` 404；服务返回未变更状态时保留 `{ message: '无更新内容', data }`；其他情况继续返回更新后的邀请码。对 DELETE，false 继续映射为同一 404，true 继续映射为 `{ message: '邀请码已失效' }`。
 
-- [ ] **步骤 4：确认 GREEN**
+- [x] **步骤 4：确认 GREEN**
 
 运行：
 
@@ -338,7 +338,7 @@ npm run test:server -- \
 
 ## 任务 5：诊断、回归与构建验证
 
-- [ ] **步骤 1：运行 diagnostics、禁止项和空白检查**
+- [x] **步骤 1：运行 diagnostics、禁止项和空白检查**
 
 对所有新增或修改的 TypeScript 文件运行 `lsp_diagnostics`，扫描类型逃逸与忽略指令，并运行：
 
@@ -348,7 +348,7 @@ GIT_MASTER=1 git diff --check
 
 预期：无新增 diagnostics、无禁止项、无空白错误。
 
-- [ ] **步骤 2：运行聚焦回归**
+- [x] **步骤 2：运行聚焦回归**
 
 ```bash
 npm run test:server -- \
@@ -371,7 +371,7 @@ npm run test:server -- \
 
 预期：聚焦测试通过；完整套件与 lint 的既有基线若仍失败，单独记录而不混入本切片。
 
-- [ ] **步骤 3：运行构建**
+- [x] **步骤 3：运行构建**
 
 运行：`npm run build`
 
@@ -381,49 +381,56 @@ npm run test:server -- \
 
 ## 任务 6：原子提交
 
-- [ ] **步骤 1：提交设计与计划**
+- [x] **步骤 1：提交设计与计划**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/specs/2026-07-14-invitation-code-management-boundary-design.md docs/superpowers/plans/2026-07-14-invitation-code-management-boundary.md
 GIT_MASTER=1 git commit -m "docs(architecture): 规划邀请码管理分层边界" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 2：提交邀请码应用服务与单测**
+- [x] **步骤 2：提交邀请码应用服务与单测**
 
 ```bash
 GIT_MASTER=1 git add server/services/invitation-code-types.ts server/services/invitation-code-service.ts server/services/__tests__/invitation-code-service.test.ts
 GIT_MASTER=1 git commit -m "feat(server): 新增邀请码管理服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 3：提交邀请码管理 Repository 与单测**
+- [x] **步骤 3：提交邀请码管理 Repository 与单测**
 
 ```bash
 GIT_MASTER=1 git add server/repositories/invitation-code-repository.ts server/repositories/__tests__/invitation-code-repository.test.ts
 GIT_MASTER=1 git commit -m "feat(server): 新增邀请码管理仓储" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 4：提交邀请码服务 token 契约**
+- [x] **步骤 4：提交邀请码服务 token 契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/tokens.ts server/service-registration/__tests__/tokens.test.ts server/container.types.ts
 GIT_MASTER=1 git commit -m "refactor(container): 登记邀请码管理服务 token" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 5：提交 DI 装配与契约**
+- [x] **步骤 5：提交邀请码 Repository 工厂与单测**
 
 ```bash
-GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/invitation-code-di-contract.test.ts
+GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/service-registration/__tests__/repository-factories.test.ts
+GIT_MASTER=1 git commit -m "refactor(container): 提供邀请码仓储工厂" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
+```
+
+- [x] **步骤 6：提交 DI 装配与契约**
+
+```bash
+GIT_MASTER=1 git add server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/invitation-code-di-contract.test.ts
 GIT_MASTER=1 git commit -m "refactor(container): 装配邀请码管理服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 6：提交 Route 边界迁移**
+- [x] **步骤 7：提交 Route 边界迁移与 API 回归测试**
 
 ```bash
-GIT_MASTER=1 git add server/routes/invitation-codes.ts server/routes/__tests__/invitation-codes-di-contract.test.ts
+GIT_MASTER=1 git add server/routes/invitation-codes.ts server/routes/__tests__/invitation-codes-di-contract.test.ts server/routes/__tests__/invitation-codes.test.ts
 GIT_MASTER=1 git commit -m "refactor(routes): 移除邀请码路由数据库直连" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 7：提交后检查**
+- [ ] **步骤 8：提交后检查**
 
 运行：`GIT_MASTER=1 git status --short`
 
