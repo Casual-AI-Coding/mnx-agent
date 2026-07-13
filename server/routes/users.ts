@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
 import { getConnection } from '../database/connection.js'
-import { getUserService } from '../service-registration.js'
+import { getAdminUserService, getUserService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
 import bcrypt from 'bcrypt'
@@ -52,29 +52,10 @@ type UserUpdateValue = UpdateUserInput[keyof UpdateUserInput] | string
 router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, res) => {
   const query = listUsersQuerySchema.parse(req.query)
   const { page, limit } = query
-  const conn = getConnection()
+  const adminUserService = getAdminUserService()
+  const result = await adminUserService.listUsers({ page, limit })
 
-  const countResult = await conn.query<{ total: number }>('SELECT COUNT(*) as total FROM users')
-  const total = Number(countResult[0]?.total ?? 0)
-
-  const offset = (page - 1) * limit
-  const rows = await conn.query(
-    `SELECT id, username, email,
-     CONCAT('minimax_', '****', SUBSTRING(minimax_api_key, -4)) AS minimax_api_key,
-     minimax_region, role, is_active, last_login_at, created_at, updated_at
-     FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-    [limit, offset]
-  )
-
-  successResponse(res, {
-    data: rows,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  })
+  successResponse(res, result)
 }))
 
 router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {

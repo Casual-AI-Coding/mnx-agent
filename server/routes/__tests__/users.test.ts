@@ -5,6 +5,7 @@ import request from 'supertest'
 const mocks = vi.hoisted(() => ({
   getConnection: vi.fn(),
   getUserById: vi.fn(),
+  listUsers: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -25,6 +26,9 @@ vi.mock('../../middleware/auth-middleware.js', () => ({
 }))
 
 vi.mock('../../service-registration.js', () => ({
+  getAdminUserService: () => ({
+    listUsers: mocks.listUsers,
+  }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
   }),
@@ -50,9 +54,8 @@ describe('Users API Routes', () => {
 
   describe('GET /api/users', () => {
     it('should normalize pagination inputs and total count to numeric values when listing users', async () => {
-      mocks.query
-        .mockResolvedValueOnce([{ total: '7' }])
-        .mockResolvedValueOnce([
+      mocks.listUsers.mockResolvedValue({
+        data: [
           {
             id: 'user-2',
             username: 'tester',
@@ -60,7 +63,14 @@ describe('Users API Routes', () => {
             role: 'user',
             is_active: true,
           },
-        ])
+        ],
+        pagination: {
+          page: 2,
+          limit: 5,
+          total: 7,
+          totalPages: 2,
+        },
+      })
 
       const res = await request(app).get('/api/users?page=2&limit=5')
 
@@ -85,13 +95,20 @@ describe('Users API Routes', () => {
           },
         },
       })
-      expect(mocks.query).toHaveBeenNthCalledWith(2, expect.stringContaining('LIMIT $1 OFFSET $2'), [5, 5])
+      expect(mocks.listUsers).toHaveBeenCalledWith({ page: 2, limit: 5 })
+      expect(mocks.getConnection).not.toHaveBeenCalled()
     })
 
     it('should apply schema defaults when pagination query is omitted', async () => {
-      mocks.query
-        .mockResolvedValueOnce([{ total: 0 }])
-        .mockResolvedValueOnce([])
+      mocks.listUsers.mockResolvedValue({
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+      })
 
       const res = await request(app).get('/api/users')
 
@@ -108,7 +125,8 @@ describe('Users API Routes', () => {
           },
         },
       })
-      expect(mocks.query).toHaveBeenNthCalledWith(2, expect.stringContaining('LIMIT $1 OFFSET $2'), [20, 0])
+      expect(mocks.listUsers).toHaveBeenCalledWith({ page: 1, limit: 20 })
+      expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })
 
