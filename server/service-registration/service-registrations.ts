@@ -1,6 +1,7 @@
 import type { Container } from '../container.js'
 import { getDatabase, type DatabaseService } from '../database/service-async.js'
 import { getMiniMaxClient } from '../lib/minimax/index.js'
+import { AnnouncementService } from '../services/announcement-service.js'
 import { DatabasePoolStatsService } from '../services/database-pool-stats-service.js'
 import { CapacityChecker } from '../services/capacity-checker.js'
 import { ConcurrencyManager } from '../services/concurrency-manager.js'
@@ -36,6 +37,7 @@ import { BackupService } from '../services/backup-service.js'
 import { ExternalApiLogService } from '../services/external-api-log-service.js'
 import type { IWebhookService } from '../services/domain/interfaces/index.js'
 import {
+  createAnnouncementRepository,
   createCapacityRepository,
   createExternalApiLogRepository,
   createExportRepositories,
@@ -62,6 +64,10 @@ export async function registerServiceDependencies(container: Container): Promise
 
   container.registerSingleton(TOKENS.DATABASE_POOL_STATS_SERVICE, (c) => {
     return new DatabasePoolStatsService(c.resolve<DatabaseService>(TOKENS.DATABASE))
+  })
+
+  container.registerSingleton(TOKENS.ANNOUNCEMENT_SERVICE, (c) => {
+    return new AnnouncementService(createAnnouncementRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.TASK_EXECUTOR, (c) => {

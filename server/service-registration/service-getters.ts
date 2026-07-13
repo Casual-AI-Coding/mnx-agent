@@ -2,6 +2,7 @@ import { getGlobalContainer } from '../container.js'
 import type { DatabaseService } from '../database/service-async.js'
 import type { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
 import type { MediaRepository } from '../repositories/media-repository.js'
+import { AnnouncementService } from '../services/announcement-service.js'
 import { DatabasePoolStatsService } from '../services/database-pool-stats-service.js'
 import { CapacityChecker } from '../services/capacity-checker.js'
 import { CronScheduler } from '../services/cron-scheduler.js'
@@ -43,6 +44,10 @@ export function getDatabaseService(): DatabaseService {
 
 export function getDatabasePoolStatsService(): DatabasePoolStatsService {
   return getGlobalContainer().resolve<DatabasePoolStatsService>(TOKENS.DATABASE_POOL_STATS_SERVICE)
+}
+
+export function getAnnouncementService(): AnnouncementService {
+  return getGlobalContainer().resolve<AnnouncementService>(TOKENS.ANNOUNCEMENT_SERVICE)
 }
 
 export function getTaskExecutorService(): TaskExecutor {
