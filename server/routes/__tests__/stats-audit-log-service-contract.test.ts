@@ -8,6 +8,10 @@ describe('stats and audit route log service contract', () => {
 
     expect(statsSource).toContain('getLogService')
     expect(statsSource).not.toContain('getDatabaseService')
+    expect(statsSource).toContain('getDatabasePoolStatsService')
+    expect(statsSource).not.toContain('../database/connection')
+    expect(statsSource).not.toContain('PostgresConnection')
+    expect(statsSource).not.toContain('getConnection(')
 
     expect(auditSource).toContain('getLogService')
     expect(auditSource).not.toContain('getDatabaseService')
