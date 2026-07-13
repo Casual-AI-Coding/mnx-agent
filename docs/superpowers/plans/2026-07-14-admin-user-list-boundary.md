@@ -22,6 +22,7 @@
 - 修改：`server/service-registration/tokens.ts`，新增后台用户 service token。
 - 修改：`server/service-registration/service-registrations.ts`，装配 singleton service。
 - 修改：`server/service-registration/service-getters.ts`，暴露 service getter。
+- 修改：`server/container.types.ts`，将新 token 映射到对应的 Service 类型。
 - 修改：`server/service-registration/__tests__/repository-factories.test.ts`，覆盖新 factory。
 - 修改：`server/service-registration/__tests__/tokens.test.ts`，覆盖新增公开 token。
 - 创建：`server/service-registration/__tests__/admin-user-list-di-contract.test.ts`，覆盖装配和 getter 的源文件契约。
@@ -35,7 +36,7 @@
 - 创建：`server/repositories/__tests__/admin-user-repository.test.ts`
 - 创建：`server/repositories/admin-user-repository.ts`
 
-- [ ] **步骤 1：写失败的 Repository 测试**
+- [x] **步骤 1：写失败的 Repository 测试**
 
 以记录 `query` 调用的 `DatabaseConnection` fixture 构造 `AdminUserRepository`，先写两个断言：
 
@@ -61,7 +62,7 @@ expect(query).toHaveBeenCalledWith(
 
 为 `query` 依次提供 `[{ total: '7' }]` 和包含公开字段的列表；断言列表原样返回且不含 `password_hash`。
 
-- [ ] **步骤 2：运行测试确认 RED**
+- [x] **步骤 2：运行测试确认 RED**
 
 运行：
 
@@ -71,7 +72,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：失败，原因是 `admin-user-repository.ts` 尚不存在。
 
-- [ ] **步骤 3：实现最小只读 Repository**
+- [x] **步骤 3：实现最小只读 Repository**
 
 在 `server/repositories/admin-user-repository.ts` 定义并导出：
 
@@ -116,7 +117,7 @@ export class AdminUserRepository {
 
 仅保留上述两个只读方法；不要继承现有 `UserRepository`、不要引入写入方法、不要读取或返回 `password_hash`。
 
-- [ ] **步骤 4：运行 Repository 测试确认 GREEN**
+- [x] **步骤 4：运行 Repository 测试确认 GREEN**
 
 运行：
 
@@ -126,7 +127,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：通过，确认计数被数值化、查询按创建时间倒序且分页参数为 `[5, 5]`。
 
-- [ ] **步骤 5：提交 Repository 单元**
+- [x] **步骤 5：提交 Repository 单元**
 
 运行：
 
@@ -144,7 +145,7 @@ GIT_MASTER=1 git commit -m "refactor(repository): 提取后台用户列表查询
 - 创建：`server/services/__tests__/admin-user-service.test.ts`
 - 创建：`server/services/admin-user-service.ts`
 
-- [ ] **步骤 1：写失败的 Service 测试**
+- [x] **步骤 1：写失败的 Service 测试**
 
 定义结构化 repository stub：
 
@@ -164,7 +165,7 @@ expect(repository.listUsers).toHaveBeenCalledWith({ limit: 5, offset: 5 })
 
 再覆盖空总数：`countUsers` 返回 0 时，`totalPages` 必须为 0。
 
-- [ ] **步骤 2：运行测试确认 RED**
+- [x] **步骤 2：运行测试确认 RED**
 
 运行：
 
@@ -174,7 +175,7 @@ npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
 
 预期：失败，原因是 `AdminUserService` 尚不存在。
 
-- [ ] **步骤 3：实现最小 Service**
+- [x] **步骤 3：实现最小 Service**
 
 在 `server/services/admin-user-service.ts` 定义 repository 依赖接口和 service：
 
@@ -203,7 +204,7 @@ export class AdminUserService {
 
 从 Repository 导入 `AdminUserListItem` 和 `AdminUserListOptions` 类型。不要导入 `DatabaseConnection`，不要增加任何 HTTP 或认证依赖。
 
-- [ ] **步骤 4：运行 Service 测试确认 GREEN**
+- [x] **步骤 4：运行 Service 测试确认 GREEN**
 
 运行：
 
@@ -213,7 +214,7 @@ npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
 
 预期：通过，确认第二页 offset 为 5，空总数页数为 0。
 
-- [ ] **步骤 5：提交 Service 单元**
+- [x] **步骤 5：提交 Service 单元**
 
 运行：
 
@@ -232,13 +233,14 @@ GIT_MASTER=1 git commit -m "refactor(server): 编排后台用户列表分页" -m
 - 修改：`server/service-registration/tokens.ts`
 - 修改：`server/service-registration/service-registrations.ts`
 - 修改：`server/service-registration/service-getters.ts`
+- 修改：`server/container.types.ts`
 - 修改：`server/service-registration/__tests__/repository-factories.test.ts`
 - 修改：`server/service-registration/__tests__/tokens.test.ts`
 - 创建：`server/service-registration/__tests__/admin-user-list-di-contract.test.ts`
 
-- [ ] **步骤 1：写失败的容器契约测试**
+- [x] **步骤 1：写失败的容器契约测试**
 
-在新测试文件读取四个注册源文件，断言：
+在新测试文件读取四个注册源文件及容器类型映射，断言：
 
 ```ts
 expect(tokensSource).toContain("ADMIN_USER_SERVICE: 'adminUserService'")
@@ -250,7 +252,7 @@ expect(gettersSource).toContain('getAdminUserService')
 
 扩展 `repository-factories.test.ts`，从 factory 创建实例并断言 `toBeInstanceOf(AdminUserRepository)`；扩展 `tokens.test.ts` 的期望对象，加入 `ADMIN_USER_SERVICE: 'adminUserService'`。
 
-- [ ] **步骤 2：运行测试确认 RED**
+- [x] **步骤 2：运行测试确认 RED**
 
 运行：
 
@@ -260,7 +262,7 @@ npm run test:server -- "server/service-registration/__tests__/repository-factori
 
 预期：失败，原因是 factory、token、注册和 getter 尚未存在。
 
-- [ ] **步骤 3：实现最小装配**
+- [x] **步骤 3：实现最小装配**
 
 在 `repository-factories.ts` 添加 import 和 factory：
 
@@ -294,9 +296,15 @@ export function getAdminUserService(): AdminUserService {
 }
 ```
 
+在 `container.types.ts` 导入 `AdminUserService` 类型，并在 `ContainerTokenMap` 中加入：
+
+```ts
+readonly [TOKENS.ADMIN_USER_SERVICE]: AdminUserService
+```
+
 不要改变 `server/service-registration.ts`，它已通过 `export *` 重导出 getters。
 
-- [ ] **步骤 4：运行容器测试确认 GREEN**
+- [x] **步骤 4：运行容器测试确认 GREEN**
 
 运行：
 
@@ -306,12 +314,12 @@ npm run test:server -- "server/service-registration/__tests__/repository-factori
 
 预期：通过，确认新 token、factory、singleton 和 public getter 均可用。
 
-- [ ] **步骤 5：提交 DI 单元**
+- [x] **步骤 5：提交 DI 单元**
 
 运行：
 
 ```bash
-GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/service-registration/tokens.ts server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/repository-factories.test.ts server/service-registration/__tests__/tokens.test.ts server/service-registration/__tests__/admin-user-list-di-contract.test.ts
+GIT_MASTER=1 git add server/service-registration/repository-factories.ts server/service-registration/tokens.ts server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/container.types.ts server/service-registration/__tests__/repository-factories.test.ts server/service-registration/__tests__/tokens.test.ts server/service-registration/__tests__/admin-user-list-di-contract.test.ts
 GIT_MASTER=1 git diff --cached --check
 GIT_MASTER=1 git commit -m "refactor(server): 注册后台用户列表服务" -m "由 Sisyphus 执行" -m "Co-authored-by: Sisyphus <noreply@sisyphus.local>"
 ```
@@ -325,7 +333,7 @@ GIT_MASTER=1 git commit -m "refactor(server): 注册后台用户列表服务" -m
 - 修改：`server/routes/__tests__/users.test.ts:5-112`
 - 修改：`server/routes/__tests__/users-di-contract.test.ts`
 
-- [ ] **步骤 1：先把 GET 行为测试改为 Service mock**
+- [x] **步骤 1：先把 GET 行为测试改为 Service mock**
 
 将 hoisted mock 添加为：
 
@@ -355,7 +363,7 @@ expect(mocks.getConnection).not.toHaveBeenCalled()
 
 保留 PATCH 测试及其 `getUserService` mock 不变。
 
-- [ ] **步骤 2：写失败的 Route 边界契约并运行 RED**
+- [x] **步骤 2：写失败的 Route 边界契约并运行 RED**
 
 在 `users-di-contract.test.ts` 增加一个测试：
 
@@ -374,7 +382,7 @@ npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__
 
 预期：失败，原因是 GET Route 仍直接查询连接和 SQL。
 
-- [ ] **步骤 3：最小化改写 GET Route**
+- [x] **步骤 3：最小化改写 GET Route**
 
 将 `users.ts` 顶部 registration import 改为：
 
@@ -392,7 +400,7 @@ successResponse(res, result)
 
 替换从 `const conn = getConnection()` 起到原 `successResponse` 为止的列表 SQL 块。保留 `getConnection` import，因为本批其余五个 Route 端点仍然需要；不得修改它们。
 
-- [ ] **步骤 4：运行 Route 测试确认 GREEN**
+- [x] **步骤 4：运行 Route 测试确认 GREEN**
 
 运行：
 
@@ -402,7 +410,7 @@ npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__
 
 预期：通过，确认 HTTP 响应、默认分页和 PATCH 原有行为均保持不变，且 GET 使用后台查询 service。
 
-- [ ] **步骤 5：提交 Route 单元**
+- [x] **步骤 5：提交 Route 单元**
 
 运行：
 
@@ -420,7 +428,7 @@ GIT_MASTER=1 git commit -m "refactor(routes): 收敛后台用户列表读取" -m
 - 修改：`docs/superpowers/plans/2026-07-14-admin-user-list-boundary.md`
 - 验证：任务 1 至 4 所列所有 TypeScript 文件。
 
-- [ ] **步骤 1：运行完整针对性测试**
+- [x] **步骤 1：运行完整针对性测试**
 
 运行：
 
@@ -430,7 +438,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：列出的文件全部通过。
 
-- [ ] **步骤 2：运行类型和构建验证**
+- [x] **步骤 2：运行类型和构建验证**
 
 对所有新增和改动 TypeScript 文件运行 LSP error diagnostics；然后运行：
 
@@ -440,7 +448,7 @@ npm run build
 
 预期：构建退出码为 0。若出现既有无关告警，记录其来源但不修改无关文件。
 
-- [ ] **步骤 3：扫描禁止项并检查差异**
+- [x] **步骤 3：扫描禁止项并检查差异**
 
 运行：
 
@@ -451,7 +459,7 @@ GIT_MASTER=1 git diff --check HEAD~4..HEAD
 
 预期：禁止项扫描无匹配，差异检查无输出。
 
-- [ ] **步骤 4：更新计划复选框并提交**
+- [x] **步骤 4：更新计划复选框并提交**
 
 将任务 1 至 5 中已完成的复选框改为 `[x]`，然后运行：
 
