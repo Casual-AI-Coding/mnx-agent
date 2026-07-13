@@ -71,33 +71,7 @@ router.patch('/:id', requireRole(['super', 'admin']), asyncHandler(async (req, r
     return
   }
   
-  await svc.update(id, { min_role, is_enabled })
-  
-  if (display_name !== undefined || category !== undefined) {
-    const conn = svc.getConnection()
-    const updates: string[] = []
-    const values: (string | number)[] = []
-    let paramIndex = 1
-    
-    if (display_name !== undefined) {
-      updates.push(`display_name = $${paramIndex}`)
-      values.push(display_name)
-      paramIndex++
-    }
-    if (category !== undefined) {
-      updates.push(`category = $${paramIndex}`)
-      values.push(category)
-      paramIndex++
-    }
-    
-    if (updates.length > 0) {
-      values.push(id)
-      await conn.execute(
-        `UPDATE service_node_permissions SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-        values
-      )
-    }
-  }
+  await svc.update(id, { display_name, category, min_role, is_enabled })
   
   const updatedPermissions = await svc.getAll()
   const updated = updatedPermissions.find(p => p.id === id)
