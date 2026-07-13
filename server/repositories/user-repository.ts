@@ -279,12 +279,27 @@ export class UserRepository extends BaseRepository<AuditLog, CreateAuditLog> {
 
   async updateServiceNodePermission(
     id: string,
-    data: { min_role?: string; is_enabled?: boolean }
+    data: {
+      display_name?: string
+      category?: string
+      min_role?: string
+      is_enabled?: boolean
+    }
   ): Promise<void> {
     const updates: string[] = []
     const values: (string | number | boolean)[] = []
     let paramIndex = 1
 
+    if (data.display_name !== undefined) {
+      updates.push(`display_name = $${paramIndex}`)
+      values.push(data.display_name)
+      paramIndex++
+    }
+    if (data.category !== undefined) {
+      updates.push(`category = $${paramIndex}`)
+      values.push(data.category)
+      paramIndex++
+    }
     if (data.min_role !== undefined) {
       updates.push(`min_role = $${paramIndex}`)
       values.push(data.min_role)
