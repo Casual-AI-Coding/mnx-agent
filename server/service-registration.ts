@@ -14,25 +14,12 @@ import { WorkflowService, JobService, TaskService, LogService, MediaService, Web
 import { ExportService } from './services/export-service.js'
 import { BackupService } from './services/backup-service.js'
 import { SettingsService } from './services/settings-service.js'
-import { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
-import { JobRepository } from './repositories/job-repository.js'
-import { CapacityRepository } from './repositories/capacity-repository.js'
-import { LogRepository } from './repositories/log-repository.js'
-import { MaterialRepository } from './repositories/material-repository.js'
-import { MaterialItemRepository } from './repositories/material-item-repository.js'
-import { PromptRepository } from './repositories/prompt-repository.js'
-import { PromptTemplateRepository } from './repositories/prompt-template-repository.js'
-import { SystemConfigRepository } from './repositories/system-config-repository.js'
+import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import { TemplateService } from './services/template-service.js'
 import { ExternalApiLogService } from './services/external-api-log-service.js'
 import { ServiceNodePermissionService } from './services/service-node-permission-service.js'
 import { SystemConfigService } from './services/system-config-service.js'
-import { MediaRepository } from './repositories/media-repository.js'
-import { TaskRepository } from './repositories/task-repository.js'
-import { UserRepository } from './repositories/user-repository.js'
-import { WorkflowRepository } from './repositories/workflow-repository.js'
-import { WebhookRepository } from './repositories/webhook-repository.js'
-import { DeadLetterRepository } from './repositories/deadletter-repository.js'
+import type { MediaRepository } from './repositories/media-repository.js'
 import { UserService } from './services/user-service.js'
 import { cronEvents } from './services/websocket-service.js'
 import type { IEventBus } from './services/interfaces/event-bus.interface.js'
@@ -46,6 +33,22 @@ import type { IConcurrencyManager } from './services/interfaces/concurrency-mana
 import type { IMisfireHandler } from './services/interfaces/misfire-handler.interface.js'
 import type { IRetryManager } from './services/interfaces/retry-manager.interface.js'
 import type { IDLQAutoRetryScheduler } from './services/interfaces/dlq-auto-retry-scheduler.interface.js'
+import {
+  createCapacityRepository,
+  createExternalApiLogRepository,
+  createExportRepositories,
+  createJobRepository,
+  createLogRepositories,
+  createMaterialRepositories,
+  createMediaRepository,
+  createServiceNodePermissionRepositories,
+  createSystemConfigRepository,
+  createTaskRepositories,
+  createTemplateRepository,
+  createWebhookRepository,
+  createWorkflowRepository,
+  getDatabaseConnection,
+} from './service-registration/repository-factories.js'
 
 export const TOKENS = {
   DATABASE: 'database',
@@ -158,9 +161,7 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.WORKFLOW_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new WorkflowService(new WorkflowRepository(conn))
+    return new WorkflowService(createWorkflowRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.DLQ_AUTO_RETRY_SCHEDULER, (c) => {
@@ -168,63 +169,52 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.JOB_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new JobService(new JobRepository(conn))
+    return new JobService(createJobRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.TASK_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
+    const repositories = createTaskRepositories(c.resolve<DatabaseService>(TOKENS.DATABASE))
     return new TaskService(
-      new TaskRepository(conn),
-      new DeadLetterRepository(conn)
+      repositories.taskRepository,
+      repositories.deadLetterRepository
     )
   })
 
   container.registerSingleton(TOKENS.LOG_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
+    const repositories = createLogRepositories(c.resolve<DatabaseService>(TOKENS.DATABASE))
     return new LogService(
-      new LogRepository(conn),
-      new UserRepository(conn),
+      repositories.logRepository,
+      repositories.userRepository,
       c.resolve(TOKENS.EXTERNAL_API_LOG_REPOSITORY)
     )
   })
 
   container.registerSingleton(TOKENS.MEDIA_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new MediaService(new MediaRepository(conn))
+    return new MediaService(createMediaRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.WEBHOOK_SERVICE, (c) => {
-    const conn = c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection()
-    return new WebhookService(new WebhookRepository(conn))
+    return new WebhookService(createWebhookRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.CAPACITY_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new CapacityService(new CapacityRepository(conn))
+    return new CapacityService(createCapacityRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.MATERIAL_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
+    const repositories = createMaterialRepositories(c.resolve<DatabaseService>(TOKENS.DATABASE))
     return new MaterialService(
-      new MaterialRepository(conn),
-      new MaterialItemRepository(conn),
-      new PromptRepository(conn)
+      repositories.materialRepository,
+      repositories.materialItemRepository,
+      repositories.promptRepository
     )
   })
 
   container.registerSingleton(TOKENS.EXPORT_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
+    const repositories = createExportRepositories(c.resolve<DatabaseService>(TOKENS.DATABASE))
     return new ExportService(
-      new LogRepository(conn),
-      new MediaRepository(conn)
+      repositories.logRepository,
+      repositories.mediaRepository
     )
   })
 
@@ -233,31 +223,27 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.SETTINGS_SERVICE, (c) => {
-    return new SettingsService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+    return new SettingsService(getDatabaseConnection(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.EXTERNAL_API_LOG_REPOSITORY, (c) => {
-    return new ExternalApiLogRepository(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+    return createExternalApiLogRepository(c.resolve<DatabaseService>(TOKENS.DATABASE))
   })
 
   container.registerSingleton(TOKENS.MEDIA_REPOSITORY, (c) => {
-    return new MediaRepository(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+    return createMediaRepository(c.resolve<DatabaseService>(TOKENS.DATABASE))
   })
 
   container.registerSingleton(TOKENS.USER_SERVICE, (c) => {
-    return new UserService(c.resolve<DatabaseService>(TOKENS.DATABASE).getConnection())
+    return new UserService(getDatabaseConnection(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.TEMPLATE_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new TemplateService(new PromptTemplateRepository(conn))
+    return new TemplateService(createTemplateRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.SYSTEM_CONFIG_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new SystemConfigService(new SystemConfigRepository(conn))
+    return new SystemConfigService(createSystemConfigRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.EXTERNAL_API_LOG_SERVICE, (c) => {
@@ -265,9 +251,8 @@ export async function registerServices(): Promise<void> {
   })
 
   container.registerSingleton(TOKENS.SERVICE_NODE_PERMISSION_SERVICE, (c) => {
-    const db = c.resolve<DatabaseService>(TOKENS.DATABASE)
-    const conn = db.getConnection()
-    return new ServiceNodePermissionService(new UserRepository(conn))
+    const repositories = createServiceNodePermissionRepositories(c.resolve<DatabaseService>(TOKENS.DATABASE))
+    return new ServiceNodePermissionService(repositories.userRepository)
   })
 
   // Register the global event bus singleton (CronEventEmitter implements IEventBus)
