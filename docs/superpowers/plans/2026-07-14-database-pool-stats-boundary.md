@@ -355,42 +355,42 @@ npm run test:server -- \
 
 ## 任务 6：原子提交
 
-- [ ] **步骤 1：提交设计与计划**
+- [x] **步骤 1：提交设计与计划**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/specs/2026-07-14-database-pool-stats-boundary-design.md docs/superpowers/plans/2026-07-14-database-pool-stats-boundary.md
 GIT_MASTER=1 git commit -m "docs(architecture): 规划连接池统计服务边界" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 2：提交连接池统计服务与单元测试**
+- [x] **步骤 2：提交连接池统计服务与单元测试**
 
 ```bash
 GIT_MASTER=1 git add server/services/database-pool-stats-service.ts server/services/__tests__/database-pool-stats-service.test.ts
 GIT_MASTER=1 git commit -m "feat(server): 新增连接池统计服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 3：提交 token 与类型契约**
+- [x] **步骤 3：提交 token 与类型契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/tokens.ts server/service-registration/__tests__/tokens.test.ts server/container.types.ts
 GIT_MASTER=1 git commit -m "refactor(container): 登记连接池统计服务契约" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 4：提交服务注册与 getter 契约**
+- [x] **步骤 4：提交服务注册与 getter 契约**
 
 ```bash
 GIT_MASTER=1 git add server/service-registration/service-registrations.ts server/service-registration/service-getters.ts server/service-registration/__tests__/database-pool-stats-di-contract.test.ts
 GIT_MASTER=1 git commit -m "refactor(server): 装配连接池统计服务" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 5：提交 stats Route 边界迁移**
+- [x] **步骤 5：提交 stats Route 边界迁移**
 
 ```bash
 GIT_MASTER=1 git add server/routes/stats.ts server/routes/__tests__/stats-audit-log-service-contract.test.ts
 GIT_MASTER=1 git commit -m "refactor(routes): 移除 stats 路由数据库直连" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 6：提交后检查**
+- [x] **步骤 6：提交后检查**
 
 运行：`GIT_MASTER=1 git status --short`。
 
