@@ -2,6 +2,7 @@ import type { Container } from './container.js'
 import type { DatabaseService } from './database/service-async.js'
 import type { MiniMaxClient } from './lib/minimax/index.js'
 import { TOKENS } from './service-registration/tokens.js'
+import type { AnnouncementService } from './services/announcement-service.js'
 import type { DatabasePoolStatsService } from './services/database-pool-stats-service.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import type { ExternalApiLogService } from './services/external-api-log-service.js'
@@ -42,6 +43,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.DATABASE]: DatabaseService
   readonly [TOKENS.MINIMAX_CLIENT]: MiniMaxClient
   readonly [TOKENS.DATABASE_POOL_STATS_SERVICE]: DatabasePoolStatsService
+  readonly [TOKENS.ANNOUNCEMENT_SERVICE]: AnnouncementService
   readonly [TOKENS.TASK_EXECUTOR]: TaskExecutor
   readonly [TOKENS.CAPACITY_CHECKER]: CapacityChecker
   readonly [TOKENS.QUEUE_PROCESSOR]: QueueProcessor

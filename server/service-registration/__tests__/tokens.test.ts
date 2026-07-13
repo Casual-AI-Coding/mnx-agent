@@ -7,6 +7,7 @@ describe('service registration tokens', () => {
       DATABASE: 'database',
       MINIMAX_CLIENT: 'minimaxClient',
       DATABASE_POOL_STATS_SERVICE: 'databasePoolStatsService',
+      ANNOUNCEMENT_SERVICE: 'announcementService',
       TASK_EXECUTOR: 'taskExecutor',
       CAPACITY_CHECKER: 'capacityChecker',
       QUEUE_PROCESSOR: 'queueProcessor',
