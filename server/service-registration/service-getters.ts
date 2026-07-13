@@ -36,6 +36,7 @@ import { WebSocketService } from '../services/websocket-service.js'
 import { WorkflowEngine } from '../services/workflow/index.js'
 import { BackupService } from '../services/backup-service.js'
 import { ExternalApiLogService } from '../services/external-api-log-service.js'
+import { InvitationCodeService } from '../services/invitation-code-service.js'
 import { TOKENS } from './tokens.js'
 
 export function getDatabaseService(): DatabaseService {
@@ -48,6 +49,10 @@ export function getDatabasePoolStatsService(): DatabasePoolStatsService {
 
 export function getAnnouncementService(): AnnouncementService {
   return getGlobalContainer().resolve<AnnouncementService>(TOKENS.ANNOUNCEMENT_SERVICE)
+}
+
+export function getInvitationCodeService(): InvitationCodeService {
+  return getGlobalContainer().resolve<InvitationCodeService>(TOKENS.INVITATION_CODE_SERVICE)
 }
 
 export function getTaskExecutorService(): TaskExecutor {

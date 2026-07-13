@@ -35,12 +35,14 @@ import { WebSocketService, cronEvents } from '../services/websocket-service.js'
 import { WorkflowEngine } from '../services/workflow/index.js'
 import { BackupService } from '../services/backup-service.js'
 import { ExternalApiLogService } from '../services/external-api-log-service.js'
+import { InvitationCodeService } from '../services/invitation-code-service.js'
 import type { IWebhookService } from '../services/domain/interfaces/index.js'
 import {
   createAnnouncementRepository,
   createCapacityRepository,
   createExternalApiLogRepository,
   createExportRepositories,
+  createInvitationCodeRepository,
   createJobRepository,
   createLogRepositories,
   createMaterialRepositories,
@@ -68,6 +70,10 @@ export async function registerServiceDependencies(container: Container): Promise
 
   container.registerSingleton(TOKENS.ANNOUNCEMENT_SERVICE, (c) => {
     return new AnnouncementService(createAnnouncementRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
+  })
+
+  container.registerSingleton(TOKENS.INVITATION_CODE_SERVICE, (c) => {
+    return new InvitationCodeService(createInvitationCodeRepository(c.resolve<DatabaseService>(TOKENS.DATABASE)))
   })
 
   container.registerSingleton(TOKENS.TASK_EXECUTOR, (c) => {
