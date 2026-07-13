@@ -1,13 +1,10 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
-import { getConnection } from '../database/connection.js'
 import { z } from 'zod'
 import { validate } from '../middleware/validate.js'
-import { v4 as uuidv4 } from 'uuid'
-import crypto from 'crypto'
 import { successResponse, errorResponse } from '../middleware/api-response'
-import { toLocalISODateString } from '../lib/date-utils.js'
+import { getInvitationCodeService } from '../service-registration.js'
 
 const router = Router()
 
@@ -26,93 +23,39 @@ const updateInvitationCodeSchema = z.object({
 })
 
 router.get('/', asyncHandler(async (req, res) => {
-  const conn = getConnection()
-  const rows = await conn.query(`
-    SELECT ic.*, u.username as created_by_username
-    FROM invitation_codes ic
-    LEFT JOIN users u ON ic.created_by = u.id
-    WHERE ic.created_by = $1
-    ORDER BY ic.created_at DESC
-  `, [req.user!.userId])
-  successResponse(res, rows)
+  const codes = await getInvitationCodeService().list(req.user!.userId)
+  successResponse(res, codes)
 }))
 
 router.post('/batch', validate(batchGenerateSchema), asyncHandler(async (req, res) => {
   const { count, max_uses, expires_at } = req.body
-  const conn = getConnection()
-  const codes = []
-
-  for (let i = 0; i < count; i++) {
-    const id = uuidv4()
-    const code = crypto.randomBytes(16).toString('hex').substring(0, 32).toUpperCase()
-    const now = toLocalISODateString()
-
-    await conn.execute(
-      `INSERT INTO invitation_codes (id, code, created_by, max_uses, used_count, expires_at, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id, code, req.user!.userId, max_uses, 0, expires_at ?? null, true, now]
-    )
-
-    codes.push({ code, max_uses, expires_at })
-  }
-
-  successResponse(res, { count: codes.length, codes }, 201)
+  const result = await getInvitationCodeService().generateBatch(
+    { count, max_uses, expires_at },
+    req.user!.userId,
+  )
+  successResponse(res, result, 201)
 }))
 
 router.patch('/:id', validate(updateInvitationCodeSchema), asyncHandler(async (req, res) => {
   const { id } = req.params
-  const updates = req.body
-  const conn = getConnection()
-
-  const existing = await conn.query('SELECT * FROM invitation_codes WHERE id = $1 AND created_by = $2', [id, req.user!.userId])
-  if (existing.length === 0) {
+  const result = await getInvitationCodeService().update(id, req.body, req.user!.userId)
+  if (!result) {
     errorResponse(res, '邀请码不存在', 404)
     return
   }
 
-  const fields: string[] = []
-  const values: unknown[] = []
-  let idx = 1
-
-  if (updates.max_uses !== undefined) {
-    fields.push(`max_uses = $${idx++}`)
-    values.push(updates.max_uses)
-  }
-  if (updates.expires_at !== undefined) {
-    fields.push(`expires_at = $${idx++}`)
-    values.push(updates.expires_at)
-  }
-  if (updates.is_active !== undefined) {
-    fields.push(`is_active = $${idx++}`)
-    values.push(updates.is_active)
-  }
-
-  if (fields.length === 0) {
-    successResponse(res, { message: '无更新内容', data: existing[0] })
+  if (!result.updated) {
+    successResponse(res, { message: '无更新内容', data: result.code })
     return
   }
 
-  values.push(id)
-  values.push(req.user!.userId)
-  await conn.execute(
-    `UPDATE invitation_codes SET ${fields.join(', ')} WHERE id = $${idx} AND created_by = $${idx + 1}`,
-    values
-  )
-
-  const updated = await conn.query('SELECT * FROM invitation_codes WHERE id = $1 AND created_by = $2', [id, req.user!.userId])
-  successResponse(res, updated[0])
+  successResponse(res, result.code)
 }))
 
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
-  const conn = getConnection()
-
-  const result = await conn.execute(
-    'UPDATE invitation_codes SET is_active = false WHERE id = $1 AND created_by = $2',
-    [id, req.user!.userId]
-  )
-
-  if (result.changes === 0) {
+  const deactivated = await getInvitationCodeService().deactivate(id, req.user!.userId)
+  if (!deactivated) {
     errorResponse(res, '邀请码不存在', 404)
     return
   }
