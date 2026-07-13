@@ -4,6 +4,7 @@ import type { MiniMaxClient } from './lib/minimax/index.js'
 import { TOKENS } from './service-registration/tokens.js'
 import type { AnnouncementService } from './services/announcement-service.js'
 import type { DatabasePoolStatsService } from './services/database-pool-stats-service.js'
+import type { InvitationCodeService } from './services/invitation-code-service.js'
 import type { ExternalApiLogRepository } from './repositories/external-api-log.repository.js'
 import type { ExternalApiLogService } from './services/external-api-log-service.js'
 import type { MediaRepository } from './repositories/media-repository.js'
@@ -44,6 +45,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.MINIMAX_CLIENT]: MiniMaxClient
   readonly [TOKENS.DATABASE_POOL_STATS_SERVICE]: DatabasePoolStatsService
   readonly [TOKENS.ANNOUNCEMENT_SERVICE]: AnnouncementService
+  readonly [TOKENS.INVITATION_CODE_SERVICE]: InvitationCodeService
   readonly [TOKENS.TASK_EXECUTOR]: TaskExecutor
   readonly [TOKENS.CAPACITY_CHECKER]: CapacityChecker
   readonly [TOKENS.QUEUE_PROCESSOR]: QueueProcessor
