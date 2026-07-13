@@ -1,5 +1,4 @@
 import type { UserRepository } from '../repositories/user-repository.js'
-import type { DatabaseConnection } from '../database/connection.js'
 import type { ServiceNodePermission } from '../database/types.js'
 
 export class ServiceNodePermissionService {
@@ -13,7 +12,12 @@ export class ServiceNodePermissionService {
     return this.userRepo.getServiceNodePermission(serviceName, methodName)
   }
 
-  async update(id: string, data: { min_role?: string; is_enabled?: boolean }): Promise<void> {
+  async update(id: string, data: {
+    display_name?: string
+    category?: string
+    min_role?: string
+    is_enabled?: boolean
+  }): Promise<void> {
     return this.userRepo.updateServiceNodePermission(id, data)
   }
 
@@ -28,7 +32,4 @@ export class ServiceNodePermissionService {
     return this.userRepo.deleteServiceNodePermission(id)
   }
 
-  getConnection(): DatabaseConnection {
-    return (this.userRepo as unknown as { conn: DatabaseConnection }).conn
-  }
 }
