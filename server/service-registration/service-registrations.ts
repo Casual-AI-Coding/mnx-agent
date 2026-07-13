@@ -1,6 +1,7 @@
 import type { Container } from '../container.js'
 import { getDatabase, type DatabaseService } from '../database/service-async.js'
 import { getMiniMaxClient } from '../lib/minimax/index.js'
+import { DatabasePoolStatsService } from '../services/database-pool-stats-service.js'
 import { CapacityChecker } from '../services/capacity-checker.js'
 import { ConcurrencyManager } from '../services/concurrency-manager.js'
 import { CronScheduler } from '../services/cron-scheduler.js'
@@ -58,6 +59,10 @@ export async function registerServiceDependencies(container: Container): Promise
 
   const minimaxClient = getMiniMaxClient()
   container.register(TOKENS.MINIMAX_CLIENT, minimaxClient)
+
+  container.registerSingleton(TOKENS.DATABASE_POOL_STATS_SERVICE, (c) => {
+    return new DatabasePoolStatsService(c.resolve<DatabaseService>(TOKENS.DATABASE))
+  })
 
   container.registerSingleton(TOKENS.TASK_EXECUTOR, (c) => {
     return new TaskExecutor(c.resolve(TOKENS.MINIMAX_CLIENT))
