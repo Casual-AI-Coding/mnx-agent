@@ -430,7 +430,7 @@ GIT_MASTER=1 git add server/routes/invitation-codes.ts server/routes/__tests__/i
 GIT_MASTER=1 git commit -m "refactor(routes): 移除邀请码路由数据库直连" -m "Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)" -m "Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>"
 ```
 
-- [ ] **步骤 8：提交后检查**
+- [x] **步骤 8：提交后检查**
 
 运行：`GIT_MASTER=1 git status --short`
 
