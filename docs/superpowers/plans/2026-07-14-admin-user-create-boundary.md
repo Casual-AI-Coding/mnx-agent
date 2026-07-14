@@ -1,6 +1,6 @@
 # 后台用户创建边界 - 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 将 `POST /api/users` 创建端点从 Route 直连数据库收敛为 Route → AdminUserService.createUser → AdminUserRepository.createUser。
 
@@ -40,7 +40,7 @@
 - Modify: `server/repositories/__tests__/admin-user-repository.test.ts`
 - Modify: `server/repositories/admin-user-repository.ts`
 
-- [ ] **Step 1: 在测试中扩展窄连接 fake，新增 `createUser` RED 测试**
+- [x] **Step 1: 在测试中扩展窄连接 fake，新增 `createUser` RED 测试**
 
 在 `server/repositories/__tests__/admin-user-repository.test.ts` 的 `describe` 块末尾新增：
 
@@ -148,7 +148,7 @@ describe('createUser', () => {
 })
 ```
 
-- [ ] **Step 2: 运行 RED 命令确认测试因 `createUser` 不存在而失败**
+- [x] **Step 2: 运行 RED 命令确认测试因 `createUser` 不存在而失败**
 
 ```bash
 rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.test.ts"
@@ -156,7 +156,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 
 **Expected:** 2 new tests FAIL with `TypeError: repository.createUser is not a function`；既有 4 tests 通过。
 
-- [ ] **Step 3: 在 `admin-user-repository.ts` 新增 `createUser` 方法**
+- [x] **Step 3: 在 `admin-user-repository.ts` 新增 `createUser` 方法**
 
 在 `AdminUserRepositoryConnection` 接口中，`execute` 签名已存在无需改动。新增：
 
@@ -193,7 +193,7 @@ async createUser(data: AdminUserCreateData): Promise<AdminUserListItem> {
 }
 ```
 
-- [ ] **Step 4: 运行 GREEN 命令确认测试通过**
+- [x] **Step 4: 运行 GREEN 命令确认测试通过**
 
 ```bash
 rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.test.ts"
@@ -201,7 +201,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 
 **Expected:** 6/6 passed。
 
-- [ ] **Step 5: LSP 诊断与禁止项检查**
+- [x] **Step 5: LSP 诊断与禁止项检查**
 
 ```bash
 # 并行运行 LSP 诊断（后台）
@@ -217,7 +217,7 @@ rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/repositories/adm
 
 **Expected:** 0 matches。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 GIT_MASTER=1 git add server/repositories/admin-user-repository.ts server/repositories/__tests__/admin-user-repository.test.ts
@@ -236,7 +236,7 @@ GIT_MASTER=1 git status --short
 - Modify: `server/services/__tests__/admin-user-service.test.ts`
 - Modify: `server/services/admin-user-service.ts`
 
-- [ ] **Step 1: 在服务测试中新增 `createUser` RED 测试**
+- [x] **Step 1: 在服务测试中新增 `createUser` RED 测试**
 
 `bcrypt` 和 `uuid` 是外部依赖，在 vitest 中 mock：
 
@@ -311,7 +311,7 @@ describe('createUser', () => {
 
 同时将现有 `AdminUserRepositoryPort` 的定义从测试文件中复用（当前已有局部类型），确保新增 `createUser` 方法签名。
 
-- [ ] **Step 2: 运行 RED 命令**
+- [x] **Step 2: 运行 RED 命令**
 
 ```bash
 rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
@@ -319,7 +319,7 @@ rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts
 
 **Expected:** 1 new test FAIL with `TypeError: service.createUser is not a function`；既有 4 tests 通过。
 
-- [ ] **Step 3: 在 `admin-user-service.ts` 新增 `createUser` 方法**
+- [x] **Step 3: 在 `admin-user-service.ts` 新增 `createUser` 方法**
 
 修改 `AdminUserRepositoryPort` 接口，新增：
 
@@ -366,7 +366,7 @@ async createUser(input: AdminUserCreateInput): Promise<AdminUserListItem> {
 }
 ```
 
-- [ ] **Step 4: 运行 GREEN 命令**
+- [x] **Step 4: 运行 GREEN 命令**
 
 ```bash
 rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
@@ -374,7 +374,7 @@ rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts
 
 **Expected:** 5/5 passed（既有 4 + 新增 1）。
 
-- [ ] **Step 5: LSP 诊断与禁止项检查**
+- [x] **Step 5: LSP 诊断与禁止项检查**
 
 对 `admin-user-service.ts` 和 `admin-user-service.test.ts` 分别运行 `lsp_diagnostics` severity=error；必须 No diagnostics。
 
@@ -384,7 +384,7 @@ rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/services/admin-u
 
 **Expected:** 0 matches。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 GIT_MASTER=1 git add server/services/admin-user-service.ts server/services/__tests__/admin-user-service.test.ts
@@ -404,7 +404,7 @@ GIT_MASTER=1 git status --short
 - Modify: `server/routes/__tests__/users-di-contract.test.ts`
 - Modify: `server/routes/users.ts`
 
-- [ ] **Step 1: 在路由测试中新增 POST `createUser` RED 测试**
+- [x] **Step 1: 在路由测试中新增 POST `createUser` RED 测试**
 
 在 `server/routes/__tests__/users.test.ts` 的 `mocks` 新增：
 
@@ -475,7 +475,7 @@ describe('POST /api/users', () => {
 })
 ```
 
-- [ ] **Step 2: 在 DI 契约测试中新增 `createUser` 委托断言**
+- [x] **Step 2: 在 DI 契约测试中新增 `createUser` 委托断言**
 
 在 `server/routes/__tests__/users-di-contract.test.ts` 新增 assertion：
 
@@ -484,7 +484,7 @@ expect(source).toContain('await adminUserService.createUser(req.body)')
 expect(source).not.toContain('INSERT INTO users (id, username, email, password_hash')
 ```
 
-- [ ] **Step 3: 运行 RED 命令**
+- [x] **Step 3: 运行 RED 命令**
 
 ```bash
 rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__tests__/users-di-contract.test.ts"
@@ -494,7 +494,7 @@ rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/route
 - users.test.ts: 2 new POST tests FAIL（route 仍用直连 `getConnection`，mock 未设置 query/execute）
 - users-di-contract.test.ts: contract 缺 `createUser` 行 FAIL
 
-- [ ] **Step 4: 修改 `server/routes/users.ts` POST handler**
+- [x] **Step 4: 修改 `server/routes/users.ts` POST handler**
 
 将 POST handler（第 60-76 行）替换为：
 
@@ -508,7 +508,7 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
 
 保留所有现有 import（`bcrypt`/`uuid`/`getConnection`/`toLocalISODateString`/`getUserService` 仍被其他端点使用）。
 
-- [ ] **Step 5: 运行 GREEN 命令**
+- [x] **Step 5: 运行 GREEN 命令**
 
 ```bash
 rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__tests__/users-di-contract.test.ts"
@@ -516,7 +516,7 @@ rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/route
 
 **Expected:** users.test.ts 10/10 passed（3 DELETE + 2 PATCH + 2 GET + 2 POST + 1 400），contract 1/1 passed。
 
-- [ ] **Step 6: LSP 诊断与禁止项检查**
+- [x] **Step 6: LSP 诊断与禁止项检查**
 
 对 `users.ts`、`users.test.ts`、`users-di-contract.test.ts` 分别运行 `lsp_diagnostics` severity=error；必须 No diagnostics。
 
@@ -526,7 +526,7 @@ rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/routes/users.ts 
 
 **Expected:** 0 matches。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 GIT_MASTER=1 git add server/routes/users.ts server/routes/__tests__/users.test.ts server/routes/__tests__/users-di-contract.test.ts
@@ -544,7 +544,7 @@ GIT_MASTER=1 git status --short
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-14-admin-user-create-boundary.md`（新建计划文件）
 
-- [ ] **Step 1: 运行聚焦测试套件**
+- [x] **Step 1: 运行聚焦测试套件**
 
 ```bash
 rtk npm run test:server -- \
@@ -554,9 +554,9 @@ rtk npm run test:server -- \
   "server/routes/__tests__/users-di-contract.test.ts"
 ```
 
-**Expected:** 4 files / 22 tests passed。
+**Expected:** 4 files / 26 tests passed。
 
-- [ ] **Step 2: 运行构建**
+- [x] **Step 2: 运行构建**
 
 ```bash
 rtk npm run build
@@ -564,7 +564,7 @@ rtk npm run build
 
 **Expected:** exit 0。Vite zh.json 告警为已知基线。
 
-- [ ] **Step 3: 全量禁止项与差异审计**
+- [x] **Step 3: 全量禁止项与差异审计**
 
 ```bash
 rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/repositories/admin-user-repository.ts server/repositories/__tests__/admin-user-repository.test.ts server/services/admin-user-service.ts server/services/__tests__/admin-user-service.test.ts server/routes/users.ts server/routes/__tests__/users.test.ts server/routes/__tests__/users-di-contract.test.ts
@@ -579,11 +579,11 @@ GIT_MASTER=1 git status --short
 
 **Expected:** clean, 无输出。
 
-- [ ] **Step 4: 同步计划复选框**
+- [x] **Step 4: 同步计划复选框**
 
-将当前计划另存为 `docs/superpowers/plans/2026-07-14-admin-user-create-boundary.md`，将所有 `- [ ]` 改为 `- [x]`。
+将当前计划另存为 `docs/superpowers/plans/2026-07-14-admin-user-create-boundary.md`，将所有 `- [x]` 改为 `- [x]`。
 
-- [ ] **Step 5: 提交计划状态**
+- [x] **Step 5: 提交计划状态**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/plans/2026-07-14-admin-user-create-boundary.md
