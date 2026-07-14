@@ -47,7 +47,6 @@ const listUsersQuerySchema = z.object({
 })
 
 type UpdateUserInput = z.infer<typeof updateUserSchema>
-type UserUpdateValue = UpdateUserInput[keyof UpdateUserInput] | string
 
 router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, res) => {
   const query = listUsersQuerySchema.parse(req.query)
@@ -79,31 +78,15 @@ router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
 router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) => {
   const { id } = req.params
   const updates: UpdateUserInput = req.body
-  const conn = getConnection()
 
-  const fields: string[] = []
-  const values: UserUpdateValue[] = []
-  let idx = 1
-
-  if (updates.email !== undefined) { fields.push(`email = $${idx++}`); values.push(updates.email) }
-  if (updates.role !== undefined) { fields.push(`role = $${idx++}`); values.push(updates.role) }
-  if (updates.is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(updates.is_active) }
-  if (updates.minimax_api_key !== undefined) { fields.push(`minimax_api_key = $${idx++}`); values.push(updates.minimax_api_key) }
-  if (updates.minimax_region !== undefined) { fields.push(`minimax_region = $${idx++}`); values.push(updates.minimax_region) }
-
-  if (fields.length === 0) {
+  const hasChanges = Object.keys(updates).length > 0
+  if (!hasChanges) {
     successResponse(res, { message: 'No changes' })
     return
   }
 
-  fields.push(`updated_at = $${idx++}`)
-  values.push(toLocalISODateString())
-  values.push(id)
-
-  await conn.execute(`UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`, values)
-
-  const userService = getUserService()
-  const user = await userService.getUserById(id)
+  const adminUserService = getAdminUserService()
+  const user = await adminUserService.updateUser(id, updates)
   successResponse(res, user)
 }))
 

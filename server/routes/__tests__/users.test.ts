@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getConnection: vi.fn(),
   getUserById: vi.fn(),
   listUsers: vi.fn(),
+  updateUser: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -28,6 +29,7 @@ vi.mock('../../middleware/auth-middleware.js', () => ({
 vi.mock('../../service-registration.js', () => ({
   getAdminUserService: () => ({
     listUsers: mocks.listUsers,
+    updateUser: mocks.updateUser,
   }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
@@ -131,9 +133,8 @@ describe('Users API Routes', () => {
   })
 
   describe('PATCH /api/users/:id', () => {
-    it('should update only provided fields with stable SQL parameter ordering', async () => {
-      mocks.execute.mockResolvedValue({ changes: 1 })
-      mocks.getUserById.mockResolvedValue({
+    it('should delegate partial attribute updates to the admin user service', async () => {
+      mocks.updateUser.mockResolvedValue({
         id: 'user-123',
         email: 'updated@example.com',
         is_active: false,
@@ -148,10 +149,6 @@ describe('Users API Routes', () => {
         })
 
       expect(res.status).toBe(200)
-      expect(mocks.execute).toHaveBeenCalledWith(
-        'UPDATE users SET email = $1, is_active = $2, updated_at = $3 WHERE id = $4',
-        ['updated@example.com', false, expect.any(String), 'user-123']
-      )
       expect(res.body).toEqual({
         success: true,
         data: {
@@ -161,6 +158,25 @@ describe('Users API Routes', () => {
           role: 'user',
         },
       })
+      expect(mocks.updateUser).toHaveBeenCalledWith('user-123', {
+        email: 'updated@example.com',
+        is_active: false,
+      })
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('should return a success message without calling the service when no fields are provided', async () => {
+      const res = await request(app)
+        .patch('/api/users/user-123')
+        .send({})
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({
+        success: true,
+        data: { message: 'No changes' },
+      })
+      expect(mocks.updateUser).not.toHaveBeenCalled()
+      expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })
 })
