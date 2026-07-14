@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   listUsers: vi.fn(),
   updateUser: vi.fn(),
   deleteUser: vi.fn(),
+  createUser: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -32,6 +33,7 @@ vi.mock('../../service-registration.js', () => ({
     listUsers: mocks.listUsers,
     updateUser: mocks.updateUser,
     deleteUser: mocks.deleteUser,
+    createUser: mocks.createUser,
   }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
@@ -220,6 +222,52 @@ describe('Users API Routes', () => {
         data: { message: '用户已删除' },
       })
       expect(mocks.deleteUser).toHaveBeenCalledWith('user-to-delete')
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /api/users', () => {
+    it('delegates user creation to the admin user service and returns 201', async () => {
+      const createdUser = {
+        id: 'new-user-123',
+        username: 'newuser',
+        email: 'new@example.com',
+        role: 'user',
+        is_active: true,
+      }
+      mocks.createUser.mockResolvedValue(createdUser)
+
+      const res = await request(app)
+        .post('/api/users')
+        .send({
+          username: 'newuser',
+          password: 'secure-pass-123',
+          email: 'new@example.com',
+          role: 'user',
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body).toEqual({
+        success: true,
+        data: createdUser,
+      })
+      expect(mocks.createUser).toHaveBeenCalledWith({
+        username: 'newuser',
+        password: 'secure-pass-123',
+        email: 'new@example.com',
+        role: 'user',
+      })
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('returns 400 when required fields are missing', async () => {
+      const res = await request(app)
+        .post('/api/users')
+        .send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.success).toBe(false)
+      expect(mocks.createUser).not.toHaveBeenCalled()
       expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })

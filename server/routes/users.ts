@@ -58,20 +58,8 @@ router.get('/', validateQuery(listUsersQuerySchema), asyncHandler(async (req, re
 }))
 
 router.post('/', validate(createUserSchema), asyncHandler(async (req, res) => {
-  const { username, password, email, role, minimax_api_key } = req.body
-  const conn = getConnection()
-  const passwordHash = await bcrypt.hash(password, 12)
-  const id = uuidv4()
-  const now = toLocalISODateString()
-
-  await conn.execute(
-    `INSERT INTO users (id, username, email, password_hash, role, minimax_api_key, is_active, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [id, username, email ?? null, passwordHash, role, minimax_api_key ?? null, true, now, now]
-  )
-
-  const userService = getUserService()
-  const user = await userService.getUserById(id)
+  const adminUserService = getAdminUserService()
+  const user = await adminUserService.createUser(req.body)
   successResponse(res, user, 201)
 }))
 
