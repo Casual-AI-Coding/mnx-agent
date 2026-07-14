@@ -21,8 +21,22 @@ describe('Button Component', () => {
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="destructive">Destructive</Button>)
     expect(screen.getByRole('button', { name: 'Destructive' })).toBeInTheDocument()
-    
+
     rerender(<Button variant="outline">Outline</Button>)
     expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument()
+  })
+
+  it('applies 44px min touch target when touchable=true', () => {
+    render(<Button touchable>点击</Button>)
+    const btn = screen.getByRole('button', { name: '点击' })
+    expect(btn.className).toContain('min-h-[44px]')
+    expect(btn.className).toContain('min-w-[44px]')
+  })
+
+  it('does not apply touch styles by default', () => {
+    render(<Button>默认</Button>)
+    const btn = screen.getByRole('button', { name: '默认' })
+    expect(btn.className).not.toContain('min-h-[44px]')
+    expect(btn.className).not.toContain('min-w-[44px]')
   })
 })
