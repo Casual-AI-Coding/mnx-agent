@@ -22,7 +22,7 @@
 
 ### Task 1: Repository RED → GREEN → Commit
 
-- [ ] **Step 1: RED — 新增 activateUser/deactivateUser 测试**
+- [x] **Step 1: RED — 新增 activateUser/deactivateUser 测试**
 
 ```typescript
 describe('activateUser', () => {
@@ -54,8 +54,8 @@ describe('deactivateUser', () => {
 })
 ```
 
-- [ ] **Step 2: RED** → 2 new FAIL
-- [ ] **Step 3: GREEN**
+- [x] **Step 2: RED** → 2 new FAIL
+- [x] **Step 3: GREEN**
 
 ```typescript
 async activateUser(id: string, now: string): Promise<boolean> {
@@ -75,15 +75,15 @@ async deactivateUser(id: string, now: string): Promise<boolean> {
 }
 ```
 
-- [ ] **Step 4: GREEN** → 14/14 passed
-- [ ] **Step 5: LSP + 禁止项**
-- [ ] **Step 6: Commit** `refactor(repository): 收敛批量激活与停用`
+- [x] **Step 4: GREEN** → 14/14 passed
+- [x] **Step 5: LSP + 禁止项**
+- [x] **Step 6: Commit** `refactor(repository): 收敛批量激活与停用`
 
 ---
 
 ### Task 2: Service RED → GREEN → Commit
 
-- [ ] **Step 1: RED — 新增 batchProcess 测试**
+- [x] **Step 1: RED — 新增 batchProcess 测试**
 
 扩展 `createRepository` fake 添加 `activateUser`/`deactivateUser`；新增 `BatchCall` 类型和 `batchCalls` 数组。
 
@@ -132,8 +132,8 @@ async deactivateUser(id: string, now: string): Promise<boolean> {
 },
 ```
 
-- [ ] **Step 2: RED** → 2 new FAIL
-- [ ] **Step 3: GREEN**
+- [x] **Step 2: RED** → 2 new FAIL
+- [x] **Step 3: GREEN**
 
 ```typescript
 export interface BatchOperationInput {
@@ -190,15 +190,15 @@ activateUser(id: string, now: string): Promise<boolean>
 deactivateUser(id: string, now: string): Promise<boolean>
 ```
 
-- [ ] **Step 4: GREEN** → 12/12 passed
-- [ ] **Step 5: LSP + 禁止项**
-- [ ] **Step 6: Commit** `refactor(server): 编排批量操作循环与计数`
+- [x] **Step 4: GREEN** → 12/12 passed
+- [x] **Step 5: LSP + 禁止项**
+- [x] **Step 6: Commit** `refactor(server): 编排批量操作循环与计数`
 
 ---
 
 ### Task 3: Route RED → GREEN → Commit
 
-- [ ] **Step 1: RED — 路由测试**
+- [x] **Step 1: RED — 路由测试**
 
 新增 `batchProcess` mock 和 3 个测试：
 
@@ -215,22 +215,22 @@ expect(source).not.toContain("getConnection")
 expect(source).not.toContain("toLocalISODateString")
 ```
 
-- [ ] **Step 2: RED** → 3+1 failures
-- [ ] **Step 3: GREEN**
+- [x] **Step 2: RED** → 3+1 failures
+- [x] **Step 3: GREEN**
 
 Route batch handler → delegate；删除 `getConnection` 和 `toLocalISODateString` import。
 
-- [ ] **Step 4: GREEN** → all pass
-- [ ] **Step 5: LSP + 禁止项**
-- [ ] **Step 6: Commit** `refactor(routes): 委托批量操作并达成零直连连接`
+- [x] **Step 4: GREEN** → all pass
+- [x] **Step 5: LSP + 禁止项**
+- [x] **Step 6: Commit** `refactor(routes): 委托批量操作并达成零直连连接`
 
 ---
 
 ### Task 4: 全链路验证与计划同步
 
-- [ ] **Step 1: 聚焦测试** — 4 files / all passed
-- [ ] **Step 2: 构建** — exit 0
-- [ ] **Step 3: 禁止项 + diff check**
-- [ ] **Step 4: `rg -n 'getConnection\(' server/routes/users.ts`** → 0 matches
-- [ ] **Step 5: 计划复选框 → `[x]`**
-- [ ] **Step 6: Commit** `docs(plan): 同步后台用户批量操作状态`
+- [x] **Step 1: 聚焦测试** — 4 files / all passed
+- [x] **Step 2: 构建** — exit 0
+- [x] **Step 3: 禁止项 + diff check**
+- [x] **Step 4: `rg -n 'getConnection\(' server/routes/users.ts`** → 0 matches
+- [x] **Step 5: 计划复选框 → `[x]`**
+- [x] **Step 6: Commit** `docs(plan): 同步后台用户批量操作状态`
