@@ -267,4 +267,44 @@ describe('AdminUserRepository', () => {
     expect(result.minimax_api_key).toBe('minimax_****1234')
     expect(executeCalls[0]?.params).toContain('sk-original-key-1234')
   })
+
+  describe('exists', () => {
+    it('returns true when the user was found', async () => {
+      const { connection, setUpdatedUsers } = createConnectionFixture()
+      setUpdatedUsers([{ id: 'existing-user' } as AdminUserListItem])
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.exists('existing-user')).resolves.toBe(true)
+    })
+
+    it('returns false when no matching row exists', async () => {
+      const { connection, setUpdatedUsers } = createConnectionFixture()
+      setUpdatedUsers([])
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.exists('missing-user')).resolves.toBe(false)
+    })
+  })
+
+  describe('updatePassword', () => {
+    it('executes a parameterized password update and returns true when a row matched', async () => {
+      const { connection, executeCalls, setNextDeleteChanges } = createConnectionFixture()
+      setNextDeleteChanges(1)
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.updatePassword('user-1', '$2b$12$hashed', '2026-07-14T10:00:00.000')).resolves.toBe(true)
+      expect(executeCalls).toEqual([{
+        sql: 'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+        params: ['$2b$12$hashed', '2026-07-14T10:00:00.000', 'user-1'],
+      }])
+    })
+
+    it('returns false when no row matched the given id', async () => {
+      const { connection, setNextDeleteChanges } = createConnectionFixture()
+      setNextDeleteChanges(0)
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.updatePassword('ghost', 'hash', 'now')).resolves.toBe(false)
+    })
+  })
 })

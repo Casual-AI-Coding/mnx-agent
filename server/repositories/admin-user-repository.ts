@@ -112,4 +112,17 @@ export class AdminUserRepository {
     )
     return rows[0]
   }
+
+  async exists(id: string): Promise<boolean> {
+    const rows = await this.conn.query('SELECT id FROM users WHERE id = $1', [id])
+    return rows.length > 0
+  }
+
+  async updatePassword(id: string, passwordHash: string, now: string): Promise<boolean> {
+    const result = await this.conn.execute(
+      'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+      [passwordHash, now, id]
+    )
+    return result.changes > 0
+  }
 }
