@@ -27,12 +27,14 @@ function createConnectionFixture(): {
   setCountRows(rows: Array<{ total: string | number }>): void
   setListedUsers(rows: AdminUserListItem[]): void
   setUpdatedUsers(rows: AdminUserListItem[]): void
+  setNextDeleteChanges(changes: number): void
 } {
   const calls: QueryCall[] = []
   const executeCalls: ExecuteCall[] = []
   let countRows: Array<{ total: string | number }> = []
   let listedUsers: AdminUserListItem[] = []
   let updatedUsers: AdminUserListItem[] = []
+  let nextDeleteChanges = 1
 
   function query(sql: string): Promise<Array<{ total: string | number }>>
   function query(sql: string, params: unknown[]): Promise<AdminUserListItem[]>
@@ -47,7 +49,7 @@ function createConnectionFixture(): {
 
   async function execute(sql: string, params?: unknown[]): Promise<{ changes: number }> {
     executeCalls.push({ sql, params })
-    return { changes: 1 }
+    return { changes: nextDeleteChanges }
   }
 
   return {
@@ -62,6 +64,9 @@ function createConnectionFixture(): {
     },
     setUpdatedUsers(rows): void {
       updatedUsers = rows
+    },
+    setNextDeleteChanges(changes): void {
+      nextDeleteChanges = changes
     },
   }
 }
@@ -151,6 +156,30 @@ describe('AdminUserRepository', () => {
     expect(calls).toEqual([{
       sql: expect.stringContaining('WHERE id = $1'),
       params: ['missing-user'],
+    }])
+  })
+
+  it('deletes a user by id and returns true when a row was removed', async () => {
+    const { connection, executeCalls, setNextDeleteChanges } = createConnectionFixture()
+    setNextDeleteChanges(1)
+    const repository = new AdminUserRepository(connection)
+
+    await expect(repository.deleteUser('user-delete-target')).resolves.toBe(true)
+    expect(executeCalls).toEqual([{
+      sql: 'DELETE FROM users WHERE id = $1',
+      params: ['user-delete-target'],
+    }])
+  })
+
+  it('returns false when no row matched the given id', async () => {
+    const { connection, executeCalls, setNextDeleteChanges } = createConnectionFixture()
+    setNextDeleteChanges(0)
+    const repository = new AdminUserRepository(connection)
+
+    await expect(repository.deleteUser('nonexistent-user')).resolves.toBe(false)
+    expect(executeCalls).toEqual([{
+      sql: 'DELETE FROM users WHERE id = $1',
+      params: ['nonexistent-user'],
     }])
   })
 })

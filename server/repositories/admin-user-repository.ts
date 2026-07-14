@@ -80,4 +80,9 @@ export class AdminUserRepository {
 
     return rows[0] ?? null
   }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await this.conn.execute('DELETE FROM users WHERE id = $1', [id])
+    return result.changes > 0
+  }
 }
