@@ -12,6 +12,7 @@ import { useSettingsStore } from '@/settings/store'
 import { useAudioStore } from '@/stores/audio'
 import { useAuthStore } from '@/stores/auth'
 import { DEFAULT_SETTINGS } from '@/settings/store/defaults'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
@@ -30,6 +31,7 @@ export default function AppLayout() {
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 1024px)').matches
   })
+  const prefersReducedMotion = useReducedMotion()
 
   const {
     currentRecord,
@@ -87,17 +89,18 @@ export default function AppLayout() {
         {isMobileSidebarOpen && (
           <>
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+              transition={prefersReducedMotion ? { duration: 0 } : undefined}
               className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-40 lg:hidden"
               onClick={closeMobileSidebar}
             />
             <motion.div
-              initial={{ x: '-100%' }}
+              initial={prefersReducedMotion ? false : { x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              exit={prefersReducedMotion ? { x: 0 } : { x: '-100%' }}
+              transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed left-0 top-0 bottom-0 z-50 w-[280px] max-w-[85vw] lg:hidden"
             >
               <Sidebar
@@ -144,9 +147,10 @@ export default function AppLayout() {
         >
           <div className="min-h-full flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              exit={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+              transition={prefersReducedMotion ? { duration: 0 } : undefined}
               className="bg-card/95 backdrop-blur-xl rounded-xl p-6 w-[420px] max-w-[95vw] border border-border shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
