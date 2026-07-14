@@ -22,11 +22,14 @@ export interface InputProps
     VariantProps<typeof inputVariants> {}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, variant, ...props }, ref) => {
+  ({ className, variant, type, ...props }, ref) => {
+    const numericInputMode = type === 'number' && props.inputMode === undefined ? 'numeric' : props.inputMode
     return (
       <input
         className={cn(inputVariants({ variant, className }))}
         ref={ref}
+        type={type}
+        {...(numericInputMode !== undefined ? { inputMode: numericInputMode } : {})}
         {...props}
       />
     )

@@ -156,6 +156,7 @@ export function WorkflowConfigPanel({
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Threshold</label>
               <input
                 type="number"
+                inputMode="numeric"
                 value={(config.threshold as number) || 0}
                 onChange={(e) => updateConfig('threshold', parseFloat(e.target.value))}
                 className="w-full px-3 py-2 rounded-md bg-secondary border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -180,6 +181,7 @@ export function WorkflowConfigPanel({
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Max Iterations</label>
               <input
                 type="number"
+                inputMode="numeric"
                 min="1"
                 value={(config.maxIterations as number) || 100}
                 onChange={(e) => updateConfig('maxIterations', parseInt(e.target.value))}
