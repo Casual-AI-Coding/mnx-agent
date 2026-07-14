@@ -32,7 +32,7 @@ DI（factory/token/singleton/getter）无需修改 —— `AdminUserService` 已
 - 修改：`server/repositories/admin-user-repository.ts`
 - 测试：`server/repositories/__tests__/admin-user-repository.test.ts`
 
-- [ ] **步骤1：写 RED 测试**
+- [x] **步骤1：写 RED 测试**
 
 在既有 `server/repositories/__tests__/admin-user-repository.test.ts` 的 `describe` 块内，紧接 `updateUser` 测试之后，新增两个测试。既有手动连接 fixture（`let calls`、`let updatedUsers`、`let executeCalls`）保留，在第二个 `beforeEach` 中添加 `let nextDeleteResult` 重置逻辑：
 
@@ -78,7 +78,7 @@ execute: (sql: string, params?: unknown[]) => {
 }
 ```
 
-- [ ] **步骤2：验证 RED**
+- [x] **步骤2：验证 RED**
 
 ```bash
 rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.test.ts"
@@ -86,7 +86,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 
 预期：`TypeError: repository.deleteUser is not a function`，既有 4 测试（count/list/update×2）继续通过。
 
-- [ ] **步骤3：最小实现**
+- [x] **步骤3：最小实现**
 
 在 `server/repositories/admin-user-repository.ts` 的 `AdminUserRepository` 类中新增方法：
 
@@ -99,7 +99,7 @@ async deleteUser(id: string): Promise<boolean> {
 
 无需修改 `AdminUserRepositoryConnection` 窄端口（`execute` 已存在）。无需新增 import 或导出类型。
 
-- [ ] **步骤4：验证 GREEN**
+- [x] **步骤4：验证 GREEN**
 
 ```bash
 rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.test.ts"
@@ -107,7 +107,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 
 预期：6/6 passed。
 
-- [ ] **步骤5：LSP 诊断**
+- [x] **步骤5：LSP 诊断**
 
 并行检查两个文件的 error diagnostics：
 
@@ -115,7 +115,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 # LSP: admin-user-repository.test.ts + admin-user-repository.ts → No diagnostics
 ```
 
-- [ ] **步骤6：提交**
+- [x] **步骤6：提交**
 
 ```bash
 GIT_MASTER=1 git add server/repositories/admin-user-repository.ts server/repositories/__tests__/admin-user-repository.test.ts
@@ -133,7 +133,7 @@ GIT_MASTER=1 git log -1 --oneline
 - 修改：`server/services/admin-user-service.ts`
 - 测试：`server/services/__tests__/admin-user-service.test.ts`
 
-- [ ] **步骤1：写 RED 测试**
+- [x] **步骤1：写 RED 测试**
 
 在既有 `server/services/__tests__/admin-user-service.test.ts` 中，扩展 `createRepository` 添加 `deleteUser` fake。测试内局部类型不引用生产 `AdminUserUpdate`，而是沿用既有模式。新增测试：
 
@@ -169,7 +169,7 @@ describe('deleteUser', () => {
 deleteUser: vi.fn<[string], Promise<boolean>>()
 ```
 
-- [ ] **步骤2：验证 RED**
+- [x] **步骤2：验证 RED**
 
 ```bash
 rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
@@ -177,7 +177,7 @@ rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts
 
 预期：`TypeError: service.deleteUser is not a function`，既有 4 测试继续通过。
 
-- [ ] **步骤3：最小实现**
+- [x] **步骤3：最小实现**
 
 `AdminUserRepositoryPort` 接口新增：
 
@@ -193,7 +193,7 @@ async deleteUser(id: string): Promise<boolean> {
 }
 ```
 
-- [ ] **步骤4：验证 GREEN**
+- [x] **步骤4：验证 GREEN**
 
 ```bash
 rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
@@ -201,11 +201,11 @@ rtk npm run test:server -- "server/services/__tests__/admin-user-service.test.ts
 
 预期：6/6 passed。
 
-- [ ] **步骤5：LSP 诊断**
+- [x] **步骤5：LSP 诊断**
 
 并行检查两个文件 error diagnostics。
 
-- [ ] **步骤6：提交**
+- [x] **步骤6：提交**
 
 ```bash
 GIT_MASTER=1 git add server/services/admin-user-service.ts server/services/__tests__/admin-user-service.test.ts
@@ -224,7 +224,7 @@ GIT_MASTER=1 git log -1 --oneline
 - 测试：`server/routes/__tests__/users.test.ts`
 - 测试：`server/routes/__tests__/users-di-contract.test.ts`
 
-- [ ] **步骤1：写 RED 行为测试**
+- [x] **步骤1：写 RED 行为测试**
 
 在 `server/routes/__tests__/users.test.ts` 中：
 
@@ -294,7 +294,7 @@ describe('DELETE /api/users/:id', () => {
 })
 ```
 
-- [ ] **步骤2：写 RED 契约测试**
+- [x] **步骤2：写 RED 契约测试**
 
 在 `server/routes/__tests__/users-di-contract.test.ts` 新增文本断言：
 
@@ -315,7 +315,7 @@ it('DELETE handler delegates to admin user service and no longer executes direct
 
 保留既有 GET/PATCH 契约断言，不影响。
 
-- [ ] **步骤3：验证 RED**
+- [x] **步骤3：验证 RED**
 
 ```bash
 rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__tests__/users-di-contract.test.ts"
@@ -323,7 +323,7 @@ rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/route
 
 预期：DELETE 3 个新测试全部失败（旧 route 仍调用 `getConnection()`），契约测试缺失 `getAdminUserService()` 中的 `deleteUser`。
 
-- [ ] **步骤4：最小路由实现**
+- [x] **步骤4：最小路由实现**
 
 在 `server/routes/users.ts` 的 DELETE handler 中，替换 L94–108 为：
 
@@ -350,7 +350,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
 `server/routes/users.ts` 顶部 import 已是 `{ getAdminUserService, getUserService }`，无需修改。保留 `getConnection` 和 `toLocalISODateString` import（其他端点仍需）。
 
-- [ ] **步骤5：验证 GREEN**
+- [x] **步骤5：验证 GREEN**
 
 ```bash
 rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__tests__/users-di-contract.test.ts"
@@ -358,11 +358,11 @@ rtk npm run test:server -- "server/routes/__tests__/users.test.ts" "server/route
 
 预期：全部通过（既有 GET×2 + PATCH×2 = 4，新增 DELETE×3 = 3，契约 GET/PATCH/DELETE 断言 = 若干）。
 
-- [ ] **步骤6：LSP 诊断**
+- [x] **步骤6：LSP 诊断**
 
 并行检查 `users.ts`、`users.test.ts`、`users-di-contract.test.ts` 三个文件 error diagnostics。
 
-- [ ] **步骤7：提交**
+- [x] **步骤7：提交**
 
 ```bash
 GIT_MASTER=1 git add server/routes/users.ts server/routes/__tests__/users.test.ts server/routes/__tests__/users-di-contract.test.ts
@@ -376,7 +376,7 @@ GIT_MASTER=1 git log -1 --oneline
 
 ### 任务4：全链路验证与计划同步
 
-- [ ] **步骤1：聚焦测试**
+- [x] **步骤1：聚焦测试**
 
 ```bash
 rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.test.ts" "server/services/__tests__/admin-user-service.test.ts" "server/routes/__tests__/users.test.ts" "server/routes/__tests__/users-di-contract.test.ts"
@@ -384,7 +384,7 @@ rtk npm run test:server -- "server/repositories/__tests__/admin-user-repository.
 
 预期：全部通过。node-cron sourcemap warning 为基线告警。
 
-- [ ] **步骤2：构建**
+- [x] **步骤2：构建**
 
 ```bash
 rtk npm run build
@@ -392,11 +392,11 @@ rtk npm run build
 
 预期：exit 0。Vite zh.json import warning 为基线告警。
 
-- [ ] **步骤3：LSP error diagnostics**
+- [x] **步骤3：LSP error diagnostics**
 
 对所有改动 TS 文件并行检查 error 级别。
 
-- [ ] **步骤4：禁止项扫描**
+- [x] **步骤4：禁止项扫描**
 
 ```bash
 rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/repositories/admin-user-repository.ts server/services/admin-user-service.ts server/routes/users.ts
@@ -404,7 +404,7 @@ rg -n "as any|@ts-ignore|@ts-expect-error|as unknown as" server/repositories/adm
 
 预期：0 matches。
 
-- [ ] **步骤5：差异审计**
+- [x] **步骤5：差异审计**
 
 ```bash
 GIT_MASTER=1 git diff --check d43c640^..HEAD
@@ -412,11 +412,11 @@ GIT_MASTER=1 git diff --check d43c640^..HEAD
 
 预期：clean。
 
-- [ ] **步骤6：同步计划状态**
+- [x] **步骤6：同步计划状态**
 
 将本计划上述所有复选框从 `[ ]` 改为 `[x]`。
 
-- [ ] **步骤7：提交计划状态**
+- [x] **步骤7：提交计划状态**
 
 ```bash
 GIT_MASTER=1 git add docs/superpowers/plans/2026-07-14-admin-user-delete-boundary.md
