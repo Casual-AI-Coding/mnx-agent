@@ -28,6 +28,7 @@ function createConnectionFixture(): {
   setListedUsers(rows: AdminUserListItem[]): void
   setUpdatedUsers(rows: AdminUserListItem[]): void
   setNextDeleteChanges(changes: number): void
+  setCreatedUser(user: AdminUserListItem): void
 } {
   const calls: QueryCall[] = []
   const executeCalls: ExecuteCall[] = []
@@ -35,6 +36,7 @@ function createConnectionFixture(): {
   let listedUsers: AdminUserListItem[] = []
   let updatedUsers: AdminUserListItem[] = []
   let nextDeleteChanges = 1
+  let createdUser: AdminUserListItem | null = null
 
   function query(sql: string): Promise<Array<{ total: string | number }>>
   function query(sql: string, params: unknown[]): Promise<AdminUserListItem[]>
@@ -44,7 +46,15 @@ function createConnectionFixture(): {
   ): Promise<Array<{ total: string | number }> | AdminUserListItem[]> {
     calls.push({ sql, params })
     if (!params) return countRows
-    return sql.includes('WHERE id = $1') ? updatedUsers : listedUsers
+    if (sql.includes('WHERE id = $1')) {
+      if (createdUser) {
+        const user = createdUser
+        createdUser = null
+        return [user]
+      }
+      return updatedUsers
+    }
+    return listedUsers
   }
 
   async function execute(sql: string, params?: unknown[]): Promise<{ changes: number }> {
@@ -67,6 +77,9 @@ function createConnectionFixture(): {
     },
     setNextDeleteChanges(changes): void {
       nextDeleteChanges = changes
+    },
+    setCreatedUser(user: AdminUserListItem): void {
+      createdUser = user
     },
   }
 }
@@ -181,5 +194,77 @@ describe('AdminUserRepository', () => {
       sql: 'DELETE FROM users WHERE id = $1',
       params: ['nonexistent-user'],
     }])
+  })
+
+  it('executes a nine-column INSERT then reads back a masked public user', async () => {
+    const createdUser: AdminUserListItem = {
+      id: 'new-user',
+      username: 'newuser',
+      email: 'new@example.com',
+      minimax_api_key: 'minimax_****abcd',
+      minimax_region: null,
+      role: 'user',
+      is_active: true,
+      last_login_at: null,
+      created_at: '2026-07-14T10:00:00.000',
+      updated_at: '2026-07-14T10:00:00.000',
+    }
+    const { connection, calls, executeCalls, setCreatedUser } = createConnectionFixture()
+    setCreatedUser(createdUser)
+    const repository = new AdminUserRepository(connection)
+
+    const result = await repository.createUser({
+      id: 'new-user',
+      username: 'newuser',
+      email: 'new@example.com',
+      passwordHash: '$2b$12$hashed',
+      role: 'user',
+      apiKey: null,
+      now: '2026-07-14T10:00:00.000',
+    })
+
+    expect(result).toEqual(createdUser)
+    expect(executeCalls).toEqual([{
+      sql: `INSERT INTO users (id, username, email, password_hash, role, minimax_api_key, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      params: [
+        'new-user', 'newuser', 'new@example.com', '$2b$12$hashed',
+        'user', null, true, '2026-07-14T10:00:00.000', '2026-07-14T10:00:00.000',
+      ],
+    }])
+    expect(calls[0]?.sql).toContain("CONCAT('minimax_', '****', SUBSTRING(minimax_api_key, -4))")
+    expect(calls[0]?.sql).not.toContain('password_hash')
+    expect(calls[0]?.params).toEqual(['new-user'])
+  })
+
+  it('masks a real API key in the read-back user', async () => {
+    const createdUser: AdminUserListItem = {
+      id: 'new-user',
+      username: 'newuser',
+      email: null,
+      minimax_api_key: 'minimax_****1234',
+      minimax_region: 'cn',
+      role: 'admin',
+      is_active: true,
+      last_login_at: null,
+      created_at: '2026-07-14T10:00:00.000',
+      updated_at: '2026-07-14T10:00:00.000',
+    }
+    const { connection, executeCalls, setCreatedUser } = createConnectionFixture()
+    setCreatedUser(createdUser)
+    const repository = new AdminUserRepository(connection)
+
+    const result = await repository.createUser({
+      id: 'new-user',
+      username: 'newuser',
+      email: null,
+      passwordHash: '$2b$12$hashed',
+      role: 'admin',
+      apiKey: 'sk-original-key-1234',
+      now: '2026-07-14T10:00:00.000',
+    })
+
+    expect(result.minimax_api_key).toBe('minimax_****1234')
+    expect(executeCalls[0]?.params).toContain('sk-original-key-1234')
   })
 })

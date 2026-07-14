@@ -34,6 +34,16 @@ export interface AdminUserRepositoryConnection {
   execute(sql: string, params?: unknown[]): Promise<{ changes: number }>
 }
 
+export interface AdminUserCreateData {
+  readonly id: string
+  readonly username: string
+  readonly email: string | null
+  readonly passwordHash: string
+  readonly role: string
+  readonly apiKey: string | null
+  readonly now: string
+}
+
 export class AdminUserRepository {
   constructor(private readonly conn: AdminUserRepositoryConnection) {}
 
@@ -84,5 +94,22 @@ export class AdminUserRepository {
   async deleteUser(id: string): Promise<boolean> {
     const result = await this.conn.execute('DELETE FROM users WHERE id = $1', [id])
     return result.changes > 0
+  }
+
+  async createUser(data: AdminUserCreateData): Promise<AdminUserListItem> {
+    await this.conn.execute(
+      `INSERT INTO users (id, username, email, password_hash, role, minimax_api_key, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [data.id, data.username, data.email, data.passwordHash, data.role, data.apiKey, true, data.now, data.now]
+    )
+
+    const rows = await this.conn.query(
+      `SELECT id, username, email,
+        CONCAT('minimax_', '****', SUBSTRING(minimax_api_key, -4)) AS minimax_api_key,
+        minimax_region, role, is_active, last_login_at, created_at, updated_at
+       FROM users WHERE id = $1`,
+      [data.id]
+    )
+    return rows[0]
   }
 }
