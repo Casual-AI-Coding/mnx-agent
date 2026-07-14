@@ -222,16 +222,26 @@ GIT_MASTER=1 git commit -m "refactor(repository): 收敛后台用户属性更新
 
 - [ ] **步骤 1：写失败的 Service 更新测试**
 
-将本地 repository fake 扩展为带 `updateUser` 的后台用户 repository，并记录更新调用：
+将本地 repository fake 扩展为带 `updateUser` 的后台用户 repository，并记录更新调用。RED 阶段先在测试内定义与目标契约同构的局部输入类型，避免在生产类型尚未导出时产生导入错误：
 
 ```ts
 type UpdateCall = {
   id: string
-  updates: AdminUserUpdate
+  updates: AdminUserUpdateInput
+}
+
+type AdminUserUpdateInput = {
+  readonly email?: string | null
+  readonly role?: 'super' | 'admin' | 'pro' | 'user'
+  readonly is_active?: boolean
+  readonly minimax_api_key?: string | null
+  readonly minimax_region?: 'cn' | 'intl'
 }
 
 function createRepository(total: number, users: AdminUserListItem[], updatedUser: AdminUserListItem | null): {
-  repository: AdminUserListRepository
+  repository: AdminUserListRepository & {
+    updateUser(id: string, updates: AdminUserUpdateInput): Promise<AdminUserListItem | null>
+  }
   listCalls: ListCall[]
   updateCalls: UpdateCall[]
 } {
@@ -245,7 +255,7 @@ function createRepository(total: number, users: AdminUserListItem[], updatedUser
         listCalls.push(options)
         return users
       },
-      async updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null> {
+      async updateUser(id: string, updates: AdminUserUpdateInput): Promise<AdminUserListItem | null> {
         updateCalls.push({ id, updates })
         return updatedUser
       },
