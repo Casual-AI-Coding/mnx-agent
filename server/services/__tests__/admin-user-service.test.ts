@@ -29,6 +29,13 @@ type CreateCall = {
   apiKey: string | null
 }
 
+type ResetCall = {
+  existsId: string | null
+  updateId: string | null
+  passwordHash: string | null
+  now: string | null
+}
+
 type AdminUserUpdateInput = {
   readonly email?: string | null
   readonly role?: 'super' | 'admin' | 'pro' | 'user'
@@ -68,11 +75,13 @@ function createRepository(
   updateCalls: UpdateCall[]
   deleteCalls: DeleteCall[]
   createCalls: CreateCall[]
+  resetCalls: ResetCall[]
 } {
   const listCalls: ListCall[] = []
   const updateCalls: UpdateCall[] = []
   const deleteCalls: DeleteCall[] = []
   const createCalls: CreateCall[] = []
+  const resetCalls: ResetCall[] = []
 
   return {
     repository: {
@@ -109,14 +118,23 @@ function createRepository(
           role: data.role,
           apiKey: data.apiKey,
         })
-        return createUser(data.id)
-      },
+    return createUser(data.id)
     },
-    listCalls,
-    updateCalls,
-    deleteCalls,
-    createCalls,
-  }
+    async exists(id: string): Promise<boolean> {
+      resetCalls.push({ existsId: id, updateId: null, passwordHash: null, now: null })
+      return id !== 'ghost'
+    },
+    async updatePassword(id: string, passwordHash: string, now: string): Promise<boolean> {
+      resetCalls.push({ existsId: null, updateId: id, passwordHash, now })
+      return true
+    },
+  },
+  listCalls,
+  updateCalls,
+  deleteCalls,
+  createCalls,
+  resetCalls,
+}
 }
 
 describe('AdminUserService', () => {
@@ -225,5 +243,32 @@ describe('AdminUserService', () => {
     expect(createCalls[0].email).toBeNull()
     expect(createCalls[0].apiKey).toBe('sk-key-1234')
     expect(createCalls[0].role).toBe('admin')
+  })
+
+  describe('resetPassword', () => {
+    it('rejects unknown users without calling updatePassword', async () => {
+      const { repository, resetCalls } = createRepository(0, [], null, false)
+      const service = new AdminUserService(repository)
+
+      await expect(service.resetPassword('ghost')).resolves.toBe(false)
+      expect(resetCalls).toEqual([
+        { existsId: 'ghost', updateId: null, passwordHash: null, now: null },
+      ])
+    })
+
+    it('generates a random password, hashes it, and updates the row', async () => {
+      const { repository, resetCalls } = createRepository(0, [], null, false)
+      const service = new AdminUserService(repository)
+
+      await expect(service.resetPassword('user-1')).resolves.toBe(true)
+      expect(resetCalls).toHaveLength(2)
+      expect(resetCalls[0]).toEqual({ existsId: 'user-1', updateId: null, passwordHash: null, now: null })
+      expect(resetCalls[1]).toEqual({
+        existsId: null,
+        updateId: 'user-1',
+        passwordHash: expect.stringMatching(/^\$2b\$12\$.{53}$/),
+        now: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/),
+      })
+    })
   })
 })

@@ -7,6 +7,7 @@ import type {
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import crypto from 'node:crypto'
 
 export interface AdminUserRepositoryPort {
   countUsers(): Promise<number>
@@ -14,6 +15,8 @@ export interface AdminUserRepositoryPort {
   updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null>
   deleteUser(id: string): Promise<boolean>
   createUser(data: AdminUserCreateData): Promise<AdminUserListItem>
+  exists(id: string): Promise<boolean>
+  updatePassword(id: string, passwordHash: string, now: string): Promise<boolean>
 }
 
 export type AdminUserListRequest = {
@@ -37,6 +40,16 @@ export interface AdminUserCreateInput {
   readonly email?: string | null
   readonly role?: string
   readonly minimax_api_key?: string | null
+}
+
+function generateRandomPassword(length: number = 20): string {
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  const bytes = crypto.randomBytes(length)
+  let password = ''
+  for (let i = 0; i < length; i++) {
+    password += CHARS[bytes[i] % CHARS.length]
+  }
+  return password
 }
 
 export class AdminUserService {
@@ -83,5 +96,17 @@ export class AdminUserService {
     }
 
     return this.repository.createUser(data)
+  }
+
+  async resetPassword(id: string): Promise<boolean> {
+    const found = await this.repository.exists(id)
+    if (!found) return false
+
+    const newPassword = generateRandomPassword(20)
+    const passwordHash = await bcrypt.hash(newPassword, 12)
+    const now = toLocalISODateString()
+
+    await this.repository.updatePassword(id, passwordHash, now)
+    return true
   }
 }
