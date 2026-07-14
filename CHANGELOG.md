@@ -2,7 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.8.1] - 2026-07-07
+## [3.0.0] - 2026-07-14
+
+### 🏗️ 代码重构
+
+- **服务注册模块化** — 将单体 `server/service-registration.ts` 拆分为 `tokens.ts`、`repository-factories.ts`、`service-getters.ts`、`service-registrations.ts` 四个模块，分离 token 契约、仓储工厂、服务注册编排与 getter 门面（涉及 `server/service-registration.ts`, `server/service-registration/`）
+- **路由零直连重构** — 移除所有路由处理器中的 `getConnection()` 直接调用，统一委托给领域服务，达成路由层零数据库直连（涉及 `server/routes/users.ts`, `server/routes/admin/announcements.ts`, `server/routes/invitation-codes.ts`, `server/routes/stats.ts`, `server/routes/admin/service-permissions.ts`）
+- **后台用户管理全链路重构** — 新增 `AdminUserService` + `AdminUserRepository`，覆盖列表分页、创建、属性更新、删除、密码重置、批量激活/停用，路由层完全委托（涉及 `server/services/admin-user-service.ts`, `server/repositories/admin-user-repository.ts`, `server/routes/users.ts`）
+- **公告管理分层重构** — 新增 `AnnouncementService` + `AnnouncementRepository`，路由层移除数据库直连（涉及 `server/services/announcement-service.ts`, `server/repositories/announcement-repository.ts`, `server/routes/admin/announcements.ts`）
+- **邀请码管理分层重构** — 新增 `InvitationCodeService` + `InvitationCodeRepository`，路由层移除数据库直连（涉及 `server/services/invitation-code-service.ts`, `server/repositories/invitation-code-repository.ts`, `server/routes/invitation-codes.ts`）
+- **连接池统计服务** — 新增 `DatabasePoolStatsService`，stats 路由移除数据库直连（涉及 `server/services/database-pool-stats-service.ts`, `server/routes/stats.ts`）
+- **服务节点权限更新重构** — 收敛服务节点权限更新服务，扩展仓储白名单（涉及 `server/services/service-node-permission-service.ts`, `server/routes/admin/service-permissions.ts`）
+- **媒体 API 拆分** — 将 `media.ts` 拆分为 `media-requests.ts`（请求层）、`media-formatters.ts`（展示格式）、`media-types.ts`（类型定义），收紧媒体服务领域契约（涉及 `src/lib/api/media.ts`, `src/lib/api/media-requests.ts`, `src/lib/api/media-formatters.ts`, `src/lib/api/media-types.ts`）
+
+Now let me write the CHANGELOG entry.</think>
+
+<｜DSML｜tool_calls>
+<｜DSML｜invoke name="edit">
+<｜DSML｜parameter name="filePath" string="true">/home/ogslp/Projects/Opencode/mnx-agent/CHANGELOG.md
 
 ### ✨ Added
 
