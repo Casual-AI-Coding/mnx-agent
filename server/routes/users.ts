@@ -1,12 +1,10 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
-import { getConnection } from '../database/connection.js'
 import { getAdminUserService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
-import { toLocalISODateString } from '../lib/date-utils.js'
 
 const router = Router()
 
@@ -91,69 +89,19 @@ const batchOperationSchema = z.object({
 
 router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, res) => {
   const { action, userIds } = req.body
-  const conn = getConnection()
-  const currentUserId = req.user?.userId
+  const currentUserId = req.user!.userId
 
   if (action === 'delete' && userIds.includes(currentUserId)) {
     errorResponse(res, '不能删除自己的账户', 400)
     return
   }
 
-  const now = toLocalISODateString()
-  let successCount = 0
-  let failCount = 0
-
-  switch (action) {
-    case 'activate':
-      for (const id of userIds) {
-        try {
-          await conn.execute(
-            'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
-            [true, now, id]
-          )
-          successCount++
-        } catch {
-          failCount++
-        }
-      }
-      break
-    case 'deactivate':
-      for (const id of userIds) {
-        try {
-          if (id === currentUserId) {
-            failCount++
-            continue
-          }
-          await conn.execute(
-            'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
-            [false, now, id]
-          )
-          successCount++
-        } catch {
-          failCount++
-        }
-      }
-      break
-    case 'delete':
-      for (const id of userIds) {
-        try {
-          await conn.execute('DELETE FROM users WHERE id = $1', [id])
-          successCount++
-        } catch {
-          failCount++
-        }
-      }
-      break
-  }
+  const adminUserService = getAdminUserService()
+  const result = await adminUserService.batchProcess({ action, userIds, currentUserId })
 
   successResponse(res, {
-    data: {
-      action,
-      successCount,
-      failCount,
-      total: userIds.length,
-    },
-    message: `批量操作完成：成功 ${successCount} 个，失败 ${failCount} 个`,
+    data: result,
+    message: `批量操作完成：成功 ${result.successCount} 个，失败 ${result.failCount} 个`,
   })
 }))
 

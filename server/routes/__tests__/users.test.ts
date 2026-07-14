@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   deleteUser: vi.fn(),
   createUser: vi.fn(),
   resetPassword: vi.fn(),
+  batchProcess: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -21,7 +22,7 @@ vi.mock('../../database/connection.js', () => ({
 vi.mock('../../middleware/auth-middleware.js', () => ({
   requireRole: () => (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.user = {
-      userId: 'super-user',
+      userId: 'c9b2e9a0-3f5d-4a1e-b8c7-2d6f8e9a0b3c',
       username: 'super-admin',
       role: 'super',
     }
@@ -36,6 +37,7 @@ vi.mock('../../service-registration.js', () => ({
     deleteUser: mocks.deleteUser,
     createUser: mocks.createUser,
     resetPassword: mocks.resetPassword,
+    batchProcess: mocks.batchProcess,
   }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
@@ -188,7 +190,7 @@ describe('Users API Routes', () => {
 
   describe('DELETE /api/users/:id', () => {
     it('returns 400 when attempting to delete own account', async () => {
-      const res = await request(app).delete('/api/users/super-user')
+      const res = await request(app).delete('/api/users/c9b2e9a0-3f5d-4a1e-b8c7-2d6f8e9a0b3c')
 
       expect(res.status).toBe(400)
       expect(res.body).toEqual({
@@ -294,6 +296,38 @@ describe('Users API Routes', () => {
       expect(res.status).toBe(404)
       expect(res.body).toEqual({ success: false, error: '用户不存在' })
       expect(mocks.resetPassword).toHaveBeenCalledWith('ghost')
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /api/users/batch', () => {
+    it('returns 400 when attempting to delete own account', async () => {
+      const res = await request(app)
+        .post('/api/users/batch')
+        .send({ action: 'delete', userIds: ['c9b2e9a0-3f5d-4a1e-b8c7-2d6f8e9a0b3c', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'] })
+
+      expect(res.status).toBe(400)
+      expect(res.body).toEqual({ success: false, error: '不能删除自己的账户' })
+      expect(mocks.batchProcess).not.toHaveBeenCalled()
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('delegates activate action to the batch service', async () => {
+      mocks.batchProcess.mockResolvedValue({
+        action: 'activate', successCount: 2, failCount: 0, total: 2,
+      })
+
+      const res = await request(app)
+        .post('/api/users/batch')
+        .send({ action: 'activate', userIds: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'b2c3d4e5-f6a7-8901-bcde-f12345678901'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(mocks.batchProcess).toHaveBeenCalledWith({
+        action: 'activate',
+        userIds: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'b2c3d4e5-f6a7-8901-bcde-f12345678901'],
+        currentUserId: 'c9b2e9a0-3f5d-4a1e-b8c7-2d6f8e9a0b3c',
+      })
       expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })
