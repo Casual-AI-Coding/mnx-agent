@@ -423,12 +423,14 @@ function App() {
       <ErrorBoundary
         fallback={<ErrorFallback className="min-h-screen" onRetry={() => window.location.reload()} />}
       >
-        <Toaster 
-          position="top-right" 
-          theme="dark" 
-          richColors 
-          offset={64} 
+        <Toaster
+          position="top-right"
+          theme="dark"
+          richColors
+          offset={64}
           closeButton
+          visibleToasts={3}
+          expand={false}
           toastOptions={{
             classNames: {
               toast: 'group relative pr-8 pl-4 py-3 rounded-xl bg-card/95 backdrop-blur-sm shadow-lg shadow-black/20',
