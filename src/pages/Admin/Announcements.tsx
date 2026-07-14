@@ -165,7 +165,7 @@ export default function AnnouncementsPage() {
         actions={
           <Button variant="outline" onClick={loadAnnouncements} disabled={isLoading}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
-            刷新
+            <span className="hidden sm:inline">刷新</span>
           </Button>
         }
       />
@@ -178,7 +178,7 @@ export default function AnnouncementsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-[1fr_180px]" onSubmit={handleCreate}>
+          <form className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_180px]" onSubmit={handleCreate}>
             <div className="space-y-4">
               <label className="grid gap-2 text-sm font-medium">
                 标题
