@@ -92,15 +92,16 @@ router.patch('/:id', validate(updateUserSchema), asyncHandler(async (req, res) =
 
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
-  const conn = getConnection()
 
   if (id === req.user?.userId) {
     errorResponse(res, '不能删除自己的账户', 400)
     return
   }
 
-  const result = await conn.execute('DELETE FROM users WHERE id = $1', [id])
-  if (result.changes === 0) {
+  const adminUserService = getAdminUserService()
+  const deleted = await adminUserService.deleteUser(id)
+
+  if (!deleted) {
     errorResponse(res, '用户不存在', 404)
     return
   }

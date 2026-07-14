@@ -10,6 +10,7 @@ describe('users route dependency contract', () => {
     expect(source).toContain('getUserService')
     expect(source).toContain('await adminUserService.listUsers({ page, limit })')
     expect(source).toContain('await adminUserService.updateUser(id, updates)')
+    expect(source).toContain('await adminUserService.deleteUser(id)')
     expect(source).not.toContain('new UserService')
     expect(source).not.toContain('../services/user-service')
     expect(source).not.toContain('SELECT COUNT(*) as total FROM users')

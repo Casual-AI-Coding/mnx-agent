@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getUserById: vi.fn(),
   listUsers: vi.fn(),
   updateUser: vi.fn(),
+  deleteUser: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -30,6 +31,7 @@ vi.mock('../../service-registration.js', () => ({
   getAdminUserService: () => ({
     listUsers: mocks.listUsers,
     updateUser: mocks.updateUser,
+    deleteUser: mocks.deleteUser,
   }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
@@ -176,6 +178,48 @@ describe('Users API Routes', () => {
         data: { message: 'No changes' },
       })
       expect(mocks.updateUser).not.toHaveBeenCalled()
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('DELETE /api/users/:id', () => {
+    it('returns 400 when attempting to delete own account', async () => {
+      const res = await request(app).delete('/api/users/super-user')
+
+      expect(res.status).toBe(400)
+      expect(res.body).toEqual({
+        success: false,
+        error: '不能删除自己的账户',
+      })
+      expect(mocks.deleteUser).not.toHaveBeenCalled()
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('returns 404 when the target user does not exist', async () => {
+      mocks.deleteUser.mockResolvedValue(false)
+
+      const res = await request(app).delete('/api/users/nonexistent-id')
+
+      expect(res.status).toBe(404)
+      expect(res.body).toEqual({
+        success: false,
+        error: '用户不存在',
+      })
+      expect(mocks.deleteUser).toHaveBeenCalledWith('nonexistent-id')
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('returns 200 with a success message when the user is deleted', async () => {
+      mocks.deleteUser.mockResolvedValue(true)
+
+      const res = await request(app).delete('/api/users/user-to-delete')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({
+        success: true,
+        data: { message: '用户已删除' },
+      })
+      expect(mocks.deleteUser).toHaveBeenCalledWith('user-to-delete')
       expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })
