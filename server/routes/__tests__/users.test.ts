@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateUser: vi.fn(),
   deleteUser: vi.fn(),
   createUser: vi.fn(),
+  resetPassword: vi.fn(),
   query: vi.fn(),
   execute: vi.fn(),
 }))
@@ -34,6 +35,7 @@ vi.mock('../../service-registration.js', () => ({
     updateUser: mocks.updateUser,
     deleteUser: mocks.deleteUser,
     createUser: mocks.createUser,
+    resetPassword: mocks.resetPassword,
   }),
   getUserService: () => ({
     getUserById: mocks.getUserById,
@@ -268,6 +270,30 @@ describe('Users API Routes', () => {
       expect(res.status).toBe(400)
       expect(res.body.success).toBe(false)
       expect(mocks.createUser).not.toHaveBeenCalled()
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /api/users/:id/reset-password', () => {
+    it('delegates password reset and returns a success message', async () => {
+      mocks.resetPassword.mockResolvedValue(true)
+
+      const res = await request(app).post('/api/users/user-42/reset-password')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ success: true, data: { message: '密码已重置' } })
+      expect(mocks.resetPassword).toHaveBeenCalledWith('user-42')
+      expect(mocks.getConnection).not.toHaveBeenCalled()
+    })
+
+    it('returns 404 when the user does not exist', async () => {
+      mocks.resetPassword.mockResolvedValue(false)
+
+      const res = await request(app).post('/api/users/ghost/reset-password')
+
+      expect(res.status).toBe(404)
+      expect(res.body).toEqual({ success: false, error: '用户不存在' })
+      expect(mocks.resetPassword).toHaveBeenCalledWith('ghost')
       expect(mocks.getConnection).not.toHaveBeenCalled()
     })
   })

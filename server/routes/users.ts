@@ -2,26 +2,13 @@ import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireRole } from '../middleware/auth-middleware.js'
 import { getConnection } from '../database/connection.js'
-import { getAdminUserService, getUserService } from '../service-registration.js'
+import { getAdminUserService } from '../service-registration.js'
 import { z } from 'zod'
 import { validate, validateQuery } from '../middleware/validate.js'
-import bcrypt from 'bcrypt'
-import crypto from 'node:crypto'
-import { v4 as uuidv4 } from 'uuid'
 import { successResponse, errorResponse } from '../middleware/api-response'
 import { toLocalISODateString } from '../lib/date-utils.js'
 
 const router = Router()
-
-function generateRandomPassword(length: number = 20): string {
-  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-  const bytes = crypto.randomBytes(length)
-  let password = ''
-  for (let i = 0; i < length; i++) {
-    password += CHARS[bytes[i] % CHARS.length]
-  }
-  return password
-}
 
 router.use(requireRole(['super']))
 
@@ -172,21 +159,13 @@ router.post('/batch', validate(batchOperationSchema), asyncHandler(async (req, r
 
 router.post('/:id/reset-password', asyncHandler(async (req, res) => {
   const { id } = req.params
-  const conn = getConnection()
+  const adminUserService = getAdminUserService()
+  const reset = await adminUserService.resetPassword(id)
 
-  const user = await conn.query('SELECT id, username FROM users WHERE id = $1', [id])
-  if (user.length === 0) {
+  if (!reset) {
     errorResponse(res, '用户不存在', 404)
     return
   }
-
-  const newPassword = generateRandomPassword(12)
-  const passwordHash = await bcrypt.hash(newPassword, 12)
-
-  await conn.execute(
-    'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
-    [passwordHash, toLocalISODateString(), id]
-  )
 
   successResponse(res, { message: '密码已重置' })
 }))
