@@ -36,6 +36,12 @@ type ResetCall = {
   now: string | null
 }
 
+type BatchCall = {
+  action: string
+  id: string
+  now: string
+}
+
 type AdminUserUpdateInput = {
   readonly email?: string | null
   readonly role?: 'super' | 'admin' | 'pro' | 'user'
@@ -76,12 +82,14 @@ function createRepository(
   deleteCalls: DeleteCall[]
   createCalls: CreateCall[]
   resetCalls: ResetCall[]
+  batchCalls: BatchCall[]
 } {
   const listCalls: ListCall[] = []
   const updateCalls: UpdateCall[] = []
   const deleteCalls: DeleteCall[] = []
   const createCalls: CreateCall[] = []
   const resetCalls: ResetCall[] = []
+  const batchCalls: BatchCall[] = []
 
   return {
     repository: {
@@ -128,12 +136,21 @@ function createRepository(
       resetCalls.push({ existsId: null, updateId: id, passwordHash, now })
       return true
     },
+    async activateUser(id: string, now: string): Promise<boolean> {
+      batchCalls.push({ action: 'activate', id, now })
+      return true
+    },
+    async deactivateUser(id: string, now: string): Promise<boolean> {
+      batchCalls.push({ action: 'deactivate', id, now })
+      return true
+    },
   },
   listCalls,
   updateCalls,
   deleteCalls,
   createCalls,
   resetCalls,
+  batchCalls,
 }
 }
 
@@ -269,6 +286,48 @@ describe('AdminUserService', () => {
         passwordHash: expect.stringMatching(/^\$2b\$12\$.{53}$/),
         now: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/),
       })
+    })
+  })
+
+  describe('batchProcess', () => {
+    it('delegates delete actions to the repository and counts results', async () => {
+      const { repository, batchCalls } = createRepository(0, [], null, true)
+      const service = new AdminUserService(repository)
+
+      const result = await service.batchProcess({
+        action: 'delete',
+        userIds: ['user-1', 'user-2'],
+        currentUserId: 'super-user',
+      })
+
+      expect(result).toEqual({ action: 'delete', successCount: 2, failCount: 0, total: 2 })
+    })
+
+    it('prevents deactivating own account by counting it as a failure', async () => {
+      const { repository } = createRepository(0, [], null, false)
+      const service = new AdminUserService(repository)
+
+      const result = await service.batchProcess({
+        action: 'deactivate',
+        userIds: ['user-1', 'self-id'],
+        currentUserId: 'self-id',
+      })
+
+      expect(result.failCount).toBe(1)
+      expect(result.successCount).toBe(1)
+    })
+
+    it('delegates activate actions', async () => {
+      const { repository, batchCalls } = createRepository(0, [], null, false)
+      const service = new AdminUserService(repository)
+
+      await service.batchProcess({
+        action: 'activate',
+        userIds: ['user-1'],
+        currentUserId: 'super-user',
+      })
+
+      expect(batchCalls[0]?.action).toBe('activate')
     })
   })
 })

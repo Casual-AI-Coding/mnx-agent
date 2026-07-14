@@ -17,6 +17,8 @@ export interface AdminUserRepositoryPort {
   createUser(data: AdminUserCreateData): Promise<AdminUserListItem>
   exists(id: string): Promise<boolean>
   updatePassword(id: string, passwordHash: string, now: string): Promise<boolean>
+  activateUser(id: string, now: string): Promise<boolean>
+  deactivateUser(id: string, now: string): Promise<boolean>
 }
 
 export type AdminUserListRequest = {
@@ -108,5 +110,44 @@ export class AdminUserService {
 
     await this.repository.updatePassword(id, passwordHash, now)
     return true
+  }
+
+  async batchProcess(input: {
+    readonly action: 'activate' | 'deactivate' | 'delete'
+    readonly userIds: string[]
+    readonly currentUserId: string
+  }): Promise<{ readonly action: string; readonly successCount: number; readonly failCount: number; readonly total: number }> {
+    const { action, userIds, currentUserId } = input
+    const now = toLocalISODateString()
+    let successCount = 0
+    let failCount = 0
+
+    for (const id of userIds) {
+      try {
+        const ok = await this.executeOne(action, id, now, currentUserId)
+        if (ok) successCount++
+        else failCount++
+      } catch {
+        failCount++
+      }
+    }
+
+    return { action, successCount, failCount, total: userIds.length }
+  }
+
+  private async executeOne(
+    action: string,
+    id: string,
+    now: string,
+    currentUserId: string,
+  ): Promise<boolean> {
+    switch (action) {
+      case 'activate': return this.repository.activateUser(id, now)
+      case 'deactivate':
+        if (id === currentUserId) return false
+        return this.repository.deactivateUser(id, now)
+      case 'delete': return this.repository.deleteUser(id)
+      default: return false
+    }
   }
 }
