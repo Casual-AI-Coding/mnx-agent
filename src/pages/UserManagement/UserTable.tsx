@@ -78,8 +78,8 @@ export function UserTable({
       </AnimatePresence>
 
       {!loading && !error && (
-        <div>
-          <table className="w-full">
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
                 <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">用户</th>

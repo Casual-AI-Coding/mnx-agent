@@ -32,7 +32,8 @@ export function ExternalApiLogTable({
   const getProviderColor = (p: string) => providerColors[p] || 'bg-muted/20 text-muted-foreground border-border'
 
   return (
-    <table className="w-full">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[640px]">
       <thead>
         <tr className="bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 border-b border-border/50">
           <th className="py-3 px-4 text-left text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">服务商</th>
@@ -104,5 +105,6 @@ export function ExternalApiLogTable({
         </tfoot>
       )}
     </table>
+    </div>
   )
 }
