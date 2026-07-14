@@ -15,12 +15,6 @@ All notable changes to this project will be documented in this file.
 - **服务节点权限更新重构** — 收敛服务节点权限更新服务，扩展仓储白名单（涉及 `server/services/service-node-permission-service.ts`, `server/routes/admin/service-permissions.ts`）
 - **媒体 API 拆分** — 将 `media.ts` 拆分为 `media-requests.ts`（请求层）、`media-formatters.ts`（展示格式）、`media-types.ts`（类型定义），收紧媒体服务领域契约（涉及 `src/lib/api/media.ts`, `src/lib/api/media-requests.ts`, `src/lib/api/media-formatters.ts`, `src/lib/api/media-types.ts`）
 
-Now let me write the CHANGELOG entry.</think>
-
-<｜DSML｜tool_calls>
-<｜DSML｜invoke name="edit">
-<｜DSML｜parameter name="filePath" string="true">/home/ogslp/Projects/Opencode/mnx-agent/CHANGELOG.md
-
 ### ✨ Added
 
 - **前端 Feature Flags 服务** — 新增统一前端环境解析与功能开关服务，支持通过 `VITE_FEATURE_*` 控制浏览器侧功能入口（涉及 `src/lib/frontend-environment.ts`, `.env.example`）
@@ -30,20 +24,35 @@ Now let me write the CHANGELOG entry.</think>
 - **侧边栏调试入口按功能开关渲染** — 歌词生成和 OpenAI Image-2 外部调试入口支持动态隐藏，空菜单分组自动过滤（涉及 `src/components/layout/sidebar/sidebar-config.ts`）
 - **歌词 API 客户端统一化** — 改用统一 `apiClient.post()` 调用并复用 `TIMEOUTS.LYRICS_GENERATION` 超时配置，保持请求路径与响应契约不变（涉及 `src/lib/api/lyrics.ts`）
 
+### 📱 移动端适配（R-012 完成）
+
+- **断点 hooks + 常量** — 新增 `src/hooks/useReducedMotion.ts`、`src/hooks/useBreakpoint.ts` 与 `src/lib/breakpoints.ts`，统一 375/768/1024/1440 四档断点与 `useIsMobile()` 派生工具
+- **Button touchable 变体** — `min-h-[44px]` 触屏目标，新增 `touchable` 变体默认开启
+- **Toast 移动端约束** — `visibleToasts=3`、`expand=false`，防止小屏堆积
+- **页面响应式** — Dashboard 标题/网格响应式；MediaUploader 工具栏 flex-wrap + 隐藏次要按钮；Admin 公告管理表单 sm:grid-cols-2 / lg:grid-cols-[1fr_180px]；Input 组件自动注入 `inputMode=numeric`（涉及 `src/pages/Dashboard.tsx`、`src/pages/MediaUploader.tsx`、`src/pages/Announcements.tsx`、`src/components/ui/Input.tsx`）
+- **表格横向滚动** — 4 张后台表格（UserTable/AuditLogTable/ExternalApiLogTable/InvitationCodeTable）外层 `overflow-x-auto` + 表 `min-w-[640px]`，避免横向溢出挤压
+- **WorkflowBuilder 移动端降级** — `useIsMobile()` 检测 < 768px 时渲染引导页 + 推荐宽度 + Link to=/cron；桌面端保持 ReactFlow 完整拖拽
+- **AppLayout 抽屉/遮罩/模态 接入 prefers-reduced-motion** — 移动端抽屉 overlay、sidebar drawer、apiKey 模态在 reducedMotion=true 时跳过 spring/scale 动画，desktop 行为不变
+
 ### 🧪 测试完善
 
 - **前端功能开关测试覆盖** — 覆盖环境变量解析、默认值、非法布尔值降级和侧边栏开关行为（`src/lib/__tests__/frontend-environment.test.ts`, `src/components/layout/sidebar/sidebar-config.test.ts`）
 - **媒体与歌词客户端测试覆盖** — 覆盖 PinButton 点击/禁用/状态样式与歌词 API 请求契约（`src/components/media/PinButton.test.tsx`, `src/lib/api/__tests__/lyrics.test.ts`）
+- **移动端回归测试** — `Dashboard.mobile.test.tsx`、`MediaUploader.mobile.test.tsx`、`WorkflowBuilder.mobile.test.tsx`、`AppLayout.breakpoints.test.tsx` 共 17 用例覆盖 4 断点 + reduced-motion 双轴
 
 ### 📝 文档更新
 
 - **v2 需求状态复核** — 同步 R-004、R-008、R-023、R-024 完成状态与范围说明，路线图当前版本更新到 v2.8.1（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v2-roadmap.md`）
+- **R-012 完成归档** — 移动端适配从「部分完成」改为「已完成」；v3-roadmap.md 与 requirement-pools.md 状态/变更记录同步（`docs/roadmap/requirement-pools.md`, `docs/roadmap/v3-roadmap.md`）
 
 ### Backward Compatibility
 
 - ✅ 新增 `VITE_FEATURE_*` 功能开关默认保持现有入口可见
 - ✅ 侧边栏仅根据配置隐藏入口，不影响既有路由和 API
 - ✅ 歌词 API 客户端请求路径、请求体和响应契约保持兼容
+- ✅ 移动端断点切换不改变任何桌面端行为与 API 契约
+- ✅ WorkflowBuilder 移动端降级仅新增引导页入口，不影响桌面端 ReactFlow
+- ✅ prefers-reduced-motion 仅在用户系统启用时降级动画，默认行为不变
 - ✅ 新增测试与文档更新不影响运行时行为
 
 ## [2.8.0] - 2026-07-07
