@@ -148,7 +148,7 @@ export default function Dashboard() {
         />
       }
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <WelcomeModal
           open={showWelcomeModal}
           onClose={handleCloseWelcomeModal}
@@ -158,7 +158,7 @@ export default function Dashboard() {
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
             <p className="text-muted-foreground/70 mt-2">{t('dashboard.subtitle')}</p>
           </div>
           <ConnectionIndicator status={status} />
@@ -192,7 +192,7 @@ export default function Dashboard() {
             <Zap className={cn('w-5 h-5', statusTokens.warning.icon)} />
             {t('dashboard.quickStart')}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {quickActions.map((action, i) => (
               <motion.div
                 key={action.path}
