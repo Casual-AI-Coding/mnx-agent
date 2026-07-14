@@ -125,4 +125,20 @@ export class AdminUserRepository {
     )
     return result.changes > 0
   }
+
+  async activateUser(id: string, now: string): Promise<boolean> {
+    const result = await this.conn.execute(
+      'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+      [true, now, id]
+    )
+    return result.changes > 0
+  }
+
+  async deactivateUser(id: string, now: string): Promise<boolean> {
+    const result = await this.conn.execute(
+      'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+      [false, now, id]
+    )
+    return result.changes > 0
+  }
 }

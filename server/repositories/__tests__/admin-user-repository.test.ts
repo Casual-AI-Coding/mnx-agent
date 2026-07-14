@@ -307,4 +307,32 @@ describe('AdminUserRepository', () => {
       await expect(repository.updatePassword('ghost', 'hash', 'now')).resolves.toBe(false)
     })
   })
+
+  describe('activateUser', () => {
+    it('sets is_active to true for the given user', async () => {
+      const { connection, executeCalls, setNextDeleteChanges } = createConnectionFixture()
+      setNextDeleteChanges(1)
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.activateUser('user-1', '2026-07-14T10:00:00.000')).resolves.toBe(true)
+      expect(executeCalls).toEqual([{
+        sql: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+        params: [true, '2026-07-14T10:00:00.000', 'user-1'],
+      }])
+    })
+  })
+
+  describe('deactivateUser', () => {
+    it('sets is_active to false for the given user', async () => {
+      const { connection, executeCalls, setNextDeleteChanges } = createConnectionFixture()
+      setNextDeleteChanges(1)
+      const repository = new AdminUserRepository(connection)
+
+      await expect(repository.deactivateUser('user-2', '2026-07-14T10:00:00.000')).resolves.toBe(true)
+      expect(executeCalls).toEqual([{
+        sql: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3',
+        params: [false, '2026-07-14T10:00:00.000', 'user-2'],
+      }])
+    })
+  })
 })
