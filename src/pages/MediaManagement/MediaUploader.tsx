@@ -79,11 +79,11 @@ export function MediaUploader({
             </div>
             <Button variant="outline" onClick={onRefresh} disabled={isRefreshing}>
               <RefreshCw className={cn('w-4 h-4 mr-2', isRefreshing && 'animate-spin')} />
-              刷新
+              <span className="hidden sm:inline">刷新</span>
             </Button>
             <Button variant="outline" onClick={onFetchRecoverable} disabled={isLoadingRecoverable}>
               <Undo2 className={cn('w-4 h-4 mr-2', isLoadingRecoverable && 'animate-spin')} />
-              恢复上传
+              <span className="hidden sm:inline">恢复上传</span>
             </Button>
           </>
         }
@@ -105,7 +105,7 @@ export function MediaUploader({
               </TabsList>
             </Tabs>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center bg-muted/30 rounded-lg p-1.5 gap-1">
                 <Button
                   variant="ghost"
@@ -120,7 +120,7 @@ export function MediaUploader({
                   title="已收藏"
                 >
                   <Star className={cn('w-4 h-4', favoriteFilters.has('favorite') && 'fill-yellow-500/50')} />
-                  <span className="ml-1 text-sm font-medium">已收藏</span>
+                  <span className="ml-1 text-sm font-medium hidden sm:inline">已收藏</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -135,7 +135,7 @@ export function MediaUploader({
                   title="未收藏"
                 >
                   <StarOff className="w-4 h-4" />
-                  <span className="ml-1 text-sm font-medium">未收藏</span>
+                  <span className="ml-1 text-sm font-medium hidden sm:inline">未收藏</span>
                 </Button>
               </div>
 
@@ -153,7 +153,7 @@ export function MediaUploader({
                   title="私有"
                 >
                   <Lock className="w-4 h-4" />
-                  <span className="ml-1 text-sm font-medium">私有</span>
+                  <span className="ml-1 text-sm font-medium hidden sm:inline">私有</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -168,7 +168,7 @@ export function MediaUploader({
                   title="公开"
                 >
                   <Globe className="w-4 h-4" />
-                  <span className="ml-1 text-sm font-medium">公开</span>
+                  <span className="ml-1 text-sm font-medium hidden sm:inline">公开</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -183,12 +183,12 @@ export function MediaUploader({
                   title="他人公开"
                 >
                   <Users className="w-4 h-4" />
-                  <span className="ml-1 text-sm font-medium">他人</span>
+                  <span className="ml-1 text-sm font-medium hidden sm:inline">他人</span>
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div className="relative flex-1 sm:flex-none sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input

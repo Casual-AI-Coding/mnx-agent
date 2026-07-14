@@ -47,11 +47,11 @@ export function PageHeader({ icon, title, description, actions, className, gradi
         </div>
       </div>
       {actions && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25, duration: 0.3 }}
-          className="flex items-center gap-2"
+          className="flex flex-wrap items-center gap-2"
         >
           {actions}
         </motion.div>
