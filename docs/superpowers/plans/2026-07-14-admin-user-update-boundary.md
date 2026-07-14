@@ -29,7 +29,7 @@
 - 修改：`server/repositories/__tests__/admin-user-repository.test.ts`
 - 修改：`server/repositories/admin-user-repository.ts`
 
-- [ ] **步骤 1：扩展失败的 Repository 测试 fixture 和更新断言**
+- [x] **步骤 1：扩展失败的 Repository 测试 fixture 和更新断言**
 
 将 `createConnectionFixture()` 扩展为可记录 `execute` 调用并配置按参数查询返回的公开用户。连接接口保持为局部窄端口，不使用 `DatabaseConnection`、类型断言或 `vi`：
 
@@ -112,7 +112,7 @@ expect(calls[0]?.sql).not.toContain('password_hash')
 
 新增未命中用例：不设置 `updatedUsers`，调用 `updateUser('missing-user', { role: 'admin' })` 并断言结果为 `null`；同时断言更新 SQL 为 `role = $1, updated_at = $2 WHERE id = $3`，参数为 `['admin', expect.any(String), 'missing-user']`。
 
-- [ ] **步骤 2：运行 Repository 测试确认 RED**
+- [x] **步骤 2：运行 Repository 测试确认 RED**
 
 运行：
 
@@ -122,7 +122,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：失败，原因是 `AdminUserRepository.updateUser`、连接端口的 `execute` 和更新类型尚未存在；失败必须来自待实现的更新契约，而不是 fixture 或导入错误。
 
-- [ ] **步骤 3：实现最小参数化 Repository 更新**
+- [x] **步骤 3：实现最小参数化 Repository 更新**
 
 在 `server/repositories/admin-user-repository.ts` 中保留现有列表读取，并添加：
 
@@ -192,7 +192,7 @@ async updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListIte
 
 不要继承 `UserRepository`，不要读取或返回 `password_hash`，不要检查 `changes` 并新增错误语义，也不要触碰列表 SQL 以外的 users 用例。
 
-- [ ] **步骤 4：运行 Repository 测试确认 GREEN**
+- [x] **步骤 4：运行 Repository 测试确认 GREEN**
 
 运行：
 
@@ -202,7 +202,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：通过；公开刷新查询脱敏 API Key、不含 `password_hash`，五字段更新保持固定参数顺序，未命中透传 `null`。
 
-- [ ] **步骤 5：提交 Repository 单元**
+- [x] **步骤 5：提交 Repository 单元**
 
 运行：
 
@@ -220,7 +220,7 @@ GIT_MASTER=1 git commit -m "refactor(repository): 收敛后台用户属性更新
 - 修改：`server/services/__tests__/admin-user-service.test.ts`
 - 修改：`server/services/admin-user-service.ts`
 
-- [ ] **步骤 1：写失败的 Service 更新测试**
+- [x] **步骤 1：写失败的 Service 更新测试**
 
 将本地 repository fake 扩展为带 `updateUser` 的后台用户 repository，并记录更新调用。RED 阶段先在测试内定义与目标契约同构的局部输入类型，避免在生产类型尚未导出时产生导入错误：
 
@@ -274,7 +274,7 @@ function createRepository(total: number, users: AdminUserListItem[], updatedUser
 
 另一个将 `updatedUser` 设为 `null`，调用 `service.updateUser('missing-user', { role: 'admin' })` 并断言结果为 `null`，以及更新调用保持原 ID 与数据。
 
-- [ ] **步骤 2：运行 Service 测试确认 RED**
+- [x] **步骤 2：运行 Service 测试确认 RED**
 
 运行：
 
@@ -284,7 +284,7 @@ npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
 
 预期：失败，原因是 `AdminUserService.updateUser` 和扩展后的 repository 契约尚未存在；既有分页行为不是失败原因。
 
-- [ ] **步骤 3：实现最小 Service 委托**
+- [x] **步骤 3：实现最小 Service 委托**
 
 从 Repository 导入 `AdminUserUpdate`，在生产 Service 中将当前本地接口改名为所有后台 users 用例所需的明确端口：
 
@@ -306,7 +306,7 @@ async updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListIte
 
 不要导入 `DatabaseConnection`、Express、Zod、HTTP 响应工具或认证代码；不要把空更新、404、密码或授权逻辑引入 Service。
 
-- [ ] **步骤 4：运行 Service 测试确认 GREEN**
+- [x] **步骤 4：运行 Service 测试确认 GREEN**
 
 运行：
 
@@ -316,7 +316,7 @@ npm run test:server -- "server/services/__tests__/admin-user-service.test.ts"
 
 预期：通过；分页计算不变，更新按原 ID 和属性委托，`null` 未命中结果原样透传。
 
-- [ ] **步骤 5：提交 Service 单元**
+- [x] **步骤 5：提交 Service 单元**
 
 运行：
 
@@ -335,7 +335,7 @@ GIT_MASTER=1 git commit -m "refactor(server): 编排后台用户属性更新" -m
 - 修改：`server/routes/__tests__/users.test.ts:5-167`
 - 修改：`server/routes/__tests__/users-di-contract.test.ts`
 
-- [ ] **步骤 1：先把 PATCH 行为测试改为 Service mock**
+- [x] **步骤 1：先把 PATCH 行为测试改为 Service mock**
 
 为 hoisted mock 添加：
 
@@ -384,7 +384,7 @@ expect(mocks.getConnection).not.toHaveBeenCalled()
 
 并断言 `mocks.updateUser` 和 `mocks.getConnection` 都未被调用。
 
-- [ ] **步骤 2：写失败的 Route 依赖契约并运行 RED**
+- [x] **步骤 2：写失败的 Route 依赖契约并运行 RED**
 
 在 `users-di-contract.test.ts` 保留既有 GET 断言，并加入：
 
@@ -402,7 +402,7 @@ npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__
 
 预期：失败，因为 PATCH 尚直接调用连接、执行 SQL 并通过 `getUserService()` 刷新；失败不能来自 GET、POST、DELETE、批量操作或密码重置。
 
-- [ ] **步骤 3：最小化改写 PATCH Route**
+- [x] **步骤 3：最小化改写 PATCH Route**
 
 删除：
 
@@ -420,7 +420,7 @@ successResponse(res, user)
 
 不要删除 `getConnection` 或 `toLocalISODateString` import，因为同一文件范围外的 POST、DELETE、`/batch` 和 `/:id/reset-password` 仍然使用它们；不要修改这些端点或 `getUserService()` 的 POST 用途。
 
-- [ ] **步骤 4：运行 Route 测试确认 GREEN**
+- [x] **步骤 4：运行 Route 测试确认 GREEN**
 
 运行：
 
@@ -430,7 +430,7 @@ npm run test:server -- "server/routes/__tests__/users.test.ts" "server/routes/__
 
 预期：通过；GET 行为仍由现有后台列表 service 覆盖，PATCH 部分更新和空更新保持 HTTP 响应，PATCH 不再取得连接。
 
-- [ ] **步骤 5：提交 Route 单元**
+- [x] **步骤 5：提交 Route 单元**
 
 运行：
 
@@ -448,7 +448,7 @@ GIT_MASTER=1 git commit -m "refactor(routes): 委托后台用户属性更新" -m
 - 修改：`docs/superpowers/plans/2026-07-14-admin-user-update-boundary.md`
 - 验证：任务 1 至任务 3 列出的所有 TypeScript 文件。
 
-- [ ] **步骤 1：运行完整针对性测试**
+- [x] **步骤 1：运行完整针对性测试**
 
 运行：
 
@@ -458,7 +458,7 @@ npm run test:server -- "server/repositories/__tests__/admin-user-repository.test
 
 预期：列出的文件全部通过；DI 测试证明已存在的后台 users 装配仍可创建扩展后的 class。
 
-- [ ] **步骤 2：运行类型和构建验证**
+- [x] **步骤 2：运行类型和构建验证**
 
 对下列文件运行 LSP error diagnostics：
 
@@ -480,7 +480,7 @@ npm run build
 
 预期：构建退出码为 0。若出现既有无关告警，只记录来源，不修改无关文件。
 
-- [ ] **步骤 3：扫描禁止项并检查差异**
+- [x] **步骤 3：扫描禁止项并检查差异**
 
 运行：
 
@@ -491,7 +491,7 @@ GIT_MASTER=1 git diff --check 62d7a06^..HEAD
 
 预期：禁止项扫描无匹配，差异检查无输出。
 
-- [ ] **步骤 4：更新计划复选框并提交**
+- [x] **步骤 4：更新计划复选框并提交**
 
 将任务 1 至任务 4 中已完成的复选框改为 `[x]`，然后运行：
 
