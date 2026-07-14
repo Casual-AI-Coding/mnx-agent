@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { AdminUserListItem } from '../../repositories/admin-user-repository.js'
 import { AdminUserService } from '../admin-user-service.js'
+import type { AdminUserRepositoryPort } from '../admin-user-service.js'
+
+import bcrypt from 'bcrypt'
 
 type ListCall = {
   limit: number
@@ -14,6 +17,16 @@ type UpdateCall = {
 
 type DeleteCall = {
   id: string
+}
+
+type CreateCall = {
+  username: string
+  passwordHash: string
+  id: string
+  now: string
+  email: string | null
+  role: string
+  apiKey: string | null
 }
 
 type AdminUserUpdateInput = {
@@ -50,17 +63,16 @@ function createRepository(
   updatedUser: AdminUserListItem | null,
   willDelete: boolean = false,
 ): {
-  repository: AdminUserListRepository & {
-    updateUser(id: string, updates: AdminUserUpdateInput): Promise<AdminUserListItem | null>
-    deleteUser(id: string): Promise<boolean>
-  }
+  repository: AdminUserRepositoryPort
   listCalls: ListCall[]
   updateCalls: UpdateCall[]
   deleteCalls: DeleteCall[]
+  createCalls: CreateCall[]
 } {
   const listCalls: ListCall[] = []
   const updateCalls: UpdateCall[] = []
   const deleteCalls: DeleteCall[] = []
+  const createCalls: CreateCall[] = []
 
   return {
     repository: {
@@ -79,10 +91,31 @@ function createRepository(
         deleteCalls.push({ id })
         return willDelete
       },
+      async createUser(data: {
+        id: string
+        username: string
+        email: string | null
+        passwordHash: string
+        role: string
+        apiKey: string | null
+        now: string
+      }): Promise<AdminUserListItem> {
+        createCalls.push({
+          username: data.username,
+          passwordHash: data.passwordHash,
+          id: data.id,
+          now: data.now,
+          email: data.email,
+          role: data.role,
+          apiKey: data.apiKey,
+        })
+        return createUser(data.id)
+      },
     },
     listCalls,
     updateCalls,
     deleteCalls,
+    createCalls,
   }
 }
 
@@ -152,5 +185,45 @@ describe('AdminUserService', () => {
 
     await expect(service.deleteUser('nonexistent')).resolves.toBe(false)
     expect(deleteCalls).toEqual([{ id: 'nonexistent' }])
+  })
+
+  it('hashes the password, generates a UUID, stamps timestamps, and delegates to the repository', async () => {
+    const { repository, createCalls } = createRepository(0, [], null, false)
+    const service = new AdminUserService(repository)
+
+    const result = await service.createUser({
+      username: 'newuser',
+      password: 'plain-password',
+      email: 'new@example.com',
+      role: 'user',
+    })
+
+    expect(result.username).toBe('tester')
+    expect(createCalls).toEqual([{
+      username: 'newuser',
+      passwordHash: expect.stringMatching(/^\$2b\$12\$.{53}$/),
+      id: expect.any(String),
+      now: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/),
+      email: 'new@example.com',
+      role: 'user',
+      apiKey: null,
+    }])
+  })
+
+  it('passes nullable fields through to the repository unchanged', async () => {
+    const { repository, createCalls } = createRepository(0, [], null, false)
+    const service = new AdminUserService(repository)
+
+    await service.createUser({
+      username: 'newuser',
+      password: 'plain-password',
+      email: null,
+      role: 'admin',
+      minimax_api_key: 'sk-key-1234',
+    })
+
+    expect(createCalls[0].email).toBeNull()
+    expect(createCalls[0].apiKey).toBe('sk-key-1234')
+    expect(createCalls[0].role).toBe('admin')
   })
 })
