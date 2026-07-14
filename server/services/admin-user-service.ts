@@ -1,11 +1,13 @@
 import type {
   AdminUserListItem,
   AdminUserListOptions,
+  AdminUserUpdate,
 } from '../repositories/admin-user-repository.js'
 
-export interface AdminUserListRepository {
+export interface AdminUserRepositoryPort {
   countUsers(): Promise<number>
   listUsers(options: AdminUserListOptions): Promise<AdminUserListItem[]>
+  updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null>
 }
 
 export type AdminUserListRequest = {
@@ -24,7 +26,7 @@ export type AdminUserListResult = {
 }
 
 export class AdminUserService {
-  constructor(private readonly repository: AdminUserListRepository) {}
+  constructor(private readonly repository: AdminUserRepositoryPort) {}
 
   async listUsers({ page, limit }: AdminUserListRequest): Promise<AdminUserListResult> {
     const [total, data] = await Promise.all([
@@ -41,5 +43,9 @@ export class AdminUserService {
         totalPages: Math.ceil(total / limit),
       },
     }
+  }
+
+  async updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null> {
+    return this.repository.updateUser(id, updates)
   }
 }
