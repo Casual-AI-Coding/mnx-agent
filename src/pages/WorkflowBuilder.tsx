@@ -1,12 +1,15 @@
 import * as React from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { toast } from 'sonner'
+import { Workflow, Smartphone, ListChecks } from 'lucide-react'
 
 import { useWorkflowBuilder } from '@/components/workflow/hooks/useWorkflowBuilder'
 import { useWorkflowStore } from '@/stores/workflow'
+import { useIsMobile } from '@/hooks/useBreakpoint'
 import { apiClient } from '@/lib/api/client'
+import { Button } from '@/components/ui/Button'
 import {
   pauseExecution,
   resumeExecution,
@@ -261,8 +264,59 @@ function WorkflowBuilderInner() {
   return <WorkflowBuilderContent builder={builder as never} workflowId={workflowId} handleSave={handleSave} handleLoad={handleLoad} canvasProps={canvasProps} testPanelProps={testPanelProps} nodeOutputPanelProps={nodeOutputPanelProps} workflowDialogProps={workflowDialogProps} />
 }
 
+function MobileWorkflowBuilderFallback() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center p-4">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <Workflow className="w-8 h-8 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">工作流构建器仅支持桌面端</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            拖拽式编辑器需要更大的屏幕空间。请在平板或电脑上访问，或前往「定时任务」查看已部署的工作流。
+          </p>
+        </div>
+        <div className="grid gap-3 text-left bg-card border border-border/50 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Smartphone className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">推荐屏幕宽度</p>
+              <p className="text-xs text-muted-foreground">≥ 768px（平板或更大）</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <ListChecks className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">查看已部署工作流</p>
+              <p className="text-xs text-muted-foreground">前往 Cron Jobs 页面查看运行状态与执行日志</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <Button variant="outline" onClick={() => window.history.back()}>
+            返回
+          </Button>
+          <Link
+            to="/cron"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
+          >
+            前往定时任务
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Wrapper with ReactFlowProvider
 export default function WorkflowBuilderPage() {
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return <MobileWorkflowBuilderFallback />
+  }
+
   return (
     <ReactFlowProvider>
       <WorkflowBuilderInner />
