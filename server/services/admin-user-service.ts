@@ -8,6 +8,7 @@ export interface AdminUserRepositoryPort {
   countUsers(): Promise<number>
   listUsers(options: AdminUserListOptions): Promise<AdminUserListItem[]>
   updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null>
+  deleteUser(id: string): Promise<boolean>
 }
 
 export type AdminUserListRequest = {
@@ -47,5 +48,9 @@ export class AdminUserService {
 
   async updateUser(id: string, updates: AdminUserUpdate): Promise<AdminUserListItem | null> {
     return this.repository.updateUser(id, updates)
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    return this.repository.deleteUser(id)
   }
 }

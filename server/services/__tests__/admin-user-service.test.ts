@@ -12,6 +12,10 @@ type UpdateCall = {
   updates: AdminUserUpdateInput
 }
 
+type DeleteCall = {
+  id: string
+}
+
 type AdminUserUpdateInput = {
   readonly email?: string | null
   readonly role?: 'super' | 'admin' | 'pro' | 'user'
@@ -44,15 +48,19 @@ function createRepository(
   total: number,
   users: AdminUserListItem[],
   updatedUser: AdminUserListItem | null,
+  willDelete: boolean = false,
 ): {
   repository: AdminUserListRepository & {
     updateUser(id: string, updates: AdminUserUpdateInput): Promise<AdminUserListItem | null>
+    deleteUser(id: string): Promise<boolean>
   }
   listCalls: ListCall[]
   updateCalls: UpdateCall[]
+  deleteCalls: DeleteCall[]
 } {
   const listCalls: ListCall[] = []
   const updateCalls: UpdateCall[] = []
+  const deleteCalls: DeleteCall[] = []
 
   return {
     repository: {
@@ -67,9 +75,14 @@ function createRepository(
         updateCalls.push({ id, updates })
         return updatedUser
       },
+      async deleteUser(id: string): Promise<boolean> {
+        deleteCalls.push({ id })
+        return willDelete
+      },
     },
     listCalls,
     updateCalls,
+    deleteCalls,
   }
 }
 
@@ -123,5 +136,21 @@ describe('AdminUserService', () => {
       id: 'missing-user',
       updates: { role: 'admin' },
     }])
+  })
+
+  it('delegates successful deletion to the repository', async () => {
+    const { repository, deleteCalls } = createRepository(0, [], null, true)
+    const service = new AdminUserService(repository)
+
+    await expect(service.deleteUser('user-to-delete')).resolves.toBe(true)
+    expect(deleteCalls).toEqual([{ id: 'user-to-delete' }])
+  })
+
+  it('passes through false when the repository found no matching row', async () => {
+    const { repository, deleteCalls } = createRepository(0, [], null, false)
+    const service = new AdminUserService(repository)
+
+    await expect(service.deleteUser('nonexistent')).resolves.toBe(false)
+    expect(deleteCalls).toEqual([{ id: 'nonexistent' }])
   })
 })
