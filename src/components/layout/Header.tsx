@@ -1,4 +1,4 @@
-import { Key, Globe, ChevronDown, X, History, Server, Cloud, LogOut, User, Check, Menu } from 'lucide-react'
+import { Key, Globe, History, Server, Cloud, LogOut, User, Check, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { logout as logoutApi } from '@/lib/api/auth'
-import { status, roles } from '@/themes/tokens'
+import { roles } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -21,7 +21,6 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
   const navigate = useNavigate()
   const { settings, setCategory } = useSettingsStore()
   const { minimaxKey: apiKey, region, mode: apiMode } = settings.api
-  const setApiKey = (key: string) => setCategory('api', { minimaxKey: key })
   const setRegion = (region: 'cn' | 'intl') => setCategory('api', { region })
   const setApiMode = (mode: 'direct' | 'proxy') => setCategory('api', { mode })
   const { user, accessToken, logout } = useAuthStore()
@@ -79,7 +78,7 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
                 <circle cx="16" cy="16" r="14" stroke="url(#minimaxGradient)" strokeWidth="2" fill="none" />
                 <circle cx="16" cy="16" r="6" fill="url(#minimaxGradient)" />
               </svg>
-                <span className="text-xl font-bold bg-gradient-to-r from-primary-400 via-secondary-400 to-rose-400 bg-clip-text text-transparent">
+                <span className="hidden sm:inline text-xl font-bold bg-gradient-to-r from-primary-400 via-secondary-400 to-rose-400 bg-clip-text text-transparent">
                   Mnx-Agent 工作台
                 </span>
             </Link>
@@ -161,7 +160,7 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
             </div>
 
             {}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -219,7 +218,7 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
             </div>
 
             {}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -238,7 +237,7 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
             </div>
 
             {}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ListTodo, Activity, ScrollText, Clock } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { useCronJobsWebSocket } from '@/hooks/useCronJobsWebSocket'
 import { useTaskQueueWebSocket } from '@/hooks/useTaskQueueWebSocket'
@@ -29,7 +29,8 @@ export default function CronManagement() {
         description="创建和管理定时执行任务"
         gradient="purple-pink"
         actions={
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="max-w-full overflow-x-auto">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-card border border-border">
               {tabs.map((tab) => (
                 <TabsTrigger
@@ -42,7 +43,8 @@ export default function CronManagement() {
                 </TabsTrigger>
               ))}
             </TabsList>
-          </Tabs>
+            </Tabs>
+          </div>
         }
       />
 

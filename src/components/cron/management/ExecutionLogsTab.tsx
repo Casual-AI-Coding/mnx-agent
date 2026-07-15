@@ -28,7 +28,7 @@ import { ExecutionLogPanel } from './ExecutionLogPanel'
 import { status } from '@/themes/tokens'
 
 export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
-  const { logs, logDetails, loading, detailsLoading, fetchLogs, fetchLogDetails } = useExecutionLogsStore()
+  const { logs, logDetails, detailsLoading, fetchLogs, fetchLogDetails } = useExecutionLogsStore()
   const { isHydrated } = useAuthStore()
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
@@ -71,7 +71,7 @@ export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
           <h3 className="text-lg font-semibold text-foreground">Execution Logs</h3>
           <p className="text-sm text-muted-foreground/70">View detailed execution data with node-level insights</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground/70" />
             <Select
@@ -145,7 +145,7 @@ export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                     onClick={() => toggleExpand(log.id)}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <StatusBadge status={log.status} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ export const ExecutionLogsTab = memo(function ExecutionLogsTab() {
                             {formatDate(log.startedAt)} • Duration: {formatDuration(log.durationMs)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-6 text-sm">
+                        <div className="flex flex-wrap items-center gap-6 text-sm">
                           <div className="text-center">
                             <p className="text-foreground font-medium">{log.tasksExecuted}</p>
                             <p className="text-xs text-muted-foreground/50">Executed</p>

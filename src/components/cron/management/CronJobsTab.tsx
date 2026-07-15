@@ -1,5 +1,4 @@
 import { useState, useEffect, memo, useMemo, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
   Plus,
@@ -11,7 +10,6 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import {
@@ -22,7 +20,6 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { useCronJobsStore } from '@/stores/cronJobs'
-import { useWorkflowTemplatesStore } from '@/stores/workflowTemplates'
 import { useAuthStore } from '@/stores/auth'
 import type { CronJob, CreateCronJobDTO, UpdateCronJobDTO } from '@/types/cron'
 import { getCronDescription } from '@/lib/cron-utils'
@@ -98,7 +95,7 @@ export const CronJobsTab = memo(function CronJobsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Cron Jobs</h3>
           <p className="text-sm text-muted-foreground/70">Manage scheduled workflow executions</p>
@@ -109,7 +106,7 @@ export const CronJobsTab = memo(function CronJobsTab() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -150,9 +147,9 @@ export const CronJobsTab = memo(function CronJobsTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <div className="bg-muted/30 border-b border-border">
-            <div className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3">
+            <div className="grid min-w-[900px] grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3">
               <div className="text-sm font-medium text-muted-foreground/70">Name</div>
               <div className="text-sm font-medium text-muted-foreground/70">Cron</div>
               <div className="text-sm font-medium text-muted-foreground/70">Status</div>
@@ -162,11 +159,11 @@ export const CronJobsTab = memo(function CronJobsTab() {
               <div className="text-sm font-medium text-muted-foreground/70 text-right">Actions</div>
             </div>
           </div>
-          <div className="overflow-auto max-h-[60vh]">
+          <div className="overflow-y-auto max-h-[60vh]">
             {filteredJobs.map((job) => (
               <div
                 key={job.id}
-                className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors items-center"
+                className="grid min-w-[900px] grid-cols-[2fr_1fr_80px_1fr_1fr_80px_120px] gap-4 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors items-center"
               >
                 <div className="min-w-0">
                   <p className="font-medium text-foreground truncate">{job.name}</p>

@@ -282,7 +282,7 @@ function MobileWorkflowBuilderFallback() {
             <Smartphone className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium">推荐屏幕宽度</p>
-              <p className="text-xs text-muted-foreground">≥ 768px（平板或更大）</p>
+              <p className="text-xs text-muted-foreground">≥ 1024px（桌面或平板横屏）</p>
             </div>
           </div>
           <div className="flex items-start gap-3">

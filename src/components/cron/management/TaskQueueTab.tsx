@@ -1,6 +1,6 @@
 import { useState, useEffect, memo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Clock,
   ListTodo,
@@ -36,7 +36,7 @@ import { taskStatus } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
 export const TaskQueueTab = memo(function TaskQueueTab() {
-  const { tasks, loading, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
+  const { tasks, fetchTasks, deleteTask, updateTask } = useTaskQueueStore()
   const { isHydrated } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [taskToDelete, setTaskToDelete] = useState<TaskQueueItem | null>(null)
@@ -80,7 +80,7 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
           <h3 className="text-lg font-semibold text-foreground">Task Queue</h3>
           <p className="text-sm text-muted-foreground/70">Monitor and manage pending, running, and completed tasks</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground/70" />
             <Select
@@ -178,9 +178,9 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <div className="bg-card border-b border-border">
-            <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3">
+            <div className="grid min-w-[720px] grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3">
               <div className="text-sm font-medium text-muted-foreground/70">Task Type</div>
               <div className="text-sm font-medium text-muted-foreground/70">Job ID</div>
               <div className="text-sm font-medium text-muted-foreground/70">Status</div>
@@ -196,6 +196,7 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
             style={{ maxHeight: '50vh' }}
           >
             <div
+              className="min-w-[720px]"
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
                 width: '100%',
@@ -219,7 +220,7 @@ export const TaskQueueTab = memo(function TaskQueueTab() {
                     }}
                     className="border-b border-border/50 hover:bg-card/800/30 transition-colors"
                   >
-                    <div className="grid grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3 items-center h-full">
+                    <div className="grid min-w-[720px] grid-cols-[1fr,1fr,0.8fr,0.6fr,1fr,0.7fr,1fr] gap-4 px-4 py-3 items-center h-full">
                       <div>
                         <span className="text-sm text-foreground font-medium">{task.taskType}</span>
                       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, TrendingUp, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { BarChart3, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -170,10 +170,10 @@ export default function StatsDashboard() {
           {errors.length > 0 ? (
             <div className="divide-y divide-border">
               {errors.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
+                <div key={idx} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 py-3">
+                  <div className="flex min-w-0 items-start gap-3">
                     <Badge variant={idx < 3 ? 'destructive' : 'secondary'}>{idx + 1}</Badge>
-                    <span className="text-muted-foreground">{item.errorSummary}</span>
+                    <span className="min-w-0 break-words text-muted-foreground">{item.errorSummary}</span>
                   </div>
                   <span className="text-muted-foreground/70">{item.count} 次</span>
                 </div>

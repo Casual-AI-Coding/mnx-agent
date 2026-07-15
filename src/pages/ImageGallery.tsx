@@ -128,7 +128,7 @@ export default function ImageGallery() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
             <ImageIcon className="w-5 h-5 text-primary-400" />
@@ -141,7 +141,7 @@ export default function ImageGallery() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-card/secondary/50 rounded-lg p-1">
+        <div className="flex items-center gap-2 bg-card/secondary/50 rounded-lg p-1 self-start sm:self-auto">
           <button
             onClick={() => setViewMode('masonry')}
             className={cn(

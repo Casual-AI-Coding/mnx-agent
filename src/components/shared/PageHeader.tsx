@@ -12,7 +12,7 @@ interface PageHeaderProps {
   gradient?: GradientVariant
 }
 
-export function PageHeader({ icon, title, description, actions, className, gradient = 'primary-accent' }: PageHeaderProps) {
+export function PageHeader({ icon, title, actions, className, gradient = 'primary-accent' }: PageHeaderProps) {
   const gradientClass = GRADIENT_CLASSES[gradient]
 
   return (
@@ -20,7 +20,7 @@ export function PageHeader({ icon, title, description, actions, className, gradi
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn("flex items-center justify-between", className)}
+      className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", className)}
     >
       <div className="flex items-center gap-4">
         {icon && (

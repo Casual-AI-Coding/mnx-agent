@@ -103,14 +103,14 @@ export default function TokenMonitor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">用量监控</h1>
           <p className="text-muted-foreground text-sm">
             实时监控 MiniMax API 使用量
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => setShowBalanceInput(!showBalanceInput)}>
             <DollarSign className="w-4 h-4 mr-2" />
             {usage.manualBalance !== undefined ? '修改余额' : '设置余额'}
@@ -125,7 +125,7 @@ export default function TokenMonitor() {
       {showBalanceInput && (
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <span className="text-sm font-medium">余额:</span>
               <Input
                 type="number"
@@ -331,7 +331,7 @@ export default function TokenMonitor() {
                   )
                 })}
 
-                <div className="flex items-center gap-4 pt-4 border-t text-sm">
+                <div className="flex flex-wrap items-center gap-4 pt-4 border-t text-sm">
                   <div className="flex items-center gap-1">
                     <div className={cn('w-3 h-3 rounded', services.text.bgSolid)} />
                     <span className="text-foreground">文本</span>

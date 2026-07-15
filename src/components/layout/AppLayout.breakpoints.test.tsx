@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -65,6 +65,10 @@ vi.mock('@/stores/auth', () => ({
 const motionTransitionCalls: Array<{ duration?: number } | undefined> = []
 const motionInitialCalls: Array<Record<string, unknown> | false> = []
 const motionExitCalls: Array<Record<string, unknown>> = []
+let desktopMediaQuery: {
+  matches: boolean
+  dispatchChange: () => void
+} | undefined
 
 vi.mock('framer-motion', async () => {
   const React = await import('react')
@@ -91,11 +95,31 @@ vi.mock('framer-motion', async () => {
 })
 
 function mockMatchMedia(desktopMatch: boolean, reducedMotion: boolean) {
+  let desktopChangeListener: (() => void) | undefined
+  const desktopQueryState = {
+    matches: desktopMatch,
+    dispatchChange: () => desktopChangeListener?.(),
+  }
+  desktopMediaQuery = desktopQueryState
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => {
       const isDesktopQuery = query.includes('min-width: 1024px')
       const isReducedMotionQuery = query.includes('prefers-reduced-motion')
+      if (isDesktopQuery) {
+        return Object.assign(desktopQueryState, {
+          media: query,
+          onchange: null,
+          addEventListener: vi.fn((_event: string, listener: () => void) => {
+            desktopChangeListener = listener
+          }),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })
+      }
       return {
         matches: isDesktopQuery ? desktopMatch : isReducedMotionQuery ? reducedMotion : false,
         media: query,
@@ -122,11 +146,11 @@ describe('AppLayout — breakpoints + reduced-motion', () => {
   })
 
   it.each([
-    [375, false],
-    [768, false],
-    [1024, true],
-    [1440, true],
-  ])('viewport=%i px → matchMedia 调用 %s', (_width, desktopMatch) => {
+    [375, false, '0px'],
+    [768, false, '0px'],
+    [1024, true, '220px'],
+    [1440, true, '220px'],
+  ])('viewport=%i px → 渲染对应主内容偏移与侧栏容器', (_width, desktopMatch, expectedMarginLeft) => {
     mockMatchMedia(desktopMatch, false)
     render(
       <MemoryRouter>
@@ -134,6 +158,32 @@ describe('AppLayout — breakpoints + reduced-motion', () => {
       </MemoryRouter>
     )
     expect(window.matchMedia).toHaveBeenCalledWith('(min-width: 1024px)')
+    expect(screen.getByRole('main').style.marginLeft).toBe(expectedMarginLeft)
+    expect(screen.getByTestId('sidebar').parentElement?.className).toContain('hidden lg:block')
+    expect(screen.getAllByTestId('sidebar')).toHaveLength(1)
+  })
+
+  it('媒体查询从移动端切换到桌面端时更新主内容偏移', () => {
+    mockMatchMedia(false, false)
+    render(
+      <MemoryRouter>
+        <AppLayout />
+      </MemoryRouter>
+    )
+
+    const main = screen.getByRole('main')
+    expect(main.style.marginLeft).toBe('0px')
+
+    if (!desktopMediaQuery) {
+      throw new Error('桌面端媒体查询未初始化')
+    }
+    const mediaQuery = desktopMediaQuery
+    act(() => {
+      mediaQuery.matches = true
+      mediaQuery.dispatchChange()
+    })
+
+    expect(main.style.marginLeft).toBe('220px')
   })
 
   it('prefers-reduced-motion=true 时抽屉和遮罩禁用过渡动画', async () => {

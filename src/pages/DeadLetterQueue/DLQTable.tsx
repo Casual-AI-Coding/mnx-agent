@@ -13,14 +13,11 @@ import {
   Package,
   Loader2,
 } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import {
   Card,
   CardContent,
 } from '@/components/ui/Card'
-import type { DeadLetterQueueItem } from '@/types/cron'
-import { status } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 import type { DLQTableProps, StatusBadgeProps } from './types'
 
@@ -138,7 +135,7 @@ export function DLQTable({
               )}
             >
               <CardContent className="p-4">
-                <div className="flex items-start gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   {!item.resolvedAt && (
                     <input
                       type="checkbox"
@@ -150,7 +147,7 @@ export function DLQTable({
                   {item.resolvedAt && <div className="w-4 mt-1" />}
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
                       <StatusBadge
                         resolved={!!item.resolvedAt}
                         resolution={item.resolution}
@@ -164,7 +161,7 @@ export function DLQTable({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="text-sm text-muted-foreground">Job:</span>
                       <code className="text-xs text-muted-foreground/70 font-mono">
                         {item.jobId || 'N/A'}
