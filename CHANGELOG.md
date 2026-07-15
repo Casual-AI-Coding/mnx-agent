@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.1] - 2026-07-15
+
+### 🐛 Fixed
+
+- **Header 移动端布局** — 375px 下品牌文字 `hidden sm:inline`，API Key/模式/用户菜单 `hidden sm:block`，移除未使用 imports（涉及 `src/components/layout/Header.tsx`）
+- **CronManagement Tabs 横向溢出** — `<TabsList>` 外层包裹 `overflow-x-auto` 容器，防止 375px 下 intrinsic 溢出（涉及 `src/pages/CronManagement.tsx`）
+- **Button 移动端自动触控** — `useIsMobile()` 检测移动端时自动启用 44px min touch target，`size="icon"` 豁免保持工具栏紧凑，`touchable` 显式覆盖优先（涉及 `src/components/ui/Button.tsx`）
+- **useMediaQuery matchMedia 守卫** — `useState` lazy init 和 `useEffect` 中添加 `typeof window.matchMedia === 'function'` 守卫，修复测试环境回归（涉及 `src/hooks/useMediaQuery.ts`）
+- **WorkflowBuilder 阈值文案** — 移动端引导页推荐宽度从 `≥ 768px` 修正为 `≥ 1024px`，与 `useIsMobile()` 阈值一致（涉及 `src/pages/WorkflowBuilder.tsx`）
+
+### 🔄 Changed
+
+- **Cron 管理表格响应式** — CronJobsTab/TaskQueueTab/ExecutionLogsTab 添加 `flex-col sm:flex-row` + `overflow-x-auto` + `min-w-[720px/900px]`，窄屏自动折行（涉及 `src/components/cron/management/CronJobsTab.tsx`, `TaskQueueTab.tsx`, `ExecutionLogsTab.tsx`）
+- **DLQ 卡片响应式** — 死信队列条目 flex-col + flex-wrap，窄屏任务元数据折行，移除未使用 imports（涉及 `src/pages/DeadLetterQueue/DLQTable.tsx`）
+- **B4 页面响应式增强** — ImageGallery header `flex-col sm:flex-row` + viewMode 按钮 `self-start sm:self-auto`；TokenMonitor header/余额编辑/统计图例 `flex-col sm:flex-row` + `flex-wrap`；StatsDashboard error row `flex-col sm:flex-row` + `min-w-0 break-words`（涉及 `src/pages/ImageGallery.tsx`, `TokenMonitor.tsx`, `StatsDashboard.tsx`）
+- **PageHeader 响应式** — `flex-col sm:flex-row` + `gap-3`，移除未使用的 `description` 解构（涉及 `src/components/shared/PageHeader.tsx`）
+
+### 🧪 测试完善
+
+- **Header 移动端回归测试** — 新增 `Header.mobile.test.tsx` 覆盖 375px 各子元素不越界
+- **CronManagement Tabs 测试** — 新增 `CronTabs.mobile.test.tsx` 覆盖 Tabs 内部横向可滚动
+- **Cron/DLQ 窄屏回归测试** — 新增 `CronResponsive.mobile.test.tsx` 4 用例覆盖 4 个表格组件
+- **B4 页面响应式回归测试** — 新增 `ResponsivePages.mobile.test.tsx` 4 用例覆盖 ImageGallery/TokenMonitor/StatsDashboard
+- **useMediaQuery 回归测试** — 新增 `useMediaQuery.test.ts` 1 用例覆盖 matchMedia 缺失守卫
+- **Button 移动端测试增强** — 5 个新用例覆盖自动触控/icon 豁免/显式覆盖/桌面端行为不变
+- **AppLayout 断点测试增强** — 4 断点真实 marginLeft/className 断言 + 媒体查询从移动端到桌面端切换测试
+
+### Backward Compatibility
+
+- ✅ Header 移动端隐藏仅为 CSS 响应式，桌面端行为不变
+- ✅ Button 自动触控仅移动端生效，桌面端无变化
+- ✅ useMediaQuery matchMedia 守卫仅影响缺失 matchMedia 的环境
+- ✅ 所有新增测试不影响运行时行为
+
 ## [3.0.0] - 2026-07-14
 
 ### 🏗️ 代码重构
