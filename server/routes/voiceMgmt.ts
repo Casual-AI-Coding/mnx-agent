@@ -1,6 +1,7 @@
 import { Router, Request } from 'express'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -47,11 +48,11 @@ router.use('/clone', createApiProxyRouter({
     const { voice_id, file_id, clone_prompt, text, model, language_boost } = req.body as VoiceCloneBody
 
     if (!file_id) {
-      throw { status: 400, message: 'file_id is required (upload file first via /api/files/upload)' }
+      throwValidationError('file_id is required (upload file first via /api/files/upload)')
     }
 
     if (!voice_id) {
-      throw { status: 400, message: 'voice_id is required (8-256 chars, starts with letter)' }
+      throwValidationError('voice_id is required (8-256 chars, starts with letter)')
     }
 
     const body: Record<string, unknown> = {
@@ -63,7 +64,7 @@ router.use('/clone', createApiProxyRouter({
       try {
         body.clone_prompt = typeof clone_prompt === 'string' ? JSON.parse(clone_prompt) : clone_prompt
       } catch {
-        throw { status: 400, message: 'clone_prompt must be valid JSON string' }
+        throwValidationError('clone_prompt must be valid JSON string')
       }
     }
     if (text) body.text = text
@@ -83,7 +84,7 @@ router.use('/design', createApiProxyRouter({
     const { prompt, preview_text, voice_id } = req.body as VoiceDesignBody
 
     if (!prompt || !preview_text) {
-      throw { status: 400, message: 'prompt and preview_text are required' }
+      throwValidationError('prompt and preview_text are required')
     }
 
     const body: Record<string, unknown> = { prompt, preview_text }
@@ -102,7 +103,7 @@ router.use('/delete', createApiProxyRouter({
     const { voice_id, voice_type } = req.body as VoiceDeleteBody
 
     if (!voice_id || !voice_type) {
-      throw { status: 400, message: 'voice_id and voice_type are required' }
+      throwValidationError('voice_id and voice_type are required')
     }
 
     return { voice_id, voice_type }

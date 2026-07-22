@@ -1,6 +1,7 @@
 import { Router, Request } from 'express'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -26,7 +27,7 @@ router.use('/generate', createApiProxyRouter({
     const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style, aigc_watermark } = req.body as ImageGenerateBody
 
     if (!prompt) {
-      throw { status: 400, message: 'prompt is required' }
+      throwValidationError('prompt is required')
     }
 
     const body: Record<string, unknown> = {

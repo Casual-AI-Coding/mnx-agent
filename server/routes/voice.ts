@@ -4,6 +4,7 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse } from '../middleware/api-response'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -27,7 +28,7 @@ router.use('/sync', createApiProxyRouter({
     const { model, text, stream } = req.body as VoiceSyncBody
 
     if (!text) {
-      throw { status: 400, message: 'text is required' }
+      throwValidationError('text is required')
     }
 
     const body: Record<string, unknown> = {
@@ -50,7 +51,7 @@ router.use('/async', createApiProxyRouter({
     const { model, text, callback_url } = req.body as VoiceAsyncBody
 
     if (!text) {
-      throw { status: 400, message: 'text is required' }
+      throwValidationError('text is required')
     }
 
     const body: Record<string, unknown> = {

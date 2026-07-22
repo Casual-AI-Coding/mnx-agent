@@ -4,6 +4,7 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -27,7 +28,7 @@ router.use('/generate', createApiProxyRouter({
     const { model, prompt, first_frame_image, last_frame_image, subject_reference, callback_url } = req.body as VideoGenerateBody
 
     if (!prompt) {
-      throw { status: 400, message: 'prompt is required' }
+      throwValidationError('prompt is required')
     }
 
     const body: Record<string, unknown> = {

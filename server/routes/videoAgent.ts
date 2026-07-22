@@ -4,6 +4,7 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -36,7 +37,7 @@ router.use('/generate', createApiProxyRouter({
     const { template_id, text_inputs, media_inputs, callback_url } = req.body as VideoAgentGenerateBody
 
     if (!template_id) {
-      throw { status: 400, message: 'template_id is required' }
+      throwValidationError('template_id is required')
     }
 
     const body: Record<string, unknown> = { template_id }

@@ -6,6 +6,7 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -86,7 +87,7 @@ router.use('/delete', createApiProxyRouter({
     const { file_id, purpose } = req.body as FileDeleteBody
 
     if (!file_id || !purpose) {
-      throw { status: 400, message: 'file_id and purpose are required' }
+      throwValidationError('file_id and purpose are required')
     }
 
     return { file_id: Number(file_id), purpose }

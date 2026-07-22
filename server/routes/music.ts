@@ -4,6 +4,7 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
+import { throwValidationError } from '../middleware/http-error'
 
 const router = Router()
 
@@ -51,16 +52,16 @@ router.use('/generate', createApiProxyRouter({
     // 纯音乐模式：lyrics 可为空，但 style_prompt 必填
     const isInstrumental = model === 'music-2.6' || model === 'music-2.5+'
     if (!lyrics && !style_prompt && !prompt) {
-      throw { status: 400, message: '纯音乐模式需要填写风格描述' }
+      throwValidationError('纯音乐模式需要填写风格描述')
     }
     // 非纯音乐模式：lyrics 必填
     if (!isInstrumental && !lyrics) {
-      throw { status: 400, message: 'lyrics is required' }
+      throwValidationError('lyrics is required')
     }
 
     // music-cover 模式验证
     if (model === 'music-cover' && !reference_audio_url) {
-      throw { status: 400, message: 'reference_audio_url is required for music-cover model' }
+      throwValidationError('reference_audio_url is required for music-cover model')
     }
 
     const body: Record<string, unknown> = {

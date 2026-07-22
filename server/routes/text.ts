@@ -4,10 +4,8 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse } from '../middleware/api-response'
-import {
-  buildChatRequestBody,
-  isChatRequestBodyError,
-} from './text/chat-request-builder.js'
+import { isHttpValidationError } from '../middleware/http-error'
+import { buildChatRequestBody } from './text/chat-request-builder.js'
 
 const router = Router()
 
@@ -35,7 +33,7 @@ router.post(
     try {
       body = buildChatRequestBody(req, { stream: true })
     } catch (validationError) {
-      if (isChatRequestBodyError(validationError)) {
+      if (isHttpValidationError(validationError)) {
         errorResponse(res, validationError.message, validationError.status)
         return
       }

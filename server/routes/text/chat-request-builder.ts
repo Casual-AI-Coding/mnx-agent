@@ -1,5 +1,6 @@
 import type { Request } from 'express'
 import { DEFAULT_CHAT_MODEL } from '../../config/model-defaults'
+import { throwValidationError } from '../../middleware/http-error'
 
 /**
  * Chat 消息（与 MiniMax chat completion API 对齐）。
@@ -20,12 +21,6 @@ export interface ChatRequestBody {
   temperature?: number
   top_p?: number
   max_completion_tokens?: number
-}
-
-/** {@link buildChatRequestBody} 抛出的错误对象形状。 */
-export interface ChatRequestBodyError {
-  readonly status: 400
-  readonly message: string
 }
 
 /** 流式选项：是否在结果中追加 `stream: true`。 */
@@ -49,14 +44,12 @@ function isChatRequestBodyLike(body: unknown): body is ChatRequestBody {
 /**
  * 把 Express {@link Request} 转换成 MiniMax chat completion 请求体。
  *
- * 设计目标（ADR-0006 Phase 2）：
+ * 设计目标（ADR-0006 Phase 2，ADR-0008 升级）：
  * - 消除 `/chat` 与 `/chat/stream` 之间重复的 `buildRequestBody` 逻辑；
  * - 把硬编码的 `'abab5.5-chat'` 集中到 {@link DEFAULT_CHAT_MODEL}；
- * - 让消息校验逻辑有单一来源，避免两处校验产生行为漂移。
- *
- * 失败时抛出 {@link ChatRequestBodyError} 形式的对象（与项目既有约定
- * 一致：`{ status, message }` 由 `asyncHandler` / `handleApiError`
- * 透传给全局错误中间件）。
+ * - 让消息校验逻辑有单一来源，避免两处校验产生行为漂移；
+ * - 失败时通过 {@link throwValidationError} 抛出标准 {@link HttpValidationError}
+ *   （ADR-0008：替代重复的 `{ status, message }` 字面量构造）。
  *
  * @param req Express 请求对象，需要 `req.body` 已经过 body-parser 解析
  * @param options 选项，`stream: true` 时会在结果中追加 `stream: true`
@@ -67,21 +60,13 @@ export function buildChatRequestBody(
   options: BuildChatRequestBodyOptions = {}
 ): Record<string, unknown> {
   if (!isChatRequestBodyLike(req.body)) {
-    const error: ChatRequestBodyError = {
-      status: 400,
-      message: 'messages is required and must be a non-empty array',
-    }
-    throw error
+    throwValidationError('messages is required and must be a non-empty array')
   }
 
   const { model, messages, temperature, top_p, max_completion_tokens } = req.body
 
   if (messages.length === 0) {
-    const error: ChatRequestBodyError = {
-      status: 400,
-      message: 'messages is required and must be a non-empty array',
-    }
-    throw error
+    throwValidationError('messages is required and must be a non-empty array')
   }
 
   const body: Record<string, unknown> = {
@@ -100,21 +85,4 @@ export function buildChatRequestBody(
   }
 
   return body
-}
-
-/**
- * 类型守卫：判断错误对象是否为 {@link ChatRequestBodyError} 形状。
- *
- * 供路由层在 `catch` 中区分「请求体校验失败」与其他异常使用，
- * 避免 `as` 类型断言（参见 docs/standards/coding-standards.md 1.2）。
- */
-export function isChatRequestBodyError(
-  error: unknown
-): error is ChatRequestBodyError {
-  if (typeof error !== 'object' || error === null) return false
-  const candidate = error as { status?: unknown; message?: unknown }
-  return (
-    typeof candidate.status === 'number' &&
-    typeof candidate.message === 'string'
-  )
 }
