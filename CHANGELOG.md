@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-07-23
+
+### ⚡ Performance
+
+- **媒体上传链路流式化** — `multer` 改用 `diskStorage` 落地临时目录，`POST /api/media/upload` 通过 `saveMediaFromFile` 流式复制源文件，`POST /api/media/upload-from-url` 改用 `saveStreamFromUrl`（axios `responseType:'stream'` + Transform 字节守卫 + `stream.pipeline` 写入），消除整文件 buffer 入内存（涉及 `server/lib/media-storage.ts`, `server/routes/media.ts`）
+- **媒体下载链路流式化** — `GET /api/media/:id/download` 改用 `createMediaReadStream` + `stream.pipe(res)`，原生支持 HTTP Range 请求；`POST /api/media/batch/download` 改用 `archive.file()` 流式附加文件，消除批量下载内存爆炸（涉及 `server/lib/media-storage.ts`, `server/routes/media.ts`, `server/routes/media/media-download-helpers.ts`）
+- **WebSocket 媒体事件通道** — `CronEvent` 类型扩展 `media_upload_completed`/`media_download_completed`/`media_batch_downloaded`，新增 `media` channel 与 emit 方法，前端可订阅媒体活动实时事件（涉及 `server/services/websocket-service.ts`, `server/routes/media.ts`）
+- **数据库查询复合索引** — 新增 `idx_media_records_owner_deleted_created`(owner_id, is_deleted, created_at DESC)、`idx_media_records_owner_type_deleted`(owner_id, type, is_deleted)、`idx_audit_logs_user_created`(user_id, created_at DESC) 三条复合索引，优化用户列表与审计日志高频查询（涉及 `server/database/migrations/041_media_perf_indexes.ts`）
+
+### 🐛 Fixed
+
+- **tsconfig.json baseUrl 失效** — TypeScript 5.9.3 已移除 `baseUrl` 选项（TS5102 错误导致 `tsc -b` 崩溃），删除该行并修正 `src/types/material.ts`、`src/types/prompt.ts` 中 4 处裸 `packages/shared-types/...` 导入为 `@mnx/shared-types/...`（涉及 `tsconfig.json`, `src/types/material.ts`, `src/types/prompt.ts`）
+- **api-routes.test.ts mock 缺 requireRole** — auth-middleware mock 补充 `requireRole` 导出，期望路径数组补充 `/api/admin/announcements`（涉及 `server/bootstrap/api-routes.test.ts`）
+
+### 🧪 Tests
+
+- **流式 API 单元测试覆盖** — `media-storage.test.ts` 扩展覆盖 `saveMediaFromFile`/`saveMediaFromStream`/`createMediaReadStream`/`saveStreamFromUrl` 共 20 用例；`media-download-helpers.test.ts` 扩展覆盖 `buildStreamingDownloadPlan` 11 用例；`media-safety.test.ts` 增强 upload-from-url 超时/字节限制与 502 失败路径
+- **migration_041 索引测试** — 新增 migration 注册、SQL 内容、`IF NOT EXISTS` 幂等性验证 5 用例（涉及 `server/database/__tests__/media-perf-indexes-migration.test.ts`）
+- **全局分支覆盖率提升** — 新增 `media-list-query-builder.test.ts`（31 用例，分支覆盖 100%）+ `task.service.test.ts`（14 用例，分支覆盖 100%），全局分支覆盖率从 79.54% 提升至 80.09%，跨过 80% 阈值
+
+### 📝 Docs
+
+- **R-007 实现计划** — 新增 `docs/plans/2026-07-22-r-007-performance.md` 完整实现计划文档（6 Wave + 验证清单 + 变更文件清单）
+- **路线图状态同步** — R-007 性能优化从「待办」标记为「已完成」，v3.1 路线图状态更新（涉及 `docs/roadmap/requirement-pools.md`, `docs/roadmap/v3-roadmap.md`）
+
+### Backward Compatibility
+
+- ✅ 流式 API 保留所有旧 API（`saveMediaFile`/`readMediaFile`/`saveFromUrl`/`buildMediaDownloadPlan`）向后兼容
+- ✅ 上传/下载端点契约（路径、参数、响应）保持不变
+- ✅ WebSocket 新增 `media` channel 为增量订阅，不影响现有 channels
+- ✅ 数据库索引使用 `IF NOT EXISTS` 增量添加，不影响现有查询
+- ✅ `tsconfig.json` 删除 `baseUrl` 后 `paths` 解析等价
+- ✅ 测试增强不影响运行时行为
+
 ## [3.0.1] - 2026-07-15
 
 ### 🐛 Fixed
