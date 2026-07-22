@@ -21,7 +21,8 @@ export interface CronEvent {
         'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'task_moved_to_dlq' |
         'log_created' | 'log_updated' |
         'workflow_test_started' | 'workflow_test_completed' | 'workflow_node_output' |
-        'workflow_node_start' | 'workflow_node_complete' | 'workflow_node_error'
+        'workflow_node_start' | 'workflow_node_complete' | 'workflow_node_error' |
+        'media_upload_completed' | 'media_download_completed' | 'media_batch_downloaded'
   payload: unknown
   timestamp: string
 }
@@ -164,9 +165,47 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
   }
 
   emitWorkflowNodeError(nodeId: string, executionId: string, error: string): void {
-    this.emit('workflow_node_event', {
+    this.emit('workflow_event', {
       type: 'workflow_node_error',
       payload: { nodeId, executionId, error },
+      timestamp: toLocalISODateString()
+    } as CronEvent)
+  }
+
+  emitMediaUploadCompleted(payload: { recordId: string; ownerId?: string; type: string; sizeBytes: number; source: string }): void {
+    this.emit('media_event', {
+      type: 'media_upload_completed',
+      payload: {
+        record_id: payload.recordId,
+        owner_id: payload.ownerId,
+        type: payload.type,
+        size_bytes: payload.sizeBytes,
+        source: payload.source,
+      },
+      timestamp: toLocalISODateString()
+    } as CronEvent)
+  }
+
+  emitMediaDownloadCompleted(payload: { recordId: string; ownerId?: string; sizeBytes: number }): void {
+    this.emit('media_event', {
+      type: 'media_download_completed',
+      payload: {
+        record_id: payload.recordId,
+        owner_id: payload.ownerId,
+        size_bytes: payload.sizeBytes,
+      },
+      timestamp: toLocalISODateString()
+    } as CronEvent)
+  }
+
+  emitMediaBatchDownloaded(payload: { ownerId?: string; recordCount: number; totalBytes: number }): void {
+    this.emit('media_event', {
+      type: 'media_batch_downloaded',
+      payload: {
+        owner_id: payload.ownerId,
+        record_count: payload.recordCount,
+        total_bytes: payload.totalBytes,
+      },
       timestamp: toLocalISODateString()
     } as CronEvent)
   }
@@ -209,6 +248,10 @@ function handleWorkflowEvent(event: CronEvent): void {
   sendToSubscribedClients('workflows', event)
 }
 
+function handleMediaEvent(event: CronEvent): void {
+  sendToSubscribedClients('media', event)
+}
+
 function sendToSubscribedClients(channel: string, event: CronEvent): void {
   const message = JSON.stringify(event)
   for (const client of clients) {
@@ -244,6 +287,7 @@ function registerEventForwarders(): void {
   cronEvents.on('log_event', handleLogEvent)
   cronEvents.on('workflow_event', handleWorkflowEvent)
   cronEvents.on('workflow_node_event', handleWorkflowEvent)
+  cronEvents.on('media_event', handleMediaEvent)
   eventForwardersRegistered = true
 }
 
@@ -254,6 +298,7 @@ function unregisterEventForwarders(): void {
   cronEvents.off('log_event', handleLogEvent)
   cronEvents.off('workflow_event', handleWorkflowEvent)
   cronEvents.off('workflow_node_event', handleWorkflowEvent)
+  cronEvents.off('media_event', handleMediaEvent)
   eventForwardersRegistered = false
 }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
 import { join } from 'path'
+import { Readable } from 'stream'
 import axios from 'axios'
 import { 
   saveMediaFile, 
@@ -9,10 +10,31 @@ import {
   getMediaFilePath, 
   saveFromUrl,
   resolveMediaPath,
+  saveMediaFromFile,
+  saveMediaFromStream,
+  createMediaReadStream,
+  saveStreamFromUrl,
 } from '../media-storage'
 import type { MediaType } from '../../database/types'
 
 const TEST_MEDIA_ROOT = 'test-media-storage'
+
+async function collectStream(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer)
+  }
+  return Buffer.concat(chunks)
+}
+
+async function countFilesRecursive(root: string): Promise<number> {
+  let count = 0
+  for await (const entry of await fs.opendir(root, { recursive: true })) {
+    if (entry.isFile()) count++
+  }
+  return count
+}
+
 
 vi.mock('axios', () => ({
   default: {
@@ -499,6 +521,247 @@ it('should handle multiple delete calls on same file', async () => {
         'image' as MediaType,
         './data/media', // explicitly pass production path
       )).rejects.toThrow('CRITICAL: Tests must use TEST_MEDIA_ROOT')
+    })
+
+    it('throws when saveMediaFromFile uses production mediaRoot', async () => {
+      await expect(saveMediaFromFile('/tmp/whatever.wav', 'test.wav', 'audio', './data/media'))
+        .rejects.toThrow('CRITICAL: Tests must use TEST_MEDIA_ROOT')
+    })
+
+    it('throws when saveMediaFromStream uses production mediaRoot', async () => {
+      await expect(saveMediaFromStream(Readable.from(Buffer.from('x')), 'test.wav', 'audio', './data/media'))
+        .rejects.toThrow('CRITICAL: Tests must use TEST_MEDIA_ROOT')
+    })
+
+    it('throws when saveStreamFromUrl uses production mediaRoot', async () => {
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(Buffer.from('x')) })
+      await expect(saveStreamFromUrl('http://example.com/x.wav', 'test.wav', 'audio', './data/media'))
+        .rejects.toThrow('CRITICAL: Tests must use TEST_MEDIA_ROOT')
+    })
+  })
+
+  describe('saveMediaFromFile', () => {
+    it('streams a source file to the media root and reports size_bytes', async () => {
+      const content = Buffer.from('streamed-from-file-content')
+      const sourcePath = join(TEST_MEDIA_ROOT, 'source-1.wav')
+      await fs.writeFile(sourcePath, content)
+
+      const result = await saveMediaFromFile(sourcePath, 'upload.wav', 'audio', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/^\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.wav$/)
+      expect(result.filepath).toContain(TEST_MEDIA_ROOT)
+      expect(result.size_bytes).toBe(content.length)
+
+      const written = await fs.readFile(result.filepath)
+      expect(written.equals(content)).toBe(true)
+    })
+
+    it('does not modify the source file', async () => {
+      const content = Buffer.from('preserve-me')
+      const sourcePath = join(TEST_MEDIA_ROOT, 'source-2.wav')
+      await fs.writeFile(sourcePath, content)
+
+      await saveMediaFromFile(sourcePath, 'upload.wav', 'audio', TEST_MEDIA_ROOT)
+
+      const source = await fs.readFile(sourcePath)
+      expect(source.equals(content)).toBe(true)
+    })
+
+    it('preserves original extension when different from type default', async () => {
+      const sourcePath = join(TEST_MEDIA_ROOT, 'source.ogg')
+      await fs.writeFile(sourcePath, Buffer.from('ogg'))
+
+      const result = await saveMediaFromFile(sourcePath, 'song.ogg', 'audio', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.ogg$/)
+    })
+
+    it('uses default extension when filename has none', async () => {
+      const sourcePath = join(TEST_MEDIA_ROOT, 'source-noext')
+      await fs.writeFile(sourcePath, Buffer.from('noext'))
+
+      const result = await saveMediaFromFile(sourcePath, 'noext-name', 'image', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.png$/)
+    })
+
+    it('handles large files via the streaming pipeline', async () => {
+      const large = Buffer.alloc(2 * 1024 * 1024, 0x41)
+      const sourcePath = join(TEST_MEDIA_ROOT, 'large-source.bin')
+      await fs.writeFile(sourcePath, large)
+
+      const result = await saveMediaFromFile(sourcePath, 'big.bin', 'video', TEST_MEDIA_ROOT)
+
+      expect(result.size_bytes).toBe(large.length)
+      const written = await fs.readFile(result.filepath)
+      expect(written.equals(large)).toBe(true)
+    })
+
+    it('rejects when the source path does not exist', async () => {
+      await expect(
+        saveMediaFromFile(join(TEST_MEDIA_ROOT, 'missing.wav'), 'upload.wav', 'audio', TEST_MEDIA_ROOT),
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('saveMediaFromStream', () => {
+    it('streams a Readable into the media root', async () => {
+      const content = Buffer.from('stream-content-here')
+
+      const result = await saveMediaFromStream(Readable.from(content), 'rec.wav', 'audio', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.wav$/)
+      expect(result.size_bytes).toBe(content.length)
+
+      const written = await fs.readFile(result.filepath)
+      expect(written.equals(content)).toBe(true)
+    })
+
+    it('handles multi-chunk streams', async () => {
+      function* gen(): Generator<Buffer> {
+        yield Buffer.from('chunk1-')
+        yield Buffer.from('chunk2-')
+        yield Buffer.from('chunk3')
+      }
+      const stream = Readable.from(gen())
+      const expected = Buffer.from('chunk1-chunk2-chunk3')
+
+      const result = await saveMediaFromStream(stream, 'multi.bin', 'video', TEST_MEDIA_ROOT)
+
+      expect(result.size_bytes).toBe(expected.length)
+      const written = await fs.readFile(result.filepath)
+      expect(written.equals(expected)).toBe(true)
+    })
+
+    it('uses default extension when originalName has none', async () => {
+      const result = await saveMediaFromStream(Readable.from(Buffer.from('x')), 'no-ext', 'music', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.mp3$/)
+    })
+
+    it('rejects when the source stream errors mid-pipeline', async () => {
+      const failing = new Readable({
+        read() {
+          this.destroy(new Error('upstream broke'))
+        },
+      })
+
+      await expect(
+        saveMediaFromStream(failing, 'broken.bin', 'audio', TEST_MEDIA_ROOT),
+      ).rejects.toThrow('upstream broke')
+    })
+  })
+
+  describe('createMediaReadStream', () => {
+    it('returns a stream and the full file size', async () => {
+      const content = Buffer.from('readable-by-stream-content')
+      const { filepath } = await saveMediaFile(content, 'r.wav', 'audio', TEST_MEDIA_ROOT)
+
+      const result = await createMediaReadStream(filepath, TEST_MEDIA_ROOT)
+
+      expect(result.size).toBe(content.length)
+      const collected = await collectStream(result.stream)
+      expect(collected.equals(content)).toBe(true)
+    })
+
+    it('honours a bounded range by slicing the stream', async () => {
+      const content = Buffer.from('0123456789')
+      const { filepath } = await saveMediaFile(content, 'r.bin', 'video', TEST_MEDIA_ROOT)
+
+      const result = await createMediaReadStream(filepath, TEST_MEDIA_ROOT, { start: 2, end: 5 })
+
+      const collected = await collectStream(result.stream)
+      expect(collected.equals(Buffer.from('2345'))).toBe(true)
+    })
+
+    it('still reports the full size when a range is applied', async () => {
+      const content = Buffer.from('0123456789')
+      const { filepath } = await saveMediaFile(content, 'r.bin', 'video', TEST_MEDIA_ROOT)
+
+      const result = await createMediaReadStream(filepath, TEST_MEDIA_ROOT, { start: 0, end: 3 })
+
+      expect(result.size).toBe(content.length)
+    })
+
+    it('throws when the file does not exist', async () => {
+      await expect(createMediaReadStream(join(TEST_MEDIA_ROOT, 'missing.wav'), TEST_MEDIA_ROOT)).rejects.toThrow()
+    })
+
+    it('throws for path traversal attempts', async () => {
+      await expect(createMediaReadStream('../etc/passwd', TEST_MEDIA_ROOT)).rejects.toThrow()
+    })
+  })
+
+  describe('saveStreamFromUrl', () => {
+    it('streams a remote Readable body to disk and reports size_bytes', async () => {
+      const content = Buffer.from('remote-stream-content')
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(content) })
+
+      const result = await saveStreamFromUrl('http://example.com/x.wav', 'remote.wav', 'audio', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.wav$/)
+      expect(result.size_bytes).toBe(content.length)
+      const written = await fs.readFile(result.filepath)
+      expect(written.equals(content)).toBe(true)
+    })
+
+    it('passes stream-oriented options to axios.get', async () => {
+      const content = Buffer.from('opts')
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(content) })
+
+      await saveStreamFromUrl('http://example.com/y.wav', 'remote.wav', 'audio', TEST_MEDIA_ROOT, {
+        timeoutMs: 7000,
+        maxBytes: 5_000_000,
+      })
+
+      expect(axios.get).toHaveBeenCalledWith('http://example.com/y.wav', {
+        responseType: 'stream',
+        timeout: 7000,
+        maxContentLength: 5_000_000,
+        maxBodyLength: 5_000_000,
+      })
+    })
+
+    it('uses sensible default options when none are provided', async () => {
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(Buffer.from('d')) })
+
+      await saveStreamFromUrl('http://example.com/z.wav', 'remote.wav', 'audio', TEST_MEDIA_ROOT)
+
+      expect(axios.get).toHaveBeenCalledWith(
+        'http://example.com/z.wav',
+        expect.objectContaining({ responseType: 'stream', timeout: 30000 }),
+      )
+    })
+
+    it('rejects when axios rejects (network failure)', async () => {
+      ;(axios.get as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network failure'))
+
+      await expect(
+        saveStreamFromUrl('http://example.com/fail.wav', 'remote.wav', 'audio', TEST_MEDIA_ROOT),
+      ).rejects.toThrow('Network failure')
+    })
+
+    it('aborts and cleans up when the remote body exceeds maxBytes', async () => {
+      const beforeCount = await countFilesRecursive(TEST_MEDIA_ROOT)
+      const oversized = Buffer.alloc(1024, 0x42)
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(oversized) })
+
+      await expect(
+        saveStreamFromUrl('http://example.com/big.wav', 'remote.wav', 'audio', TEST_MEDIA_ROOT, {
+          maxBytes: 16,
+        }),
+      ).rejects.toThrow(/exceeds max size 16 bytes/)
+
+      const afterCount = await countFilesRecursive(TEST_MEDIA_ROOT)
+      expect(afterCount).toBe(beforeCount)
+    })
+
+    it('uses default extension when originalName has none', async () => {
+      ;(axios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: Readable.from(Buffer.from('x')) })
+
+      const result = await saveStreamFromUrl('http://example.com/x', 'no-ext', 'image', TEST_MEDIA_ROOT)
+
+      expect(result.filename).toMatch(/\.png$/)
     })
   })
 })

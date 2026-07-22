@@ -15,6 +15,7 @@ import { migration_037 } from './migrations/037_seed_proxy_allowed_hosts_config.
 import { migration_038 } from './migrations/038_create_system_config_table.js'
 import { migration_039 } from './migrations/039_create_announcements.js'
 import { migration_040 } from './migrations/040_create_user_media_pins.js'
+import { migration_041 } from './migrations/041_media_perf_indexes.js'
 
 export interface Migration {
   id: number
@@ -600,6 +601,7 @@ CREATE INDEX IF NOT EXISTS idx_media_records_owner_public ON media_records(owner
   migration_037,
   migration_039,
   migration_040,
+  migration_041,
 ]
 
 async function getExecutedMigrations(conn: DatabaseConnection): Promise<Set<string>> {

@@ -5,6 +5,9 @@ import request from 'supertest'
 const mocks = vi.hoisted(() => ({
   axiosGet: vi.fn(),
   saveMediaFile: vi.fn(),
+  saveMediaFromFile: vi.fn(),
+  saveStreamFromUrl: vi.fn(),
+  createMediaReadStream: vi.fn(),
   saveFromUrl: vi.fn(),
   deleteMediaFile: vi.fn(),
   queryLogs: vi.fn(),
@@ -49,6 +52,9 @@ vi.mock('../../middleware/data-isolation.js', () => ({
 
 vi.mock('../../lib/media-storage', () => ({
   saveMediaFile: mocks.saveMediaFile,
+  saveMediaFromFile: mocks.saveMediaFromFile,
+  saveStreamFromUrl: mocks.saveStreamFromUrl,
+  createMediaReadStream: mocks.createMediaReadStream,
   readMediaFile: vi.fn(),
   deleteMediaFile: mocks.deleteMediaFile,
   saveFromUrl: mocks.saveFromUrl,
@@ -79,6 +85,20 @@ describe('Media Route Safety', () => {
       filename: 'file.png',
       size_bytes: 4,
     })
+    mocks.saveMediaFromFile.mockResolvedValue({
+      filepath: '/tmp/file.png',
+      filename: 'file.png',
+      size_bytes: 4,
+    })
+    mocks.saveStreamFromUrl.mockResolvedValue({
+      filepath: '/tmp/file.png',
+      filename: 'file.png',
+      size_bytes: 4,
+    })
+    mocks.createMediaReadStream.mockResolvedValue({
+      stream: { pipe: vi.fn() },
+      size: 4,
+    })
     mocks.saveFromUrl.mockResolvedValue({
       filepath: '/tmp/recovered.mp3',
       filename: 'recovered.mp3',
@@ -104,9 +124,10 @@ describe('Media Route Safety', () => {
 
   describe('POST /api/media/upload-from-url', () => {
     it('should set timeout and body size limits on remote downloads', async () => {
-      mocks.axiosGet.mockResolvedValue({
-        data: Buffer.from('test'),
-        headers: { 'content-type': 'image/png' },
+      mocks.saveStreamFromUrl.mockResolvedValueOnce({
+        filepath: '/tmp/file.png',
+        filename: 'file.png',
+        size_bytes: 4,
       })
 
       const res = await request(app)
@@ -118,15 +139,30 @@ describe('Media Route Safety', () => {
         })
 
       expect(res.status).toBe(201)
-      expect(mocks.axiosGet).toHaveBeenCalledWith(
+      expect(mocks.saveStreamFromUrl).toHaveBeenCalledWith(
         'https://example.com/image.png',
+        expect.any(String),
+        'image',
+        undefined,
         expect.objectContaining({
-          responseType: 'arraybuffer',
-          timeout: 30000,
-          maxContentLength: expect.any(Number),
-          maxBodyLength: expect.any(Number),
-        })
+          timeoutMs: 30000,
+          maxBytes: expect.any(Number),
+        }),
       )
+    })
+
+    it('should return 502 when remote download fails', async () => {
+      mocks.saveStreamFromUrl.mockRejectedValueOnce(new Error('Remote timeout'))
+
+      const res = await request(app)
+        .post('/api/media/upload-from-url')
+        .send({
+          url: 'https://example.com/image.png',
+          type: 'image',
+          source: 'image_generation',
+        })
+
+      expect(res.status).toBe(502)
     })
   })
 

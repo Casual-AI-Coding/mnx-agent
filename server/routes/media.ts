@@ -12,11 +12,19 @@ import {
   batchDeleteSchema,
   batchDownloadSchema,
 } from '../validation/media-schemas'
-import { saveMediaFile, readMediaFile, deleteMediaFile, saveFromUrl } from '../lib/media-storage'
+import {
+  saveMediaFromFile,
+  saveStreamFromUrl,
+  deleteMediaFile,
+  saveFromUrl,
+  createMediaReadStream,
+} from '../lib/media-storage'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token.js'
 import multer from 'multer'
-import axios from 'axios'
 import archiver from 'archiver'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { promises as fs } from 'fs'
 import { buildOwnerFilter, getOwnerIdForInsert } from '../middleware/data-isolation.js'
 import {
   createPaginatedResponse,
@@ -34,16 +42,29 @@ import {
   parseUploadFromUrlBody,
   parseUploadMetadata,
 } from './media/media-route-helpers.js'
-import { buildMediaDownloadPlan } from './media/media-download-helpers.js'
+import { buildStreamingDownloadPlan } from './media/media-download-helpers.js'
 import { buildBatchDownloadPlan, buildBatchPublicPlan, validateBatchDeleteRecords } from './media/media-batch-helpers.js'
+import { cronEvents } from '../services/websocket-service.js'
 
 const router = Router()
 const REMOTE_DOWNLOAD_TIMEOUT_MS = 30000
 const REMOTE_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024
+const UPLOAD_TMP_DIR = process.env.UPLOAD_TMP_DIR || join(tmpdir(), 'mnx-agent-uploads')
+const UPLOAD_MAX_BYTES = 100 * 1024 * 1024
+
+void fs.mkdir(UPLOAD_TMP_DIR, { recursive: true }).catch(error => {
+  logger.error({ error, dir: UPLOAD_TMP_DIR }, 'Failed to ensure upload tmp dir at startup')
+})
 
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  storage: multer.diskStorage({
+    destination: UPLOAD_TMP_DIR,
+    filename: (_req, file, cb) => {
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${Buffer.from(file.originalname).toString('base64url').slice(0, 32)}`
+      cb(null, unique)
+    },
+  }),
+  limits: { fileSize: UPLOAD_MAX_BYTES },
 })
 
 function getRecoveryPlanErrorMessage(result: Extract<CreateMediaRecoveryPlanResult, { ok: false }>, operation: string): string {
@@ -359,6 +380,7 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const uploadFields = parseMediaUploadFields(req.body)
   if (!uploadFields.ok) {
     errorResponse(res, uploadFields.error, 400)
+    await cleanupTmpFile(req.file.path)
     return
   }
   const ownerId = getOwnerIdForInsert(req) ?? undefined
@@ -366,28 +388,49 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   const metadataResult = parseUploadMetadata(req.body.metadata)
   if (!metadataResult.ok) {
     errorResponse(res, metadataResult.error, 400)
+    await cleanupTmpFile(req.file.path)
     return
   }
 
-  const { filepath, filename, size_bytes } = await saveMediaFile(
-    req.file.buffer,
-    req.file.originalname,
-    uploadFields.type
-  )
+  try {
+    const { filepath, filename, size_bytes } = await saveMediaFromFile(
+      req.file.path,
+      req.file.originalname,
+      uploadFields.type
+    )
 
-  const record = await db.create({
-    filename,
-    original_name: req.file.originalname,
-    filepath,
-    type: uploadFields.type,
-    mime_type: req.file.mimetype,
-    size_bytes,
-    source: uploadFields.source,
-    metadata: metadataResult.metadata,
-  }, ownerId)
+    const record = await db.create({
+      filename,
+      original_name: req.file.originalname,
+      filepath,
+      type: uploadFields.type,
+      mime_type: req.file.mimetype,
+      size_bytes,
+      source: uploadFields.source,
+      metadata: metadataResult.metadata,
+    }, ownerId)
 
-  createdResponse(res, record)
+    cronEvents.emitMediaUploadCompleted({
+      recordId: record.id,
+      ownerId,
+      type: uploadFields.type,
+      sizeBytes: size_bytes,
+      source: uploadFields.source ?? 'upload',
+    })
+
+    createdResponse(res, record)
+  } finally {
+    await cleanupTmpFile(req.file.path)
+  }
 }))
+
+async function cleanupTmpFile(filePath: string): Promise<void> {
+  await fs.unlink(filePath).catch(error => {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.warn({ error, filePath }, 'Failed to clean up multer tmp file')
+    }
+  })
+}
 
 router.post('/upload-from-url', asyncHandler(async (req, res) => {
   const db = getMediaService()
@@ -399,31 +442,46 @@ router.post('/upload-from-url', asyncHandler(async (req, res) => {
     return
   }
 
-  const response = await axios.get(bodyResult.url, {
-    responseType: 'arraybuffer',
-    timeout: REMOTE_DOWNLOAD_TIMEOUT_MS,
-    maxContentLength: REMOTE_DOWNLOAD_MAX_BYTES,
-    maxBodyLength: REMOTE_DOWNLOAD_MAX_BYTES,
-  })
-  const buffer = Buffer.from(response.data)
-  const finalFilename = bodyResult.filename || `image_${Date.now()}.png`
+  let saved: { filepath: string; filename: string; size_bytes: number }
+  try {
+    saved = await saveStreamFromUrl(
+      bodyResult.url,
+      bodyResult.filename ?? `image_${Date.now()}.png`,
+      bodyResult.type,
+      undefined,
+      {
+        timeoutMs: REMOTE_DOWNLOAD_TIMEOUT_MS,
+        maxBytes: REMOTE_DOWNLOAD_MAX_BYTES,
+      },
+    )
+  } catch (error) {
+    const message = getErrorMessage(error)
+    logger.warn({ url: bodyResult.url, error: message }, 'upload-from-url: remote download failed')
+    errorResponse(res, `Remote download failed: ${message}`, 502)
+    return
+  }
 
-  const { filepath, filename: savedFilename, size_bytes } = await saveMediaFile(
-    buffer,
-    finalFilename,
-    bodyResult.type
-  )
+  const { filepath, filename: savedFilename, size_bytes } = saved
+  const finalFilename = bodyResult.filename || `image_${Date.now()}.png`
 
   const record = await db.create({
     filename: savedFilename,
     original_name: finalFilename,
     filepath,
     type: bodyResult.type,
-    mime_type: String(response.headers['content-type'] ?? 'application/octet-stream'),
+    mime_type: 'application/octet-stream',
     size_bytes,
     source: bodyResult.source,
     metadata: bodyResult.metadata,
   }, ownerId)
+
+  cronEvents.emitMediaUploadCompleted({
+    recordId: record.id,
+    ownerId,
+    type: bodyResult.type,
+    sizeBytes: size_bytes,
+    source: bodyResult.source ?? 'upload_from_url',
+  })
 
   createdResponse(res, record)
 }))
@@ -473,9 +531,20 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
     return
   }
 
-  const buffer = await readMediaFile(record.filepath)
-  const downloadPlan = buildMediaDownloadPlan({
-    file: buffer,
+  let readResult
+  try {
+    readResult = await createMediaReadStream(record.filepath, undefined, undefined)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      logger.error({ recordId: record.id, filepath: record.filepath }, 'Media file missing on disk during download')
+      errorResponse(res, 'Media file not found on disk', 404)
+      return
+    }
+    throw error
+  }
+
+  const downloadPlan = buildStreamingDownloadPlan({
+    fileSize: readResult.size,
     filename: record.filename,
     originalName: record.original_name,
     mimeType: record.mime_type,
@@ -486,7 +555,23 @@ router.get('/:id/download', validateParams(mediaIdParamsSchema), asyncHandler(as
     res.setHeader(name, value)
   }
   res.status(downloadPlan.statusCode)
-  res.send(downloadPlan.body)
+
+  cronEvents.emitMediaDownloadCompleted({
+    recordId: record.id,
+    ownerId: record.owner_id ?? undefined,
+    sizeBytes: readResult.size,
+  })
+
+  if (downloadPlan.range) {
+    const ranged = await createMediaReadStream(record.filepath, undefined, {
+      start: downloadPlan.range.start,
+      end: downloadPlan.range.end,
+    })
+    ranged.stream.pipe(res)
+    return
+  }
+
+  readResult.stream.pipe(res)
 }))
 
 router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async (req, res) => {
@@ -497,7 +582,6 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
     return
   }
   const ids = idsResult.ids
-  // P0: 批量下载必须按当前用户 owner_id 过滤，防止跨租户读取
   const ownerId = buildOwnerFilter(req).params[0]
   const records = await db.getByIds(ids, ownerId)
 
@@ -511,7 +595,6 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
     timestamp: Date.now(),
   })
 
-  // 审计记录：当请求 ID 数量与可访问记录数量不一致时静默记录
   if (downloadPlan.inaccessibleSummary) {
     logger.warn(
       { ...downloadPlan.inaccessibleSummary, userId: ownerId },
@@ -526,16 +609,41 @@ router.post('/batch/download', validate(batchDownloadSchema), asyncHandler(async
 
   archive.pipe(res)
 
+  const seenFilenames = new Set<string>()
   for (const record of downloadPlan.records) {
     try {
-      const buffer = await readMediaFile(record.filepath)
-      const filename = record.original_name || record.filename
-      archive.append(buffer, { name: filename })
+      const filename = pickUniqueBatchName(
+        record.original_name || record.filename,
+        seenFilenames,
+      )
+      seenFilenames.add(filename)
+      archive.file(record.filepath, { name: filename })
     } catch (error) {
       logger.error(error, `Failed to add file ${record.filename} to zip`)
     }
   }
 
+  const totalBytes = downloadPlan.records.reduce((sum, r) => sum + (r.size_bytes ?? 0), 0)
+  cronEvents.emitMediaBatchDownloaded({
+    ownerId: ownerId ?? undefined,
+    recordCount: downloadPlan.records.length,
+    totalBytes,
+  })
+
   archive.finalize()
 }))
+
+function pickUniqueBatchName(name: string, seen: Set<string>): string {
+  if (!seen.has(name)) return name
+  const dot = name.lastIndexOf('.')
+  const stem = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot) : ''
+  let i = 1
+  let candidate = `${stem} (${i})${ext}`
+  while (seen.has(candidate)) {
+    i += 1
+    candidate = `${stem} (${i})${ext}`
+  }
+  return candidate
+}
 export default router
