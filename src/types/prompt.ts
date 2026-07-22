@@ -9,7 +9,7 @@ import type {
   UpdatePromptRecord as SharedUpdatePromptRecord,
   PromptTargetType,
   PromptSlotType,
-} from 'packages/shared-types/entities/material'
+} from '@mnx/shared-types/entities/material'
 
 // Re-export from shared-types
 export type {
@@ -18,7 +18,7 @@ export type {
   PromptRecord as SharedPromptRecord,
   CreatePromptRecord as SharedCreatePromptRecord,
   UpdatePromptRecord as SharedUpdatePromptRecord,
-} from 'packages/shared-types/entities/material'
+} from '@mnx/shared-types/entities/material'
 
 // 前端友好的 Prompt 类型
 export type PromptRecord = SharedPromptRecord

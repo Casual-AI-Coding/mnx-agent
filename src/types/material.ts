@@ -11,11 +11,11 @@ import type {
   CreateMaterialItem as SharedCreateMaterialItem,
   UpdateMaterialItem as SharedUpdateMaterialItem,
   MaterialDetailResult as SharedMaterialDetailResult,
-} from 'packages/shared-types/entities/material'
+} from '@mnx/shared-types/entities/material'
 
 // Re-export from shared-types with explicit naming
 export type {
-} from 'packages/shared-types/entities/material'
+} from '@mnx/shared-types/entities/material'
 
 // 前端友好的 Material 类型 (与 shared-types 相同结构)
 export type Material = SharedMaterial

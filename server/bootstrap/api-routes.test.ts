@@ -21,6 +21,7 @@ const mockedHandlers = vi.hoisted(() => {
 vi.mock('../middleware/audit-middleware.js', () => ({ auditMiddleware: vi.fn(mockedHandlers.passThrough) }))
 vi.mock('../middleware/auth-middleware.js', () => ({
   authenticateJWT: vi.fn(mockedHandlers.unauthorized),
+  requireRole: vi.fn(() => mockedHandlers.passThrough),
 }))
 vi.mock('../middleware/rateLimit.js', () => ({
   cronRateLimiter: vi.fn(mockedHandlers.passThrough),
@@ -142,6 +143,7 @@ describe('configureApiRoutes', () => {
       '/api/templates',
       '/api/workflows',
       '/api/admin/service-nodes',
+      '/api/admin/announcements',
       '/api/admin/workflows',
       '/api/admin/service-permissions',
       '/api/stats',
