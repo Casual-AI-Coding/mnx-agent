@@ -101,19 +101,26 @@ export const useWebhooksStore = create<WebhooksState>()((set, _get) => ({
   addWebhook: async (data: CreateWebhookConfig) => {
     const response = await withLoadingState(set, () => apiCreateWebhook(data))
     if (!response) throw new Error('Failed to create webhook')
-    if (!response.success || !response.data) throw new Error(response.error || 'Failed to create webhook')
+    if (!response.success || !response.data) {
+      set({ error: response.error || 'Failed to create webhook' })
+      throw new Error(response.error || 'Failed to create webhook')
+    }
     const newWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
-    set((state) => ({ webhooks: [...state.webhooks, newWebhook] }))
+    set((state) => ({ webhooks: [...state.webhooks, newWebhook], error: null }))
     return newWebhook
   },
 
   updateWebhook: async (id: string, data: UpdateWebhookConfig) => {
     const response = await withLoadingState(set, () => apiUpdateWebhook(id, data))
     if (!response) throw new Error('Failed to update webhook')
-    if (!response.success || !response.data) throw new Error(response.error || 'Failed to update webhook')
+    if (!response.success || !response.data) {
+      set({ error: response.error || 'Failed to update webhook' })
+      throw new Error(response.error || 'Failed to update webhook')
+    }
     const updatedWebhook = transformWebhookResponse(response.data as unknown as WebhookApiResponse)
     set((state) => ({
       webhooks: state.webhooks.map((w) => (w.id === id ? { ...w, ...updatedWebhook } : w)),
+      error: null,
     }))
     return updatedWebhook
   },
@@ -121,8 +128,11 @@ export const useWebhooksStore = create<WebhooksState>()((set, _get) => ({
   removeWebhook: async (id: string) => {
     const response = await withLoadingState(set, () => apiDeleteWebhook(id))
     if (!response) throw new Error('Failed to delete webhook')
-    if (!response.success) throw new Error(response.error || 'Failed to delete webhook')
-    set((state) => ({ webhooks: state.webhooks.filter((w) => w.id !== id) }))
+    if (!response.success) {
+      set({ error: response.error || 'Failed to delete webhook' })
+      throw new Error(response.error || 'Failed to delete webhook')
+    }
+    set((state) => ({ webhooks: state.webhooks.filter((w) => w.id !== id), error: null }))
   },
 
   testWebhook: async (id: string) => {
