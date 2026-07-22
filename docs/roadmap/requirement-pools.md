@@ -29,7 +29,7 @@
 | R-004 | 审计日志补充 | Security | P1 | v2.1 | 已完成 |
 | R-005 | Dashboard 运营总览 | UX | P2 | v3.2 | 待办 |
 | R-006 | 工作流/DLQ 投产验证 | QA | P1 | v4.0 | 待办 |
-| R-007 | 性能优化 | Performance | P4 | v3.1 | 待办 |
+| R-007 | 性能优化 | Performance | P4 | v3.1 | 已完成 |
 | R-008 | 前端环境分离 | DevOps | P4 | v2.0 | 已完成 |
 | R-009 | 请求回放与参数复用 | UX | P2 | v2.6 | 已完成 |
 | R-010 | 新手引导 Tour | UX | P2 | v3.5 | 待办 |
@@ -68,8 +68,8 @@
 
 ### R-007 - 性能优化
 - **描述**: 下载上传改异步/WebSocket、后端性能优化、数据库索引/查询优化
-- **现状**: 上传下载同步阻塞
-- **范围**: `server/routes/media.ts` + 数据库索引优化 + 前端懒加载
+- **现状**: 已完成。上传链路（multer diskStorage + `saveMediaFromFile`/`saveStreamFromUrl` 流式落盘）、下载链路（`createMediaReadStream` + `stream.pipe(res)` + `buildStreamingDownloadPlan` Range 支持、批量下载改 `archive.file()` 流式附加）全部去 buffer 化；WebSocket 新增 `media_event` channel 与 3 个 emit（upload/download/batch）；migration_041 增加 `media_records(owner_id,is_deleted,created_at DESC)` / `audit_logs(user_id,created_at DESC)` / `media_records(owner_id,type,is_deleted)` 复合索引；前端懒加载已在 `src/App.tsx` 全量 `React.lazy` 化，无需改动。详见 `docs/plans/2026-07-22-r-007-performance.md`
+- **范围**: `server/lib/media-storage.ts` + `server/routes/media/media-download-helpers.ts` + `server/routes/media.ts` + `server/services/websocket-service.ts` + `server/database/migrations/041_media_perf_indexes.ts`
 
 ### R-008 - 前端环境分离
 - **描述**: dev/生产环境分离，Feature flags 支持
@@ -229,6 +229,7 @@
 | 2026-05-04 | R-024（OpenAI Image-2 外部调试）标记为已完成，版本 v2.2.6 |
 | 2026-05-11 | 更新当前 ID 范围到 R-025；完善 R-005/R-009/R-016/R-020/R-022 描述；将 R-016/R-022 分配到 v3.2 |
 | 2026-07-07 | v2.7.1 发布；R-017（资源置顶）标记为已完成 |
+| 2026-07-22 | R-007（性能优化）标记为已完成；上传/下载全链路流式化（multer diskStorage + saveMediaFromFile/saveStreamFromUrl/createMediaReadStream/buildStreamingDownloadPlan + archive.file 批量），WebSocket 新增 media_event channel + 3 emit，migration_041 补 3 个高频复合索引；前端 React.lazy 已就绪 |
 | 2026-07-15 | R-012（移动端适配）标记为已完成；4 Wave / 11 commits，4 断点 (375/768/1024/1440) + prefers-reduced-motion 集成 |
 | 2026-07-03 | v2.3.1 发布；R-002 部分完成（Prompt 列表查询 API 已实现） |
 | 2026-07-04 | v2.3.2 发布；R-002 标记为已完成（收口） |
