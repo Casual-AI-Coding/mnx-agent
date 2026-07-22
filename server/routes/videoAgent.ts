@@ -4,18 +4,19 @@ import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { handleApiError } from '../middleware/errorHandler'
 import { errorResponse, successResponse } from '../middleware/api-response'
-import { throwValidationError } from '../middleware/http-error'
+import { validate } from '../middleware/validate.js'
+import { videoAgentGenerateSchema, type VideoAgentGenerateInput } from '@mnx/shared-types/entities'
 
 const router = Router()
 
-interface VideoAgentGenerateBody {
-  template_id: string
-  text_inputs?: Array<{ value: string }>
-  media_inputs?: Array<{ value: string }>
-  callback_url?: string
+interface VideoAgentTemplate {
+  id: string
+  name: string
+  description: string
+  requires: Array<'media_inputs' | 'text_inputs'>
 }
 
-const VIDEO_AGENT_TEMPLATES = [
+const VIDEO_AGENT_TEMPLATES: ReadonlyArray<VideoAgentTemplate> = [
   { id: '392747428568649728', name: '潜水', description: '水下世界探索', requires: ['media_inputs'] },
   { id: '393769180141805569', name: '逃亡', description: '宠物生存视频', requires: ['media_inputs', 'text_inputs'] },
   { id: '397087679467597833', name: '变形金刚', description: '汽车变形机器人', requires: ['media_inputs'] },
@@ -30,26 +31,26 @@ router.get('/templates', asyncHandler(async (_req: Request, res: Response) => {
 }))
 
 // POST /generate - uses factory
-router.use('/generate', createApiProxyRouter({
-  endpoint: '/',
-  clientMethod: 'videoAgentGenerate',
-  buildRequestBody: (req: Request) => {
-    const { template_id, text_inputs, media_inputs, callback_url } = req.body as VideoAgentGenerateBody
+router.use('/generate',
+  validate(videoAgentGenerateSchema),
+  createApiProxyRouter({
+    endpoint: '/',
+    clientMethod: 'videoAgentGenerate',
+    buildRequestBody: (req: Request) => {
+      const { template_id, text_inputs, media_inputs, callback_url } =
+        req.body as VideoAgentGenerateInput
 
-    if (!template_id) {
-      throwValidationError('template_id is required')
-    }
+      const body: Record<string, unknown> = { template_id }
 
-    const body: Record<string, unknown> = { template_id }
+      if (text_inputs) body.text_inputs = text_inputs
+      if (media_inputs) body.media_inputs = media_inputs
+      if (callback_url) body.callback_url = callback_url
 
-    if (text_inputs) body.text_inputs = text_inputs
-    if (media_inputs) body.media_inputs = media_inputs
-    if (callback_url) body.callback_url = callback_url
-
-    return body
-  },
-  extractClient: getClientFromRequest
-}))
+      return body
+    },
+    extractClient: getClientFromRequest,
+  }),
+)
 
 // GET /status/:taskId - manual implementation (factory only supports POST)
 router.get('/status/:taskId', asyncHandler(async (req: Request, res: Response) => {
