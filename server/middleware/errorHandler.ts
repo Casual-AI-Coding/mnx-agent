@@ -3,6 +3,7 @@ import { getLogger } from '../lib/logger'
 import { isProduction } from '../config/index.js'
 import { captureServerException } from '../lib/error-tracking.js'
 import { getCurrentTraceId } from '../services/audit-context.service.js'
+import { pickHttpStatusCode, pickHttpErrorMessage, toErrorInstance } from './http-error.js'
 
 const logger = getLogger()
 
@@ -35,19 +36,15 @@ export const errorHandler = (
 }
 
 /**
- * 工具函数 — 在非 Express 错误中间件路径中统一返回错误响应。
- * 与 asyncHandler/errorHandler 保持相同的 4xx/5xx 差异化策略：
- * 4xx 保留用户可见错误信息，仅 5xx 在生产环境隐藏详情。
+ * 在非 Express 错误中间件路径中统一返回错误响应（4xx 保留错误信息，仅 5xx 在生产环境隐藏）。
+ * 优先识别 error.status（ADR-0007 Phase A），然后回退到 error.code，默认 500。
  */
 export function handleApiError(req: Request, res: Response, error: unknown): void {
-  const statusCode = error instanceof Error && 'code' in error && typeof error.code === 'number' && error.code >= 100 && error.code < 600
-    ? error.code
-    : 500
+  const statusCode = pickHttpStatusCode(error)
 
   if (statusCode >= 500) {
     const traceId = getCurrentTraceId() ?? undefined
-    const capturedError = error instanceof Error ? error : new Error('Unknown error')
-    captureServerException(capturedError, {
+    captureServerException(toErrorInstance(error), {
       method: req.method,
       path: req.path,
       statusCode,
@@ -56,7 +53,9 @@ export function handleApiError(req: Request, res: Response, error: unknown): voi
     })
   }
 
-  const errorMessage = isProduction() && statusCode >= 500 ? 'Internal server error' : (error instanceof Error ? error.message : 'Unknown error')
+  const errorMessage = isProduction() && statusCode >= 500
+    ? 'Internal server error'
+    : pickHttpErrorMessage(error)
 
   res.status(statusCode).json({
     success: false,

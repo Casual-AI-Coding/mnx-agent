@@ -75,4 +75,31 @@ describe('handleApiError', () => {
 
     expect(captureServerException).not.toHaveBeenCalled()
   })
+
+  // ADR-0007 Phase A：项目既有约定 `throw { status, message }`（14 处），handleApiError 必须识别
+  it('recognizes error.status over error.code from explicit catch paths', async () => {
+    const app = express()
+    const error: Error & { code?: number; status?: number } = new Error('Validation failed')
+    error.code = 500
+    error.status = 400
+    app.get('/invalid', (req, res) => {
+      handleApiError(req, res, error)
+    })
+
+    const response = await request(app).get('/invalid').expect(400)
+
+    expect(response.body).toEqual({ success: false, error: 'Validation failed' })
+    expect(captureServerException).not.toHaveBeenCalled()
+  })
+
+  it('uses error.status from plain thrown object shape', async () => {
+    const app = express()
+    app.get('/plain-status', (req, res) => {
+      handleApiError(req, res, { status: 422, message: 'Unprocessable' })
+    })
+
+    const response = await request(app).get('/plain-status').expect(422)
+
+    expect(response.body).toEqual({ success: false, error: 'Unprocessable' })
+  })
 })

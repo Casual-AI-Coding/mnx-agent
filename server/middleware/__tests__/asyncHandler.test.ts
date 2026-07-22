@@ -123,4 +123,48 @@ describe('asyncHandler', () => {
 
     expect(captureServerException).not.toHaveBeenCalled()
   })
+
+  // ADR-0007 Phase A：项目既有约定 `throw { status, message }`（14 处），asyncHandler 必须识别
+  it('should recognize error.status on thrown plain object', async () => {
+    vi.mocked(isProduction).mockReturnValue(true)
+    const req = {} as any
+    const res = mockRes()
+    const handler = asyncHandler(async () => {
+      throw { status: 400, message: 'Bad request' } as unknown as Error
+    })
+    handler(req, res)
+    await Promise.resolve()
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ success: false, error: 'Bad request' })
+  })
+
+  it('should prefer error.status over error.code when both present', async () => {
+    vi.mocked(isProduction).mockReturnValue(false)
+    const req = {} as any
+    const res = mockRes()
+    const handler = asyncHandler(async () => {
+      const err: Error & { code?: number; status?: number } = new Error('Conflict')
+      err.code = 500
+      err.status = 409
+      throw err
+    })
+    handler(req, res)
+    await Promise.resolve()
+    expect(res.status).toHaveBeenCalledWith(409)
+    expect(res.json).toHaveBeenCalledWith({ success: false, error: 'Conflict' })
+  })
+
+  it('should reject invalid status codes (out of 100-599 range) and fall back to 500', async () => {
+    vi.mocked(isProduction).mockReturnValue(false)
+    const req = {} as any
+    const res = mockRes()
+    const handler = asyncHandler(async () => {
+      const err: Error & { code?: number; status?: number } = new Error('Weird')
+      err.status = 999
+      throw err
+    })
+    handler(req, res)
+    await Promise.resolve()
+    expect(res.status).toHaveBeenCalledWith(500)
+  })
 })
