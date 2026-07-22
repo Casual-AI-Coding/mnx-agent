@@ -1,38 +1,25 @@
 import { Router, Request, Response } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
-import { createApiProxyRouter } from '../utils/api-proxy-router'
+import { createApiProxyRouter } from '../utils/api-proxy-router.js'
 import { getClientFromRequest } from '../lib/minimax-client-factory.js'
-import { handleApiError } from '../middleware/errorHandler'
-import { errorResponse } from '../middleware/api-response'
-import { throwValidationError } from '../middleware/http-error'
+import { handleApiError } from '../middleware/errorHandler.js'
+import { errorResponse } from '../middleware/api-response.js'
+import { validate } from '../middleware/validate.js'
+import { voiceSyncSchema, voiceAsyncSchema } from '@mnx/shared-types/entities'
+import type { VoiceSyncInput, VoiceAsyncInput } from '@mnx/shared-types/entities'
 
 const router = Router()
 
-interface VoiceSyncBody {
-  model?: string
-  text: string
-  stream?: boolean
-}
-
-interface VoiceAsyncBody {
-  model?: string
-  text: string
-  callback_url?: string
-}
-
 // Sync voice generation
-router.use('/sync', createApiProxyRouter({
+router.use('/sync', validate(voiceSyncSchema), createApiProxyRouter({
   endpoint: '/',
   clientMethod: 'textToAudioSync',
   buildRequestBody: (req: Request) => {
-    const { model, text, stream } = req.body as VoiceSyncBody
-
-    if (!text) {
-      throwValidationError('text is required')
-    }
+    // validate 中间件已经把 model（含默认值）、text、stream 写入 req.body
+    const { model, text, stream } = req.body as VoiceSyncInput
 
     const body: Record<string, unknown> = {
-      model: model || 'speech-01',
+      model,
       text,
     }
 
@@ -44,18 +31,14 @@ router.use('/sync', createApiProxyRouter({
 }))
 
 // Async voice generation
-router.use('/async', createApiProxyRouter({
+router.use('/async', validate(voiceAsyncSchema), createApiProxyRouter({
   endpoint: '/',
   clientMethod: 'textToAudioAsync',
   buildRequestBody: (req: Request) => {
-    const { model, text, callback_url } = req.body as VoiceAsyncBody
-
-    if (!text) {
-      throwValidationError('text is required')
-    }
+    const { model, text, callback_url } = req.body as VoiceAsyncInput
 
     const body: Record<string, unknown> = {
-      model: model || 'speech-01',
+      model,
       text,
     }
 

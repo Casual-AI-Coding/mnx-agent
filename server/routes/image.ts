@@ -1,37 +1,22 @@
 import { Router, Request } from 'express'
-import { createApiProxyRouter } from '../utils/api-proxy-router'
-import { getClientFromRequest } from '../lib/minimax-client-factory'
-import { throwValidationError } from '../middleware/http-error'
+import { createApiProxyRouter } from '../utils/api-proxy-router.js'
+import { getClientFromRequest } from '../lib/minimax-client-factory.js'
+import { validate } from '../middleware/validate.js'
+import { imageGenerateSchema } from '@mnx/shared-types/entities'
+import type { ImageGenerateInput } from '@mnx/shared-types/entities'
 
 const router = Router()
 
-interface ImageGenerateBody {
-  model?: string
-  prompt: string
-  n?: number
-  num_images?: number  // 兼容旧参数
-  prompt_optimizer?: boolean
-  aspect_ratio?: string
-  width?: number
-  height?: number
-  seed?: number
-  style?: string
-  aigc_watermark?: boolean
-}
-
-// POST /generate - uses factory
-router.use('/generate', createApiProxyRouter({
+// POST /generate - proxy to MiniMax image_generation API
+router.use('/generate', validate(imageGenerateSchema), createApiProxyRouter({
   endpoint: '/',
   clientMethod: 'imageGeneration',
   buildRequestBody: (req: Request) => {
-    const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style, aigc_watermark } = req.body as ImageGenerateBody
-
-    if (!prompt) {
-      throwValidationError('prompt is required')
-    }
+    // validate 中间件已经把 model（含默认值）、prompt 等字段写入 req.body
+    const { model, prompt, n, num_images, prompt_optimizer, aspect_ratio, width, height, seed, style, aigc_watermark } = req.body as ImageGenerateInput
 
     const body: Record<string, unknown> = {
-      model: model || 'image-01',
+      model,
       prompt,
     }
 
