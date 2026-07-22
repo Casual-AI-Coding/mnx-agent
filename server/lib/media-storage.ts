@@ -5,6 +5,7 @@ import { pipeline } from 'stream/promises'
 import axios from 'axios'
 import { Transform, type Readable } from 'stream'
 import type { MediaType } from '../database/types'
+import { isTestEnvironmentGuard } from './env-utils.js'
 
 const DEFAULT_MEDIA_ROOT = process.env.MEDIA_ROOT || './data/media'
 
@@ -15,7 +16,7 @@ interface SaveMediaResult {
 }
 
 function buildMediaTargetPath(originalName: string, type: MediaType, mediaRoot: string): { filepath: string; filename: string } {
-  if (process.env.NODE_ENV === 'test' && mediaRoot === './data/media') {
+  if (isTestEnvironmentGuard() && mediaRoot === './data/media') {
     throw new Error('CRITICAL: Tests must use TEST_MEDIA_ROOT, not production path ./data/media')
   }
   const now = new Date()
@@ -45,7 +46,7 @@ export async function saveMediaFile(
   type: MediaType,
   mediaRoot: string = DEFAULT_MEDIA_ROOT
 ): Promise<SaveMediaResult> {
-  if (process.env.NODE_ENV === 'test' && mediaRoot === './data/media') {
+  if (isTestEnvironmentGuard() && mediaRoot === './data/media') {
     throw new Error('CRITICAL: Tests must use TEST_MEDIA_ROOT, not production path ./data/media')
   }
   await ensureMediaDir(mediaRoot)
@@ -71,7 +72,7 @@ export async function saveMediaFromFile(
   type: MediaType,
   mediaRoot: string = DEFAULT_MEDIA_ROOT
 ): Promise<SaveMediaResult> {
-  if (process.env.NODE_ENV === 'test' && mediaRoot === './data/media') {
+  if (isTestEnvironmentGuard() && mediaRoot === './data/media') {
     throw new Error('CRITICAL: Tests must use TEST_MEDIA_ROOT, not production path ./data/media')
   }
   await ensureMediaDir(mediaRoot)
@@ -98,7 +99,7 @@ export async function saveMediaFromStream(
   type: MediaType,
   mediaRoot: string = DEFAULT_MEDIA_ROOT
 ): Promise<SaveMediaResult> {
-  if (process.env.NODE_ENV === 'test' && mediaRoot === './data/media') {
+  if (isTestEnvironmentGuard() && mediaRoot === './data/media') {
     throw new Error('CRITICAL: Tests must use TEST_MEDIA_ROOT, not production path ./data/media')
   }
   await ensureMediaDir(mediaRoot)
