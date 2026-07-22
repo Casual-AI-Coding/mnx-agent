@@ -2,6 +2,7 @@ import type { TaskResult, WorkflowNode, WorkflowEdge } from './types.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
+import { TASK_TIMEOUTS } from '../../config/timeouts.js'
 import { 
   nodeExecutorRegistry, 
   executeNodeWithRegistry,
@@ -12,7 +13,7 @@ import {
 export { nodeExecutorRegistry, executeNodeWithRegistry }
 export type { NodeExecutionContext }
 
-const DEFAULT_NODE_TIMEOUT_MS = 300000
+const DEFAULT_NODE_TIMEOUT_MS = TASK_TIMEOUTS.WORKFLOW_NODE_MS
 
 export interface NodeExecutorDeps {
   serviceRegistry: ServiceNodeRegistry

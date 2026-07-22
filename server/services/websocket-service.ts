@@ -5,6 +5,8 @@ import { UserService } from './user-service.js'
 import type { IEventBus } from './interfaces/event-bus.interface'
 import { toLocalISODateString } from '../lib/date-utils.js'
 import { isProduction } from '../config/index.js'
+import { WEBSOCKET_TIMEOUTS } from '../config/timeouts.js'
+import { CONNECTION_LIMITS } from '../config/limits.js'
 
 function sanitizeErrorForClient(error: unknown): string {
   if (!error) return 'Unknown error'
@@ -213,10 +215,9 @@ export class CronEventEmitter extends EventEmitter implements IEventBus {
 
 export const cronEvents = new CronEventEmitter()
 
-// Heartbeat and connection limit constants
-const HEARTBEAT_INTERVAL = 30000 // 30 seconds
-const HEARTBEAT_TIMEOUT = 10000 // 10 seconds
-const MAX_CONNECTIONS = 1000
+const HEARTBEAT_INTERVAL = WEBSOCKET_TIMEOUTS.HEARTBEAT_INTERVAL_MS
+const HEARTBEAT_TIMEOUT = WEBSOCKET_TIMEOUTS.HEARTBEAT_TIMEOUT_MS
+const MAX_CONNECTIONS = CONNECTION_LIMITS.MAX_WS_CONNECTIONS
 
 interface WebSocketClient {
   ws: WebSocket

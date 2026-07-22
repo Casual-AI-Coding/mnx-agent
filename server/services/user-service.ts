@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken'
 import { DatabaseConnection } from '../database/connection.js'
 import type { User, UserRow, UserRole } from '../database/types.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
+import { SECURITY_LIMITS } from '../config/limits.js'
 
-const BCRYPT_ROUNDS = 12
+const BCRYPT_ROUNDS = SECURITY_LIMITS.BCRYPT_ROUNDS
 
 export interface RegisterInput {
   username: string
