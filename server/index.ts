@@ -16,26 +16,23 @@ import { toCSV } from './lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from './lib/media-token'
 import { registerServices, TOKENS, getCronSchedulerService, getDLQAutoRetryScheduler } from './service-registration.js'
 import { getGlobalContainer } from './container.js'
+import { resolve } from './container.types.js'
 import { configureApiRoutes } from './bootstrap/api-routes.js'
 import { createDatabaseServiceNodes, registerServiceNodeCatalog } from './services/service-node-catalog.js'
-import type { ServiceNodeRegistry } from './services/service-node-registry.js'
-import type { MiniMaxClient } from './lib/minimax/index.js'
-import type { CapacityChecker } from './services/capacity-checker.js'
-import type { QueueProcessor } from './services/queue-processor.js'
-import type { JobService, LogService, MediaService, TaskService } from './services/domain/index.js'
 
 config()
 config({ path: '.env.local', override: true })
 
+const appConfig = getConfig()
 const logger = getLogger()
 
 const app = express()
-const PORT = process.env.PORT || 4511
+const PORT = appConfig.server.port
 
 app.set('trust proxy', 1)
 
 app.use(cors({
-  origin: getConfig().server.corsOrigins,
+  origin: appConfig.server.corsOrigins,
   credentials: true,
 }))
 app.use(helmet({
@@ -49,7 +46,7 @@ app.use(helmet({
       mediaSrc: ["'self'", 'blob:'],
       fontSrc: ["'self'"],
     },
-    reportOnly: process.env.NODE_ENV === 'development',
+    reportOnly: appConfig.server.nodeEnv === 'development',
   },
   crossOriginEmbedderPolicy: false,
   hsts: {
@@ -74,15 +71,15 @@ async function initializeServices() {
   await registerServices()
   
   const container = getGlobalContainer()
-  const minimaxClient = container.resolve<MiniMaxClient>(TOKENS.MINIMAX_CLIENT)
-  const capacityChecker = container.resolve<CapacityChecker>(TOKENS.CAPACITY_CHECKER)
-  const queueProcessor = container.resolve<QueueProcessor>(TOKENS.QUEUE_PROCESSOR)
-  const serviceRegistry = container.resolve<ServiceNodeRegistry>(TOKENS.SERVICE_NODE_REGISTRY)
+  const minimaxClient = resolve(container, TOKENS.MINIMAX_CLIENT)
+  const capacityChecker = resolve(container, TOKENS.CAPACITY_CHECKER)
+  const queueProcessor = resolve(container, TOKENS.QUEUE_PROCESSOR)
+  const serviceRegistry = resolve(container, TOKENS.SERVICE_NODE_REGISTRY)
   const dbService = createDatabaseServiceNodes({
-    jobService: container.resolve<JobService>(TOKENS.JOB_SERVICE),
-    taskService: container.resolve<TaskService>(TOKENS.TASK_SERVICE),
-    logService: container.resolve<LogService>(TOKENS.LOG_SERVICE),
-    mediaService: container.resolve<MediaService>(TOKENS.MEDIA_SERVICE),
+    jobService: resolve(container, TOKENS.JOB_SERVICE),
+    taskService: resolve(container, TOKENS.TASK_SERVICE),
+    logService: resolve(container, TOKENS.LOG_SERVICE),
+    mediaService: resolve(container, TOKENS.MEDIA_SERVICE),
   })
   await registerServiceNodeCatalog(serviceRegistry, {
     minimaxClient,
