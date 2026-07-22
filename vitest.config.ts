@@ -28,11 +28,13 @@ export default defineConfig({
     isolate: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text-summary', 'json'],
+      reporter: ['text', 'text-summary', 'json'],
       reportsDirectory: './coverage',
       include: [
         'src/stores/**/*.ts',
         'src/settings/**/*.ts',
+        'src/hooks/**/*.ts',
+        'src/lib/**/*.ts',
       ],
       exclude: [
         '**/__tests__/**',
@@ -45,12 +47,20 @@ export default defineConfig({
         'src/types/**',
         'src/stores/index.ts',
         '**/*.types.ts',
+        'src/lib/__tests__/**',
+        'src/lib/**/*.d.ts',
+        'src/lib/vite-env.d.ts',
+        'src/lib/constants/**',
+        'src/lib/api/types.ts',
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 70,
-        statements: 80,
+        // ADR-0010 初始基线阈值：扩展到 hooks/lib 后基线为 ~45%
+        // 防护阈值设 40% 防止下滑，目标通过补测试逐步提升至 70%（AGENTS.md §8 目标）
+        // 后续 ADR 根据提升进度更新
+        lines: 40,
+        functions: 40,
+        branches: 40,
+        statements: 40,
       },
     },
   },
