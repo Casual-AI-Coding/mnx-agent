@@ -18,7 +18,7 @@ export interface VoiceCloneBody {
   /** 数字或字符串，路由层会 `Number()` 转换 */
   file_id: number | string
   /** 接受字符串（JSON 字符串）或对象；字符串形式会被路由层 JSON.parse */
-  clone_prompt?: string | object
+  clone_prompt?: string | Record<string, unknown>
   text?: string
   model?: string
   language_boost?: string
@@ -45,11 +45,7 @@ export const voiceListSchema = z.object({
 /** Voice 克隆请求体 schema */
 export const voiceCloneSchema = z.object({
   voice_id: z.string().min(1, 'voice_id is required (8-256 chars, starts with letter)'),
-  file_id: z
-    .union([z.number().int().positive(), z.string().min(1)])
-    .refine((v) => v !== undefined && v !== null, {
-      message: 'file_id is required (upload file first via /api/files/upload)',
-    }),
+  file_id: z.union([z.number().int().positive(), z.string().min(1)]),
   clone_prompt: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
   text: z.string().optional(),
   model: z.string().optional(),

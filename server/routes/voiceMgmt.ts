@@ -2,6 +2,7 @@ import { Router, Request } from 'express'
 import { createApiProxyRouter } from '../utils/api-proxy-router'
 import { getClientFromRequest } from '../lib/minimax-client-factory'
 import { validate } from '../middleware/validate.js'
+import { throwValidationError } from '../middleware/http-error.js'
 import {
   voiceListSchema,
   voiceCloneSchema,
@@ -45,8 +46,15 @@ router.use('/clone',
       }
 
       if (clone_prompt) {
-        // 接受字符串（JSON）或对象两种形式：字符串走 JSON.parse，对象直接透传
-        body.clone_prompt = typeof clone_prompt === 'string' ? JSON.parse(clone_prompt) : clone_prompt
+        if (typeof clone_prompt === 'string') {
+          try {
+            body.clone_prompt = JSON.parse(clone_prompt)
+          } catch {
+            throwValidationError('clone_prompt 必须是合法 JSON 字符串或对象')
+          }
+        } else {
+          body.clone_prompt = clone_prompt
+        }
       }
       if (text) body.text = text
       if (model) body.model = model

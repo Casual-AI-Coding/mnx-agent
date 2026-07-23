@@ -11,16 +11,13 @@ export default defineConfig((envConfig) => {
       conditions: ['import'],
       mainFields: ['module', 'jsnext:main', 'main'],
       extensions: ['.js', '.ts', '.tsx', '.json'],
-      alias: [
-        {
-          find: /^@mnx\/shared-types$/,
-          replacement: resolve(__dirname, './packages/shared-types/dist/index.js'),
-        },
-        {
-          find: /^@mnx\/shared-types\/(.+)$/,
-          replacement: resolve(__dirname, './packages/shared-types/dist/$1/index.js'),
-        },
-      ],
+      alias: {
+        // replacement 指向目录（不是 index.ts），alias 拼接深层后缀后由 vite extensions 解析；source 模式与 vitest.config.ts 对齐
+        '@mnx/shared-types/entities': resolve(__dirname, './packages/shared-types/entities'),
+        '@mnx/shared-types/validation': resolve(__dirname, './packages/shared-types/validation'),
+        '@mnx/shared-types/api': resolve(__dirname, './packages/shared-types/api'),
+        '@mnx/shared-types': resolve(__dirname, './packages/shared-types/index.ts'),
+      },
     },
     test: {
       env,

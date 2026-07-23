@@ -8,9 +8,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@mnx/shared-types/entities': path.resolve(__dirname, './packages/shared-types/entities/index.ts'),
-      '@mnx/shared-types/validation': path.resolve(__dirname, './packages/shared-types/validation/index.ts'),
-      '@mnx/shared-types/api': path.resolve(__dirname, './packages/shared-types/api/index.ts'),
+      // replacement 指向目录（不是 index.ts），alias 拼接深层后缀后由 vite extensions 解析；ADR-0012 修复 latent bug
+      '@mnx/shared-types/entities': path.resolve(__dirname, './packages/shared-types/entities'),
+      '@mnx/shared-types/validation': path.resolve(__dirname, './packages/shared-types/validation'),
+      '@mnx/shared-types/api': path.resolve(__dirname, './packages/shared-types/api'),
       '@mnx/shared-types': path.resolve(__dirname, './packages/shared-types/index.ts'),
     },
   },
