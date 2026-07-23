@@ -4,6 +4,7 @@ export {
   getPaginationParams,
   createPaginationMeta,
   createPaginatedResponse,
+  getErrorMessage,
   type PaginationParams,
   type PaginationMeta,
   type PaginatedResponse,

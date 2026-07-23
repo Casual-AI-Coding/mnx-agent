@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import express from 'express'
 import request from 'supertest'
 import { setupTestDatabase, teardownTestDatabase, getConnection, getTestFileMarker } from '../../__tests__/test-helpers.js'
-import mediaRouter from '../media.js'
+import mediaRouter from '../media/index.js'
 
 describe('Media API Routes', () => {
   let app: express.Application

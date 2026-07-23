@@ -9,6 +9,23 @@
 import { Response } from 'express'
 
 /**
+ * Coerces a thrown value (typically `unknown` in a catch block) into a human-readable string.
+ *
+ * Used by route handlers that need to surface a failure reason back to the client
+ * without losing the original message when the thrown value is not an Error instance.
+ *
+ * @example
+ * try {
+ *   await saveFromUrl(url)
+ * } catch (error) {
+ *   errorResponse(res, `Download failed: ${getErrorMessage(error)}`, 502)
+ * }
+ */
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
  * Handles the "entity not found" pattern.
  * Returns null if entity is null/undefined, sending 404 response.
  * 

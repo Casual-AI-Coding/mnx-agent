@@ -60,7 +60,7 @@ vi.mock('../../lib/media-storage', () => ({
   saveFromUrl: mocks.saveFromUrl,
 }))
 
-import mediaRouter from '../media.js'
+import mediaRouter from '../media/index.js'
 
 describe('Media Route Safety', () => {
   let app: express.Application
