@@ -51,7 +51,7 @@ export default defineConfig((envConfig) => {
           'server/repositories/**/*.ts',
           'server/lib/media-storage.ts',
           'server/lib/retry.ts',
-          'server/lib/minimax.ts',
+          'server/lib/minimax/index.ts',
           'server/lib/csv-utils.ts',
         ],
         exclude: [
