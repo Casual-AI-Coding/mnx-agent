@@ -2,6 +2,8 @@ import type { DatabaseService } from '../../database/service-async.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
+import type { ILogService } from '../../services/domain/interfaces/log.interface.js'
+import type { ITaskService } from '../../services/domain/interfaces/task.interface.js'
 import type { WorkflowResult, TaskResult, TestExecutionOptions, WorkflowNode, WorkflowEdge } from './types.js'
 import { ExecutionStateManager } from '../execution-state-manager.js'
 import { parseWorkflowJson, validateWorkflow } from './parser.js'
@@ -32,6 +34,8 @@ export class WorkflowEngine {
   private testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }> = {}
   private dryRun: boolean = false
   private eventBus: IEventBus
+  private logService: ILogService
+  private taskService: ITaskService
 
   private static setRunningExecution(executionId: string, engine: WorkflowEngine): void {
     this.runningExecutions.set(executionId, engine)
@@ -45,11 +49,20 @@ export class WorkflowEngine {
     return this.runningExecutions.get(executionId)
   }
 
-  constructor(db: DatabaseService | null, serviceRegistry: ServiceNodeRegistry, taskExecutor: ITaskExecutor | undefined, eventBus: IEventBus) {
+  constructor(
+    db: DatabaseService | null,
+    serviceRegistry: ServiceNodeRegistry,
+    taskExecutor: ITaskExecutor | undefined,
+    eventBus: IEventBus,
+    logService: ILogService,
+    taskService: ITaskService,
+  ) {
     this.db = db
     this.serviceRegistry = serviceRegistry
     this.taskExecutor = taskExecutor || null
     this.eventBus = eventBus
+    this.logService = logService
+    this.taskService = taskService
   }
 
   async executeWorkflow(
@@ -123,6 +136,8 @@ export class WorkflowEngine {
           dryRun: this.dryRun,
           testData: this.testData,
           eventBus: this.eventBus,
+          logService: this.logService,
+          taskService: this.taskService,
         }
 
         const layerResults = await Promise.all(

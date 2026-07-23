@@ -5,9 +5,12 @@ import { CronScheduler } from '../../services/cron-scheduler'
 import { WorkflowService } from '../../services/domain/workflow.service'
 import { JobService } from '../../services/domain/job.service'
 import { LogService } from '../../services/domain/log.service'
+import { TaskService } from '../../services/domain/task.service'
 import { WorkflowRepository } from '../../repositories/workflow-repository'
 import { JobRepository } from '../../repositories/job-repository'
 import { LogRepository } from '../../repositories/log-repository'
+import { TaskRepository } from '../../repositories/task-repository'
+import { DeadLetterRepository } from '../../repositories/deadletter-repository'
 import { UserRepository } from '../../repositories/user-repository'
 import { ExternalApiLogRepository } from '../../repositories/external-api-log.repository'
 import { getGlobalContainer } from '../../container'
@@ -32,6 +35,7 @@ export class WorkflowTestHelper {
   private workflowService: WorkflowService
   private jobService: JobService
   private logService: LogService
+  private taskService: TaskService
   private scheduler: CronScheduler | null = null
 
   private workflows: TestWorkflowFixture[] = []
@@ -46,10 +50,19 @@ export class WorkflowTestHelper {
       new UserRepository(connection),
       new ExternalApiLogRepository(connection)
     )
+    this.taskService = new TaskService(new TaskRepository(connection), new DeadLetterRepository(connection))
     getGlobalContainer().register(TOKENS.WORKFLOW_SERVICE, this.workflowService)
     getGlobalContainer().register(TOKENS.JOB_SERVICE, this.jobService)
     getGlobalContainer().register(TOKENS.LOG_SERVICE, this.logService)
-    this.engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
+    getGlobalContainer().register(TOKENS.TASK_SERVICE, this.taskService)
+    this.engine = new WorkflowEngine(
+      db,
+      registry,
+      undefined,
+      createMockEventBus(),
+      this.logService,
+      this.taskService,
+    )
   }
 
   async createTestWorkflow(config: {

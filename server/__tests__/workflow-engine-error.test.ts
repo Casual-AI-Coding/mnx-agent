@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { WorkflowEngine } from '../services/workflow/index'
 import { createMockEventBus } from './helpers/mock-event-bus'
+import { createMockLogService, createMockTaskService } from './helpers/mock-services'
 
 describe('Workflow Engine Error Handling', () => {
   let engine: WorkflowEngine
@@ -10,7 +11,14 @@ describe('Workflow Engine Error Handling', () => {
   beforeEach(() => {
     mockDb = {} as any
     mockRegistry = {} as any
-    engine = new WorkflowEngine(mockDb, mockRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      mockDb,
+      mockRegistry,
+      undefined,
+      createMockEventBus(),
+      createMockLogService(),
+      createMockTaskService(),
+    )
   })
 
   it('should return specific error for malformed JSON', async () => {

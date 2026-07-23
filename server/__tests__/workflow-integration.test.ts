@@ -11,6 +11,7 @@ import { toCSV } from '../lib/csv-utils'
 import { generateMediaToken, verifyMediaToken } from '../lib/media-token'
 import { createMockEventBus } from './helpers/mock-event-bus'
 import { createMockConcurrencyManager } from './helpers/mock-concurrency-manager'
+import { createMockTaskService } from './helpers/mock-services'
 import type { WorkflowTemplate } from '../database/types'
 import { WorkflowService } from '../services/domain/workflow.service.js'
 import { JobService } from '../services/domain/job.service.js'
@@ -24,7 +25,7 @@ import { UserRepository } from '../repositories/user-repository.js'
 import { ExternalApiLogRepository } from '../repositories/external-api-log.repository.js'
 import { MediaRepository } from '../repositories/media-repository.js'
 import { getGlobalContainer, resetContainer } from '../container.js'
-import { TOKENS } from '../service-registration.js'
+import { TOKENS, getLogService, getTaskService } from '../service-registration.js'
 import type { ICapacityService } from '../services/domain/interfaces/index.js'
 
 function createPhaseBCapacityService(): ICapacityService {
@@ -105,6 +106,8 @@ async function registerServices(db: Awaited<ReturnType<typeof getDatabase>>) {
 async function registerMockServices(db: Awaited<ReturnType<typeof getDatabase>>) {
   const registry = getServiceNodeRegistry(db)
   const mediaService = new MediaService(new MediaRepository(getConnection()))
+
+  getGlobalContainer().register(TOKENS.TASK_SERVICE, createMockTaskService())
 
   const mockMinimaxClient = {
     chatCompletion: vi.fn().mockResolvedValue({
@@ -220,7 +223,14 @@ describe.skipIf(!hasApiKey)('Workflow Engine - Phase B Integration Tests', () =>
     mediaService = new MediaService(new MediaRepository(conn))
     await registerServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      db,
+      registry,
+      undefined,
+      createMockEventBus(),
+      getLogService(),
+      getTaskService(),
+    )
   })
 
   beforeEach(async () => {
@@ -599,7 +609,14 @@ describe('Workflow Engine - Phase C E2E Tests (Mocked)', () => {
     getGlobalContainer().register(TOKENS.SERVICE_NODE_PERMISSION_SERVICE, serviceNodePermissionService)
     await registerMockServices(db)
     registry = getServiceNodeRegistry(db)
-    engine = new WorkflowEngine(db, registry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      db,
+      registry,
+      undefined,
+      createMockEventBus(),
+      getLogService(),
+      getTaskService(),
+    )
     const mockConcurrencyManager = createMockConcurrencyManager()
     scheduler = new CronScheduler(engine, null, null, createMockEventBus(), mockConcurrencyManager)
   }, 30000)

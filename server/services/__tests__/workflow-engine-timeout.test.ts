@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { WorkflowEngine } from '../workflow/index.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
+import { createMockLogService, createMockTaskService } from '../../__tests__/helpers/mock-services.js'
 
 describe('WorkflowEngine - Node Timeout', () => {
   let engine: WorkflowEngine
@@ -15,7 +16,14 @@ describe('WorkflowEngine - Node Timeout', () => {
       }),
     }
 
-    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      null,
+      mockRegistry as ServiceNodeRegistry,
+      undefined,
+      createMockEventBus(),
+      createMockLogService(),
+      createMockTaskService(),
+    )
   })
 
   describe('default timeout', () => {

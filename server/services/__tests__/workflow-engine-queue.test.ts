@@ -1,18 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { WorkflowEngine } from '../workflow/index.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { TaskQueueItem } from '../../database/types.js'
+import type { ITaskService } from '../../services/domain/interfaces/task.interface.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus.js'
-import { getGlobalContainer, resetContainer } from '../../container.js'
-import { TOKENS } from '../../service-registration.js'
+import { createMockLogService, createMockTaskService } from '../../__tests__/helpers/mock-services.js'
+
+type GetPendingByJobId = (jobId: string, limit: number) => Promise<TaskQueueItem[]>
+type GetPendingByType = (taskType: string, limit: number) => Promise<TaskQueueItem[]>
+type MarkRunning = (id: string) => Promise<TaskQueueItem>
+type MarkCompleted = (id: string, result?: string) => Promise<TaskQueueItem>
+type MarkFailed = (id: string, error: string) => Promise<TaskQueueItem>
+type CreateDeadLetter = (data: { task_id: string; error_message: string }) => Promise<{ id: string }>
 
 interface QueueTaskMocks {
-  getPendingTasksByJob: ReturnType<typeof vi.fn>
-  getPendingTasksByType: ReturnType<typeof vi.fn>
-  markTaskRunning: ReturnType<typeof vi.fn>
-  markTaskCompleted: ReturnType<typeof vi.fn>
-  markTaskFailed: ReturnType<typeof vi.fn>
-  createDeadLetterQueueItem: ReturnType<typeof vi.fn>
+  getPendingTasksByJob: Mock<GetPendingByJobId>
+  getPendingTasksByType: Mock<GetPendingByType>
+  markTaskRunning: Mock<MarkRunning>
+  markTaskCompleted: Mock<MarkCompleted>
+  markTaskFailed: Mock<MarkFailed>
+  createDeadLetterQueueItem: Mock<CreateDeadLetter>
 }
 
 describe('WorkflowEngine - Queue Node', () => {
@@ -22,49 +30,51 @@ describe('WorkflowEngine - Queue Node', () => {
 
   beforeEach(() => {
     queueTaskMocks = {
-      getPendingTasksByJob: vi.fn().mockResolvedValue([]),
-      getPendingTasksByType: vi.fn().mockResolvedValue([]),
-      markTaskRunning: vi.fn().mockImplementation(async (id: string) => ({
+      getPendingTasksByJob: vi.fn<GetPendingByJobId>().mockResolvedValue([]),
+      getPendingTasksByType: vi.fn<GetPendingByType>().mockResolvedValue([]),
+      markTaskRunning: vi.fn<MarkRunning>().mockImplementation(async (id) => ({
         id,
         status: 'running',
-      })),
-      markTaskCompleted: vi.fn().mockImplementation(async (id: string) => ({
+      } as TaskQueueItem)),
+      markTaskCompleted: vi.fn<MarkCompleted>().mockImplementation(async (id) => ({
         id,
         status: 'completed',
-      })),
-      markTaskFailed: vi.fn().mockImplementation(async (id: string) => ({
+      } as TaskQueueItem)),
+      markTaskFailed: vi.fn<MarkFailed>().mockImplementation(async (id) => ({
         id,
         status: 'failed',
-      })),
-      createDeadLetterQueueItem: vi.fn().mockResolvedValue({ id: 'dlq-1' }),
+      } as TaskQueueItem)),
+      createDeadLetterQueueItem: vi.fn<CreateDeadLetter>().mockResolvedValue({ id: 'dlq-1' }),
     }
 
-    getGlobalContainer().register(TOKENS.TASK_SERVICE, {
-      getPendingByJobId: (jobId: string, limit: number) =>
-        (queueTaskMocks.getPendingTasksByJob as unknown as (jobId: string, limit: number) => Promise<TaskQueueItem[]>)(jobId, limit),
-      getPendingByType: (taskType: string, limit: number) =>
-        (queueTaskMocks.getPendingTasksByType as unknown as (taskType: string, limit: number) => Promise<TaskQueueItem[]>)(taskType, limit),
-      markRunning: (id: string) =>
-        (queueTaskMocks.markTaskRunning as unknown as (id: string) => Promise<TaskQueueItem>)(id),
-      markCompleted: (id: string, result?: string) =>
-        (queueTaskMocks.markTaskCompleted as unknown as (id: string, result?: string) => Promise<TaskQueueItem>)(id, result),
-      markFailed: (id: string, error: string) =>
-        (queueTaskMocks.markTaskFailed as unknown as (id: string, error: string) => Promise<TaskQueueItem>)(id, error),
-      moveToDeadLetter: (id: string, error: string) =>
-        (queueTaskMocks.createDeadLetterQueueItem as unknown as (data: { task_id: string; error_message: string }) => Promise<{ id: string }>)(
-          { task_id: id, error_message: error }
-        ),
+    const mockTaskService: ITaskService = createMockTaskService({
+      getPendingByJobId: (jobId, limit) => queueTaskMocks.getPendingTasksByJob(jobId, limit),
+      getPendingByType: (taskType, limit) => queueTaskMocks.getPendingTasksByType(taskType, limit),
+      markRunning: (id) => queueTaskMocks.markTaskRunning(id),
+      markCompleted: (id, result) => queueTaskMocks.markTaskCompleted(id, result),
+      markFailed: (id, error) => queueTaskMocks.markTaskFailed(id, error),
+      moveToDeadLetter: (id, error) => {
+        void queueTaskMocks.createDeadLetterQueueItem({ task_id: id, error_message: error })
+        return Promise.resolve()
+      },
     })
 
     mockRegistry = {
       call: vi.fn().mockResolvedValue({ success: true }),
     }
 
-    engine = new WorkflowEngine(null, mockRegistry as ServiceNodeRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      null,
+      mockRegistry as ServiceNodeRegistry,
+      undefined,
+      createMockEventBus(),
+      createMockLogService(),
+      mockTaskService,
+    )
   })
 
   afterEach(() => {
-    resetContainer()
+    vi.restoreAllMocks()
   })
 
   describe('queue processing', () => {

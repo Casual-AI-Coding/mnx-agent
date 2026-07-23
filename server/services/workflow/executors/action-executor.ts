@@ -1,8 +1,8 @@
 import type { WorkflowNode } from '../types.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import type { IEventBus } from '../../interfaces/event-bus.interface.js'
+import type { ILogService } from '../../../services/domain/interfaces/log.interface.js'
 import { toLocalISODateString } from '../../../lib/date-utils.js'
-import { getLogService } from '../../../service-registration.js'
 
 export interface ActionExecutorDeps {
   serviceRegistry: ServiceNodeRegistry
@@ -11,6 +11,11 @@ export interface ActionExecutorDeps {
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
   eventBus: IEventBus
+  /**
+   * 日志服务，由 WorkflowEngine 通过 NodeExecutorDeps 显式注入。
+   * 设计原因：消除 executors → service-registration → workflow/engine 的循环依赖（ADR-0013 Phase A）。
+   */
+  logService: ILogService
 }
 
 export async function executeActionNode(
@@ -18,7 +23,7 @@ export async function executeActionNode(
   config: Record<string, unknown>,
   deps: ActionExecutorDeps
 ): Promise<unknown> {
-  const { serviceRegistry, executionLogId, workflowId, dryRun, testData, eventBus } = deps
+  const { serviceRegistry, executionLogId, workflowId, dryRun, testData, eventBus, logService } = deps
   const service = config.service as string
   const method = config.method as string
   const args = (config.args as unknown[]) ?? []
@@ -50,7 +55,7 @@ export async function executeActionNode(
   }
 
   if (executionLogId) {
-    const detail = await getLogService().createDetail({
+    const detail = await logService.createDetail({
       log_id: executionLogId,
       node_id: node.id,
       node_type: 'action',
@@ -66,7 +71,7 @@ export async function executeActionNode(
     const result = await serviceRegistry.call(service, method, args)
 
     if (detailId) {
-      await getLogService().updateDetail(detailId, {
+      await logService.updateDetail(detailId, {
         output_result: JSON.stringify(result),
         completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,
@@ -80,7 +85,7 @@ export async function executeActionNode(
     return result
   } catch (error) {
     if (detailId) {
-      await getLogService().updateDetail(detailId, {
+      await logService.updateDetail(detailId, {
         error_message: (error as Error).message,
         completed_at: toLocalISODateString(),
         duration_ms: Date.now() - detailStartTime,

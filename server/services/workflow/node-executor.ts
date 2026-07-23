@@ -2,6 +2,8 @@ import type { TaskResult, WorkflowNode, WorkflowEdge } from './types.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
+import type { ILogService } from '../../services/domain/interfaces/log.interface.js'
+import type { ITaskService } from '../../services/domain/interfaces/task.interface.js'
 import { TASK_TIMEOUTS } from '../../config/timeouts.js'
 import { 
   nodeExecutorRegistry, 
@@ -25,6 +27,8 @@ export interface NodeExecutorDeps {
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
   eventBus: IEventBus
+  logService: ILogService
+  taskService: ITaskService
 }
 
 export async function executeNode(
@@ -47,6 +51,8 @@ export async function executeNode(
     dryRun: deps.dryRun,
     testData: deps.testData,
     eventBus: deps.eventBus,
+    logService: deps.logService,
+    taskService: deps.taskService,
   }
 
   const executeOnce = async (): Promise<TaskResult> => {

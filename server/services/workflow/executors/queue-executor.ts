@@ -2,7 +2,7 @@ import type { WorkflowNode, TaskResult } from '../types.js'
 import type { ITaskExecutor } from '../../../types/task.js'
 import type { ServiceNodeRegistry } from '../../service-node-registry.js'
 import type { IEventBus } from '../../interfaces/event-bus.interface.js'
-import { getTaskService } from '../../../service-registration.js'
+import type { ITaskService } from '../../../services/domain/interfaces/task.interface.js'
 
 export interface QueueExecutorDeps {
   taskExecutor: ITaskExecutor | null
@@ -10,6 +10,11 @@ export interface QueueExecutorDeps {
   executionLogId: string | null
   workflowId: string | null
   eventBus: IEventBus
+  /**
+   * 任务队列服务，由 WorkflowEngine 通过 NodeExecutorDeps 显式注入。
+   * 设计原因：消除 executors → service-registration → workflow/engine 的循环依赖（ADR-0013 Phase A）。
+   */
+  taskService: ITaskService
 }
 
 export async function executeQueueNode(
@@ -17,7 +22,7 @@ export async function executeQueueNode(
   config: Record<string, unknown>,
   deps: QueueExecutorDeps
 ): Promise<{ total: number; succeeded: number; failed: number }> {
-  const { taskExecutor, serviceRegistry, executionLogId, workflowId, eventBus } = deps
+  const { taskExecutor, serviceRegistry, executionLogId, workflowId, eventBus, taskService } = deps
   const jobId = config.jobId as string | undefined
   const taskType = config.taskType as string | undefined
   const limit = (config.limit as number) ?? 10
@@ -38,9 +43,9 @@ export async function executeQueueNode(
     }[] = []
 
     if (jobId) {
-      tasks = await getTaskService().getPendingByJobId(jobId, limit)
+      tasks = await taskService.getPendingByJobId(jobId, limit)
     } else if (taskType) {
-      tasks = await getTaskService().getPendingByType(taskType, limit)
+      tasks = await taskService.getPendingByType(taskType, limit)
     }
 
     const total = tasks.length
@@ -49,7 +54,7 @@ export async function executeQueueNode(
 
     for (const task of tasks) {
       try {
-        await getTaskService().markRunning(task.id)
+        await taskService.markRunning(task.id)
 
         const payload = JSON.parse(task.payload)
         let result: TaskResult
@@ -63,16 +68,16 @@ export async function executeQueueNode(
           ])) as TaskResult
         }
 
-        await getTaskService().markCompleted(task.id, JSON.stringify(result))
+        await taskService.markCompleted(task.id, JSON.stringify(result))
         succeeded++
       } catch (error) {
         const errorMessage = (error as Error).message
-        await getTaskService().markFailed(task.id, errorMessage)
+        await taskService.markFailed(task.id, errorMessage)
         failed++
 
         const newRetryCount = task.retry_count + 1
         if (newRetryCount >= task.max_retries) {
-          await getTaskService().moveToDeadLetter(task.id, errorMessage)
+          await taskService.moveToDeadLetter(task.id, errorMessage)
           continue
         }
       }

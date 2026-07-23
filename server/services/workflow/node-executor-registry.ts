@@ -2,6 +2,8 @@ import type { WorkflowNode, WorkflowEdge } from './types.js'
 import type { ServiceNodeRegistry } from '../service-node-registry.js'
 import type { ITaskExecutor } from '../../types/task.js'
 import type { IEventBus } from '../interfaces/event-bus.interface.js'
+import type { ILogService } from '../../services/domain/interfaces/log.interface.js'
+import type { ITaskService } from '../../services/domain/interfaces/task.interface.js'
 import {
   executeActionNode,
   executeConditionNode,
@@ -25,6 +27,8 @@ export interface NodeExecutionContext {
   dryRun: boolean
   testData: Record<string, { mockResponse?: unknown; mockInput?: unknown }>
   eventBus: IEventBus
+  logService: ILogService
+  taskService: ITaskService
 }
 
 export interface NodeExecutionResult {
@@ -71,6 +75,7 @@ nodeExecutorRegistry.register('action', async (node, config, _nodeOutputs, conte
     dryRun: context.dryRun,
     testData: context.testData,
     eventBus: context.eventBus,
+    logService: context.logService,
   })
 })
 
@@ -118,6 +123,7 @@ nodeExecutorRegistry.register('queue', async (node, config, _nodeOutputs, contex
     executionLogId: context.executionLogId,
     workflowId: context.workflowId,
     eventBus: context.eventBus,
+    taskService: context.taskService,
   })
 })
 

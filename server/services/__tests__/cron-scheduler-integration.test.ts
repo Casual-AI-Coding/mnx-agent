@@ -10,6 +10,7 @@ import type { TaskQueueItem } from '../../database/types.js'
 import { getGlobalContainer, resetContainer } from '../../container.js'
 import { TOKENS } from '../../service-registration.js'
 import { createMockEventBus } from '../../__tests__/helpers/mock-event-bus'
+import { createMockLogService } from '../../__tests__/helpers/mock-services'
 
 interface SchedulerWorkflowMocks {
   getActiveCronJobs: ReturnType<typeof vi.fn>
@@ -109,12 +110,14 @@ describe('CronScheduler Integration with TaskExecutor', () => {
 
     mockEventBus = createMockEventBus()
     mockConcurrencyManager = createMockConcurrencyManager()
-    
+
     workflowEngine = new WorkflowEngine(
       null,
       mockRegistry as ServiceNodeRegistry,
       mockTaskExecutor as any,
-      mockEventBus
+      mockEventBus,
+      createMockLogService(),
+      createMockTaskService(),
     )
     
     cronScheduler = new CronScheduler(
@@ -313,12 +316,14 @@ describe('WorkflowEngine with TaskExecutor', () => {
     mockEventBus = createMockEventBus()
     mockTaskService = createMockTaskService()
     getGlobalContainer().register(TOKENS.TASK_SERVICE, mockTaskService)
-    
+
     workflowEngine = new WorkflowEngine(
       null,
       mockRegistry as ServiceNodeRegistry,
       mockTaskExecutor as any,
-      mockEventBus
+      mockEventBus,
+      createMockLogService(),
+      mockTaskService,
     )
   })
 
@@ -376,7 +381,9 @@ describe('WorkflowEngine with TaskExecutor', () => {
       null,
       mockRegistry as ServiceNodeRegistry,
       undefined,
-      mockEventBus
+      mockEventBus,
+      createMockLogService(),
+      mockTaskService,
     )
 
     const queueTask = {

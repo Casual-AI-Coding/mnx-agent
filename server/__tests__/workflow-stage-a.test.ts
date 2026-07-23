@@ -3,6 +3,7 @@ import { WorkflowNodeType } from '../types/workflow'
 import type { ServiceNodeRegistry } from '../services/service-node-registry'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createMockEventBus } from './helpers/mock-event-bus'
+import { createMockLogService, createMockTaskService } from './helpers/mock-services'
 
 type TestWorkflowNode = Omit<WorkflowGraph['nodes'][number], 'position'> & { position?: WorkflowGraph['nodes'][number]['position'] }
 type TestWorkflowGraph = Omit<WorkflowGraph, 'nodes'> & { nodes: TestWorkflowNode[] }
@@ -73,7 +74,14 @@ describe('Workflow Engine - Stage A Verification', () => {
 
   beforeEach(() => {
     mockRegistry = createMockServiceRegistry()
-    engine = new WorkflowEngine(null, mockRegistry, undefined, createMockEventBus())
+    engine = new WorkflowEngine(
+      null,
+      mockRegistry,
+      undefined,
+      createMockEventBus(),
+      createMockLogService(),
+      createMockTaskService(),
+    )
   })
 
   describe('A-1: Single Action Node', () => {

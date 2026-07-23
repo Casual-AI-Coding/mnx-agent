@@ -109,7 +109,14 @@ export async function registerServiceDependencies(container: Container): Promise
   })
 
   container.registerSingleton(TOKENS.WORKFLOW_ENGINE, (c) => {
-    return new WorkflowEngine(c.resolve(TOKENS.DATABASE), c.resolve(TOKENS.SERVICE_NODE_REGISTRY), undefined, c.resolve(TOKENS.EVENT_BUS))
+    return new WorkflowEngine(
+      c.resolve(TOKENS.DATABASE),
+      c.resolve(TOKENS.SERVICE_NODE_REGISTRY),
+      undefined,
+      c.resolve(TOKENS.EVENT_BUS),
+      c.resolve(TOKENS.LOG_SERVICE),
+      c.resolve(TOKENS.TASK_SERVICE),
+    )
   })
 
   container.registerSingleton(TOKENS.NOTIFICATION_SERVICE, (c): NotificationService => {

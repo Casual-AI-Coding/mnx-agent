@@ -1,4 +1,4 @@
-import { createMockEventBus } from './__tests__/helpers/mock-event-bus'
+import { createMockLogService, createMockTaskService } from './__tests__/helpers/mock-services'
 /**
  * 阶段 B 验证：真实 API 集成测试
  * 直接调用 WorkflowEngine，不通过 HTTP API
@@ -16,7 +16,14 @@ async function testWorkflow() {
   const db = await getDatabase()
   const registry = getServiceNodeRegistry(db)
   const eventBus = getEventBus()
-  const engine = new WorkflowEngine(db, registry, undefined, eventBus)
+  const engine = new WorkflowEngine(
+    db,
+    registry,
+    undefined,
+    eventBus,
+    createMockLogService(),
+    createMockTaskService(),
+  )
 
   // 检查注册的服务
   const services = registry.getAllServices()
