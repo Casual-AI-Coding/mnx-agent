@@ -12,6 +12,7 @@ import {
   Gauge,
   GitBranch,
   Globe,
+  FlaskConical,
   LifeBuoy,
   HardDrive,
   Image,
@@ -84,6 +85,15 @@ export function getMenuSections(
       items: featureFlags.openAIImage2Debug
         ? [{ path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image }]
         : [],
+    },
+    {
+      id: 'devtools',
+      label: '开发工具',
+      icon: FlaskConical,
+      minRole: UserRole.PRO,
+      items: [
+        { path: '/playground', label: t('sidebar.playground', 'API Playground'), icon: FlaskConical },
+      ],
     },
     {
       id: 'help',

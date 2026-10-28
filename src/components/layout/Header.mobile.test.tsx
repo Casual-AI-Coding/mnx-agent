@@ -46,7 +46,11 @@ vi.mock('framer-motion', () => ({
 }))
 
 vi.mock('@/themes/tokens', () => ({
-  status: {},
+  status: {
+    success: { icon: 'text-success', text: 'text-success', bg: 'bg-success', bgSubtle: 'bg-success/10' },
+    warning: { icon: 'text-warning', text: 'text-warning', bg: 'bg-warning', bgSubtle: 'bg-warning/10' },
+    error: { icon: 'text-error', text: 'text-error', bg: 'bg-error', bgSubtle: 'bg-error/10' },
+  },
   roles: {
     user: { bgLight: 'bg-user', text: 'text-user' },
     super: { bgLight: 'bg-super', text: 'text-super' },

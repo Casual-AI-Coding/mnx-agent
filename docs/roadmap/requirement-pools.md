@@ -100,7 +100,7 @@
 
 ## 2026-04-15
 
-**汇总**: 9 个需求 | 已完成: 5 | 待办: 4
+**汇总**: 9 个需求 | 已完成: 9 | 待办: 0
 
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
@@ -109,7 +109,7 @@
 | R-015 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 已完成 |
 | R-016 | 全局通知中心与 Toast 治理 | UX | P1 | v3.2 | 待办 |
 | R-017 | 资源置顶功能 | UX | P2 | v2.7 | 已完成 |
-| R-018 | API Playground | DevTools | P1 | v4.1 | 待办 |
+| R-018 | API Playground | DevTools | P1 | v4.1 | 已完成 |
 | R-019 | Prompt模板版本管理 | Content | P3 | v2.4 | 已完成 |
 | R-020 | 错误码速查表 | Help | P2 | v3.4 | 已完成 |
 | R-021 | 资源集成 | Content | P2 | v2.4 | 已完成 |
@@ -141,7 +141,7 @@
 
 ### R-018 - API Playground
 - **描述**: 交互式 API 调试界面，支持参数配置、实时响应查看、一键生成 Python/JS 调用代码
-- **现状**: 无类似功能
+- **现状**: 已完成。/playground 页面：七类端点目录（真实消耗标注）、参数/请求体编辑、实时响应、Python/JS/cURL 代码一键生成
 - **范围**: `src/pages/Playground.tsx` + 各服务调试组件 + `src/components/CodeSnippetGenerator.tsx`
 
 ### R-019 - Prompt模板版本管理

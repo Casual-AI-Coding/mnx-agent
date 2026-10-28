@@ -43,6 +43,7 @@ const SystemConfig = lazy(() => import('@/pages/SystemConfig'))
 const Announcements = lazy(() => import('@/pages/Admin/Announcements'))
 const RateLimits = lazy(() => import('@/pages/Admin/RateLimits'))
 const HelpCenter = lazy(() => import('@/pages/HelpCenter'))
+const Playground = lazy(() => import('@/pages/Playground'))
 const MaterialManagement = lazy(() => import('@/pages/MaterialManagement'))
 const ArtistMaterialEditor = lazy(() => import('@/pages/ArtistMaterialEditor'))
 const OpenAIImage2 = lazy(() => import('@/pages/OpenAIImage2'))
@@ -369,6 +370,14 @@ function AppContent() {
           element={
             <RouteWithErrorBoundary pageName="模板市场">
               <WorkflowMarketplace />
+            </RouteWithErrorBoundary>
+          }
+        />
+        <Route
+          path="playground"
+          element={
+            <RouteWithErrorBoundary pageName="API Playground">
+              <Playground />
             </RouteWithErrorBoundary>
           }
         />
