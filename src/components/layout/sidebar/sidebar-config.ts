@@ -134,6 +134,7 @@ export function getMenuSections(
         { path: '/invitation-codes', label: t('sidebar.invitationCodes', '邀请码'), icon: Key },
         { path: '/service-nodes', label: t('sidebar.serviceNodes', '节点权限'), icon: Server },
         { path: '/announcements', label: t('sidebar.announcements', '公告管理'), icon: Bell },
+        { path: '/admin/rate-limits', label: t('sidebar.rateLimits', '速率限制'), icon: Gauge },
       ],
     },
   ]

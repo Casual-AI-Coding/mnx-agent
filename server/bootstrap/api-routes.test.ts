@@ -147,6 +147,7 @@ describe('configureApiRoutes', () => {
       '/api/admin/announcements',
       '/api/admin/workflows',
       '/api/admin/service-permissions',
+      '/api/admin/rate-limits',
       '/api/stats',
       '/api/export',
       '/api/audit',

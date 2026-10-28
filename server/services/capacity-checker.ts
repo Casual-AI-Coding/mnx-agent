@@ -3,7 +3,7 @@ import { CapacityRecord, CreateCapacityRecord } from '../database/types'
 import type { ICapacityService } from './domain/interfaces/index.js'
 import { SimpleCache } from '../lib/cache.js'
 import { toLocalISODateString } from '../lib/date-utils.js'
-import { RATE_LIMITS_BY_SERVICE } from '../config/rate-limits.js'
+import { getEffectiveServiceRateLimits, getRateLimitForService } from '../config/rate-limits.js'
 
 const BALANCE_CACHE_TTL_MS = 5000
 
@@ -121,8 +121,7 @@ export class CapacityChecker {
   async getRemainingCapacity(serviceType: string): Promise<number> {
     const capacity = await this.fetchCapacityRecord(serviceType)
     if (!capacity) {
-      const rateLimit = RATE_LIMITS_BY_SERVICE[serviceType]
-      return rateLimit?.rpm ?? 100
+      return getRateLimitForService(serviceType)
     }
     return capacity.remaining_quota
   }
@@ -136,7 +135,7 @@ export class CapacityChecker {
     const now = new Date()
     const resetAt = toLocalISODateString(new Date(now.getTime() + 60000))
 
-    for (const [serviceType, config] of Object.entries(RATE_LIMITS_BY_SERVICE)) {
+    for (const [serviceType, config] of Object.entries(getEffectiveServiceRateLimits())) {
       await this.saveCapacityRecord(serviceType, config.rpm, config.rpm, resetAt)
     }
   }
@@ -154,9 +153,8 @@ export class CapacityChecker {
   async getSafeExecutionLimit(serviceType: string): Promise<number> {
     const balance = await this.checkBalance()
     const remainingCapacity = await this.getRemainingCapacity(serviceType)
-    const rateLimit = RATE_LIMITS_BY_SERVICE[serviceType]
 
-    const safeLimit = Math.min(remainingCapacity, rateLimit?.rpm ?? 100)
+    const safeLimit = Math.min(remainingCapacity, getRateLimitForService(serviceType))
     const balanceBasedLimit = Math.floor(balance.totalBalance / 0.01)
 
     return Math.min(safeLimit, balanceBasedLimit)

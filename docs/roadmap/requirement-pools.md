@@ -106,7 +106,7 @@
 |----|------|------|--------|------|------|
 | R-013 | 结构化日志 + Trace ID | Monitoring | P0 | v2.5 | 已完成 |
 | R-014 | 错误追踪集成 | Monitoring | P0 | v2.5 | 已完成 |
-| R-015 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 待办 |
+| R-015 | Rate Limiting 管理界面 | Admin | P1 | v3.3 | 已完成 |
 | R-016 | 全局通知中心与 Toast 治理 | UX | P1 | v3.2 | 待办 |
 | R-017 | 资源置顶功能 | UX | P2 | v2.7 | 已完成 |
 | R-018 | API Playground | DevTools | P1 | v4.1 | 待办 |
@@ -126,7 +126,7 @@
 
 ### R-015 - Rate Limiting 管理界面
 - **描述**: 管理员可在 UI 查看/调整各服务的速率限制，无需改代码
-- **现状**: `rate-limits.ts` 纯静态配置，无 UI
+- **现状**: 已完成。服务 RPM 迁移到 system_config 动态配置（ratelimit.service_rpm，TTL 懒刷新 + 写入即生效），新增 super 专用 GET/PUT /api/admin/rate-limits 端点与「速率限制」管理页面（侧边栏入口）
 - **范围**: `server/routes/admin/rate-limits.ts` + `src/pages/Admin/RateLimits.tsx`
 
 ### R-016 - 全局通知中心与 Toast 治理
