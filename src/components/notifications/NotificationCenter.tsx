@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, Bell, CheckCheck, Info, Trash2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Bell, CheckCheck, Info, Trash2, X, AlertCircle, CheckCircle2, Code2 } from 'lucide-react'
 import { useNotificationStore, type AppNotification, type NotificationLevel } from '@/stores/notification'
 import { getCurrentAnnouncements } from '@/lib/api/announcements'
 import { cn } from '@/lib/utils'
@@ -145,6 +145,13 @@ export function NotificationCenter() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            <div className="px-4 py-2 border-b border-border/50 bg-secondary/30">
+              <Link to="/help#error-codes" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1" onClick={() => setOpen(false)}>
+                <Code2 className="w-3 h-3" />
+                遇到错误？查看错误码速查表
+              </Link>
             </div>
 
             <div className="max-h-[380px] overflow-y-auto">

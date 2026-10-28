@@ -12,6 +12,7 @@ import {
   Gauge,
   GitBranch,
   Globe,
+  LifeBuoy,
   HardDrive,
   Image,
   Key,
@@ -83,6 +84,15 @@ export function getMenuSections(
       items: featureFlags.openAIImage2Debug
         ? [{ path: '/external-debug/openai-image-2', label: 'OpenAI Image-2', icon: Image }]
         : [],
+    },
+    {
+      id: 'help',
+      label: '帮助',
+      icon: LifeBuoy,
+      minRole: UserRole.USER,
+      items: [
+        { path: '/help', label: t('sidebar.helpCenter', '帮助中心'), icon: LifeBuoy },
+      ],
     },
     {
       id: 'resources',
