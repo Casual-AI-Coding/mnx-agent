@@ -3,11 +3,11 @@ import {
   initWebSocketClient,
   getWebSocketClient,
   closeWebSocketClient,
-  showEventToast,
   type ConnectionStatus,
   type WebSocketEvent,
   type WebSocketChannel,
 } from '@/lib/websocket-client'
+import { ingestWebSocketEvent } from '@/lib/notification-events'
 
 interface UseWebSocketOptions {
   channels?: WebSocketChannel[]
@@ -58,7 +58,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       addEvent(event)
 
       if (showToasts) {
-        showEventToast(event)
+        // R-016: 统一走通知中心分发（error 级别才弹 Toast），不再全量 toast
+        ingestWebSocketEvent(event)
       }
 
       onEvent?.(event)

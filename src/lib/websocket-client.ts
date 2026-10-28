@@ -1,4 +1,3 @@
-import { toastInfo, toastError } from './toast'
 import { WEBSOCKET } from '@/lib/config'
 
 export interface WebSocketMessage {
@@ -434,77 +433,8 @@ function getWebSocketUrl(): string {
   return `${protocol}//${window.location.host}/ws/cron`
 }
 
-const TOAST_DEBOUNCE_MS = 5000
 const MAX_TOAST_MAP_SIZE = 200
 
-const recentToasts = new Map<string, number>()
 
-function pruneRecentToasts(now: number): void {
-  if (recentToasts.size <= MAX_TOAST_MAP_SIZE) return
 
-  for (const [key, timestamp] of recentToasts) {
-    if (now - timestamp > TOAST_DEBOUNCE_MS * 2) {
-      recentToasts.delete(key)
-    }
-  }
 
-  while (recentToasts.size > MAX_TOAST_MAP_SIZE) {
-    const oldestKey = recentToasts.keys().next().value
-    if (!oldestKey) return
-    recentToasts.delete(oldestKey)
-  }
-}
-
-export function showEventToast(event: WebSocketEvent): void {
-  const toastKey = buildToastKey(event)
-  const now = Date.now()
-  const lastTime = recentToasts.get(toastKey)
-
-  pruneRecentToasts(now)
-
-  if (lastTime && now - lastTime < TOAST_DEBOUNCE_MS) {
-    return
-  }
-  recentToasts.set(toastKey, now)
-
-  switch (event.type) {
-    case 'job_created':
-      toastInfo('定时任务已创建', (event.payload as { name?: string })?.name || '新任务')
-      break
-    case 'job_executed':
-    case 'task_completed':
-    case 'workflow_test_started':
-      // 成功/创建/测试开始事件不再直接 toast，避免刷屏
-      break
-    case 'task_failed':
-      toastError('任务执行失败', (event.payload as { id?: string })?.id || '')
-      break
-    case 'task_moved_to_dlq':
-      toastError('任务移至死信队列', (event.payload as { id?: string })?.id || '')
-      break
-    case 'workflow_test_completed': {
-      const payload = event.payload as { status?: string; error?: string }
-      if (payload.status === 'failed' || payload.error) {
-        toastError('工作流测试失败', payload.error || '未知错误')
-      }
-      break
-    }
-    case 'retry_scheduled':
-      toastInfo('任务重试已调度', `将在 ${(event.payload as { retryAt?: string })?.retryAt} 重试`)
-      break
-    case 'queue_capacity_warning':
-      toastError('队列容量警告', `剩余容量: ${(event.payload as { remaining?: number })?.remaining || 0}`)
-      break
-    default:
-      break
-  }
-}
-
-function buildToastKey(event: WebSocketEvent): string {
-  const payload = event.payload as Record<string, unknown> | undefined
-  if (payload?.id) return `${event.type}:${payload.id}`
-  if (payload?.jobId) return `${event.type}:${payload.jobId}`
-  if (payload?.workflowId) return `${event.type}:${payload.workflowId}`
-  if (payload?.executionId) return `${event.type}:${payload.executionId}`
-  return event.type
-}

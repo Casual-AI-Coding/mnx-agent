@@ -33,6 +33,7 @@ vi.mock('../services/audit-context.service.js', () => ({
 vi.mock('../routes/admin/service-nodes.js', () => ({ default: mockedHandlers.routeHandler }))
 vi.mock('../routes/admin/service-permissions.js', () => ({ default: mockedHandlers.routeHandler }))
 vi.mock('../routes/admin/workflows.js', () => ({ default: mockedHandlers.routeHandler }))
+vi.mock('../routes/announcements.js', () => ({ default: mockedHandlers.routeHandler }))
 vi.mock('../routes/audit.js', () => ({ default: mockedHandlers.routeHandler }))
 vi.mock('../routes/auth.js', () => ({ default: mockedHandlers.routeHandler }))
 vi.mock('../routes/capacity.js', () => ({ default: mockedHandlers.routeHandler }))
@@ -155,6 +156,7 @@ describe('configureApiRoutes', () => {
       '/api/invitation-codes',
       '/api/system-config',
       '/api/settings',
+      '/api/announcements',
     ])
   })
 })

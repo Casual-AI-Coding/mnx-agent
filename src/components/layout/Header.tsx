@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/settings/store'
 import { useAuthStore } from '@/stores/auth'
 import { logout as logoutApi } from '@/lib/api/auth'
 import { roles } from '@/themes/tokens'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -85,6 +86,9 @@ export default function Header({ onHistoryClick, onShowKeyModal, onMenuClick }: 
           </div>
 
           <div className="flex items-center gap-2">
+            {}
+            <NotificationCenter />
+
             {}
             <div className="relative">
               <motion.button
