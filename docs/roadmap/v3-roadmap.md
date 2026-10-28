@@ -14,7 +14,7 @@ v3.x 系列专注用户体验优化，提升系统响应速度和用户支持能
 |------|--------|----------|------|------|
 | v3.0 | R-012 | 移动端适配 | 需求池 | 已完成 |
 | v3.1 | R-007 | 性能优化 | 需求池 | 已完成 |
-| v3.2 | R-005 | Dashboard 运营总览 | 需求池 | 待办 |
+| v3.2 | R-005 | Dashboard 运营总览 | 需求池 | 已完成 |
 | v3.2 | R-016 | 全局通知中心与 Toast 治理 | 需求池 | 待办 |
 | v3.2 | R-022 | 用量监控完善 | 需求池 | 待办 |
 | v3.3 | R-015 | Rate Limiting 管理界面 | 需求池 | 待办 |
@@ -29,6 +29,7 @@ v3.x 系列专注用户体验优化，提升系统响应速度和用户支持能
 | 日期 | 变更 |
 |------|------|
 | 2026-05-11 | R-012 移动端适配标记为部分完成（基础抽屉布局已实施；主表状态同步）；安全/体验/移动端修复批次完成 |
+| 2026-10-29 | R-005（Dashboard 运营总览）标记为已完成；DashboardService 六板块聚合 + /api/stats/operations + Dashboard 组件化重构 |
 | 2026-07-22 | R-007（性能优化）标记为已完成；上传/下载链路流式化（diskStorage + 流式 API + archive.file），WebSocket media_event channel，migration_041 复合索引 |
 | 2026-07-15 | R-012（移动端适配）标记为已完成；4 Wave / 11 commits；新增 useReducedMotion + useBreakpoint + Button touchable + WorkflowBuilder 移动端降级 + 4 断点回归测试 |
 | 2026-05-11 | v3.2 增加 R-016 全局通知中心与 Toast 治理、R-022 用量监控完善；R-005 更名为 Dashboard 运营总览 |

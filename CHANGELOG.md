@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2026-10-29
+
+### ✨ Added（R-005 Dashboard 运营总览）
+
+- **运营总览聚合服务** — 新增 `DashboardService`（`DASHBOARD_SERVICE` 单例），编排 LogService/TaskService/CapacityService/DatabaseService/PoolStats 六板块，单一板块失败降级为 `{ error }` 不阻塞整体；新增仓储方法 `LogRepository.getRecentFailed` 与 `DeadLetterRepository.countUnresolved` 及领域接口透传（涉及 `server/services/domain/dashboard.service.ts`, `server/services/domain/interfaces/dashboard.interface.ts`, `server/repositories/log-repository.ts`, `server/repositories/deadletter-repository.ts`）
+- **运营总览端点** — `GET /api/stats/operations`（JWT + owner 隔离）：执行统计（总执行/成功率/失败率/平均耗时）、服务分布、最近失败任务、DLQ 摘要（未解决计数 + 最近 5 条）、容量风险（本地快照，剩余 < 20% 判险，不触发外部 API）、系统健康（数据库连通/运行时长/连接池）（涉及 `server/routes/stats.ts`）
+- **Dashboard 运营总览重构** — 首页升级为运营总览：四指标卡（失败率 > 20% 红色告警）、系统健康三卡（数据库/DLQ/容量风险，带跳转入口）、服务分布占比条形、最近失败明细；保留快捷入口/最近活动/欢迎引导；WS job/task 事件自动刷新 + 手动刷新按钮；最近活动抽取为 `RecentActivityCard` 保持 300 行上限（涉及 `src/pages/Dashboard.tsx`, `src/components/dashboard/`）
+
+### 🧪 Tests
+
+- **DashboardService 单元测试** — 5 用例覆盖六板块聚合、owner 隔离透传、容量风险阈值（< 20%）、板块独立降级、健康汇总
+- **/operations 集成测试** — 3 用例覆盖 401、聚合数据断言（owner 隔离计数/失败明细/DLQ/容量风险/健康），种子幂等（跨运行清理 + 容量 service_type 独立命名避免污染共享测试库）
+- **前端组件测试** — 10 用例覆盖指标渲染、降级提示、空态、容量风险与格式化
+- **mock-services 同步** — 共享测试桩补充 `getRecentFailedExecutions`/`countUnresolvedDeadLetters`
+
+### Backward Compatibility
+
+- ✅ 既有 `/api/stats/*` 端点契约不变，`/operations` 为增量端点
+- ✅ Dashboard 保留全部既有功能（欢迎引导/快捷入口/最近活动/WS 连接指示）
+- ✅ 仓储新增方法为增量，既有查询不变
+
 ## [3.1.0] - 2026-07-23
 
 ### ⚡ Performance
