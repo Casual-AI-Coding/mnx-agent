@@ -142,6 +142,7 @@ export default function Sidebar({ onCollapseChange, onWidthChange, isMobile, onN
   return (
     <aside
       ref={asideRef}
+      data-tour="sidebar"
       className={cn(
         'bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col transition-all duration-200',
         isMobile

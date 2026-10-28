@@ -26,7 +26,14 @@ export function NavItem({ collapsed, item, onClick }: NavItemProps) {
     )
 
   return (
-    <NavLink key={item.path} to={item.path} title={collapsed ? item.label : undefined} className={baseClassName} onClick={onClick}>
+    <NavLink
+      key={item.path}
+      to={item.path}
+      title={collapsed ? item.label : undefined}
+      className={baseClassName}
+      onClick={onClick}
+      data-tour={item.path === '/help' ? 'help-center' : undefined}
+    >
       <Icon className={collapsed ? 'w-5 h-5' : 'w-4 h-4'} />
       {!collapsed && item.label}
     </NavLink>

@@ -10,6 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal'
+import { TourGuide } from '@/components/onboarding/TourGuide'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
 import { OperationsCards } from '@/components/dashboard/OperationsCards'
 import { ServiceDistribution } from '@/components/dashboard/ServiceDistribution'
@@ -19,6 +20,7 @@ import { RecentActivityCard } from '@/components/dashboard/RecentActivityCard'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { getOperationsOverview, type OperationsOverview } from '@/lib/api/stats'
+import { isTourCompleted } from '@/lib/tour-steps'
 import type { ConnectionStatus } from '@/lib/websocket-client'
 import { cn } from '@/lib/utils'
 import { status as statusTokens } from '@/themes/tokens'
@@ -56,6 +58,7 @@ export default function Dashboard() {
   })
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [showTour, setShowTour] = useState(false)
   const [operations, setOperations] = useState<OperationsOverview | null>(null)
   const [operationsLoading, setOperationsLoading] = useState(true)
 
@@ -82,6 +85,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (!hasCompletedOnboarding) {
       setShowWelcomeModal(true)
+    } else if (!isTourCompleted()) {
+      // 欢迎弹窗已完成但未看过漫游引导
+      setShowTour(true)
     }
   }, [hasCompletedOnboarding])
 
@@ -89,6 +95,7 @@ export default function Dashboard() {
     setShowWelcomeModal(false)
     if (dontShowAgain) {
       localStorage.setItem('onboarding-complete', 'true')
+      setShowTour(true)
     }
   }
 
@@ -179,6 +186,8 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <TourGuide open={showTour} onClose={() => setShowTour(false)} />
+
         <OperationsCards executions={operations?.executions ?? null} loading={operationsLoading} />
 
         <SystemHealthStrip
@@ -193,7 +202,7 @@ export default function Dashboard() {
           <RecentFailures failures={operations?.recentFailures ?? null} loading={operationsLoading} />
         </div>
 
-        <div>
+        <div data-tour="quick-actions">
           <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <Zap className={cn('w-5 h-5', statusTokens.warning.icon)} />
             {t('dashboard.quickStart')}

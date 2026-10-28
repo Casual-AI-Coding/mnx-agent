@@ -87,7 +87,7 @@ export function NotificationCenter() {
   }
 
   return (
-    <div className="relative" ref={containerRef} data-testid="notification-center">
+    <div className="relative" ref={containerRef} data-testid="notification-center" data-tour="notification-center">
       <button
         onClick={() => setOpen((prev) => !prev)}
         className="relative flex items-center justify-center w-9 h-9 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-all"
