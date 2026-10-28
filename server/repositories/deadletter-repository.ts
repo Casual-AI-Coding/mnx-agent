@@ -41,7 +41,7 @@ export class DeadLetterRepository extends BaseRepository<DeadLetterQueueItem, Cr
     await this.conn.execute(
       `INSERT INTO dead_letter_queue (id, original_task_id, job_id, owner_id, task_type, payload, error_message, retry_count, max_retries, failed_at, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, data.original_task_id ?? null, data.job_id ?? null, ownerId ?? null, data.task_type, payload, data.error_message ?? null, data.retry_count ?? 0, data.max_retries ?? 3, now, now]
+      [id, data.original_task_id ?? null, data.job_id ?? null, data.owner_id ?? ownerId ?? null, data.task_type, payload, data.error_message ?? null, data.retry_count ?? 0, data.max_retries ?? 3, now, now]
     )
 
     return (await this.getById(id))!
