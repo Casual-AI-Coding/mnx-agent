@@ -104,6 +104,10 @@ export class TaskService implements ITaskService {
     return this.deadLetterRepo.listItems(ownerId, limit ?? 50)
   }
 
+  async countUnresolvedDeadLetters(ownerId?: string): Promise<number> {
+    return this.deadLetterRepo.countUnresolved(ownerId)
+  }
+
   async getDeadLetterItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null> {
     return this.deadLetterRepo.getById(id, ownerId)
   }

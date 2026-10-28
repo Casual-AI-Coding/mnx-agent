@@ -63,6 +63,18 @@ export class DeadLetterRepository extends BaseRepository<DeadLetterQueueItem, Cr
     return rows.map(rowToDeadLetterQueueItem)
   }
 
+  async countUnresolved(ownerId?: string): Promise<number> {
+    const rows = ownerId
+      ? await this.conn.query<{ count: string }>(
+          'SELECT COUNT(*) AS count FROM dead_letter_queue WHERE owner_id = $1 AND resolved_at IS NULL',
+          [ownerId]
+        )
+      : await this.conn.query<{ count: string }>(
+          'SELECT COUNT(*) AS count FROM dead_letter_queue WHERE resolved_at IS NULL'
+        )
+    return parseInt(rows[0]?.count ?? '0', 10)
+  }
+
   async update(id: string, data: UpdateDeadLetterQueueItem, ownerId?: string): Promise<DeadLetterQueueItem | null> {
     const existing = await this.getById(id, ownerId)
     if (!existing) return null

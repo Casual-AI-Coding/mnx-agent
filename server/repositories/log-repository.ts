@@ -215,6 +215,19 @@ export class LogRepository extends BaseRepository<ExecutionLog, CreateExecutionL
     return this.getAll(undefined, limit, ownerId)
   }
 
+  async getRecentFailed(limit: number = 5, ownerId?: string): Promise<ExecutionLog[]> {
+    const rows = ownerId
+      ? await this.conn.query<ExecutionLogRow>(
+          'SELECT * FROM execution_logs WHERE status = $1 AND owner_id = $2 ORDER BY started_at DESC LIMIT $3',
+          ['failed', ownerId, limit]
+        )
+      : await this.conn.query<ExecutionLogRow>(
+          'SELECT * FROM execution_logs WHERE status = $1 ORDER BY started_at DESC LIMIT $2',
+          ['failed', limit]
+        )
+    return rows.map(rowToExecutionLog)
+  }
+
   async createDetail(data: CreateExecutionLogDetail): Promise<string> {
     const id = uuidv4()
     const now = toLocalISODateString()

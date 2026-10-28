@@ -91,6 +91,10 @@ export class LogService implements ILogService {
     return this.logRepo.getStatsErrors(limit, ownerId)
   }
 
+  async getRecentFailedExecutions(limit: number = 5, ownerId?: string): Promise<ExecutionLog[]> {
+    return this.logRepo.getRecentFailed(limit, ownerId)
+  }
+
   async createAuditLog(data: CreateAuditLog): Promise<AuditLog> {
     return this.userRepo.createAuditLog(data)
   }

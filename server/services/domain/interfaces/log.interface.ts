@@ -88,6 +88,9 @@ export interface ILogService {
 
   getExecutionStatsErrors(limit?: number, ownerId?: string): Promise<{ errorSummary: string; count: number }[]>
 
+  /** 最近失败执行记录（按开始时间倒序），运营总览使用 */
+  getRecentFailedExecutions(limit?: number, ownerId?: string): Promise<ExecutionLog[]>
+
   createAuditLog(data: CreateAuditLog): Promise<AuditLog>
 
   getAuditLogById(id: string, ownerId?: string): Promise<AuditLog | null>

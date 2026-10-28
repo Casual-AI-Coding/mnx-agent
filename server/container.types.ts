@@ -14,6 +14,7 @@ import type { CapacityChecker } from './services/capacity-checker.js'
 import type { CronScheduler } from './services/cron-scheduler.js'
 import type {
   CapacityService,
+  DashboardService,
   JobService,
   LogService,
   MaterialService,
@@ -65,6 +66,7 @@ export interface ContainerTokenMap {
   readonly [TOKENS.JOB_SERVICE]: JobService
   readonly [TOKENS.TASK_SERVICE]: TaskService
   readonly [TOKENS.LOG_SERVICE]: LogService
+  readonly [TOKENS.DASHBOARD_SERVICE]: DashboardService
   readonly [TOKENS.MEDIA_SERVICE]: MediaService
   readonly [TOKENS.WEBHOOK_SERVICE]: WebhookService
   readonly [TOKENS.CAPACITY_SERVICE]: CapacityService

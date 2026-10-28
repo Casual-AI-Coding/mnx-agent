@@ -18,3 +18,13 @@ export type { ILogService, LogFilter, LogStats } from './log.interface.js'
 export type { IWebhookService } from './webhook.interface.js'
 export type { IWorkflowService } from './workflow.interface.js'
 export type { ICapacityService } from './capacity.interface.js'
+export type {
+  IDashboardService,
+  OperationsOverview,
+  OperationsExecutionsStats,
+  OperationsRecentFailure,
+  OperationsDlqSummary,
+  OperationsCapacity,
+  OperationsCapacityRecord,
+  OperationsHealth,
+} from './dashboard.interface.js'

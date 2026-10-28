@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { authenticateJWT } from '../middleware/auth-middleware'
-import { getDatabasePoolStatsService, getLogService } from '../service-registration.js'
+import { getDatabasePoolStatsService, getLogService, getDashboardService } from '../service-registration.js'
 import { getOwnerId } from '../middleware/data-isolation.js'
 import { successResponse, errorResponse } from '../middleware/api-response'
 
@@ -15,6 +15,12 @@ function isStatsPeriod(value: string): value is StatsPeriod {
 }
 
 router.use(authenticateJWT)
+
+router.get('/operations', asyncHandler(async (req, res) => {
+  const ownerId = getOwnerId(req)
+  const overview = await getDashboardService().getOperationsOverview(ownerId)
+  successResponse(res, overview)
+}))
 
 router.get('/overview', asyncHandler(async (req, res) => {
   const logService = getLogService()

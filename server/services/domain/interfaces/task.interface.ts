@@ -71,6 +71,11 @@ export interface ITaskService {
   getDeadLetterQueue(ownerId?: string, limit?: number): Promise<DeadLetterQueueItem[]>
 
   /**
+   * Count unresolved dead letter queue items
+   */
+  countUnresolvedDeadLetters(ownerId?: string): Promise<number>
+
+  /**
    * Get a single dead letter queue item by ID
    */
   getDeadLetterItemById(id: string, ownerId?: string): Promise<DeadLetterQueueItem | null>

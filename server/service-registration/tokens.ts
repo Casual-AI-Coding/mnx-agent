@@ -22,6 +22,7 @@ export const TOKENS = {
   JOB_SERVICE: 'jobService',
   TASK_SERVICE: 'taskService',
   LOG_SERVICE: 'logService',
+  DASHBOARD_SERVICE: 'dashboardService',
   MEDIA_SERVICE: 'mediaService',
   WEBHOOK_SERVICE: 'webhookService',
   CAPACITY_SERVICE: 'capacityService',

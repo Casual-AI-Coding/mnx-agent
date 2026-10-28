@@ -9,6 +9,7 @@ import { ConcurrencyManager } from '../services/concurrency-manager.js'
 import { CronScheduler } from '../services/cron-scheduler.js'
 import {
   CapacityService,
+  DashboardService,
   JobService,
   LogService,
   MaterialService,
@@ -172,6 +173,16 @@ export async function registerServiceDependencies(container: Container): Promise
       repositories.logRepository,
       repositories.userRepository,
       c.resolve(TOKENS.EXTERNAL_API_LOG_REPOSITORY)
+    )
+  })
+
+  container.registerSingleton(TOKENS.DASHBOARD_SERVICE, (c) => {
+    return new DashboardService(
+      c.resolve(TOKENS.LOG_SERVICE),
+      c.resolve(TOKENS.TASK_SERVICE),
+      c.resolve(TOKENS.CAPACITY_SERVICE),
+      c.resolve<DatabaseService>(TOKENS.DATABASE),
+      c.resolve(TOKENS.DATABASE_POOL_STATS_SERVICE)
     )
   })
 

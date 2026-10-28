@@ -100,6 +100,10 @@ export function getLogService() {
   return resolve(getGlobalContainer(), TOKENS.LOG_SERVICE)
 }
 
+export function getDashboardService() {
+  return resolve(getGlobalContainer(), TOKENS.DASHBOARD_SERVICE)
+}
+
 export function getMediaService() {
   return resolve(getGlobalContainer(), TOKENS.MEDIA_SERVICE)
 }

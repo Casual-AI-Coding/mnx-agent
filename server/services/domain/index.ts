@@ -37,6 +37,9 @@ export { WebhookService } from './webhook.service.js'
 export type { ICapacityService } from './interfaces/index.js'
 export { CapacityService } from './capacity.service.js'
 
+export type { IDashboardService, OperationsOverview } from './interfaces/index.js'
+export { DashboardService } from './dashboard.service.js'
+
 export type {
   IMaterialService,
   MaterialFilter,
