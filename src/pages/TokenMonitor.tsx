@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useUsageStore } from '@/stores/usage'
+import { OperationsMetrics } from '@/components/token/OperationsMetrics'
 import { services } from '@/themes/tokens'
 import { cn } from '@/lib/utils'
 
@@ -215,12 +216,14 @@ export default function TokenMonitor() {
         </Card>
       )}
 
+      <OperationsMetrics />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              用量分布
+              用量分布（本地记录）
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">

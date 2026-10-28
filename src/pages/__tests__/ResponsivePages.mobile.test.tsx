@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import ImageGallery from '../ImageGallery'
+import { MemoryRouter } from 'react-router-dom'
 import TokenMonitor from '../TokenMonitor'
 import StatsDashboard from '../StatsDashboard'
 
@@ -118,7 +119,7 @@ describe('ImageGallery — mobile responsive layout', () => {
 describe('TokenMonitor — mobile responsive layout', () => {
   it('stacks the balance editor before the desktop breakpoint', async () => {
     const user = userEvent.setup()
-    render(<TokenMonitor />)
+    render(<MemoryRouter><TokenMonitor /></MemoryRouter>)
 
     await user.click(screen.getByRole('button', { name: /设置余额/ }))
     const balanceLabel = screen.getByText('余额:')
@@ -129,7 +130,7 @@ describe('TokenMonitor — mobile responsive layout', () => {
   })
 
   it('wraps the seven-day chart legend on narrow screens', () => {
-    const { container } = render(<TokenMonitor />)
+    const { container } = render(<MemoryRouter><TokenMonitor /></MemoryRouter>)
 
     const legend = container.querySelector('.border-t.text-sm')
     expect(legend?.className).toContain('flex-wrap')

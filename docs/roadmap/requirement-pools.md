@@ -167,12 +167,12 @@
 
 | ID | 名称 | 分类 | 优先级 | 版本 | 状态 |
 |----|------|------|--------|------|------|
-| R-022 | 用量监控完善 | Monitoring | P2 | v3.2 | 待办 |
+| R-022 | 用量监控完善 | Monitoring | P2 | v3.2 | 已完成 |
 | R-023 | 歌词生成 | Content | P1 | v2.2 | 已完成 |
 
 ### R-022 - 用量监控完善
 - **描述**: 用量监控页面展示 API 使用量统计、配额消耗趋势、各服务调用占比、历史用量对比，并与 Dashboard 运营总览共享关键指标
-- **现状**: `/token` 路由和 `TokenMonitor.tsx` 已有本地 usage/history、手动余额和简易图表雏形，但未接入真实后端统计、配额趋势和服务占比
+- **现状**: 已完成。TokenMonitor 新增 OperationsMetrics 区，与 Dashboard 共享 `/api/stats/operations`（执行统计/服务占比/配额快照）并新增按天/周/月执行趋势（复用 success-rate 端点）
 - **范围**: `src/pages/TokenMonitor.tsx` + `server/routes/stats.ts` 统计 API 扩展 + Dashboard 指标复用
 
 ### R-023 - 歌词生成
