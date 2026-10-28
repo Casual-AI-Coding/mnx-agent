@@ -4,19 +4,24 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   MessageSquare, Mic, MicOff, Image, Music, Video, Film,
-  User, FolderOpen, BarChart3, TrendingUp, Zap, Clock,
-  Wifi, WifiOff, Loader2
+  User, FolderOpen, BarChart3, Zap,
+  Wifi, WifiOff, Loader2, RefreshCw
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal'
 import { ErrorBoundary, ErrorFallback } from '@/components/shared'
-import { useUsageStore } from '@/stores/usage'
+import { OperationsCards } from '@/components/dashboard/OperationsCards'
+import { ServiceDistribution } from '@/components/dashboard/ServiceDistribution'
+import { RecentFailures } from '@/components/dashboard/RecentFailures'
+import { SystemHealthStrip } from '@/components/dashboard/SystemHealthStrip'
+import { RecentActivityCard } from '@/components/dashboard/RecentActivityCard'
 import { useHistoryStore } from '@/stores/history'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { getOperationsOverview, type OperationsOverview } from '@/lib/api/stats'
 import type { ConnectionStatus } from '@/lib/websocket-client'
 import { cn } from '@/lib/utils'
-import { services, status as statusTokens } from '@/themes/tokens'
+import { status as statusTokens } from '@/themes/tokens'
 
 const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
   const statusConfig: Record<ConnectionStatus, { icon: typeof Wifi; color: string; text: string }> = {
@@ -36,9 +41,13 @@ const ConnectionIndicator = memo(function ConnectionIndicator({ status }: { stat
   )
 })
 
+/**
+ * Dashboard 运营总览（R-005）：
+ * 运营指标卡 + 服务分布 + 最近失败任务 + 系统健康（DLQ/容量风险），
+ * 保留快捷入口、最近活动与欢迎引导。
+ */
 export default function Dashboard() {
   const { t } = useTranslation()
-  const { usage } = useUsageStore()
   const { items, addItem } = useHistoryStore()
   const hasCompletedOnboarding = localStorage.getItem('onboarding-complete') === 'true'
   const { status, events } = useWebSocket({
@@ -47,6 +56,28 @@ export default function Dashboard() {
   })
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [operations, setOperations] = useState<OperationsOverview | null>(null)
+  const [operationsLoading, setOperationsLoading] = useState(true)
+
+  const loadOperations = useCallback(async () => {
+    setOperationsLoading(true)
+    const result = await getOperationsOverview()
+    setOperations(result.success ? result.data ?? null : null)
+    setOperationsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    void loadOperations()
+  }, [loadOperations])
+
+  // 任务/作业事件到达时刷新运营指标（失败任务、DLQ 变化会反映在总览中）
+  const [eventCount, setEventCount] = useState(0)
+  useEffect(() => {
+    if (events.length > 0 && events.length !== eventCount) {
+      setEventCount(events.length)
+      void loadOperations()
+    }
+  }, [events, eventCount, loadOperations])
 
   useEffect(() => {
     if (!hasCompletedOnboarding) {
@@ -68,24 +99,6 @@ export default function Dashboard() {
   // Memoized: only recalculates when items change
   const recentItems = useMemo(() => items.slice(-5).reverse(), [items])
 
-  // Memoized: type labels and colors - stable references
-  const typeLabels = useMemo(() => ({
-    text: t('dashboard.text'),
-    image: t('dashboard.image'),
-    voice: t('dashboard.voice'),
-    music: t('dashboard.music'),
-    video: t('dashboard.video'),
-  }), [t])
-
-  const typeColors = useMemo(() => ({
-    text: cn(services.text.bg, services.text.icon),
-    image: cn(services.image.bg, services.image.icon),
-    voice: cn(statusTokens.success.bgSubtle, statusTokens.success.icon),
-    music: cn(services.music.bg, services.music.icon),
-    video: cn(services.video.bg, services.video.icon),
-  }), [])
-
-  // Memoized: stable array reference
   const quickActions = useMemo(() => [
     { title: t('dashboard.aiChatAndWriting'), desc: t('dashboard.aiChatAndWriting'), icon: MessageSquare, path: '/text', color: 'hover:border-primary' },
     { title: t('dashboard.realtimeVoiceSynthesis'), desc: t('dashboard.realtimeVoiceSynthesis'), icon: Mic, path: '/voice', color: 'hover:border-success' },
@@ -99,7 +112,6 @@ export default function Dashboard() {
     { title: t('dashboard.apiUsageStatistics'), desc: t('dashboard.apiUsageStatistics'), icon: BarChart3, path: '/token', color: 'hover:border-warning' },
   ], [t])
 
-  // Memoized: stable function reference
   const timeAgo = useCallback((date: Date): string => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
     if (seconds < 60) return t('dashboard.justNow')
@@ -110,14 +122,6 @@ export default function Dashboard() {
     const days = Math.floor(hours / 24)
     return `${days}${t('dashboard.daysAgo')}`
   }, [t])
-
-  // Memoized: only recalculates when usage or t changes
-  const stats = useMemo(() => [
-    { label: t('dashboard.totalGenerations'), value: usage.textTokens + usage.imageRequests + usage.musicRequests + usage.videoRequests, icon: Zap, color: statusTokens.warning.icon },
-    { label: t('dashboard.textTokens'), value: usage.textTokens.toLocaleString(), icon: MessageSquare, color: services.text.icon },
-    { label: t('dashboard.imageRequests'), value: usage.imageRequests, icon: Image, color: services.image.icon },
-    { label: t('dashboard.videoRequests'), value: usage.videoRequests, icon: Video, color: services.video.icon },
-  ], [usage, t])
 
   useEffect(() => {
     if (events.length === 0) return
@@ -161,30 +165,32 @@ export default function Dashboard() {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
             <p className="text-muted-foreground/70 mt-2">{t('dashboard.subtitle')}</p>
           </div>
-          <ConnectionIndicator status={status} />
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => void loadOperations()}
+              disabled={operationsLoading}
+              aria-label="刷新运营指标"
+            >
+              <RefreshCw className={cn('w-4 h-4', operationsLoading && 'animate-spin')} />
+            </Button>
+            <ConnectionIndicator status={status} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className={`p-3 rounded-lg bg-card/secondary ${stat.color}`}>
-                    <stat.icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground/70">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        <OperationsCards executions={operations?.executions ?? null} loading={operationsLoading} />
+
+        <SystemHealthStrip
+          health={operations?.health ?? null}
+          dlq={operations?.dlq ?? null}
+          capacity={operations?.capacity ?? null}
+          loading={operationsLoading}
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ServiceDistribution distribution={operations?.distribution ?? null} loading={operationsLoading} />
+          <RecentFailures failures={operations?.recentFailures ?? null} loading={operationsLoading} />
         </div>
 
         <div>
@@ -216,39 +222,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary-400" />
-            {t('dashboard.recentActivity')}
-          </h2>
-          <Card>
-            <CardContent className="p-0">
-              {recentItems.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {recentItems.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 px-4 py-3 hover:bg-secondary/50 transition-colors">
-                      <Badge className={typeColors[item.type] || 'bg-card/secondary text-muted-foreground'}>
-                        {typeLabels[item.type] || item.type}
-                      </Badge>
-                      <span className="flex-1 text-sm text-muted-foreground truncate">
-                        {item.input || t('dashboard.noActivity')}
-                      </span>
-                      <span className="text-xs text-muted-foreground/50 whitespace-nowrap">
-                        {timeAgo(new Date(item.timestamp))}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-12 text-center text-muted-foreground/70">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>{t('dashboard.noActivity')}</p>
-                  <p className="text-sm mt-1">{t('dashboard.noActivityDesc')}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <RecentActivityCard items={recentItems} timeAgo={timeAgo} />
 
       </div>
     </ErrorBoundary>

@@ -96,6 +96,7 @@ export function createMockLogService(overrides: Partial<ILogService> = {}): ILog
     getExecutionStatsTrend: vi.fn().mockResolvedValue([]),
     getExecutionStatsDistribution: vi.fn().mockResolvedValue([]),
     getExecutionStatsErrors: vi.fn().mockResolvedValue([]),
+    getRecentFailedExecutions: vi.fn().mockResolvedValue([]) as ILogService['getRecentFailedExecutions'],
     createAuditLog: vi.fn().mockImplementation(async (data: CreateAuditLog) => ({
       id: 'audit-mock',
       username: null,
@@ -186,6 +187,7 @@ export function createMockTaskService(overrides: Partial<ITaskService> = {}): IT
     moveToDeadLetter: vi.fn().mockResolvedValue(undefined),
     retryFromDeadLetter: vi.fn().mockImplementation(async (taskId: string) => emptyTask(taskId, TaskStatus.PENDING)) as ITaskService['retryFromDeadLetter'],
     getDeadLetterQueue: vi.fn().mockResolvedValue([]) as ITaskService['getDeadLetterQueue'],
+    countUnresolvedDeadLetters: vi.fn().mockResolvedValue(0) as ITaskService['countUnresolvedDeadLetters'],
     getDeadLetterItemById: vi.fn().mockResolvedValue(null),
     resolveDeadLetterItem: vi.fn().mockResolvedValue(undefined),
     incrementRetryCount: vi.fn().mockResolvedValue(undefined),

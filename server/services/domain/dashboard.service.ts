@@ -41,10 +41,6 @@ async function safely<T>(load: () => Promise<T>): Promise<Section<T>> {
   }
 }
 
-function isSectionError<T>(section: Section<T>): section is { error: string } {
-  return typeof section === 'object' && section !== null && 'error' in section
-}
-
 export class DashboardService implements IDashboardService {
   constructor(
     private readonly logService: ILogService,
